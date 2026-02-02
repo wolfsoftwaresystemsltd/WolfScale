@@ -585,7 +585,7 @@ fn run_validate(config_path: PathBuf) -> Result<()> {
                 config.database.user,
                 config.database.host,
                 config.database.port,
-                config.database.database);
+                config.database.database.as_deref().unwrap_or("(all)"));
             println!("  Peers: {}", config.cluster.peers.len());
             println!("  Quorum Size: {}", config.quorum_size());
             Ok(())
@@ -611,7 +611,7 @@ fn run_info(config_path: PathBuf) -> Result<()> {
     println!();
     println!("Database Configuration:");
     println!("  Host:           {}:{}", config.database.host, config.database.port);
-    println!("  Database:       {}", config.database.database);
+    println!("  Database:       {}", config.database.database.as_deref().unwrap_or("(all - server-wide)"));
     println!("  Pool Size:      {}", config.database.pool_size);
     println!();
     println!("WAL Configuration:");
