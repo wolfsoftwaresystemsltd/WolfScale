@@ -266,8 +266,9 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
             backend_password: config.database.password.clone(),
         };
         let proxy_cluster = Arc::clone(&cluster);
-        let proxy = ProxyServer::new(proxy_config, proxy_cluster);
-        tracing::info!("MySQL proxy listening on {}", config.proxy.bind_address);
+        let proxy_wal = wal_writer.clone();
+        let proxy = ProxyServer::with_wal(proxy_config, proxy_cluster, proxy_wal);
+        tracing::info!("MySQL proxy listening on {} (WAL-enabled)", config.proxy.bind_address);
         tokio::spawn(async move {
             if let Err(e) = proxy.start().await {
                 tracing::error!("Proxy error: {}", e);

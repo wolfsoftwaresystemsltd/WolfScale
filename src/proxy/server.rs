@@ -3,14 +3,15 @@
 //! TCP server that proxies MySQL connections to backend MariaDB.
 //! - Relays the real MariaDB handshake for proper authentication
 //! - Parses command packets to detect writes
+//! - Writes are logged to WAL for replication before execution
 //! - Smart routing: reads from local if caught up, otherwise from leader
-//! - Writes always go through the cluster for replication
 
 use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::state::{ClusterMembership, NodeStatus, NodeRole};
+use crate::wal::{WalWriter, LogEntry};
 use crate::error::Result;
 use super::protocol::MySqlPacket;
 
@@ -33,11 +34,17 @@ pub struct ProxyConfig {
 pub struct ProxyServer {
     config: ProxyConfig,
     cluster: Arc<ClusterMembership>,
+    wal_writer: Option<WalWriter>,
 }
 
 impl ProxyServer {
     pub fn new(config: ProxyConfig, cluster: Arc<ClusterMembership>) -> Self {
-        Self { config, cluster }
+        Self { config, cluster, wal_writer: None }
+    }
+
+    /// Create with WAL writer for replication support
+    pub fn with_wal(config: ProxyConfig, cluster: Arc<ClusterMembership>, wal_writer: WalWriter) -> Self {
+        Self { config, cluster, wal_writer: Some(wal_writer) }
     }
 
     /// Start the proxy server
@@ -51,9 +58,10 @@ impl ProxyServer {
 
             let config = self.config.clone();
             let cluster = Arc::clone(&self.cluster);
+            let wal_writer = self.wal_writer.clone();
 
             tokio::spawn(async move {
-                if let Err(e) = handle_connection(client_socket, config, cluster).await {
+                if let Err(e) = handle_connection(client_socket, config, cluster, wal_writer).await {
                     tracing::error!("Proxy connection error: {}", e);
                 }
             });
@@ -71,7 +79,43 @@ fn is_write_query(query: &str) -> bool {
     upper.starts_with("ALTER") ||
     upper.starts_with("DROP") ||
     upper.starts_with("TRUNCATE") ||
-    upper.starts_with("REPLACE")
+    upper.starts_with("REPLACE") ||
+    upper.starts_with("GRANT") ||
+    upper.starts_with("REVOKE")
+}
+
+/// Extract table name from a SQL query (best effort)
+fn extract_table_name(query: &str) -> Option<String> {
+    let upper = query.trim().to_uppercase();
+    let query_lower = query.trim();
+    
+    // Try common patterns
+    if upper.starts_with("INSERT INTO ") {
+        let rest = &query_lower[12..];
+        Some(rest.split_whitespace().next()?.trim_matches('`').to_string())
+    } else if upper.starts_with("UPDATE ") {
+        let rest = &query_lower[7..];
+        Some(rest.split_whitespace().next()?.trim_matches('`').to_string())
+    } else if upper.starts_with("DELETE FROM ") {
+        let rest = &query_lower[12..];
+        Some(rest.split_whitespace().next()?.trim_matches('`').to_string())
+    } else if upper.starts_with("CREATE TABLE ") {
+        let rest = &query_lower[13..];
+        let name = rest.split_whitespace().next()?.trim_matches('`');
+        Some(name.split('(').next()?.to_string())
+    } else if upper.starts_with("DROP TABLE ") {
+        let rest = &query_lower[11..];
+        Some(rest.split_whitespace().next()?.trim_matches('`').to_string())
+    } else if upper.starts_with("ALTER TABLE ") {
+        let rest = &query_lower[12..];
+        Some(rest.split_whitespace().next()?.trim_matches('`').to_string())
+    } else if upper.starts_with("CREATE DATABASE ") || upper.starts_with("DROP DATABASE ") {
+        // Database operations - return the database name
+        let rest = &query_lower[16..];
+        Some(rest.split_whitespace().next()?.trim_matches('`').to_string())
+    } else {
+        None
+    }
 }
 
 /// Determine the backend address to use based on query type and replication status
@@ -122,6 +166,7 @@ async fn handle_connection(
     mut client: TcpStream,
     config: ProxyConfig,
     cluster: Arc<ClusterMembership>,
+    wal_writer: Option<WalWriter>,
 ) -> Result<()> {
     // Determine initial backend (for handshake)
     // Use local backend for initial connection - it's faster and handles auth
@@ -181,20 +226,57 @@ async fn handle_connection(
         };
 
         // Parse packet to check query type
-        let is_write = if let Ok((packet, _)) = MySqlPacket::read(&cmd_buf[..n]) {
+        let (is_write, query_opt) = if let Ok((packet, _)) = MySqlPacket::read(&cmd_buf[..n]) {
             if let Some(query) = packet.query_string() {
                 let write = is_write_query(&query);
-                if write {
-                    tracing::info!("WRITE query detected: {}", 
-                        query.chars().take(100).collect::<String>());
-                }
-                write
+                (write, Some(query))
             } else {
-                false
+                (false, None)
             }
         } else {
-            false
+            (false, None)
         };
+
+        // If this is a write query and we have a WAL writer, log it for replication
+        // BUT only if we are the leader - followers should forward to the leader
+        if is_write {
+            if let Some(ref query) = query_opt {
+                tracing::info!("WRITE query: {}", query.chars().take(100).collect::<String>());
+                
+                // Check if we are the leader
+                let self_node = cluster.get_self().await;
+                let is_leader = self_node.role == NodeRole::Leader;
+                
+                if is_leader {
+                    // We are the leader - write to WAL for replication
+                    if let Some(ref wal) = wal_writer {
+                        let table_name = extract_table_name(query);
+                        let entry = LogEntry::RawSql {
+                            sql: query.clone(),
+                            affects_table: table_name,
+                        };
+                        
+                        match wal.append(entry).await {
+                            Ok(lsn) => {
+                                tracing::debug!("Write query logged to WAL with LSN {}", lsn);
+                            }
+                            Err(e) => {
+                                tracing::error!("Failed to log write query to WAL: {}", e);
+                            }
+                        }
+                    }
+                } else {
+                    // We are a follower - the write goes to our local backend
+                    // which is connected to the same MariaDB. The leader's proxy
+                    // will handle WAL logging when replicating from MariaDB binlog.
+                    // 
+                    // Note: For full write forwarding, we'd need to connect to the
+                    // leader's proxy port instead. For now, writes to followers
+                    // execute locally and will be replicated via MariaDB replication.
+                    tracing::debug!("Follower received write - executing locally (will sync via replication)");
+                }
+            }
+        }
 
         // Get the appropriate backend address
         let target_addr = get_backend_address(&config, &cluster, is_write).await;
