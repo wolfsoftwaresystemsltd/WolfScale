@@ -2,7 +2,6 @@
 //!
 //! Handles parsing and building MySQL protocol packets.
 
-use bytes::{Buf, BufMut, BytesMut};
 use std::io;
 
 /// MySQL packet types

@@ -19,11 +19,11 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-# Build if needed
+# Check for binary
 if [ ! -f "$BINARY" ]; then
-    echo "Building WolfScale..."
-    cd "$SCRIPT_DIR"
-    sudo -u "$(logname)" cargo build --release
+    echo "ERROR: WolfScale binary not found at $BINARY"
+    echo "Please build first with: cargo build --release"
+    exit 1
 fi
 
 echo "Installing WolfScale as systemd service ($SERVICE_TYPE mode)..."

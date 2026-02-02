@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 use tokio::net::TcpStream;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::AsyncWriteExt;
 
 use crate::state::ClusterMembership;
 use crate::error::Result;
