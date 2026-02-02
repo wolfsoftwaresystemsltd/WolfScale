@@ -166,56 +166,70 @@ pub fn build_error_packet(sequence_id: u8, error_code: u16, sql_state: &str, mes
 }
 
 /// Build initial handshake packet (server -> client)
+/// This implements MySQL Protocol v10 handshake
 pub fn build_handshake_packet(server_version: &str) -> MySqlPacket {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    
     let mut payload = Vec::new();
     
-    // Protocol version (10 = current)
+    // Protocol version: 10
     payload.push(10);
     
-    // Server version (null-terminated)
+    // Server version string (null-terminated)
     payload.extend_from_slice(server_version.as_bytes());
     payload.push(0);
     
-    // Connection ID (4 bytes)
-    payload.extend_from_slice(&[1, 0, 0, 0]);
+    // Connection ID (4 bytes, little-endian) - use timestamp as simple ID
+    let conn_id = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs() as u32)
+        .unwrap_or(1);
+    payload.extend_from_slice(&conn_id.to_le_bytes());
     
-    // Auth plugin data part 1 (8 bytes) - scramble first part
-    payload.extend_from_slice(b"12345678");
+    // Generate scramble (auth-plugin-data) - 20 bytes total
+    // For simplicity, use a predictable but valid scramble
+    let scramble_part1: [u8; 8] = [0x3a, 0x23, 0x4d, 0x58, 0x5f, 0x2a, 0x35, 0x48];
+    let scramble_part2: [u8; 12] = [0x51, 0x22, 0x6b, 0x7c, 0x32, 0x49, 0x61, 0x5e, 0x4f, 0x28, 0x73, 0x2d];
     
-    // Filler
-    payload.push(0);
+    // Auth-plugin-data-part-1 (8 bytes)
+    payload.extend_from_slice(&scramble_part1);
     
-    // Capability flags (must include CLIENT_SECURE_CONNECTION=0x8000, CLIENT_PROTOCOL_41=0x200)
-    // Lower 2 bytes: 0xF7DF (basic + secure connection + protocol 41 + transactions + interactive)
-    let cap_lower: u16 = 0xF7DF;
-    payload.push((cap_lower & 0xff) as u8);
-    payload.push(((cap_lower >> 8) & 0xff) as u8);
+    // Filler byte (0x00)
+    payload.push(0x00);
     
-    // Character set (utf8mb4 = 45, or utf8 = 33)
+    // Capability flags lower 2 bytes
+    // CLIENT_LONG_PASSWORD (0x0001) | CLIENT_FOUND_ROWS (0x0002) | CLIENT_LONG_FLAG (0x0004) |
+    // CLIENT_CONNECT_WITH_DB (0x0008) | CLIENT_PROTOCOL_41 (0x0200) | CLIENT_SECURE_CONNECTION (0x8000)
+    // NOT including CLIENT_SSL (0x0800) - we don't support SSL
+    let capabilities_lower: u16 = 0x820F; // key bits for MariaDB compatibility, no SSL
+    payload.push((capabilities_lower & 0xFF) as u8);
+    payload.push(((capabilities_lower >> 8) & 0xFF) as u8);
+    
+    // Character set: utf8_general_ci = 33
     payload.push(33);
     
-    // Status flags (SERVER_STATUS_AUTOCOMMIT)
+    // Server status: SERVER_STATUS_AUTOCOMMIT (0x0002)
     payload.push(0x02);
     payload.push(0x00);
     
-    // Capability flags upper 2 bytes: 0x0081 (CLIENT_PLUGIN_AUTH + CLIENT_CONNECT_WITH_DB)
-    let cap_upper: u16 = 0x8081;
-    payload.push((cap_upper & 0xff) as u8);
-    payload.push(((cap_upper >> 8) & 0xff) as u8);
+    // Capability flags upper 2 bytes
+    // CLIENT_PLUGIN_AUTH (0x00080000) shifted to upper bits
+    let capabilities_upper: u16 = 0x0008;
+    payload.push((capabilities_upper & 0xFF) as u8);
+    payload.push(((capabilities_upper >> 8) & 0xFF) as u8);
     
-    // Auth plugin data length (21 = 8 + 13 with null terminator)
+    // Auth plugin data length (if CLIENT_PLUGIN_AUTH is set): 21 (8 + 12 + 1 null)
     payload.push(21);
     
-    // Reserved (10 bytes of zeros)
-    payload.extend_from_slice(&[0u8; 10]);
+    // Reserved: 10 bytes of zeros
+    payload.extend_from_slice(&[0x00; 10]);
     
-    // Auth plugin data part 2 (12 bytes + null = 13 bytes)
-    payload.extend_from_slice(b"123456789abc");
-    payload.push(0);
+    // Auth-plugin-data-part-2 (12 bytes, no null terminator here in some versions)
+    payload.extend_from_slice(&scramble_part2);
+    payload.push(0x00); // terminating null for scramble
     
     // Auth plugin name (null-terminated)
-    payload.extend_from_slice(b"mysql_native_password");
-    payload.push(0);
+    payload.extend_from_slice(b"mysql_native_password\0");
     
     MySqlPacket::new(0, payload)
 }
