@@ -27,33 +27,52 @@ WolfScale keeps multiple MariaDB databases in sync using a Write-Ahead Log (WAL)
 - **HTTP API** — RESTful API for writes and cluster management
 - **Snowflake IDs** — Distributed unique ID generation
 
-## Quick Start
+## Installation (Fresh Server)
 
-### Build
+### Prerequisites
 
 ```bash
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source ~/.cargo/env
+
+# Install build dependencies (Ubuntu/Debian)
+sudo apt update
+sudo apt install -y build-essential pkg-config libssl-dev
+```
+
+### Install WolfScale
+
+```bash
+# Clone repository
+git clone https://github.com/wolfsoftwaresystemsltd/WolfScale.git
+cd WolfScale
+
+# Build release binary
 cargo build --release
-```
 
-### Start a Cluster
-
-**Node 1 (Leader):**
-```bash
-./run.sh start --bootstrap
-```
-
-**Node 2+ (Followers):**
-```bash
-./run.sh start
-```
-
-### Install as Service
-
-```bash
+# Run interactive installer
 sudo ./install_service.sh
 ```
 
-The installer will prompt for configuration if none exists.
+The installer prompts for:
+- **Node ID** — unique name for this server
+- **Bind address** — cluster communication (default: 0.0.0.0:7654)
+- **MariaDB** — host, port, user, password
+- **API port** — HTTP API (default: 8080)
+- **Proxy port** — MySQL proxy (default: 3307)
+- **Peers** — addresses of other cluster nodes
+
+### Connect
+
+```bash
+# Via MySQL proxy (recommended)
+mariadb -h 127.0.0.1 -P 3307 -u your_user -p
+
+# Check status
+sudo systemctl status wolfscale
+curl http://localhost:8080/health
+```
 
 ## Usage
 
