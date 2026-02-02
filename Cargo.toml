@@ -80,6 +80,10 @@ criterion = "0.5"
 name = "wolfscale"
 path = "src/main.rs"
 
+[[bin]]
+name = "wolfctl"
+path = "src/bin/wolfctl.rs"
+
 [features]
 default = []
 integration = []

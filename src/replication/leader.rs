@@ -106,6 +106,13 @@ impl LeaderNode {
             }
 
             heartbeat_ticker.tick().await;
+            
+            // Replicate any new WAL entries to followers
+            // This is critical for proxy-written entries that bypass LeaderNode.write()
+            if let Err(e) = self.replicate_to_followers().await {
+                tracing::warn!("Replication error: {}", e);
+            }
+            
             self.send_heartbeats().await?;
             self.check_commit_progress().await?;
         }
