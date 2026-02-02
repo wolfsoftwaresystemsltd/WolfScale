@@ -167,6 +167,50 @@ WolfScale can bridge two separate Galera clusters for cross-datacenter replicati
 
 ---
 
+## User Setup
+
+Before using WolfScale, you need to create MariaDB users on **each node** in the cluster.
+
+### Required Users
+
+| User | Purpose | Where to Create |
+|------|---------|-----------------|
+| WolfScale internal user | Used by WolfScale to connect to local MariaDB | All nodes |
+| Application users | Your application's database access | All nodes |
+
+### Creating Users
+
+Run these commands on **each node** by connecting directly to local MariaDB:
+
+```bash
+# Connect to local MariaDB as root
+sudo mariadb -u root
+
+# Create WolfScale internal user (matches config [database] section)
+CREATE USER 'wolfscale'@'localhost' IDENTIFIED BY 'your_secure_password';
+GRANT ALL PRIVILEGES ON *.* TO 'wolfscale'@'localhost';
+
+# Create application user(s)
+CREATE USER 'appuser'@'%' IDENTIFIED BY 'app_password';
+CREATE USER 'appuser'@'localhost' IDENTIFIED BY 'app_password';
+GRANT ALL PRIVILEGES ON your_database.* TO 'appuser'@'%';
+GRANT ALL PRIVILEGES ON your_database.* TO 'appuser'@'localhost';
+
+FLUSH PRIVILEGES;
+EXIT;
+```
+
+> **Note:** The `%` wildcard allows connections from any host. Use more specific hostnames for better security.
+
+### Why Users Must Exist on All Nodes
+
+- Each node runs its own MariaDB instance
+- WolfScale proxy connects to the local MariaDB
+- When clients connect to any node, they authenticate against that node's MariaDB
+- Users must have the same credentials on all nodes for seamless failover
+
+---
+
 ## Architecture
 
 ┌─────────────────────────────────────────────────────────────────┐
