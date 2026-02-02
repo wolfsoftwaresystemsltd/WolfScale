@@ -142,33 +142,67 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     tracing::info!("Starting WolfScale node...");
 
     // Load configuration
-    let config = WolfScaleConfig::from_file(&config_path)?;
+    let config = match WolfScaleConfig::from_file(&config_path) {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!("Failed to load configuration from {:?}: {}", config_path, e);
+            tracing::error!("Please check that the config file exists and is valid TOML");
+            return Err(e);
+        }
+    };
     tracing::info!("Loaded configuration for node: {}", config.node.id);
 
     // Ensure directories exist
-    std::fs::create_dir_all(config.data_dir())?;
-    std::fs::create_dir_all(config.wal_dir())?;
-    std::fs::create_dir_all(config.state_dir())?;
+    if let Err(e) = std::fs::create_dir_all(config.data_dir()) {
+        tracing::error!("Failed to create data directory {:?}: {}", config.data_dir(), e);
+        return Err(e.into());
+    }
+    if let Err(e) = std::fs::create_dir_all(config.wal_dir()) {
+        tracing::error!("Failed to create WAL directory {:?}: {}", config.wal_dir(), e);
+        return Err(e.into());
+    }
+    if let Err(e) = std::fs::create_dir_all(config.state_dir()) {
+        tracing::error!("Failed to create state directory {:?}: {}", config.state_dir(), e);
+        return Err(e.into());
+    }
 
     // Initialize WAL
-    let wal_writer = WalWriter::new(
+    let wal_writer = match WalWriter::new(
         config.data_dir().clone(),
         config.wal.clone(),
         config.node.id.clone(),
-    ).await?;
+    ).await {
+        Ok(w) => w,
+        Err(e) => {
+            tracing::error!("Failed to initialize WAL: {}", e);
+            return Err(e);
+        }
+    };
     tracing::info!("WAL initialized, current LSN: {}", wal_writer.current_lsn().await);
 
-    let wal_reader = WalReader::new(
+    let wal_reader = match WalReader::new(
         config.data_dir().clone(),
         config.wal.segment_size_mb,
         config.wal.compression,
-    )?;
+    ) {
+        Ok(r) => r,
+        Err(e) => {
+            tracing::error!("Failed to initialize WAL reader: {}", e);
+            return Err(e);
+        }
+    };
 
     // Initialize state tracker
-    let state_tracker = Arc::new(StateTracker::new(
+    let state_tracker = match StateTracker::new(
         config.state_dir(),
         config.node.id.clone(),
-    )?);
+    ) {
+        Ok(s) => Arc::new(s),
+        Err(e) => {
+            tracing::error!("Failed to initialize state tracker: {}", e);
+            return Err(e);
+        }
+    };
     tracing::info!("State tracker initialized, last applied LSN: {}", 
         state_tracker.last_applied_lsn().await?);
 
@@ -188,9 +222,24 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     tracing::info!("Cluster initialized with {} nodes", cluster.size().await);
 
     // Initialize database executor
-    let executor = Arc::new(MariaDbExecutor::new(&config.database).await?);
-    if executor.health_check().await? {
-        tracing::info!("Database connection established");
+    tracing::info!("Connecting to MariaDB at {}:{}...", config.database.host, config.database.port);
+    let executor = match MariaDbExecutor::new(&config.database).await {
+        Ok(e) => Arc::new(e),
+        Err(e) => {
+            tracing::error!("Failed to connect to MariaDB: {}", e);
+            tracing::error!("  Host: {}:{}", config.database.host, config.database.port);
+            tracing::error!("  User: {}", config.database.user);
+            tracing::error!("Please check that MariaDB is running and credentials are correct");
+            return Err(e);
+        }
+    };
+    match executor.health_check().await {
+        Ok(true) => tracing::info!("Database connection established"),
+        Ok(false) => tracing::warn!("Database health check returned false"),
+        Err(e) => {
+            tracing::error!("Database health check failed: {}", e);
+            return Err(e);
+        }
     }
 
     // Initialize network
