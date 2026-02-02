@@ -6,7 +6,7 @@
 
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Patreon](https://img.shields.io/badge/Patreon-Support%20Us-orange.svg)](https://www.patreon.com/wolfsoftwaresystems)
+[![Patreon](https://img.shields.io/badge/Patreon-Support%20Us-orange.svg)](https://www.patreon.com/15362110/join)
 
 **© Wolf Software Systems Ltd** — [wolf.uk.com](https://wolf.uk.com)
 
@@ -150,4 +150,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 - **Website:** [wolf.uk.com](https://wolf.uk.com)
 - **Issues:** [GitHub Issues](https://github.com/wolfsoftwaresystemsltd/WolfScale/issues)
-- **Support Us:** [Patreon](https://www.patreon.com/wolfsoftwaresystems)
+- **Support Us:** [Patreon](https://www.patreon.com/15362110/join)
