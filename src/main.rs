@@ -248,11 +248,15 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
         }
     }
 
-    // Initialize network
-    let (msg_tx, mut msg_rx) = tokio::sync::mpsc::channel(10000);
+    // Initialize network - separate channels for incoming and outgoing messages
+    // Outgoing: used by leader to queue messages to send to peers
+    let (outgoing_tx, mut outgoing_rx) = tokio::sync::mpsc::channel::<(String, crate::replication::Message)>(10000);
+    // Incoming: used by network server to receive messages from peers
+    let (incoming_tx, mut incoming_rx) = tokio::sync::mpsc::channel(10000);
+    
     let network_server = NetworkServer::new(
         config.node.bind_address.clone(),
-        msg_tx.clone(),
+        incoming_tx,
     );
 
     // Create network client for outbound messages
@@ -261,12 +265,12 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
         Duration::from_secs(10),  // request timeout
     ));
 
-    // Start message delivery loop - delivers queued messages to peers
+    // Start OUTGOING message delivery loop - sends queued messages to peers
     let delivery_cluster = Arc::clone(&cluster);
     let delivery_client = Arc::clone(&network_client);
     tokio::spawn(async move {
-        tracing::info!("Message delivery loop started");
-        while let Some((target_node_id, message)) = msg_rx.recv().await {
+        tracing::info!("Outgoing message delivery loop started");
+        while let Some((target_node_id, message)) = outgoing_rx.recv().await {
             // Look up the target node's address
             if let Some(node) = delivery_cluster.get_node(&target_node_id).await {
                 let addr = &node.address;
@@ -279,8 +283,43 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                 tracing::warn!("Cannot deliver message: unknown node {}", target_node_id);
             }
         }
-        tracing::info!("Message delivery loop stopped");
+        tracing::info!("Outgoing message delivery loop stopped");
     });
+
+    // Start INCOMING message processing loop - handles messages from peers
+    let incoming_cluster = Arc::clone(&cluster);
+    tokio::spawn(async move {
+        tracing::info!("Incoming message processing loop started");
+        while let Some((peer_addr, message)) = incoming_rx.recv().await {
+            tracing::debug!("Received {} from {}", message.type_name(), peer_addr);
+            
+            match message {
+                wolfscale::replication::Message::Heartbeat { leader_id, commit_lsn, .. } => {
+                    // Update cluster: mark sender as leader
+                    if let Err(e) = incoming_cluster.set_leader(&leader_id).await {
+                        tracing::warn!("Failed to set leader from heartbeat: {}", e);
+                    }
+                    // Record the heartbeat
+                    let _ = incoming_cluster.record_heartbeat(&leader_id, commit_lsn).await;
+                    tracing::debug!("Heartbeat from leader {}", leader_id);
+                }
+                wolfscale::replication::Message::AppendEntries { leader_id, entries, .. } => {
+                    tracing::debug!("Received {} entries from leader {}", entries.len(), leader_id);
+                    let _ = incoming_cluster.record_heartbeat(&leader_id, 0).await;
+                }
+                wolfscale::replication::Message::RequestVote { candidate_id, .. } => {
+                    tracing::info!("Vote request from {}", candidate_id);
+                }
+                _ => {
+                    tracing::trace!("Ignoring message type {} from {}", message.type_name(), peer_addr);
+                }
+            }
+        }
+        tracing::info!("Incoming message processing loop stopped");
+    });
+
+    // Use outgoing_tx for replication (pass this to LeaderNode/FollowerNode)
+    let msg_tx = outgoing_tx;
 
     // Initialize HTTP API
     let http_server = HttpServer::new(
