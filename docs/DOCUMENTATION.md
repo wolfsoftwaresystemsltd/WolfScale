@@ -328,6 +328,55 @@ wolfscale start --log-level debug
 
 > **Tip:** Always use an odd number of nodes. Even numbers (2, 4, 6) provide no additional fault tolerance compared to n-1 nodes, but require more nodes for quorum.
 
+### Complete 3-Node Cluster Example
+
+Here are the complete `[node]` and `[cluster]` sections for a 3-node cluster:
+
+**Node 1 (10.0.10.10) - Initial Leader:**
+```toml
+[node]
+id = "node-1"
+bind_address = "0.0.0.0:7654"
+advertise_address = "10.0.10.10:7654"
+data_dir = "/var/lib/wolfscale/node-1"
+
+[cluster]
+bootstrap = true
+peers = ["10.0.10.11:7654", "10.0.10.12:7654"]
+```
+
+**Node 2 (10.0.10.11):**
+```toml
+[node]
+id = "node-2"
+bind_address = "0.0.0.0:7654"
+advertise_address = "10.0.10.11:7654"
+data_dir = "/var/lib/wolfscale/node-2"
+
+[cluster]
+bootstrap = false
+peers = ["10.0.10.10:7654", "10.0.10.12:7654"]
+```
+
+**Node 3 (10.0.10.12):**
+```toml
+[node]
+id = "node-3"
+bind_address = "0.0.0.0:7654"
+advertise_address = "10.0.10.12:7654"
+data_dir = "/var/lib/wolfscale/node-3"
+
+[cluster]
+bootstrap = false
+peers = ["10.0.10.10:7654", "10.0.10.11:7654"]
+```
+
+> [!IMPORTANT]
+> - Each node's `peers` list contains all OTHER nodes (never itself)
+> - Only ONE node has `bootstrap = true` (the initial leader)
+> - All peer addresses must include the port (`:7654`)
+> - `advertise_address` must be an IP that other nodes can reach (not `0.0.0.0`)
+
 ### 6. Write Forwarding
 
 Followers automatically forward write requests to the current leader, so clients can send writes to any node:
@@ -403,7 +452,8 @@ wolfscale proxy --listen 0.0.0.0:8007 --config wolfscale.toml
 ```toml
 [node]
 id = "node-1"                      # Unique node identifier
-bind_address = "0.0.0.0:7654"      # Cluster communication port
+bind_address = "0.0.0.0:7654"      # What to listen on
+advertise_address = "10.0.10.10:7654"  # Address other nodes use to reach this node
 data_dir = "/var/lib/wolfscale/node-1"
 
 [database]
@@ -423,7 +473,8 @@ retention_hours = 168              # 7 days
 fsync = true                       # Sync to disk
 
 [cluster]
-peers = []                         # Peer addresses
+bootstrap = false                  # Set to true ONLY on initial leader
+peers = ["10.0.10.11:7654", "10.0.10.12:7654"]  # All OTHER nodes (with ports!)
 heartbeat_interval_ms = 500        # Heartbeat frequency
 election_timeout_ms = 2000         # Leader election timeout
 
@@ -433,7 +484,7 @@ bind_address = "0.0.0.0:8080"      # HTTP API port
 
 [proxy]
 enabled = true                     # Built-in MySQL proxy (default: true)
-bind_address = "0.0.0.0:8007"      # MySQL proxy port
+bind_address = "0.0.0.0:3307"      # MySQL proxy port
 ```
 
 ---
@@ -525,6 +576,7 @@ Edit `wolfscale.toml` on the new node:
 [node]
 id = "node-2"                           # Must be unique across cluster
 bind_address = "0.0.0.0:7654"
+advertise_address = "10.0.10.11:7654"   # THIS node's reachable IP
 data_dir = "/var/lib/wolfscale/node-2"
 
 [database]
@@ -535,7 +587,8 @@ password = "your-password"
 database = "myapp"
 
 [cluster]
-peers = ["leader-host:7654"]            # Leader's address
+bootstrap = false                        # Only leader has bootstrap=true
+peers = ["10.0.10.10:7654", "10.0.10.12:7654"]  # All OTHER nodes (with ports!)
 ```
 
 ### Step 3: Join the Cluster
