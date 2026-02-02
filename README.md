@@ -217,3 +217,4 @@ cargo test --features integration
 ## License
 
 MIT License - see LICENSE file for details.
+# WolfScale
