@@ -300,8 +300,11 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                         peer_addr.clone()
                     };
                     
-                    // Add leader to cluster if not present
+                    // Add leader to cluster if not present (also remove any synthetic peer with same address)
                     if incoming_cluster.get_node(&leader_id).await.is_none() {
+                        // Remove any existing synthetic peer with this address (e.g. "peer-10.0.10.112-7654")
+                        let synthetic_id = format!("peer-{}", leader_addr.replace(':', "-"));
+                        let _ = incoming_cluster.remove_peer(&synthetic_id).await;
                         let _ = incoming_cluster.add_peer(leader_id.clone(), leader_addr.clone()).await;
                     }
                     
@@ -339,6 +342,9 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                         };
                         
                         if incoming_cluster.get_node(&node_id).await.is_none() {
+                            // Remove any existing synthetic peer with this address
+                            let synthetic_id = format!("peer-{}", follower_addr.replace(':', "-"));
+                            let _ = incoming_cluster.remove_peer(&synthetic_id).await;
                             let _ = incoming_cluster.add_peer(node_id.clone(), follower_addr).await;
                         }
                         
