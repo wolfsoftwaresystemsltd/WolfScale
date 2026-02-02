@@ -249,11 +249,38 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     }
 
     // Initialize network
-    let (msg_tx, _msg_rx) = tokio::sync::mpsc::channel(10000);
+    let (msg_tx, mut msg_rx) = tokio::sync::mpsc::channel(10000);
     let network_server = NetworkServer::new(
         config.node.bind_address.clone(),
         msg_tx.clone(),
     );
+
+    // Create network client for outbound messages
+    let network_client = Arc::new(NetworkClient::new(
+        Duration::from_secs(5),   // connect timeout
+        Duration::from_secs(10),  // request timeout
+    ));
+
+    // Start message delivery loop - delivers queued messages to peers
+    let delivery_cluster = Arc::clone(&cluster);
+    let delivery_client = Arc::clone(&network_client);
+    tokio::spawn(async move {
+        tracing::info!("Message delivery loop started");
+        while let Some((target_node_id, message)) = msg_rx.recv().await {
+            // Look up the target node's address
+            if let Some(node) = delivery_cluster.get_node(&target_node_id).await {
+                let addr = &node.address;
+                tracing::debug!("Delivering {} to {} at {}", message.type_name(), target_node_id, addr);
+                
+                if let Err(e) = delivery_client.send_async(addr, message).await {
+                    tracing::warn!("Failed to deliver message to {}: {}", target_node_id, e);
+                }
+            } else {
+                tracing::warn!("Cannot deliver message: unknown node {}", target_node_id);
+            }
+        }
+        tracing::info!("Message delivery loop stopped");
+    });
 
     // Initialize HTTP API
     let http_server = HttpServer::new(
