@@ -94,6 +94,17 @@ echo ""
 # (Needed because stdin is consumed when script is piped via curl)
 sudo ./install_service.sh < /dev/tty
 
+# Install wolfctl CLI tool to /usr/local/bin
+echo ""
+echo "Installing wolfctl CLI tool..."
+if [ -f "$INSTALL_DIR/target/release/wolfctl" ]; then
+    sudo cp "$INSTALL_DIR/target/release/wolfctl" /usr/local/bin/wolfctl
+    sudo chmod +x /usr/local/bin/wolfctl
+    echo "✓ wolfctl installed to /usr/local/bin/wolfctl"
+else
+    echo "⚠ wolfctl binary not found (may not have been built)"
+fi
+
 echo ""
 echo "╔══════════════════════════════════════════════════════════════╗"
 echo "║                Installation Complete!                        ║"
@@ -101,4 +112,5 @@ echo "╠═══════════════════════�
 echo "║  Connect:  mariadb -h 127.0.0.1 -P 8007 -u USER -p          ║"
 echo "║  Status:   sudo systemctl status wolfscale                   ║"
 echo "║  Logs:     sudo journalctl -u wolfscale -f                   ║"
+echo "║  Cluster:  wolfctl list servers                              ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
