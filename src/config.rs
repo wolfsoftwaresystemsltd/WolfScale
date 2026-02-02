@@ -45,6 +45,7 @@ pub struct NodeConfig {
     pub bind_address: String,
 
     /// Data directory for WAL and state storage
+    #[serde(default = "default_data_dir")]
     pub data_dir: PathBuf,
 
     /// Advertised address for other nodes to connect
@@ -259,6 +260,10 @@ fn default_log_format() -> String {
 
 fn default_proxy_address() -> String {
     "0.0.0.0:3307".to_string()
+}
+
+fn default_data_dir() -> PathBuf {
+    PathBuf::from("/var/lib/wolfscale")
 }
 
 impl Default for ApiConfig {
