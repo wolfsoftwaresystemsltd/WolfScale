@@ -14,6 +14,8 @@
 
 ---
 
+> ⚠️ **Work in Progress** — This project is currently under active development and testing. APIs and features may change. Use in production at your own risk.
+
 WolfScale keeps multiple MariaDB databases in sync using a Write-Ahead Log (WAL) with automatic leader election and failover. Perfect for distributed applications that need strong consistency across database replicas.
 
 ## Features
@@ -48,8 +50,7 @@ cargo build --release
 ### Install as Service
 
 ```bash
-sudo ./install_service.sh node    # Install as cluster node
-sudo ./install_service.sh proxy   # Install as MySQL proxy
+sudo ./install_service.sh
 ```
 
 The installer will prompt for configuration if none exists.
@@ -100,7 +101,6 @@ bind_address = "0.0.0.0:7400"
 [database]
 host = "127.0.0.1"
 port = 3306
-database = "myapp"
 user = "wolfscale"
 password = "secret"
 

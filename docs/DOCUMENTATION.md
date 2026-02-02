@@ -308,31 +308,41 @@ Client -> Follower -> Leader -> Replication -> Response
 
 ### 7. MySQL Proxy Mode
 
-WolfScale can run as a **MySQL protocol proxy**, allowing applications to connect as if it were a regular MariaDB server:
+Every WolfScale node includes a **built-in MySQL protocol proxy**, allowing applications to connect as if it were a regular MariaDB server:
 
 ```
-mysql -h proxy-host -P 3307 -u user -p
+mysql -h any-node -P 3307 -u user -p
 ```
 
 **How it works:**
-1. Application connects to the proxy on port 3307
+1. Application connects to any node on port 3307
 2. Proxy accepts the connection using MySQL wire protocol
 3. For writes (INSERT/UPDATE/DELETE), proxy routes to the cluster leader
 4. For reads (SELECT), proxy executes on local backend
 5. SQL errors are returned back to client in MySQL format
 
-**Starting the proxy:**
+**Configuration:**
 
-```bash
-wolfscale proxy --listen 0.0.0.0:3307 --config wolfscale.toml
+```toml
+[proxy]
+enabled = true                     # Enabled by default
+bind_address = "0.0.0.0:3307"      # MySQL proxy port
 ```
 
 **Benefits:**
+- Every node is a MySQL entry point - no separate proxy service needed
 - Applications need no code changes
 - Works with any MySQL client/library
 - Transparent write routing to leader
 - SQL errors passed through unchanged
-- Can run on separate load balancer server
+
+**Standalone proxy (optional):**
+
+You can also run a dedicated proxy on a separate machine:
+
+```bash
+wolfscale proxy --listen 0.0.0.0:3307 --config wolfscale.toml
+```
 
 ---
 
@@ -370,6 +380,10 @@ election_timeout_ms = 2000         # Leader election timeout
 [api]
 enabled = true
 bind_address = "0.0.0.0:8080"      # HTTP API port
+
+[proxy]
+enabled = true                     # Built-in MySQL proxy (default: true)
+bind_address = "0.0.0.0:3307"      # MySQL proxy port
 ```
 
 ---

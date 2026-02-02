@@ -92,7 +92,11 @@ else
     echo ""
     echo "Database Configuration"
     echo "======================"
-    
+    echo ""
+    echo "WolfScale connects to the local MariaDB server and replicates ALL"
+    echo "operations to other nodes. Enter the connection details below."
+    echo "(The database name is just for the connection - all databases are synced)"
+    echo ""
     # Database host
     read -p "MariaDB host [127.0.0.1]: " DB_HOST
     DB_HOST="${DB_HOST:-127.0.0.1}"
@@ -100,10 +104,6 @@ else
     # Database port
     read -p "MariaDB port [3306]: " DB_PORT
     DB_PORT="${DB_PORT:-3306}"
-    
-    # Database name
-    read -p "Database name [wolfscale]: " DB_NAME
-    DB_NAME="${DB_NAME:-wolfscale}"
     
     # Database user
     read -p "Database user [wolfscale]: " DB_USER
@@ -117,6 +117,10 @@ else
     read -p "HTTP API port [8080]: " API_PORT
     API_PORT="${API_PORT:-8080}"
     
+    # Proxy port
+    read -p "MySQL proxy port [3307]: " PROXY_PORT
+    PROXY_PORT="${PROXY_PORT:-3307}"
+    
     # Generate config file
     cat > "$CONFIG" << EOF
 # WolfScale Configuration
@@ -125,11 +129,11 @@ else
 [node]
 id = "$NODE_ID"
 bind_address = "$BIND_ADDR"
+data_dir = "/var/lib/wolfscale/$NODE_ID"
 
 [database]
 host = "$DB_HOST"
 port = $DB_PORT
-database = "$DB_NAME"
 user = "$DB_USER"
 password = "$DB_PASS"
 pool_size = 10
@@ -149,6 +153,10 @@ disable_auto_election = false
 [api]
 enabled = true
 bind_address = "0.0.0.0:$API_PORT"
+
+[proxy]
+enabled = true
+bind_address = "0.0.0.0:$PROXY_PORT"
 EOF
 
     echo ""
@@ -167,15 +175,10 @@ if [[ "$IS_BOOTSTRAP" == "y" || "$IS_BOOTSTRAP" == "Y" ]]; then
 fi
 
 # Create systemd service
-if [ "$SERVICE_TYPE" = "proxy" ]; then
-    SERVICE_NAME="wolfscale-proxy"
-    EXEC_START="$INSTALL_DIR/wolfscale --config $CONFIG proxy --listen 0.0.0.0:3307"
-    DESCRIPTION="WolfScale MySQL Proxy"
-else
-    SERVICE_NAME="wolfscale"
-    EXEC_START="$INSTALL_DIR/wolfscale --config $CONFIG start $BOOTSTRAP_FLAG"
-    DESCRIPTION="WolfScale Distributed Database Manager"
-fi
+# Note: Proxy is now built-in to the node, no separate service needed
+SERVICE_NAME="wolfscale"
+EXEC_START="$INSTALL_DIR/wolfscale --config $CONFIG start $BOOTSTRAP_FLAG"
+DESCRIPTION="WolfScale Distributed Database Manager"
 
 cat > "/etc/systemd/system/${SERVICE_NAME}.service" << EOF
 [Unit]

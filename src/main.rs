@@ -207,6 +207,25 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
         Arc::clone(&cluster),
     );
 
+    // Start built-in MySQL proxy if enabled
+    if config.proxy.enabled {
+        let proxy_config = ProxyConfig {
+            listen_address: config.proxy.bind_address.clone(),
+            backend_host: config.database.host.clone(),
+            backend_port: config.database.port,
+            backend_user: config.database.user.clone(),
+            backend_password: config.database.password.clone(),
+        };
+        let proxy_cluster = Arc::clone(&cluster);
+        let proxy = ProxyServer::new(proxy_config, proxy_cluster);
+        tracing::info!("MySQL proxy listening on {}", config.proxy.bind_address);
+        tokio::spawn(async move {
+            if let Err(e) = proxy.start().await {
+                tracing::error!("Proxy error: {}", e);
+            }
+        });
+    }
+
     // Determine role
     let is_leader = bootstrap || config.cluster.peers.is_empty();
 
@@ -492,6 +511,10 @@ cors_enabled = false
 level = "info"
 format = "pretty"
 # file = "/var/log/wolfscale/wolfscale.log"
+
+[proxy]
+enabled = true
+bind_address = "0.0.0.0:3307"
 "#);
 
     std::fs::write(&output, config_content)?;

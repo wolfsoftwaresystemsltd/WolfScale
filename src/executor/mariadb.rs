@@ -21,14 +21,23 @@ pub struct MariaDbExecutor {
 impl MariaDbExecutor {
     /// Create a new executor with a connection pool
     pub async fn new(config: &DatabaseConfig) -> Result<Self> {
-        let url = format!(
-            "mysql://{}:{}@{}:{}/{}",
-            config.user,
-            config.password,
-            config.host,
-            config.port,
-            config.database
-        );
+        let url = match &config.database {
+            Some(db) => format!(
+                "mysql://{}:{}@{}:{}/{}",
+                config.user,
+                config.password,
+                config.host,
+                config.port,
+                db
+            ),
+            None => format!(
+                "mysql://{}:{}@{}:{}",
+                config.user,
+                config.password,
+                config.host,
+                config.port
+            ),
+        };
 
         let pool = MySqlPoolOptions::new()
             .max_connections(config.pool_size)

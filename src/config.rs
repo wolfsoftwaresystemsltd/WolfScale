@@ -29,6 +29,10 @@ pub struct WolfScaleConfig {
     /// Logging configuration
     #[serde(default)]
     pub logging: LoggingConfig,
+
+    /// MySQL proxy configuration
+    #[serde(default)]
+    pub proxy: ProxyConfig,
 }
 
 /// Node-specific configuration
@@ -64,8 +68,9 @@ pub struct DatabaseConfig {
     /// Database password
     pub password: String,
 
-    /// Database name
-    pub database: String,
+    /// Database name (optional - leave empty for server-wide replication)
+    #[serde(default)]
+    pub database: Option<String>,
 
     /// Connection pool size
     #[serde(default = "default_pool_size")]
@@ -171,6 +176,18 @@ pub struct LoggingConfig {
     pub file: Option<PathBuf>,
 }
 
+/// MySQL proxy configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProxyConfig {
+    /// Enable built-in MySQL proxy
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+
+    /// MySQL proxy bind address
+    #[serde(default = "default_proxy_address")]
+    pub bind_address: String,
+}
+
 // Default value functions
 fn default_db_port() -> u16 {
     3306
@@ -240,6 +257,10 @@ fn default_log_format() -> String {
     "pretty".to_string()
 }
 
+fn default_proxy_address() -> String {
+    "0.0.0.0:3307".to_string()
+}
+
 impl Default for ApiConfig {
     fn default() -> Self {
         Self {
@@ -256,6 +277,15 @@ impl Default for LoggingConfig {
             level: default_log_level(),
             format: default_log_format(),
             file: None,
+        }
+    }
+}
+
+impl Default for ProxyConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            bind_address: default_proxy_address(),
         }
     }
 }
@@ -288,10 +318,6 @@ impl WolfScaleConfig {
 
         if self.database.host.is_empty() {
             return Err(crate::Error::Config("database.host cannot be empty".into()));
-        }
-
-        if self.database.database.is_empty() {
-            return Err(crate::Error::Config("database.database cannot be empty".into()));
         }
 
         Ok(())
@@ -347,14 +373,23 @@ impl WolfScaleConfig {
 
     /// Get database connection URL
     pub fn database_url(&self) -> String {
-        format!(
-            "mysql://{}:{}@{}:{}/{}",
-            self.database.user,
-            self.database.password,
-            self.database.host,
-            self.database.port,
-            self.database.database
-        )
+        match &self.database.database {
+            Some(db) => format!(
+                "mysql://{}:{}@{}:{}/{}",
+                self.database.user,
+                self.database.password,
+                self.database.host,
+                self.database.port,
+                db
+            ),
+            None => format!(
+                "mysql://{}:{}@{}:{}",
+                self.database.user,
+                self.database.password,
+                self.database.host,
+                self.database.port
+            ),
+        }
     }
 }
 
