@@ -281,13 +281,15 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
 
     // Start INCOMING message processing loop - handles messages from peers
     let incoming_cluster = Arc::clone(&cluster);
+    let response_tx = outgoing_tx.clone();  // Use outgoing channel to send responses
+    let our_node_id = config.node.id.clone();
     tokio::spawn(async move {
         tracing::info!("Incoming message processing loop started");
         while let Some((peer_addr, message)) = incoming_rx.recv().await {
             tracing::debug!("Received {} from {}", message.type_name(), peer_addr);
             
             match message {
-                wolfscale::replication::Message::Heartbeat { leader_id, commit_lsn, .. } => {
+                wolfscale::replication::Message::Heartbeat { leader_id, commit_lsn, term } => {
                     // Update cluster: mark sender as leader
                     if let Err(e) = incoming_cluster.set_leader(&leader_id).await {
                         tracing::warn!("Failed to set leader from heartbeat: {}", e);
@@ -295,6 +297,18 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                     // Record the heartbeat
                     let _ = incoming_cluster.record_heartbeat(&leader_id, commit_lsn).await;
                     tracing::debug!("Heartbeat from leader {}", leader_id);
+                    
+                    // Send HeartbeatResponse back to the leader
+                    if let Some(leader_node) = incoming_cluster.get_node(&leader_id).await {
+                        let response = wolfscale::replication::Message::HeartbeatResponse {
+                            node_id: our_node_id.clone(),
+                            term,
+                            last_applied_lsn: 0, // TODO: get actual LSN
+                            success: true,
+                        };
+                        let _ = response_tx.send((leader_node.address.clone(), response)).await;
+                        tracing::debug!("Sent HeartbeatResponse to leader at {}", leader_node.address);
+                    }
                 }
                 wolfscale::replication::Message::AppendEntries { leader_id, entries, .. } => {
                     tracing::debug!("Received {} entries from leader {}", entries.len(), leader_id);
@@ -302,6 +316,13 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                 }
                 wolfscale::replication::Message::RequestVote { candidate_id, .. } => {
                     tracing::info!("Vote request from {}", candidate_id);
+                }
+                wolfscale::replication::Message::HeartbeatResponse { node_id, success, last_applied_lsn, .. } => {
+                    // Leader receives response from follower - mark follower as active
+                    if success {
+                        let _ = incoming_cluster.record_heartbeat(&node_id, last_applied_lsn).await;
+                        tracing::debug!("HeartbeatResponse from {} (active)", node_id);
+                    }
                 }
                 _ => {
                     tracing::trace!("Ignoring message type {} from {}", message.type_name(), peer_addr);
