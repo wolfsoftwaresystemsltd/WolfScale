@@ -209,7 +209,7 @@ async fn handle_connection(
     // Phase 4: Main command loop with smart routing
     let mut cmd_buf = vec![0u8; 16 * 1024 * 1024]; // 16MB max packet
     let mut result_buf = vec![0u8; 16 * 1024 * 1024];
-    let mut current_backend_addr = initial_backend_addr;
+    let current_backend_addr = initial_backend_addr;
     
     loop {
         // Read command from client
@@ -278,26 +278,12 @@ async fn handle_connection(
             }
         }
 
-        // Get the appropriate backend address
+        // Log routing decision (but don't switch backends mid-session)
+        // Switching backends would break MySQL protocol - new connection gets handshake, not query results
+        // Replication happens via WAL, not by forwarding queries
         let target_addr = get_backend_address(&config, &cluster, is_write).await;
-        
-        // If backend changed, reconnect to the target
         if target_addr != current_backend_addr {
-            tracing::info!("Switching backend from {} to {}", current_backend_addr, target_addr);
-            
-            // Reconnect to the new backend
-            match TcpStream::connect(&target_addr).await {
-                Ok(new_backend) => {
-                    backend = new_backend;
-                    current_backend_addr = target_addr;
-                    tracing::debug!("Connected to new backend {}", current_backend_addr);
-                }
-                Err(e) => {
-                    tracing::warn!("Failed to connect to {}, staying with {}: {}", 
-                        target_addr, current_backend_addr, e);
-                    // Stay with current backend
-                }
-            }
+            tracing::debug!("Would route to {} (keeping session on {})", target_addr, current_backend_addr);
         }
 
         // Forward command to backend
