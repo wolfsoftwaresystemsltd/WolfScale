@@ -256,6 +256,14 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
         Arc::clone(&cluster),
     );
 
+    // Determine role BEFORE starting proxy - leader if bootstrap CLI flag, config bootstrap, or no peers
+    let is_leader = bootstrap || config.cluster.bootstrap || config.cluster.peers.is_empty();
+    
+    if is_leader {
+        tracing::info!("This node will start as LEADER");
+        cluster.set_leader(&config.node.id).await?;
+    }
+
     // Start built-in MySQL proxy if enabled
     if config.proxy.enabled {
         let proxy_config = ProxyConfig {
@@ -276,12 +284,9 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
         });
     }
 
-    // Determine role - leader if bootstrap CLI flag, config bootstrap, or no peers
-    let is_leader = bootstrap || config.cluster.bootstrap || config.cluster.peers.is_empty();
 
     if is_leader {
-        tracing::info!("Starting as LEADER");
-        cluster.set_leader(&config.node.id).await?;
+        tracing::info!("Starting LEADER components");
 
         let leader = LeaderNode::new(
             config.node.id.clone(),

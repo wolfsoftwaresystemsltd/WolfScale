@@ -238,17 +238,14 @@ async fn handle_connection(
         };
 
         // If this is a write query and we have a WAL writer, log it for replication
-        // BUT only if we are the leader - followers should forward to the leader
+        // Only log if we are the leader - followers route to leader's proxy
         if is_write {
             if let Some(ref query) = query_opt {
                 tracing::info!("WRITE query: {}", query.chars().take(100).collect::<String>());
                 
-                // Check if we are the leader
+                // Check if we are the leader - only leader writes to WAL
                 let self_node = cluster.get_self().await;
-                let is_leader = self_node.role == NodeRole::Leader;
-                
-                if is_leader {
-                    // We are the leader - write to WAL for replication
+                if self_node.role == NodeRole::Leader {
                     if let Some(ref wal) = wal_writer {
                         let table_name = extract_table_name(query);
                         let entry = LogEntry::RawSql {
@@ -265,15 +262,6 @@ async fn handle_connection(
                             }
                         }
                     }
-                } else {
-                    // We are a follower - the write goes to our local backend
-                    // which is connected to the same MariaDB. The leader's proxy
-                    // will handle WAL logging when replicating from MariaDB binlog.
-                    // 
-                    // Note: For full write forwarding, we'd need to connect to the
-                    // leader's proxy port instead. For now, writes to followers
-                    // execute locally and will be replicated via MariaDB replication.
-                    tracing::debug!("Follower received write - executing locally (will sync via replication)");
                 }
             }
         }
