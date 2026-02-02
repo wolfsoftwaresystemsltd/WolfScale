@@ -648,6 +648,69 @@ curl http://localhost:8080/cluster   # Cluster info
 
 ---
 
+## WolfCtl CLI Tool
+
+`wolfctl` is a command-line tool for managing and monitoring WolfScale clusters.
+
+### Installation
+
+The `wolfctl` binary is automatically installed to `/usr/local/bin` when using the setup script. For manual installations:
+
+```bash
+sudo cp target/release/wolfctl /usr/local/bin/
+```
+
+### Commands
+
+#### List Cluster Servers
+
+```bash
+wolfctl list servers
+```
+
+Shows status of all nodes in the cluster:
+- Node ID and address
+- Status (Active, Joining, Lagging, Offline)
+- Role (Leader or Follower)
+- LSN and replication lag
+
+#### Show Node Status
+
+```bash
+wolfctl status
+```
+
+Shows status of the local node.
+
+#### Promote/Demote
+
+```bash
+wolfctl promote    # Request leader promotion
+wolfctl demote     # Step down from leadership
+```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-c, --config <PATH>` | Path to config file (default: `/etc/wolfscale/config.toml`) |
+| `-e, --endpoint <URL>` | API endpoint to connect to (overrides config) |
+
+### Examples
+
+```bash
+# Check cluster status from any node
+wolfctl list servers
+
+# Connect to a specific node's API
+wolfctl -e http://192.168.1.10:8080 list servers
+
+# Quick health check
+wolfctl status
+```
+
+---
+
 ## Requirements
 
 - **Rust**: 1.70+
