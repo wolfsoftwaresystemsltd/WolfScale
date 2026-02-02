@@ -169,7 +169,7 @@ pub fn build_error_packet(sequence_id: u8, error_code: u16, sql_state: &str, mes
 pub fn build_handshake_packet(server_version: &str) -> MySqlPacket {
     let mut payload = Vec::new();
     
-    // Protocol version
+    // Protocol version (10 = current)
     payload.push(10);
     
     // Server version (null-terminated)
@@ -179,39 +179,41 @@ pub fn build_handshake_packet(server_version: &str) -> MySqlPacket {
     // Connection ID (4 bytes)
     payload.extend_from_slice(&[1, 0, 0, 0]);
     
-    // Auth plugin data part 1 (8 bytes)
+    // Auth plugin data part 1 (8 bytes) - scramble first part
     payload.extend_from_slice(b"12345678");
     
     // Filler
     payload.push(0);
     
-    // Capability flags lower 2 bytes
-    let capabilities: u32 = 0x0000_a20f; // Basic capabilities
-    payload.push((capabilities & 0xff) as u8);
-    payload.push(((capabilities >> 8) & 0xff) as u8);
+    // Capability flags (must include CLIENT_SECURE_CONNECTION=0x8000, CLIENT_PROTOCOL_41=0x200)
+    // Lower 2 bytes: 0xF7DF (basic + secure connection + protocol 41 + transactions + interactive)
+    let cap_lower: u16 = 0xF7DF;
+    payload.push((cap_lower & 0xff) as u8);
+    payload.push(((cap_lower >> 8) & 0xff) as u8);
     
-    // Character set (utf8mb4)
-    payload.push(45);
+    // Character set (utf8mb4 = 45, or utf8 = 33)
+    payload.push(33);
     
-    // Status flags
+    // Status flags (SERVER_STATUS_AUTOCOMMIT)
     payload.push(0x02);
     payload.push(0x00);
     
-    // Capability flags upper 2 bytes
-    payload.push(((capabilities >> 16) & 0xff) as u8);
-    payload.push(((capabilities >> 24) & 0xff) as u8);
+    // Capability flags upper 2 bytes: 0x0081 (CLIENT_PLUGIN_AUTH + CLIENT_CONNECT_WITH_DB)
+    let cap_upper: u16 = 0x8081;
+    payload.push((cap_upper & 0xff) as u8);
+    payload.push(((cap_upper >> 8) & 0xff) as u8);
     
-    // Auth plugin data length (or 0)
+    // Auth plugin data length (21 = 8 + 13 with null terminator)
     payload.push(21);
     
-    // Reserved (10 bytes)
+    // Reserved (10 bytes of zeros)
     payload.extend_from_slice(&[0u8; 10]);
     
-    // Auth plugin data part 2 (12 bytes + null)
-    payload.extend_from_slice(b"123456789012");
+    // Auth plugin data part 2 (12 bytes + null = 13 bytes)
+    payload.extend_from_slice(b"123456789abc");
     payload.push(0);
     
-    // Auth plugin name
+    // Auth plugin name (null-terminated)
     payload.extend_from_slice(b"mysql_native_password");
     payload.push(0);
     
