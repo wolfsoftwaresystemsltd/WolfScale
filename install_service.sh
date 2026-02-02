@@ -28,6 +28,12 @@ fi
 
 echo "Installing WolfScale as systemd service ($SERVICE_TYPE mode)..."
 
+# Stop existing service if running (for upgrades)
+if systemctl is-active --quiet wolfscale 2>/dev/null; then
+    echo "Stopping existing WolfScale service..."
+    systemctl stop wolfscale
+fi
+
 # Create user if doesn't exist
 if ! id "$USER" &>/dev/null; then
     useradd --system --no-create-home --shell /bin/false "$USER"
