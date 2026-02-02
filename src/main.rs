@@ -250,7 +250,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
 
     // Initialize network - separate channels for incoming and outgoing messages
     // Outgoing: used by leader to queue messages to send to peers
-    let (outgoing_tx, mut outgoing_rx) = tokio::sync::mpsc::channel::<(String, crate::replication::Message)>(10000);
+    let (outgoing_tx, mut outgoing_rx) = tokio::sync::mpsc::channel::<(String, wolfscale::replication::Message)>(10000);
     // Incoming: used by network server to receive messages from peers
     let (incoming_tx, mut incoming_rx) = tokio::sync::mpsc::channel(10000);
     
