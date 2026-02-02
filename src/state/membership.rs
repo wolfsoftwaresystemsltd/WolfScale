@@ -202,11 +202,23 @@ impl ClusterMembership {
             node.touch();
             node.last_applied_lsn = lsn;
             
-            // Update status based on replication lag
-            if node.status == NodeStatus::Syncing && node.replication_lag == 0 {
-                node.status = NodeStatus::Active;
-            } else if node.status == NodeStatus::Lagging {
-                node.status = NodeStatus::Syncing;
+            // Update status based on current state
+            match node.status {
+                NodeStatus::Joining => {
+                    // Node has responded - it's now active
+                    node.status = NodeStatus::Active;
+                }
+                NodeStatus::Syncing if node.replication_lag == 0 => {
+                    node.status = NodeStatus::Active;
+                }
+                NodeStatus::Lagging => {
+                    node.status = NodeStatus::Syncing;
+                }
+                NodeStatus::Offline => {
+                    // Node came back online
+                    node.status = NodeStatus::Active;
+                }
+                _ => {}
             }
         }
         Ok(())
