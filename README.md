@@ -135,6 +135,34 @@ bind_address = "0.0.0.0:8080"
 
 See [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md) for full documentation.
 
+---
+
 ## 📄 License
 
 MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+## 💬 Support
+
+<table>
+<tr>
+<td>
+
+**🌐 Website:** [wolf.uk.com](https://wolf.uk.com)
+
+**🐛 Issues:** [GitHub Issues](https://github.com/wolfsoftwaresystemsltd/wolfscale/issues)
+
+**☕ Support Us:** [Patreon](https://www.patreon.com/wolfsoftwaresystems)
+
+</td>
+</tr>
+</table>
+
+---
+
+<div align="center">
+
+**© Wolf Software Systems Ltd** — [wolf.uk.com](https://wolf.uk.com)
+
+</div>
