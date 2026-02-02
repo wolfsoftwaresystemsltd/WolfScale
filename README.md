@@ -6,6 +6,9 @@
 
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Patreon](https://img.shields.io/badge/Patreon-Support%20Us-orange.svg)](https://www.patreon.com/wolfsoftwaresystems)
+
+**© Wolf Software Systems Ltd** — [wolf.uk.com](https://wolf.uk.com)
 
 </div>
 
@@ -13,7 +16,7 @@
 
 WolfScale keeps multiple MariaDB databases in sync using a Write-Ahead Log (WAL) with automatic leader election and failover. Perfect for distributed applications that need strong consistency across database replicas.
 
-## ✨ Features
+## Features
 
 - **Write-Ahead Log (WAL)** — Durable logging with optional LZ4 compression
 - **Automatic Leader Election** — Raft-style elections with automatic failover
@@ -22,7 +25,7 @@ WolfScale keeps multiple MariaDB databases in sync using a Write-Ahead Log (WAL)
 - **HTTP API** — RESTful API for writes and cluster management
 - **Snowflake IDs** — Distributed unique ID generation
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Build
 
@@ -51,7 +54,7 @@ sudo ./install_service.sh proxy   # Install as MySQL proxy
 
 The installer will prompt for configuration if none exists.
 
-## 📖 Usage
+## Usage
 
 ### CLI Commands
 
@@ -85,7 +88,7 @@ curl -X POST http://localhost:8080/write/insert \
 curl http://localhost:8080/status
 ```
 
-## ⚙️ Configuration
+## Configuration
 
 Create `wolfscale.toml`:
 
@@ -110,7 +113,7 @@ election_timeout_ms = 2000
 bind_address = "0.0.0.0:8080"
 ```
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -131,38 +134,20 @@ bind_address = "0.0.0.0:8080"
    └─────────┘      └─────────┘      └─────────┘
 ```
 
-## 📚 Documentation
+## Documentation
 
 See [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md) for full documentation.
 
 ---
 
-## 📄 License
+## License
 
 MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-## 💬 Support
+## Support
 
-<table>
-<tr>
-<td>
-
-**🌐 Website:** [wolf.uk.com](https://wolf.uk.com)
-
-**🐛 Issues:** [GitHub Issues](https://github.com/wolfsoftwaresystemsltd/wolfscale/issues)
-
-**☕ Support Us:** [Patreon](https://www.patreon.com/wolfsoftwaresystems)
-
-</td>
-</tr>
-</table>
-
----
-
-<div align="center">
-
-**© Wolf Software Systems Ltd** — [wolf.uk.com](https://wolf.uk.com)
-
-</div>
+- **Website:** [wolf.uk.com](https://wolf.uk.com)
+- **Issues:** [GitHub Issues](https://github.com/wolfsoftwaresystemsltd/WolfScale/issues)
+- **Support Us:** [Patreon](https://www.patreon.com/wolfsoftwaresystems)
