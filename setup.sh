@@ -90,7 +90,9 @@ echo "Build complete! Starting service installer..."
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 
-sudo ./install_service.sh
+# Run installer with TTY for interactive input
+# (Needed because stdin is consumed when script is piped via curl)
+sudo ./install_service.sh < /dev/tty
 
 echo ""
 echo "╔══════════════════════════════════════════════════════════════╗"

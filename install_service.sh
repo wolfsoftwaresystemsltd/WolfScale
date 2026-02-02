@@ -210,20 +210,37 @@ EOF
 # Reload systemd
 systemctl daemon-reload
 
-echo ""
-echo "=============================================="
-echo "WolfScale installed successfully!"
-echo "=============================================="
+# Enable and start the service
+echo "Enabling and starting service..."
+systemctl enable "$SERVICE_NAME"
+systemctl start "$SERVICE_NAME"
+
+# Wait a moment for startup
+sleep 2
+
+# Check if service started successfully
+if systemctl is-active --quiet "$SERVICE_NAME"; then
+    echo ""
+    echo "=============================================="
+    echo "WolfScale installed and running!"
+    echo "=============================================="
+else
+    echo ""
+    echo "=============================================="
+    echo "WolfScale installed (service may need attention)"
+    echo "=============================================="
+    echo ""
+    echo "Check logs: sudo journalctl -u $SERVICE_NAME -n 50"
+fi
+
 echo ""
 echo "Configuration: $CONFIG"
 echo "Data directory: /var/lib/wolfscale"
 echo "Logs: /var/log/wolfscale/"
 echo ""
 echo "Commands:"
-echo "  sudo systemctl start $SERVICE_NAME     # Start service"
-echo "  sudo systemctl stop $SERVICE_NAME      # Stop service"
-echo "  sudo systemctl enable $SERVICE_NAME    # Start on boot"
 echo "  sudo systemctl status $SERVICE_NAME    # Check status"
+echo "  sudo systemctl restart $SERVICE_NAME   # Restart service"
 echo "  sudo journalctl -u $SERVICE_NAME -f    # View logs"
 echo ""
 echo "To edit configuration:"
