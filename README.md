@@ -37,6 +37,11 @@ Run this on any Ubuntu/Debian or Fedora/RHEL server:
 curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/setup.sh | bash
 ```
 
+Or with wget:
+```bash
+wget -qO- https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/setup.sh | bash
+```
+
 This automatically:
 - Detects your distro (apt or dnf)
 - Installs all dependencies (git, build tools, OpenSSL)
