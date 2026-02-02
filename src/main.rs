@@ -214,8 +214,14 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
         config.election_timeout(),
     ));
 
-    // Add configured peers
+    // Add configured peers (automatically filter out our own address)
+    let own_address = config.advertise_address();
     for peer in &config.cluster.peers {
+        // Skip if this peer is ourselves
+        if peer == own_address {
+            tracing::debug!("Skipping peer {} (that's us)", peer);
+            continue;
+        }
         let peer_id = format!("peer-{}", peer.replace(':', "-"));
         cluster.add_peer(peer_id, peer.clone()).await?;
     }
