@@ -266,21 +266,14 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     ));
 
     // Start OUTGOING message delivery loop - sends queued messages to peers
-    let delivery_cluster = Arc::clone(&cluster);
     let delivery_client = Arc::clone(&network_client);
     tokio::spawn(async move {
         tracing::info!("Outgoing message delivery loop started");
-        while let Some((target_node_id, message)) = outgoing_rx.recv().await {
-            // Look up the target node's address
-            if let Some(node) = delivery_cluster.get_node(&target_node_id).await {
-                let addr = &node.address;
-                tracing::debug!("Delivering {} to {} at {}", message.type_name(), target_node_id, addr);
-                
-                if let Err(e) = delivery_client.send_async(addr, message).await {
-                    tracing::warn!("Failed to deliver message to {}: {}", target_node_id, e);
-                }
-            } else {
-                tracing::warn!("Cannot deliver message: unknown node {}", target_node_id);
+        while let Some((target_address, message)) = outgoing_rx.recv().await {
+            tracing::debug!("Delivering {} to {}", message.type_name(), target_address);
+            
+            if let Err(e) = delivery_client.send_async(&target_address, message).await {
+                tracing::warn!("Failed to deliver message to {}: {}", target_address, e);
             }
         }
         tracing::info!("Outgoing message delivery loop stopped");

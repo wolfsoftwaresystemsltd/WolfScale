@@ -199,7 +199,8 @@ impl LeaderNode {
         let peers = self.cluster.peers().await;
         for peer in peers {
             if peer.status != NodeStatus::Dropped {
-                let _ = self.message_tx.send((peer.id.clone(), msg.clone())).await;
+                // Send address directly so delivery loop doesn't need to look up
+                let _ = self.message_tx.send((peer.address.clone(), msg.clone())).await;
             }
         }
 
@@ -252,7 +253,7 @@ impl LeaderNode {
                 leader_commit_lsn: commit_lsn,
             };
 
-            let _ = self.message_tx.send((peer.id.clone(), msg)).await;
+            let _ = self.message_tx.send((peer.address.clone(), msg)).await;
         }
 
         Ok(())
