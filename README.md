@@ -27,41 +27,47 @@ WolfScale keeps multiple MariaDB databases in sync using a Write-Ahead Log (WAL)
 - **HTTP API** — RESTful API for writes and cluster management
 - **Snowflake IDs** — Distributed unique ID generation
 
-## Installation (Fresh Server)
+## Installation
 
-### Prerequisites
+### Quick Install (Recommended)
+
+Run this on any Ubuntu/Debian or Fedora/RHEL server:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/setup.sh | bash
+```
+
+This automatically:
+- Detects your distro (apt or dnf)
+- Installs all dependencies (git, build tools, OpenSSL)
+- Installs Rust
+- Clones, builds, and installs WolfScale
+- Runs the interactive configuration wizard
+
+<details>
+<summary><strong>Manual Installation</strong></summary>
 
 ```bash
 # Install Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source ~/.cargo/env
 
-# Install build dependencies (Ubuntu/Debian)
-sudo apt update
-sudo apt install -y build-essential pkg-config libssl-dev
-```
+# Install dependencies (Ubuntu/Debian)
+sudo apt update && sudo apt install -y git build-essential pkg-config libssl-dev
 
-### Install WolfScale
+# Or for Fedora/RHEL:
+# sudo dnf install -y git gcc gcc-c++ make openssl-devel pkg-config
 
-```bash
-# Clone repository
+# Clone and build
 git clone https://github.com/wolfsoftwaresystemsltd/WolfScale.git
 cd WolfScale
-
-# Build release binary
 cargo build --release
 
-# Run interactive installer
+# Install as service
 sudo ./install_service.sh
 ```
 
-The installer prompts for:
-- **Node ID** — unique name for this server
-- **Bind address** — cluster communication (default: 0.0.0.0:7654)
-- **MariaDB** — host, port, user, password
-- **API port** — HTTP API (default: 8080)
-- **Proxy port** — MySQL proxy (default: 3307)
-- **Peers** — addresses of other cluster nodes
+</details>
 
 ### Connect
 

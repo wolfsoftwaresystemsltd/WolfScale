@@ -167,6 +167,7 @@ pub fn build_error_packet(sequence_id: u8, error_code: u16, sql_state: &str, mes
 
 /// Build initial handshake packet (server -> client)
 /// This implements MySQL Protocol v10 handshake
+#[allow(dead_code)]
 pub fn build_handshake_packet(server_version: &str) -> MySqlPacket {
     use std::time::{SystemTime, UNIX_EPOCH};
     
