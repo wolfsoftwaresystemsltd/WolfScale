@@ -270,10 +270,11 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     tokio::spawn(async move {
         tracing::info!("Outgoing message delivery loop started");
         while let Some((target_address, message)) = outgoing_rx.recv().await {
-            tracing::debug!("Delivering {} to {}", message.type_name(), target_address);
+            tracing::info!("SENDING {} to {}", message.type_name(), target_address);
             
-            if let Err(e) = delivery_client.send_async(&target_address, message).await {
-                tracing::warn!("Failed to deliver message to {}: {}", target_address, e);
+            match delivery_client.send_async(&target_address, message).await {
+                Ok(()) => tracing::info!("SENT successfully to {}", target_address),
+                Err(e) => tracing::error!("FAILED to deliver to {}: {}", target_address, e),
             }
         }
         tracing::info!("Outgoing message delivery loop stopped");
@@ -290,25 +291,35 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
             
             match message {
                 wolfscale::replication::Message::Heartbeat { leader_id, commit_lsn, term } => {
+                    // Register the leader node if we don't know it yet
+                    // The peer_addr is the connection source - extract the IP and use cluster port
+                    let leader_addr = if let Some(colon_idx) = peer_addr.rfind(':') {
+                        // Use the peer's IP with the standard cluster port
+                        format!("{}:7654", &peer_addr[..colon_idx])
+                    } else {
+                        peer_addr.clone()
+                    };
+                    
+                    // Add leader to cluster if not present
+                    if incoming_cluster.get_node(&leader_id).await.is_none() {
+                        let _ = incoming_cluster.add_peer(leader_id.clone(), leader_addr.clone()).await;
+                    }
+                    
                     // Update cluster: mark sender as leader
                     if let Err(e) = incoming_cluster.set_leader(&leader_id).await {
                         tracing::warn!("Failed to set leader from heartbeat: {}", e);
                     }
                     // Record the heartbeat
                     let _ = incoming_cluster.record_heartbeat(&leader_id, commit_lsn).await;
-                    tracing::debug!("Heartbeat from leader {}", leader_id);
                     
-                    // Send HeartbeatResponse back to the leader
-                    if let Some(leader_node) = incoming_cluster.get_node(&leader_id).await {
-                        let response = wolfscale::replication::Message::HeartbeatResponse {
-                            node_id: our_node_id.clone(),
-                            term,
-                            last_applied_lsn: 0, // TODO: get actual LSN
-                            success: true,
-                        };
-                        let _ = response_tx.send((leader_node.address.clone(), response)).await;
-                        tracing::debug!("Sent HeartbeatResponse to leader at {}", leader_node.address);
-                    }
+                    // Send HeartbeatResponse back to the leader using the extracted address
+                    let response = wolfscale::replication::Message::HeartbeatResponse {
+                        node_id: our_node_id.clone(),
+                        term,
+                        last_applied_lsn: 0,
+                        success: true,
+                    };
+                    let _ = response_tx.send((leader_addr, response)).await;
                 }
                 wolfscale::replication::Message::AppendEntries { leader_id, entries, .. } => {
                     tracing::debug!("Received {} entries from leader {}", entries.len(), leader_id);
@@ -320,8 +331,18 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                 wolfscale::replication::Message::HeartbeatResponse { node_id, success, last_applied_lsn, .. } => {
                     // Leader receives response from follower - mark follower as active
                     if success {
+                        // Register the follower if we don't know it yet
+                        let follower_addr = if let Some(colon_idx) = peer_addr.rfind(':') {
+                            format!("{}:7654", &peer_addr[..colon_idx])
+                        } else {
+                            peer_addr.clone()
+                        };
+                        
+                        if incoming_cluster.get_node(&node_id).await.is_none() {
+                            let _ = incoming_cluster.add_peer(node_id.clone(), follower_addr).await;
+                        }
+                        
                         let _ = incoming_cluster.record_heartbeat(&node_id, last_applied_lsn).await;
-                        tracing::debug!("HeartbeatResponse from {} (active)", node_id);
                     }
                 }
                 _ => {
