@@ -76,6 +76,13 @@ else
     read -p "Is this the FIRST node in the cluster? (y/n) [n]: " IS_BOOTSTRAP
     IS_BOOTSTRAP="${IS_BOOTSTRAP:-n}"
     
+    # Convert to boolean for config file
+    if [[ "$IS_BOOTSTRAP" == "y" || "$IS_BOOTSTRAP" == "Y" ]]; then
+        IS_BOOTSTRAP_BOOL="true"
+    else
+        IS_BOOTSTRAP_BOOL="false"
+    fi
+    
     # Peer addresses (if not bootstrap)
     PEERS=""
     if [[ "$IS_BOOTSTRAP" != "y" && "$IS_BOOTSTRAP" != "Y" ]]; then
@@ -124,8 +131,8 @@ else
     API_PORT="${API_PORT:-8080}"
     
     # Proxy port
-    read -p "MySQL proxy port [3307]: " PROXY_PORT
-    PROXY_PORT="${PROXY_PORT:-3307}"
+    read -p "MySQL proxy port [8007]: " PROXY_PORT
+    PROXY_PORT="${PROXY_PORT:-8007}"
     
     # Generate config file
     cat > "$CONFIG" << EOF
@@ -151,6 +158,7 @@ segment_size_mb = 64
 fsync = true
 
 [cluster]
+bootstrap = $IS_BOOTSTRAP_BOOL
 peers = [$PEERS]
 heartbeat_interval_ms = 500
 election_timeout_ms = 2000

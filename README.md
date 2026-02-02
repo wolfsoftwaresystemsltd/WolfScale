@@ -78,7 +78,7 @@ sudo ./install_service.sh
 
 ```bash
 # Via MySQL proxy (recommended)
-mariadb -h 127.0.0.1 -P 3307 -u your_user -p
+mariadb -h 127.0.0.1 -P 8007 -u your_user -p
 
 # Check status
 sudo systemctl status wolfscale
@@ -93,7 +93,7 @@ curl http://localhost:8080/health
 |---------|-------------|
 | `wolfscale start --bootstrap` | Start as initial leader |
 | `wolfscale start` | Start as follower |
-| `wolfscale proxy --listen 0.0.0.0:3307` | Start MySQL proxy |
+| `wolfscale proxy --listen 0.0.0.0:8007` | Start MySQL proxy |
 | `wolfscale status` | Check cluster status |
 | `wolfscale info` | Show node configuration |
 
@@ -102,7 +102,7 @@ curl http://localhost:8080/health
 Connect to WolfScale like a regular MySQL server:
 
 ```bash
-mysql -h wolfscale-host -P 3307 -u user -p
+mysql -h wolfscale-host -P 8007 -u user -p
 ```
 
 Writes are automatically routed to the leader. SQL errors pass through unchanged.

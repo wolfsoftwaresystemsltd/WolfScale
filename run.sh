@@ -34,7 +34,7 @@ case "$MODE" in
         ;;
     proxy)
         shift || true
-        LISTEN="${1:---listen 0.0.0.0:3307}"
+        LISTEN="${1:---listen 0.0.0.0:8007}"
         echo "Starting WolfScale MySQL Proxy..."
         "$BINARY" --config "$CONFIG" proxy $LISTEN
         ;;
@@ -49,7 +49,7 @@ case "$MODE" in
         echo ""
         echo "Modes:"
         echo "  start [--bootstrap]  Start as cluster node (use --bootstrap for first node)"
-        echo "  proxy [--listen ADDR] Start MySQL proxy (default: 0.0.0.0:3307)"
+        echo "  proxy [--listen ADDR] Start MySQL proxy (default: 0.0.0.0:8007)"
         echo "  status               Check cluster status"
         echo "  info                 Show node configuration"
         exit 1

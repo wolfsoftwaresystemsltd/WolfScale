@@ -113,6 +113,10 @@ pub struct WalConfig {
 /// Cluster configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClusterConfig {
+    /// Bootstrap this node as the initial leader (first node in cluster)
+    #[serde(default)]
+    pub bootstrap: bool,
+
     /// List of peer node addresses
     #[serde(default)]
     pub peers: Vec<String>,
@@ -259,7 +263,7 @@ fn default_log_format() -> String {
 }
 
 fn default_proxy_address() -> String {
-    "0.0.0.0:3307".to_string()
+    "0.0.0.0:8007".to_string()
 }
 
 fn default_data_dir() -> PathBuf {

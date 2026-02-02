@@ -86,7 +86,7 @@ enum Commands {
     /// Start MySQL protocol proxy
     Proxy {
         /// Address to listen on
-        #[arg(short, long, default_value = "0.0.0.0:3307")]
+        #[arg(short, long, default_value = "0.0.0.0:8007")]
         listen: String,
     },
 }
@@ -275,8 +275,8 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
         });
     }
 
-    // Determine role
-    let is_leader = bootstrap || config.cluster.peers.is_empty();
+    // Determine role - leader if bootstrap CLI flag, config bootstrap, or no peers
+    let is_leader = bootstrap || config.cluster.bootstrap || config.cluster.peers.is_empty();
 
     if is_leader {
         tracing::info!("Starting as LEADER");
@@ -563,7 +563,7 @@ format = "pretty"
 
 [proxy]
 enabled = true
-bind_address = "0.0.0.0:3307"
+bind_address = "0.0.0.0:8007"
 "#);
 
     std::fs::write(&output, config_content)?;
