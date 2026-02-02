@@ -58,29 +58,43 @@ struct ClusterInfoResponse {
 
 #[derive(Debug, Deserialize)]
 struct ClusterSummary {
+    #[serde(default)]
     total_nodes: usize,
+    #[serde(default)]
     active_nodes: usize,
     #[serde(default)]
     leader_id: Option<String>,
+    #[serde(default)]
     has_quorum: bool,
 }
 
 #[derive(Debug, Deserialize)]
 struct NodeState {
+    #[serde(default)]
     id: String,
+    #[serde(default)]
     address: String,
+    #[serde(default)]
     status: String,
+    #[serde(default)]
     role: String,
+    #[serde(default)]
     last_applied_lsn: u64,
+    #[serde(default)]
     replication_lag: u64,
 }
 
 #[derive(Debug, Deserialize)]
 struct StatusResponse {
+    #[serde(default)]
     node_id: String,
+    #[serde(default)]
     is_leader: bool,
+    #[serde(default)]
     leader_id: Option<String>,
+    #[serde(default)]
     cluster_size: usize,
+    #[serde(default)]
     has_quorum: bool,
 }
 
