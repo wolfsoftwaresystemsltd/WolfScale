@@ -1,0 +1,31 @@
+# Build artifacts
+/target/
+*.rs.bk
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local configuration
+*.local.toml
+local.toml
+
+# Logs
+*.log
+logs/
+
+# State and WAL data (production data)
+/data/
+*.db
+*.db-journal
+
+# Environment files
+.env
+.env.local

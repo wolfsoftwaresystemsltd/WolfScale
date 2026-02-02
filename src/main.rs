@@ -1,0 +1,478 @@
+//! WolfScale - Distributed MariaDB Synchronization Manager
+//!
+//! A high-performance Rust application that keeps multiple MariaDB
+//! databases in sync using a Write-Ahead Log (WAL).
+
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Duration;
+
+use clap::{Parser, Subcommand};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+use wolfscale::config::WolfScaleConfig;
+use wolfscale::wal::{WalWriter, WalReader};
+use wolfscale::state::{StateTracker, ClusterMembership, ElectionConfig};
+use wolfscale::executor::MariaDbExecutor;
+use wolfscale::api::HttpServer;
+use wolfscale::network::{NetworkServer, NetworkClient};
+use wolfscale::replication::{LeaderNode, FollowerNode, ReplicationConfig};
+use wolfscale::error::Result;
+
+/// WolfScale - Distributed MariaDB Synchronization Manager
+#[derive(Parser)]
+#[command(name = "wolfscale")]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    /// Path to configuration file
+    #[arg(short, long, default_value = "wolfscale.toml")]
+    config: PathBuf,
+
+    /// Log level (trace, debug, info, warn, error)
+    #[arg(short, long, default_value = "info")]
+    log_level: String,
+
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Start the WolfScale node
+    Start {
+        /// Force start as leader (for initial cluster bootstrap)
+        #[arg(long)]
+        bootstrap: bool,
+    },
+    
+    /// Join an existing cluster
+    Join {
+        /// Leader address to join (host:port)
+        leader: String,
+    },
+    
+    /// Check cluster status
+    Status {
+        /// Node address to query (defaults to localhost)
+        #[arg(short, long, default_value = "localhost:8080")]
+        address: String,
+    },
+    
+    /// Force synchronization check
+    Sync {
+        /// Target node address
+        #[arg(short, long, default_value = "localhost:8080")]
+        address: String,
+    },
+    
+    /// Initialize a new configuration file
+    Init {
+        /// Output path for configuration file
+        #[arg(short, long, default_value = "wolfscale.toml")]
+        output: PathBuf,
+        
+        /// Node ID
+        #[arg(long, default_value = "node-1")]
+        node_id: String,
+    },
+    
+    /// Validate configuration file
+    Validate,
+    
+    /// Show node information
+    Info,
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let cli = Cli::parse();
+
+    // Initialize logging
+    init_logging(&cli.log_level);
+
+    match cli.command {
+        Commands::Start { bootstrap } => {
+            run_start(cli.config, bootstrap).await
+        }
+        Commands::Join { leader } => {
+            run_join(cli.config, leader).await
+        }
+        Commands::Status { address } => {
+            run_status(address).await
+        }
+        Commands::Sync { address } => {
+            run_sync(address).await
+        }
+        Commands::Init { output, node_id } => {
+            run_init(output, node_id)
+        }
+        Commands::Validate => {
+            run_validate(cli.config)
+        }
+        Commands::Info => {
+            run_info(cli.config)
+        }
+    }
+}
+
+/// Initialize logging
+fn init_logging(level: &str) {
+    let env_filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| level.into());
+
+    tracing_subscriber::registry()
+        .with(env_filter)
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+}
+
+/// Start the WolfScale node
+async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
+    tracing::info!("Starting WolfScale node...");
+
+    // Load configuration
+    let config = WolfScaleConfig::from_file(&config_path)?;
+    tracing::info!("Loaded configuration for node: {}", config.node.id);
+
+    // Ensure directories exist
+    std::fs::create_dir_all(config.data_dir())?;
+    std::fs::create_dir_all(config.wal_dir())?;
+    std::fs::create_dir_all(config.state_dir())?;
+
+    // Initialize WAL
+    let wal_writer = WalWriter::new(
+        config.data_dir().clone(),
+        config.wal.clone(),
+        config.node.id.clone(),
+    ).await?;
+    tracing::info!("WAL initialized, current LSN: {}", wal_writer.current_lsn().await);
+
+    let wal_reader = WalReader::new(
+        config.data_dir().clone(),
+        config.wal.segment_size_mb,
+        config.wal.compression,
+    )?;
+
+    // Initialize state tracker
+    let state_tracker = Arc::new(StateTracker::new(
+        config.state_dir(),
+        config.node.id.clone(),
+    )?);
+    tracing::info!("State tracker initialized, last applied LSN: {}", 
+        state_tracker.last_applied_lsn().await?);
+
+    // Initialize cluster membership
+    let cluster = Arc::new(ClusterMembership::new(
+        config.node.id.clone(),
+        config.advertise_address().to_string(),
+        config.heartbeat_interval(),
+        config.election_timeout(),
+    ));
+
+    // Add configured peers
+    for peer in &config.cluster.peers {
+        let peer_id = format!("peer-{}", peer.replace(':', "-"));
+        cluster.add_peer(peer_id, peer.clone()).await?;
+    }
+    tracing::info!("Cluster initialized with {} nodes", cluster.size().await);
+
+    // Initialize database executor
+    let executor = Arc::new(MariaDbExecutor::new(&config.database).await?);
+    if executor.health_check().await? {
+        tracing::info!("Database connection established");
+    }
+
+    // Initialize network
+    let (msg_tx, _msg_rx) = tokio::sync::mpsc::channel(10000);
+    let network_server = NetworkServer::new(
+        config.node.bind_address.clone(),
+        msg_tx.clone(),
+    );
+
+    // Initialize HTTP API
+    let http_server = HttpServer::new(
+        config.api.clone(),
+        config.node.id.clone(),
+        Arc::clone(&cluster),
+    );
+
+    // Determine role
+    let is_leader = bootstrap || config.cluster.peers.is_empty();
+
+    if is_leader {
+        tracing::info!("Starting as LEADER");
+        cluster.set_leader(&config.node.id).await?;
+
+        let leader = LeaderNode::new(
+            config.node.id.clone(),
+            wal_writer,
+            wal_reader,
+            Arc::clone(&state_tracker),
+            Arc::clone(&cluster),
+            ReplicationConfig {
+                max_batch_entries: config.cluster.max_batch_entries,
+                heartbeat_interval_ms: config.cluster.heartbeat_interval_ms,
+                replication_timeout_ms: config.cluster.election_timeout_ms,
+            },
+            msg_tx,
+        );
+
+        // Start all components
+        tokio::select! {
+            result = leader.start() => {
+                if let Err(e) = result {
+                    tracing::error!("Leader error: {}", e);
+                }
+            }
+            result = http_server.start() => {
+                if let Err(e) = result {
+                    tracing::error!("HTTP server error: {}", e);
+                }
+            }
+            result = network_server.start() => {
+                if let Err(e) = result {
+                    tracing::error!("Network server error: {}", e);
+                }
+            }
+            _ = tokio::signal::ctrl_c() => {
+                tracing::info!("Received shutdown signal");
+            }
+        }
+    } else {
+        tracing::info!("Starting as FOLLOWER");
+
+        let follower = FollowerNode::new(
+            config.node.id.clone(),
+            wal_writer,
+            Arc::clone(&state_tracker),
+            Arc::clone(&cluster),
+            Arc::clone(&executor),
+            ReplicationConfig {
+                max_batch_entries: config.cluster.max_batch_entries,
+                heartbeat_interval_ms: config.cluster.heartbeat_interval_ms,
+                replication_timeout_ms: config.cluster.election_timeout_ms,
+            },
+            msg_tx,
+            ElectionConfig {
+                timeout_min_ms: config.cluster.election_timeout_min_ms,
+                timeout_max_ms: config.cluster.election_timeout_max_ms,
+            },
+            config.cluster.disable_auto_election,
+        );
+
+        tokio::select! {
+            result = follower.start() => {
+                if let Err(e) = result {
+                    tracing::error!("Follower error: {}", e);
+                }
+            }
+            result = http_server.start() => {
+                if let Err(e) = result {
+                    tracing::error!("HTTP server error: {}", e);
+                }
+            }
+            result = network_server.start() => {
+                if let Err(e) = result {
+                    tracing::error!("Network server error: {}", e);
+                }
+            }
+            _ = tokio::signal::ctrl_c() => {
+                tracing::info!("Received shutdown signal");
+            }
+        }
+    }
+
+    tracing::info!("WolfScale shutdown complete");
+    Ok(())
+}
+
+/// Join an existing cluster
+async fn run_join(config_path: PathBuf, leader: String) -> Result<()> {
+    tracing::info!("Joining cluster via leader: {}", leader);
+
+    let config = WolfScaleConfig::from_file(&config_path)?;
+    
+    // Connect to leader
+    let client = NetworkClient::new(
+        Duration::from_secs(10),
+        Duration::from_secs(30),
+    );
+
+    let join_msg = wolfscale::replication::Message::JoinRequest {
+        node_id: config.node.id.clone(),
+        address: config.advertise_address().to_string(),
+    };
+
+    match client.send(&leader, join_msg).await {
+        Ok(response) => {
+            match response {
+                wolfscale::replication::Message::JoinResponse { success, message, .. } => {
+                    if success {
+                        tracing::info!("Successfully joined cluster");
+                        // Now start normally
+                        run_start(config_path, false).await
+                    } else {
+                        tracing::error!("Join failed: {:?}", message);
+                        Err(wolfscale::error::Error::Replication(
+                            message.unwrap_or_else(|| "Join failed".to_string())
+                        ))
+                    }
+                }
+                _ => {
+                    tracing::error!("Unexpected response from leader");
+                    Err(wolfscale::error::Error::Replication("Unexpected response".into()))
+                }
+            }
+        }
+        Err(e) => {
+            tracing::error!("Failed to connect to leader: {}", e);
+            Err(e)
+        }
+    }
+}
+
+/// Check cluster status
+async fn run_status(address: String) -> Result<()> {
+    let url = format!("http://{}/status", address);
+    
+    match reqwest::get(&url).await {
+        Ok(response) => {
+            let status: serde_json::Value = response.json().await
+                .map_err(|e| wolfscale::error::Error::Network(e.to_string()))?;
+            println!("{}", serde_json::to_string_pretty(&status).unwrap());
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("Failed to get status: {}", e);
+            Err(wolfscale::error::Error::Network(e.to_string()))
+        }
+    }
+}
+
+/// Force synchronization
+async fn run_sync(address: String) -> Result<()> {
+    let url = format!("http://{}/cluster", address);
+    
+    match reqwest::get(&url).await {
+        Ok(response) => {
+            let cluster: serde_json::Value = response.json().await
+                .map_err(|e| wolfscale::error::Error::Network(e.to_string()))?;
+            println!("Cluster Info:");
+            println!("{}", serde_json::to_string_pretty(&cluster).unwrap());
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("Failed to get cluster info: {}", e);
+            Err(wolfscale::error::Error::Network(e.to_string()))
+        }
+    }
+}
+
+/// Initialize configuration file
+fn run_init(output: PathBuf, node_id: String) -> Result<()> {
+    let config_content = format!(r#"# WolfScale Configuration
+# Generated configuration file
+
+[node]
+id = "{node_id}"
+bind_address = "0.0.0.0:7654"
+data_dir = "/var/lib/wolfscale/{node_id}"
+# advertise_address = "my-public-ip:7654"
+
+[database]
+host = "localhost"
+port = 3306
+user = "wolfscale"
+password = "changeme"
+database = "myapp"
+pool_size = 10
+connect_timeout_secs = 30
+
+[wal]
+batch_size = 1000
+flush_interval_ms = 100
+compression = true
+segment_size_mb = 64
+retention_hours = 168
+fsync = true
+
+[cluster]
+peers = []
+# peers = ["node-2.example.com:7654", "node-3.example.com:7654"]
+heartbeat_interval_ms = 500
+election_timeout_ms = 2000
+max_batch_entries = 1000
+
+[api]
+enabled = true
+bind_address = "0.0.0.0:8080"
+cors_enabled = false
+
+[logging]
+level = "info"
+format = "pretty"
+# file = "/var/log/wolfscale/wolfscale.log"
+"#);
+
+    std::fs::write(&output, config_content)?;
+    println!("Configuration file created: {}", output.display());
+    println!("\nEdit the file to configure your database and cluster settings.");
+    println!("Then start with: wolfscale start --config {}", output.display());
+    
+    Ok(())
+}
+
+/// Validate configuration
+fn run_validate(config_path: PathBuf) -> Result<()> {
+    match WolfScaleConfig::from_file(&config_path) {
+        Ok(config) => {
+            println!("✓ Configuration is valid");
+            println!("  Node ID: {}", config.node.id);
+            println!("  Bind Address: {}", config.node.bind_address);
+            println!("  Database: {}@{}:{}/{}", 
+                config.database.user,
+                config.database.host,
+                config.database.port,
+                config.database.database);
+            println!("  Peers: {}", config.cluster.peers.len());
+            println!("  Quorum Size: {}", config.quorum_size());
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("✗ Configuration error: {}", e);
+            Err(e)
+        }
+    }
+}
+
+/// Show node information
+fn run_info(config_path: PathBuf) -> Result<()> {
+    let config = WolfScaleConfig::from_file(&config_path)?;
+    
+    println!("WolfScale Node Information");
+    println!("==========================");
+    println!();
+    println!("Node ID:          {}", config.node.id);
+    println!("Bind Address:     {}", config.node.bind_address);
+    println!("Advertise:        {}", config.advertise_address());
+    println!("Data Directory:   {}", config.data_dir().display());
+    println!();
+    println!("Database Configuration:");
+    println!("  Host:           {}:{}", config.database.host, config.database.port);
+    println!("  Database:       {}", config.database.database);
+    println!("  Pool Size:      {}", config.database.pool_size);
+    println!();
+    println!("WAL Configuration:");
+    println!("  Batch Size:     {}", config.wal.batch_size);
+    println!("  Compression:    {}", config.wal.compression);
+    println!("  Segment Size:   {} MB", config.wal.segment_size_mb);
+    println!("  Fsync:          {}", config.wal.fsync);
+    println!();
+    println!("Cluster Configuration:");
+    println!("  Peers:          {:?}", config.cluster.peers);
+    println!("  Quorum Size:    {}", config.quorum_size());
+    println!("  Heartbeat:      {} ms", config.cluster.heartbeat_interval_ms);
+    println!("  Election:       {} ms", config.cluster.election_timeout_ms);
+    
+    Ok(())
+}

@@ -1,0 +1,566 @@
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:44:03.511Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:44:03.540Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:44:03.544Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:44:03.946Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:53:44.306Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:53:44.320Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:53:44.324Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:53:44.420Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:53:52.391Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:53:52.397Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:53:52.399Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:53:52.455Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:54:50.008Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:54:50.016Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:54:50.023Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:54:50.081Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:54:56.318Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:54:56.327Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:54:56.330Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:54:56.383Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:55:59.517Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:55:59.526Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:55:59.530Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:55:59.589Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:56:06.850Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:56:06.855Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:56:06.857Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:56:06.904Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:56:15.879Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:56:15.884Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:56:15.890Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:56:15.941Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:56:46.041Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:56:46.049Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:56:46.053Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:56:46.115Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:56:52.446Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:56:52.457Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:56:52.465Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:56:52.694Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:58:15.542Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:58:15.555Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:58:15.559Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:58:15.625Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:58:31.519Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:58:31.527Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:58:31.531Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:58:31.541Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:58:31.551Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:58:31.556Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:58:31.563Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:58:31.573Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:58:31.579Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:58:31.594Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:58:31.601Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:58:31.605Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:58:31.613Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:58:31.619Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:58:31.628Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:58:31.634Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:58:31.648Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:58:31.653Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:58:31.684Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:58:31.685Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:58:31.727Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:58:31.733Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:58:31.737Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:58:31.780Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:58:32.263Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:58:32.269Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:58:32.275Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:58:32.291Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:58:32.297Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:58:32.308Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:58:32.321Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:58:32.349Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:58:32.353Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:58:32.359Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:58:32.363Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:58:32.398Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:58:40.111Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:58:40.119Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:58:40.123Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:58:40.161Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:58:40.272Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:58:40.277Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:58:40.281Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:58:40.325Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:58:40.338Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:58:40.346Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:58:40.348Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:58:40.349Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:58:40.352Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:58:40.354Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:58:40.382Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:58:40.385Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:58:40.565Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:58:40.567Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:58:40.569Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:58:40.595Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:58:40.637Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:58:40.640Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:58:40.642Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:58:40.655Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:58:40.659Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:58:40.662Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-1 (Architect)...",
+      "timestamp": "2026-02-02T08:58:40.662Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing AI-2 (Implementer)...",
+      "timestamp": "2026-02-02T08:58:40.670Z"
+    },
+    {
+      "role": "system",
+      "content": "🔍 Testing database connection and scanning indexed code...",
+      "timestamp": "2026-02-02T08:58:40.672Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:58:40.679Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:58:40.699Z"
+    },
+    {
+      "role": "system",
+      "content": "\n╔═══════════════════════════════════════╗\n║     🐺 CODEWOLF DIAGNOSTICS     ║\n╚═══════════════════════════════════════╝\n\n📁 WORKSPACE\n   1. wolfscale (/home/paulc/NetBeansProjects/wolfscale)\n\n💾 DATABASE CONFIG\n   Host: 127.0.0.1\n   Database: firestorm\n   Username: lone\n   Project: codewolf\n\n🔄 TRANSLATION/REWRITING MODE\n   From: c\n   To: web application with php, html and javascript\n   Source dir: /home/paulc/NetBeansProjects/firestorm/viewercode/\n   Dest dir: /home/paulc/NetBeansProjects/firestorm/wolfstorm/\n   ⚠️  Will examine source files first\n   Context: This is a rewrite of the Firestorm OpenSim/Second Life viewer from c# to a beaut...\n\n🤖 AI MODELS CONFIG\n   AI-1: local/gemini-2.5-flash\n   AI-2: local/gemini-2.5-flash\n\n🔍 CONNECTIVITY TESTS\n   ⚠️ AI-1: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n   ⚠️ AI-2: Error: Ollama/Local AI request failed: Ollama request failed: Not Found\n\nPossible causes:\n• Ollama server not running (start with: ollama serve)\n• Incorrect host URL in settings\n• Model not pulled (run: ollama pull <model>)\n• Network connectivity issues\n• Port conflict or firewall blocking\n\nCheck settings: AI-1/AI-2 Provider and Local AI Host\n\n💾 DATABASE STRUCTURE & CONTENTS\n   ✅ Connection: Successful\n   📋 Database Tables (All Projects):\n      • code_entities: 17186 total records\n      • code_relationships: 9085 total records\n      • indexed_files: 1739 files\n\n   📂 SOURCE PROJECT: \"codewolf\"\n      • Entities indexed: 10038\n      • Relationships: 9085\n      • Files indexed: 1739\n\n   📑 Source Entity Types:\n      • class: 6788\n      • function: 3250\n\n   🔤 Source Languages:\n      • c: 8190 entities\n      • cpp: 1441 entities\n      • python: 338 entities\n      • r: 64 entities\n      • shell: 5 entities\n\n   ✅ Source code indexed with 10038 entities!\n\n   🎯 DESTINATION PROJECT: \"codewolf-dest\"\n      • Entities indexed: 119\n      • Relationships: 0\n      • Files indexed: 98\n\n   📑 Destination Entity Types:\n      • class: 103\n      • function: 16\n\n   🔤 Destination Languages:\n      • javascript: 104 entities\n      • php: 8 entities\n      • python: 7 entities\n\n   ✅ Destination code indexed with 119 entities!\n\n⚠️  Some systems need attention\n\nTroubleshooting:\n• Check API keys: Ctrl+, → Search \"AI Code Assistant\"\n• Verify database: sudo systemctl status mariadb\n• Run indexer: python3 code_indexer.py\n• Check logs: View > Output > CodeWolf\n• Restart diagnostics: Ctrl+Shift+P → \"Run System Diagnostics\"\n\n",
+      "timestamp": "2026-02-02T08:58:40.704Z"
+    }
+  ],
+  "context": null,
+  "lastUpdated": "2026-02-02T08:58:40.704Z"
+}

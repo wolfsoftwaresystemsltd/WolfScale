@@ -1,0 +1,87 @@
+[package]
+name = "wolfscale"
+version = "0.1.0"
+edition = "2021"
+authors = ["WolfScale Team"]
+description = "Distributed MariaDB synchronization manager"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/wolfscale/wolfscale"
+keywords = ["database", "mariadb", "replication", "distributed", "sync"]
+categories = ["database", "network-programming"]
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"
+
+# Database
+sqlx = { version = "0.7", default-features = false, features = ["runtime-tokio", "mysql", "macros"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+bincode = "1"
+toml = "0.8"
+
+# Compression
+lz4_flex = "0.11"
+
+# IDs
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+thiserror = "1"
+anyhow = "1"
+
+# File I/O
+memmap2 = "0.9"
+crc32fast = "1"
+
+# HTTP API
+axum = "0.7"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# Networking
+bytes = "1"
+tokio-util = { version = "0.7", features = ["codec"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Async utilities
+async-trait = "0.1"
+futures = "0.3"
+
+# HTTP client (for CLI)
+reqwest = { version = "0.11", features = ["json"] }
+
+# State storage (embedded)
+rusqlite = { version = "0.31", features = ["bundled"] }
+rand = "0.8"
+
+[dev-dependencies]
+tempfile = "3"
+rand = "0.8"
+criterion = "0.5"
+
+[[bin]]
+name = "wolfscale"
+path = "src/main.rs"
+
+[features]
+default = []
+integration = []
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3

@@ -1,0 +1,86 @@
+# WolfScale Configuration Example
+# Copy this file to wolfscale.toml and edit for your environment
+
+[node]
+# Unique identifier for this node (must be unique across cluster)
+id = "node-1"
+
+# Address to bind for cluster communication
+bind_address = "0.0.0.0:7654"
+
+# Data directory for WAL and state storage
+data_dir = "/var/lib/wolfscale/node-1"
+
+# Optional: Advertised address for other nodes to connect
+# Use if bind address is 0.0.0.0 or behind NAT
+# advertise_address = "192.168.1.100:7654"
+
+[database]
+# MariaDB connection settings
+host = "localhost"
+port = 3306
+user = "wolfscale"
+password = "your-secure-password"
+database = "myapp"
+
+# Connection pool size
+pool_size = 10
+
+# Connection timeout in seconds
+connect_timeout_secs = 30
+
+[wal]
+# Number of entries to batch before flushing
+batch_size = 1000
+
+# Flush interval in milliseconds
+flush_interval_ms = 100
+
+# Enable LZ4 compression for WAL entries
+compression = true
+
+# Maximum segment size in megabytes
+segment_size_mb = 64
+
+# Retention period in hours (0 = infinite)
+retention_hours = 168  # 7 days
+
+# Use fsync for durability (slower but safer)
+fsync = true
+
+[cluster]
+# List of peer node addresses
+# Empty for single node or bootstrap node
+peers = []
+
+# For a 3-node cluster:
+# peers = ["node-2.example.com:7654", "node-3.example.com:7654"]
+
+# Heartbeat interval in milliseconds
+heartbeat_interval_ms = 500
+
+# Election timeout in milliseconds
+election_timeout_ms = 2000
+
+# Maximum entries per replication batch
+max_batch_entries = 1000
+
+[api]
+# Enable HTTP API
+enabled = true
+
+# HTTP API bind address
+bind_address = "0.0.0.0:8080"
+
+# Enable CORS (for browser-based clients)
+cors_enabled = false
+
+[logging]
+# Log level: trace, debug, info, warn, error
+level = "info"
+
+# Log format: pretty, json
+format = "pretty"
+
+# Optional: Log to file
+# file = "/var/log/wolfscale/wolfscale.log"
