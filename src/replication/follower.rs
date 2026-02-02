@@ -512,6 +512,8 @@ mod tests {
             executor,
             ReplicationConfig::default(),
             tx,
+            ElectionConfig::default(),
+            false,
         );
     }
 }

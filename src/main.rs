@@ -17,6 +17,7 @@ use wolfscale::executor::MariaDbExecutor;
 use wolfscale::api::HttpServer;
 use wolfscale::network::{NetworkServer, NetworkClient};
 use wolfscale::replication::{LeaderNode, FollowerNode, ReplicationConfig};
+use wolfscale::proxy::{ProxyServer, ProxyConfig};
 use wolfscale::error::Result;
 
 /// WolfScale - Distributed MariaDB Synchronization Manager
@@ -81,6 +82,13 @@ enum Commands {
     
     /// Show node information
     Info,
+    
+    /// Start MySQL protocol proxy
+    Proxy {
+        /// Address to listen on
+        #[arg(short, long, default_value = "0.0.0.0:3307")]
+        listen: String,
+    },
 }
 
 #[tokio::main]
@@ -111,6 +119,9 @@ async fn main() -> Result<()> {
         }
         Commands::Info => {
             run_info(cli.config)
+        }
+        Commands::Proxy { listen } => {
+            run_proxy(cli.config, listen).await
         }
     }
 }
@@ -241,7 +252,8 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     } else {
         tracing::info!("Starting as FOLLOWER");
 
-        let follower = FollowerNode::new(
+        // Create shared state for role transitions
+        let follower = Arc::new(FollowerNode::new(
             config.node.id.clone(),
             wal_writer,
             Arc::clone(&state_tracker),
@@ -252,34 +264,102 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                 heartbeat_interval_ms: config.cluster.heartbeat_interval_ms,
                 replication_timeout_ms: config.cluster.election_timeout_ms,
             },
-            msg_tx,
+            msg_tx.clone(),
             ElectionConfig {
                 timeout_min_ms: config.cluster.election_timeout_min_ms,
                 timeout_max_ms: config.cluster.election_timeout_max_ms,
             },
             config.cluster.disable_auto_election,
-        );
+        ));
 
-        tokio::select! {
-            result = follower.start() => {
-                if let Err(e) = result {
-                    tracing::error!("Follower error: {}", e);
-                }
+        let follower_clone = Arc::clone(&follower);
+        let http_server_handle = tokio::spawn(async move {
+            if let Err(e) = http_server.start().await {
+                tracing::error!("HTTP server error: {}", e);
             }
-            result = http_server.start() => {
-                if let Err(e) = result {
-                    tracing::error!("HTTP server error: {}", e);
-                }
+        });
+
+        let network_server_handle = tokio::spawn(async move {
+            if let Err(e) = network_server.start().await {
+                tracing::error!("Network server error: {}", e);
             }
-            result = network_server.start() => {
-                if let Err(e) = result {
-                    tracing::error!("Network server error: {}", e);
+        });
+
+        // Role transition loop - monitors for election wins
+        let role_check_interval = Duration::from_millis(100);
+        let mut role_ticker = tokio::time::interval(role_check_interval);
+
+        loop {
+            tokio::select! {
+                result = follower_clone.start() => {
+                    if let Err(e) = result {
+                        tracing::error!("Follower error: {}", e);
+                    }
+                    break;
                 }
-            }
-            _ = tokio::signal::ctrl_c() => {
-                tracing::info!("Received shutdown signal");
+                _ = role_ticker.tick() => {
+                    // Check if we won an election
+                    if follower_clone.is_leader().await {
+                        tracing::info!("Election won! Transitioning from FOLLOWER to LEADER");
+                        
+                        // Stop follower mode
+                        if let Err(e) = follower_clone.stop().await {
+                            tracing::error!("Error stopping follower: {}", e);
+                        }
+
+                        // Create new WAL writer and reader for leader mode
+                        let wal_writer = WalWriter::new(
+                            config.data_dir().clone(),
+                            config.wal.clone(),
+                            config.node.id.clone(),
+                        ).await?;
+
+                        let wal_reader = WalReader::new(
+                            config.data_dir().clone(),
+                            config.wal.segment_size_mb,
+                            config.wal.compression,
+                        )?;
+
+                        // Start as leader
+                        let leader = LeaderNode::new(
+                            config.node.id.clone(),
+                            wal_writer,
+                            wal_reader,
+                            Arc::clone(&state_tracker),
+                            Arc::clone(&cluster),
+                            ReplicationConfig {
+                                max_batch_entries: config.cluster.max_batch_entries,
+                                heartbeat_interval_ms: config.cluster.heartbeat_interval_ms,
+                                replication_timeout_ms: config.cluster.election_timeout_ms,
+                            },
+                            msg_tx.clone(),
+                        );
+
+                        tracing::info!("Now running as LEADER");
+
+                        tokio::select! {
+                            result = leader.start() => {
+                                if let Err(e) = result {
+                                    tracing::error!("Leader error: {}", e);
+                                }
+                            }
+                            _ = tokio::signal::ctrl_c() => {
+                                tracing::info!("Received shutdown signal");
+                            }
+                        }
+                        break;
+                    }
+                }
+                _ = tokio::signal::ctrl_c() => {
+                    tracing::info!("Received shutdown signal");
+                    break;
+                }
             }
         }
+
+        // Cleanup
+        http_server_handle.abort();
+        network_server_handle.abort();
     }
 
     tracing::info!("WolfScale shutdown complete");
@@ -476,3 +556,52 @@ fn run_info(config_path: PathBuf) -> Result<()> {
     
     Ok(())
 }
+
+/// Run the MySQL protocol proxy
+async fn run_proxy(config_path: PathBuf, listen_address: String) -> Result<()> {
+    let config = WolfScaleConfig::from_file(&config_path)?;
+    
+    tracing::info!("Starting WolfScale MySQL Proxy");
+    tracing::info!("Node ID: {}", config.node.id);
+    
+    // Create cluster membership (we need it to find the leader)
+    // In proxy mode, we'll use the first peer as the default backend
+    let cluster = Arc::new(ClusterMembership::new(
+        config.node.id.clone(),
+        config.advertise_address().to_string(),
+        Duration::from_secs(1),
+        Duration::from_secs(5),
+    ));
+    
+    // Create proxy configuration
+    let proxy_config = ProxyConfig {
+        listen_address,
+        backend_host: config.database.host.clone(),
+        backend_port: config.database.port,
+        backend_user: config.database.user.clone(),
+        backend_password: config.database.password.clone(),
+    };
+    
+    let proxy = ProxyServer::new(proxy_config, cluster);
+    
+    println!("WolfScale MySQL Proxy");
+    println!("====================");
+    println!();
+    println!("MySQL clients can connect to this proxy as if it were a MariaDB server.");
+    println!("Writes will be automatically routed to the cluster leader.");
+    println!();
+    
+    tokio::select! {
+        result = proxy.start() => {
+            if let Err(e) = result {
+                tracing::error!("Proxy error: {}", e);
+            }
+        }
+        _ = tokio::signal::ctrl_c() => {
+            tracing::info!("Received shutdown signal");
+        }
+    }
+    
+    Ok(())
+}
+

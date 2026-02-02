@@ -18,6 +18,14 @@ use crate::wal::{LogEntry, Value, PrimaryKey};
 use crate::state::{ClusterMembership, NodeState, ClusterSummary};
 use crate::error::{Error, Result};
 
+/// HTTP client for forwarding writes to leader
+static HTTP_CLIENT: std::sync::LazyLock<reqwest::Client> = std::sync::LazyLock::new(|| {
+    reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .expect("Failed to create HTTP client")
+});
+
 /// Shared application state
 pub struct AppState {
     /// Node ID
@@ -133,7 +141,7 @@ impl HttpServer {
 // ============ Request/Response Types ============
 
 /// Write request
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[allow(dead_code)]
 pub struct WriteRequest {
     pub table: String,
@@ -142,14 +150,14 @@ pub struct WriteRequest {
 }
 
 /// Insert request
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct InsertRequest {
     pub table: String,
     pub values: std::collections::HashMap<String, serde_json::Value>,
 }
 
 /// Update request
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct UpdateRequest {
     pub table: String,
     pub set: std::collections::HashMap<String, serde_json::Value>,
@@ -157,14 +165,14 @@ pub struct UpdateRequest {
 }
 
 /// Delete request
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct DeleteRequest {
     pub table: String,
     pub where_key: std::collections::HashMap<String, serde_json::Value>,
 }
 
 /// Upsert request
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct UpsertRequest {
     pub table: String,
     pub values: std::collections::HashMap<String, serde_json::Value>,
@@ -172,7 +180,7 @@ pub struct UpsertRequest {
 }
 
 /// DDL request
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct DdlRequest {
     pub ddl: String,
     pub table: Option<String>,
@@ -225,17 +233,14 @@ pub struct ErrorResponse {
 
 async fn handle_write(
     State(state): State<Arc<AppState>>,
-    Json(_req): Json<WriteRequest>,
+    Json(req): Json<WriteRequest>,
 ) -> impl IntoResponse {
-    // Check if we're the leader
+    // Forward to leader if we're not the leader
     if !*state.is_leader.read().await {
-        return (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(ErrorResponse {
-                error: "Not the leader".to_string(),
-                code: "NOT_LEADER".to_string(),
-            }),
-        ).into_response();
+        return match forward_to_leader(&state, "/write", &req).await {
+            Ok(response) => response,
+            Err(error_response) => error_response,
+        };
     }
 
     // Parse and execute write
@@ -251,14 +256,12 @@ async fn handle_insert(
     State(state): State<Arc<AppState>>,
     Json(req): Json<InsertRequest>,
 ) -> impl IntoResponse {
+    // Forward to leader if we're not the leader
     if !*state.is_leader.read().await {
-        return (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(ErrorResponse {
-                error: "Not the leader".to_string(),
-                code: "NOT_LEADER".to_string(),
-            }),
-        ).into_response();
+        return match forward_to_leader(&state, "/write/insert", &req).await {
+            Ok(response) => response,
+            Err(error_response) => error_response,
+        };
     }
 
     // Convert request to log entry
@@ -289,14 +292,12 @@ async fn handle_update(
     State(state): State<Arc<AppState>>,
     Json(req): Json<UpdateRequest>,
 ) -> impl IntoResponse {
+    // Forward to leader if we're not the leader
     if !*state.is_leader.read().await {
-        return (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(ErrorResponse {
-                error: "Not the leader".to_string(),
-                code: "NOT_LEADER".to_string(),
-            }),
-        ).into_response();
+        return match forward_to_leader(&state, "/write/update", &req).await {
+            Ok(response) => response,
+            Err(error_response) => error_response,
+        };
     }
 
     let set_columns: Vec<String> = req.set.keys().cloned().collect();
@@ -328,14 +329,12 @@ async fn handle_delete(
     State(state): State<Arc<AppState>>,
     Json(req): Json<DeleteRequest>,
 ) -> impl IntoResponse {
+    // Forward to leader if we're not the leader
     if !*state.is_leader.read().await {
-        return (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(ErrorResponse {
-                error: "Not the leader".to_string(),
-                code: "NOT_LEADER".to_string(),
-            }),
-        ).into_response();
+        return match forward_to_leader(&state, "/write/delete", &req).await {
+            Ok(response) => response,
+            Err(error_response) => error_response,
+        };
     }
 
     let key_columns: Vec<String> = req.where_key.keys().cloned().collect();
@@ -362,14 +361,12 @@ async fn handle_upsert(
     State(state): State<Arc<AppState>>,
     Json(req): Json<UpsertRequest>,
 ) -> impl IntoResponse {
+    // Forward to leader if we're not the leader
     if !*state.is_leader.read().await {
-        return (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(ErrorResponse {
-                error: "Not the leader".to_string(),
-                code: "NOT_LEADER".to_string(),
-            }),
-        ).into_response();
+        return match forward_to_leader(&state, "/write/upsert", &req).await {
+            Ok(response) => response,
+            Err(error_response) => error_response,
+        };
     }
 
     let columns: Vec<String> = req.values.keys().cloned().collect();
@@ -398,14 +395,12 @@ async fn handle_ddl(
     State(state): State<Arc<AppState>>,
     Json(req): Json<DdlRequest>,
 ) -> impl IntoResponse {
+    // Forward to leader if we're not the leader
     if !*state.is_leader.read().await {
-        return (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(ErrorResponse {
-                error: "Not the leader".to_string(),
-                code: "NOT_LEADER".to_string(),
-            }),
-        ).into_response();
+        return match forward_to_leader(&state, "/write/ddl", &req).await {
+            Ok(response) => response,
+            Err(error_response) => error_response,
+        };
     }
 
     // Parse DDL to determine type
@@ -560,6 +555,84 @@ fn json_to_primary_key(v: &serde_json::Value) -> PrimaryKey {
             }
         }
         _ => PrimaryKey::String(v.to_string()),
+    }
+}
+
+/// Forward a write request to the current leader
+/// Returns the leader's response or an error if forwarding fails
+async fn forward_to_leader<T: Serialize>(
+    state: &AppState,
+    endpoint: &str,
+    body: &T,
+) -> std::result::Result<axum::response::Response, axum::response::Response> {
+    // Get the current leader
+    let leader = match state.cluster.current_leader().await {
+        Some(l) => l,
+        None => {
+            return Err((
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(ErrorResponse {
+                    error: "No leader available".to_string(),
+                    code: "NO_LEADER".to_string(),
+                }),
+            ).into_response());
+        }
+    };
+
+    // Don't forward to ourselves
+    if leader.id == state.node_id {
+        return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Routing error: not leader but no other leader found".to_string(),
+                code: "ROUTING_ERROR".to_string(),
+            }),
+        ).into_response());
+    }
+
+    // Extract host from leader address (assume same port as API or use configured API port)
+    // The leader.address is the cluster port, we need to convert to API port (8080)
+    let leader_host = leader.address.split(':')
+        .next()
+        .unwrap_or(&leader.address);
+    let leader_api_url = format!("http://{}:8080{}", leader_host, endpoint);
+
+    tracing::debug!("Forwarding write to leader at {}", leader_api_url);
+
+    // Forward the request
+    match HTTP_CLIENT
+        .post(&leader_api_url)
+        .json(body)
+        .send()
+        .await
+    {
+        Ok(response) => {
+            let status = response.status();
+            match response.text().await {
+                Ok(body) => {
+                    let response_status = StatusCode::from_u16(status.as_u16())
+                        .unwrap_or(StatusCode::OK);
+                    Ok((response_status, body).into_response())
+                }
+                Err(e) => Err((
+                    StatusCode::BAD_GATEWAY,
+                    Json(ErrorResponse {
+                        error: format!("Failed to read leader response: {}", e),
+                        code: "FORWARD_ERROR".to_string(),
+                    }),
+                ).into_response()),
+            }
+        }
+        Err(e) => {
+            tracing::warn!("Failed to forward to leader: {}", e);
+            Err((
+                StatusCode::BAD_GATEWAY,
+                Json(ErrorResponse {
+                    error: format!("Failed to contact leader: {}", e),
+                    code: "FORWARD_ERROR".to_string(),
+                }),
+            ).into_response())
+        }
     }
 }
 

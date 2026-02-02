@@ -29,6 +29,7 @@ pub mod executor;
 pub mod network;
 pub mod api;
 pub mod id;
+pub mod proxy;
 
 pub use config::WolfScaleConfig;
 pub use error::{Error, Result};

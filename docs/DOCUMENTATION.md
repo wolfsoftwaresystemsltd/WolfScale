@@ -78,7 +78,7 @@ When running multiple MariaDB instances that need to stay synchronized, traditio
 │   Server A (Leader)        Server B (Follower)      Server C (Follower)    │
 │   ┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐    │
 │   │  WolfScale      │      │  WolfScale      │      │  WolfScale      │    │
-│   │  (node-1)       │─────▶│  (node-2)       │      │  (node-3)       │    │
+│   │  (node-1)       │────▶│  (node-2)       │────▶│  (node-3)       │    │
 │   │       │         │      │       │         │      │       │         │    │
 │   │       ▼         │      │       ▼         │      │       ▼         │    │
 │   │  MariaDB        │      │  MariaDB        │      │  MariaDB        │    │
@@ -136,8 +136,8 @@ WolfScale can bridge two separate Galera clusters for cross-datacenter replicati
 │   (Datacenter 1)            │         │   (Datacenter 2)            │
 │                             │         │                             │
 │  ┌─────┐ ┌─────┐ ┌─────┐    │         │  ┌─────┐ ┌─────┐ ┌─────┐    │
-│  │ DB1 │ │ DB2 │ │ DB3 │    │         │  │ DB4 │ │ DB5 │ │ DB6 │   │
-│  └─────┘ └─────┘ └──┬──┘    │         │  └──┬──┘ └─────┘ └─────┘   │
+│  │ DB1 │ │ DB2 │ │ DB3 │    │         │  │ DB4 │ │ DB5 │ │ DB6 │    │
+│  └─────┘ └─────┘ └──┬──┘    │         │  └──┬──┘ └─────┘ └─────┘    │
 │              ┌──────┴─────┐ │ WolfScale│ ┌──┴───────┐               │
 │              │ WolfScale  │◄├─────────┼─►│ WolfScale│               │
 │              │ (Leader)   │ │   WAN   │  │(Follower)│               │
@@ -238,6 +238,102 @@ For distributed primary key generation without coordination:
 - **10 bits**: Node ID (0-1023) - identifies which node generated the ID
 - **12 bits**: Sequence (0-4095) - allows 4096 IDs per millisecond per node
 
+### 5. Automatic Leader Election (Failover)
+
+WolfScale uses Raft-style leader election to automatically promote a follower to leader when the current leader goes down.
+
+**How it works:**
+
+1. Followers track heartbeats from the leader
+2. If no heartbeat is received within the election timeout (default: 1.5-3 seconds, randomized), a follower becomes a candidate
+3. The candidate requests votes from all peers
+4. A node grants its vote if the candidate has a higher or equal term and an up-to-date log
+5. The candidate with a majority of votes becomes the new leader
+6. The new leader starts sending heartbeats immediately
+
+**Configuration:**
+
+```toml
+[cluster]
+election_timeout_min_ms = 1500    # Minimum timeout before election
+election_timeout_max_ms = 3000    # Maximum timeout (randomized for split-brain prevention)
+disable_auto_election = false     # Set to true for manual promotion only
+```
+
+**Monitoring failover:**
+
+```bash
+# Check cluster status
+curl http://localhost:8080/cluster
+
+# View logs for election messages
+wolfscale start --log-level debug
+```
+
+> **Note:** For best reliability, deploy an odd number of nodes (3, 5, 7) to ensure quorum can be established during network partitions.
+
+**Cluster Sizing Guide:**
+
+| Nodes | Quorum | Fault Tolerance | Recommendation |
+|-------|--------|-----------------|----------------|
+| 1 | 1 | None | Development only |
+| 2 | 2 | None | ⚠️ No auto-failover (needs both for quorum) |
+| 3 | 2 | 1 node | ✅ Minimum for production HA |
+| 5 | 3 | 2 nodes | ✅ Recommended for production |
+| 7 | 4 | 3 nodes | High availability |
+
+> **Tip:** Always use an odd number of nodes. Even numbers (2, 4, 6) provide no additional fault tolerance compared to n-1 nodes, but require more nodes for quorum.
+
+### 6. Write Forwarding
+
+Followers automatically forward write requests to the current leader, so clients can send writes to any node:
+
+```
+Client -> Follower -> Leader -> Replication -> Response
+```
+
+**Benefits:**
+- Clients don't need to track which node is the leader
+- Simplifies load balancer configuration
+- Transparent failover during leader elections
+
+**How it works:**
+1. Client sends write to any node (e.g., `POST /write/insert`)
+2. If the node is a follower, it looks up the current leader
+3. Follower proxies the request to the leader's HTTP API
+4. Leader processes the write and returns response
+5. Follower returns the leader's response to the client
+
+> **Note:** For lowest latency, send writes directly to the leader when known.
+
+### 7. MySQL Proxy Mode
+
+WolfScale can run as a **MySQL protocol proxy**, allowing applications to connect as if it were a regular MariaDB server:
+
+```
+mysql -h proxy-host -P 3307 -u user -p
+```
+
+**How it works:**
+1. Application connects to the proxy on port 3307
+2. Proxy accepts the connection using MySQL wire protocol
+3. For writes (INSERT/UPDATE/DELETE), proxy routes to the cluster leader
+4. For reads (SELECT), proxy executes on local backend
+5. SQL errors are returned back to client in MySQL format
+
+**Starting the proxy:**
+
+```bash
+wolfscale proxy --listen 0.0.0.0:3307 --config wolfscale.toml
+```
+
+**Benefits:**
+- Applications need no code changes
+- Works with any MySQL client/library
+- Transparent write routing to leader
+- SQL errors passed through unchanged
+- Can run on separate load balancer server
+
 ---
 
 ## Configuration
@@ -289,6 +385,61 @@ bind_address = "0.0.0.0:8080"      # HTTP API port
 | `wolfscale status` | Check cluster status |
 | `wolfscale info` | Show node configuration details |
 | `wolfscale validate` | Validate configuration file |
+| `wolfscale proxy --listen ADDR` | Start MySQL protocol proxy |
+
+---
+
+## Installation & Service Management
+
+### Quick Start with `run.sh`
+
+Use the included `run.sh` script for development and testing:
+
+```bash
+./run.sh start              # Start as follower node
+./run.sh start --bootstrap  # Start as leader (first node)
+./run.sh proxy              # Start MySQL proxy on port 3307
+./run.sh status             # Check cluster status
+./run.sh info               # Show node info
+```
+
+### Installing as a System Service
+
+Use `install_service.sh` to install WolfScale as a systemd service:
+
+```bash
+# Install as cluster node
+sudo ./install_service.sh node
+
+# Install as MySQL proxy
+sudo ./install_service.sh proxy
+```
+
+**Interactive Configuration:** If no `wolfscale.toml` exists, the installer will ask:
+- Node ID (defaults to hostname)
+- Bind address for cluster communication
+- Whether this is the first/bootstrap node
+- Peer addresses (one per line, format: `host:port`)
+- MariaDB connection details (host, port, database, user, password)
+- HTTP API port
+
+**Service Commands:**
+
+```bash
+sudo systemctl start wolfscale      # Start
+sudo systemctl stop wolfscale       # Stop
+sudo systemctl enable wolfscale     # Start on boot
+sudo systemctl status wolfscale     # Check status
+sudo journalctl -u wolfscale -f     # View logs
+```
+
+**File Locations:**
+| Path | Description |
+|------|-------------|
+| `/opt/wolfscale/wolfscale` | Binary |
+| `/opt/wolfscale/wolfscale.toml` | Configuration |
+| `/var/lib/wolfscale/` | Data directory |
+| `/var/log/wolfscale/` | Log files |
 
 ---
 

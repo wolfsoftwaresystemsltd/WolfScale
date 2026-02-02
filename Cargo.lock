@@ -3157,6 +3157,7 @@ dependencies = [
  "async-trait",
  "axum",
  "bincode",
+ "byteorder",
  "bytes",
  "chrono",
  "clap",
