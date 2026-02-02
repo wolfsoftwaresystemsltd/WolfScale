@@ -209,7 +209,7 @@ async fn handle_connection(
     // Phase 4: Main command loop with smart routing
     let mut cmd_buf = vec![0u8; 16 * 1024 * 1024]; // 16MB max packet
     let mut result_buf = vec![0u8; 16 * 1024 * 1024];
-    let current_backend_addr = initial_backend_addr;
+    let mut current_backend_addr = initial_backend_addr;
     
     loop {
         // Read command from client
@@ -281,17 +281,23 @@ async fn handle_connection(
         // Get the appropriate backend address
         let target_addr = get_backend_address(&config, &cluster, is_write).await;
         
-        // If backend changed, reconnect
+        // If backend changed, reconnect to the target
         if target_addr != current_backend_addr {
-            tracing::debug!("Switching backend from {} to {}", current_backend_addr, target_addr);
+            tracing::info!("Switching backend from {} to {}", current_backend_addr, target_addr);
             
-            // Note: For a production system, we'd need to maintain connection state
-            // For now, we'll keep using the initial connection since switching mid-session
-            // would lose session state (USE database, transactions, etc.)
-            // 
-            // TODO: Implement proper connection pooling with session affinity
-            // For now, log the routing decision but keep using existing connection
-            tracing::info!("Would route to {} (keeping existing connection for session state)", target_addr);
+            // Reconnect to the new backend
+            match TcpStream::connect(&target_addr).await {
+                Ok(new_backend) => {
+                    backend = new_backend;
+                    current_backend_addr = target_addr;
+                    tracing::debug!("Connected to new backend {}", current_backend_addr);
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to connect to {}, staying with {}: {}", 
+                        target_addr, current_backend_addr, e);
+                    // Stay with current backend
+                }
+            }
         }
 
         // Forward command to backend
