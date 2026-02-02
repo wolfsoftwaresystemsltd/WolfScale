@@ -317,23 +317,29 @@ mysql -h any-node -P 8007 -u user -p
 **How it works:**
 1. Application connects to any node on port 8007
 2. Proxy accepts the connection using MySQL wire protocol
-3. For writes (INSERT/UPDATE/DELETE), proxy routes to the cluster leader
-4. For reads (SELECT), proxy executes on local backend
-5. SQL errors are returned back to client in MySQL format
+3. Proxy determines routing based on query type and replication status
+4. SQL errors are returned back to client in MySQL format
 
-**Configuration:**
+**Routing Logic:**
 
-```toml
-[proxy]
-enabled = true                     # Enabled by default
-bind_address = "0.0.0.0:8007"      # MySQL proxy port
-```
+| Scenario | Action |
+|----------|--------|
+| **Write** (INSERT/UPDATE/DELETE/CREATE/ALTER/DROP) | Always routes to leader |
+| **Read** + node is leader | Returns from local database |
+| **Read** + follower + caught up (lag=0) | Returns from local database |
+| **Read** + follower + lagging (lag>0) | Routes to leader for fresh data |
+
+**Write Replication:**
+- When the leader receives a write through the proxy, it logs the query to the WAL
+- Followers replicate the WAL entries and execute them locally
+- This ensures all nodes eventually have the same data
 
 **Benefits:**
 - Every node is a MySQL entry point - no separate proxy service needed
 - Applications need no code changes
 - Works with any MySQL client/library
 - Transparent write routing to leader
+- Smart read routing based on replication status
 - SQL errors passed through unchanged
 
 **Standalone proxy (optional):**
