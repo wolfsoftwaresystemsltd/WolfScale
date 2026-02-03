@@ -94,6 +94,8 @@ impl LeaderNode {
 
     /// Start the leader loop
     pub async fn start(&self) -> Result<()> {
+        tracing::info!("Leader replication loop starting");
+        
         // Set ourselves as leader
         self.cluster.set_leader(&self.node_id).await?;
 
