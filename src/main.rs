@@ -304,12 +304,18 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     let shared_follower = Arc::new(RwLock::new(None::<Arc<FollowerNode>>));
     let shared_leader = Arc::new(RwLock::new(None::<Arc<LeaderNode>>));
 
+    // Channel for forwarding entries from message loop to FollowerNode
+    // (We can't call FollowerNode methods directly due to Send trait constraints on rusqlite)
+    let (entry_tx, entry_rx) = tokio::sync::mpsc::channel::<Vec<wolfscale::wal::entry::WalEntry>>(100);
+    let shared_entry_rx = Arc::new(tokio::sync::Mutex::new(Some(entry_rx)));
+
     // Start INCOMING message processing loop - handles messages from peers
     // NOTE: Cannot call FollowerNode/LeaderNode methods here as they contain non-Send types (rusqlite)
     let incoming_cluster = Arc::clone(&cluster);
     let response_tx = outgoing_tx.clone();  
     let our_node_id = config.node.id.clone();
     let incoming_heartbeat_time = Arc::clone(&shared_heartbeat_time);
+    let incoming_entry_tx = entry_tx;
 
     tokio::spawn(async move {
         while let Some((peer_addr, message)) = incoming_rx.recv().await {
@@ -385,6 +391,14 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                     
                     // Get the highest LSN from this batch for ACK
                     let match_lsn = entries.last().map(|e| e.header.lsn).unwrap_or(0);
+                    
+                    // Forward entries to FollowerNode for processing
+                    // (we can't call FollowerNode.apply_entry directly due to Send trait constraints)
+                    if !entries.is_empty() {
+                        if let Err(e) = incoming_entry_tx.send(entries).await {
+                            tracing::error!("Failed to forward entries to follower: {}", e);
+                        }
+                    }
                     
                     // Send AppendEntriesResponse back to the leader - THIS IS THE KEY FIX
                     // The leader needs this to advance its next_lsn tracking
@@ -581,6 +595,12 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
             },
             config.cluster.disable_auto_election,
         ));
+
+        // Connect the entry channel to the follower
+        // This allows the message loop to forward entries to the follower for processing
+        if let Some(rx) = shared_entry_rx.lock().await.take() {
+            follower.set_entry_receiver(rx).await;
+        }
 
         // Store in shared state for message delegation
         *shared_follower.write().await = Some(Arc::clone(&follower));

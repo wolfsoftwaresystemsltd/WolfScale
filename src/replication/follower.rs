@@ -48,6 +48,8 @@ pub struct FollowerNode {
     disable_auto_election: bool,
     /// Was this node previously a leader (prevents auto re-election)
     was_leader: RwLock<bool>,
+    /// Channel to receive entries from message loop (due to Send trait constraints)
+    entry_rx: tokio::sync::Mutex<Option<mpsc::Receiver<Vec<crate::wal::entry::WalEntry>>>>,
 }
 
 impl FollowerNode {
@@ -87,6 +89,7 @@ impl FollowerNode {
             election,
             disable_auto_election,
             was_leader: RwLock::new(false),
+            entry_rx: tokio::sync::Mutex::new(None),
         }
     }
 
@@ -118,6 +121,11 @@ impl FollowerNode {
         node
     }
 
+    /// Set the entry receiver channel (for receiving entries from message loop)
+    pub async fn set_entry_receiver(&self, rx: mpsc::Receiver<Vec<crate::wal::entry::WalEntry>>) {
+        *self.entry_rx.lock().await = Some(rx);
+    }
+
     /// Start the follower loop
     pub async fn start(&self) -> Result<()> {
         // Load last applied LSN from state
@@ -133,10 +141,33 @@ impl FollowerNode {
                 break;
             }
 
-            interval_ticker.tick().await;
-            
-            // Check for leader timeout
-            self.check_leader_timeout().await?;
+            // Take the receiver out for this iteration
+            let mut entry_rx_guard = self.entry_rx.lock().await;
+            let maybe_entries = if let Some(ref mut rx) = *entry_rx_guard {
+                // Try to receive without blocking
+                rx.try_recv().ok()
+            } else {
+                None
+            };
+            drop(entry_rx_guard);
+
+            // Process any received entries
+            if let Some(entries) = maybe_entries {
+                tracing::info!("Processing {} replicated entries from leader", entries.len());
+                for entry in &entries {
+                    if let Err(e) = self.apply_entry(entry).await {
+                        // Log but continue - non-fatal errors shouldn't stop replication
+                        tracing::warn!("Failed to apply entry LSN {}: {} - continuing", entry.header.lsn, e);
+                    }
+                }
+            }
+
+            tokio::select! {
+                _ = interval_ticker.tick() => {
+                    // Check for leader timeout
+                    self.check_leader_timeout().await?;
+                }
+            }
         }
 
         Ok(())
