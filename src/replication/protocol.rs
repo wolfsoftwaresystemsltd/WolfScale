@@ -134,6 +134,14 @@ pub enum Message {
         nodes: Vec<NodeState>,
     },
 
+    /// Peer heartbeat (from any node to all peers for health detection)
+    PeerHeartbeat {
+        node_id: String,
+        term: u64,
+        /// Cluster membership known to this node
+        members: Vec<(String, String)>,
+    },
+
     // ========== Status ==========
     /// Status request
     StatusRequest,
@@ -218,6 +226,7 @@ impl Message {
             Message::LeaveRequest { .. } => "LeaveRequest",
             Message::LeaveResponse { .. } => "LeaveResponse",
             Message::ClusterStateUpdate { .. } => "ClusterStateUpdate",
+            Message::PeerHeartbeat { .. } => "PeerHeartbeat",
             Message::StatusRequest => "StatusRequest",
             Message::StatusResponse { .. } => "StatusResponse",
             Message::WriteForward { .. } => "WriteForward",

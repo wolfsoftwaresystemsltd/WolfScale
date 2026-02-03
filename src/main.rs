@@ -392,6 +392,21 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                         let _ = incoming_cluster.record_heartbeat(&node_id, last_applied_lsn).await;
                     }
                 }
+                wolfscale::replication::Message::PeerHeartbeat { node_id, members, .. } => {
+                    // Peer heartbeat - record that this peer is alive
+                    tracing::trace!("Peer heartbeat from {}", node_id);
+                    
+                    // Register peer if not known
+                    if incoming_cluster.get_node(&node_id).await.is_none() {
+                        // Find this node's address from the members list
+                        if let Some((_, addr)) = members.iter().find(|(id, _)| id == &node_id) {
+                            let _ = incoming_cluster.add_peer(node_id.clone(), addr.clone()).await;
+                        }
+                    }
+                    
+                    // Record heartbeat from this peer
+                    let _ = incoming_cluster.record_heartbeat(&node_id, 0).await;
+                }
                 _ => {
                     tracing::trace!("Ignoring message type {} from {}", message.type_name(), peer_addr);
                 }
@@ -541,6 +556,44 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                 }
             }
             tracing::info!("Entry processing loop stopped");
+        });
+
+        // Peer heartbeat loop - followers broadcast heartbeats to all peers
+        // This enables proper health detection even when leader is down
+        let peer_cluster = Arc::clone(&cluster);
+        let peer_msg_tx = msg_tx.clone();
+        let peer_node_id = config.node.id.clone();
+        let peer_heartbeat_interval = Duration::from_millis(config.cluster.heartbeat_interval_ms);
+        tokio::spawn(async move {
+            tracing::info!("Peer heartbeat loop started");
+            let mut interval = tokio::time::interval(peer_heartbeat_interval);
+            loop {
+                interval.tick().await;
+                
+                // Get all known peers
+                let peers = peer_cluster.peers().await;
+                let self_node = peer_cluster.get_self().await;
+                
+                // Build membership list
+                let mut members: Vec<(String, String)> = vec![
+                    (peer_node_id.clone(), self_node.address.clone())
+                ];
+                for peer in &peers {
+                    members.push((peer.id.clone(), peer.address.clone()));
+                }
+                
+                // Send peer heartbeat to all known peers
+                for peer in &peers {
+                    let msg = wolfscale::replication::Message::PeerHeartbeat {
+                        node_id: peer_node_id.clone(),
+                        term: 0,  // Followers don't track term
+                        members: members.clone(),
+                    };
+                    if let Err(e) = peer_msg_tx.send((peer.address.clone(), msg)).await {
+                        tracing::debug!("Failed to send peer heartbeat to {}: {}", peer.id, e);
+                    }
+                }
+            }
         });
 
         // Role transition loop - monitors for election wins and checks heartbeat
