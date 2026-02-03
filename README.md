@@ -112,12 +112,14 @@ The new node will be in `NEEDS_MIGRATION` status until you run the migrate comma
 
 ## Cluster Sizing
 
-| Nodes | Fault Tolerance | Use Case                   |
-|-------|-----------------|----------------------------|
-| 1     | None            | Development only           |
-| 2     | None            | Testing, no auto-failover  |
-| 3     | 1 node failure  | Minimum for production     |
-| 5     | 2 node failures | Recommended for production |
+| Nodes | Fault Tolerance   | Use Case                        |
+|-------|-------------------|---------------------------------|
+| 1     | None              | Development only                |
+| 2     | 1 node failure    | Basic HA (not recommended)      |
+| 3     | 2 node failures   | Minimum for production          |
+| 5     | 4 node failures   | Recommended for production      |
+
+> **Note:** WolfScale doesn't use quorum - only one node needs to survive. More nodes = more read capacity and redundancy.
 
 > **Note:** The install wizard creates your configuration file automatically. See the [full documentation](docs/DOCUMENTATION.md) for advanced configuration options.
 

@@ -519,15 +519,15 @@ wolfscale start --log-level debug
 
 **Cluster Sizing Guide:**
 
-| Nodes | Fault Tolerance | Use Case                     |
-|-------|-----------------|------------------------------|
-| 1     | None            | Development only             |
-| 2     | None            | Testing, no auto-failover    |
-| 3     | 1 node failure  | Minimum for production       |
-| 5     | 2 node failures | Recommended for production   |
-| 7     | 3 node failures | High availability            |
+| Nodes | Fault Tolerance   | Use Case                        |
+|-------|-------------------|---------------------------------|
+| 1     | None              | Development only                |
+| 2     | 1 node failure    | Basic HA (not recommended)      |
+| 3     | 2 node failures   | Minimum for production          |
+| 5     | 4 node failures   | Recommended for production      |
+| 7     | 6 node failures   | High availability               |
 
-**Tip:** Use an odd number of nodes for best fault tolerance.
+**Note:** WolfScale doesn't use quorum - only one node needs to survive. More nodes add read capacity and redundancy.
 
 ### Complete 3-Node Cluster Example
 
