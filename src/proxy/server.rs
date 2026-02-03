@@ -489,7 +489,7 @@ async fn handle_connection(
         let n = if let Some(data) = pending_data.take() {
             let n = data.len();
             cmd_buf[..n].copy_from_slice(&data);
-            eeprintln!("[PROXY] Using pending data: {} bytes", n);
+            eprintln!("[PROXY] Using pending data: {} bytes", n);
             n
         } else {
             match client.read(&mut cmd_buf).await {
