@@ -112,6 +112,9 @@ impl LeaderNode {
 
             heartbeat_ticker.tick().await;
             
+            // Log that we're running (visible at INFO level)
+            tracing::trace!("Leader heartbeat tick");
+            
             // Check database health every 5 heartbeats (to avoid too frequent checks)
             db_check_counter += 1;
             if db_check_counter % 5 == 0 {
@@ -298,7 +301,7 @@ impl LeaderNode {
                 continue;
             }
 
-            tracing::debug!("Replicating {} entries starting at LSN {} to {}", entries.len(), next, peer.id);
+            tracing::info!("Replicating {} entries starting at LSN {} to {}", entries.len(), next, peer.id);
 
             // Get prev entry info
             let (prev_lsn, prev_term) = if next > 1 {
