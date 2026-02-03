@@ -70,21 +70,15 @@ When running multiple MariaDB instances that need to stay synchronized, traditio
 
 **WolfScale should be installed on the same machine as each MariaDB server.** This is the ideal configuration for several reasons:
 
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           3-Node Cluster Example                            │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│   Server A (Leader)        Server B (Follower)      Server C (Follower)    │
-│   ┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐    │
-│   │  WolfScale      │      │  WolfScale      │      │  WolfScale      │    │
-│   │  (node-1)       │────▶│  (node-2)       │────▶│  (node-3)       │    │
-│   │       │         │      │       │         │      │       │         │    │
-│   │       ▼         │      │       ▼         │      │       ▼         │    │
-│   │  MariaDB        │      │  MariaDB        │      │  MariaDB        │    │
-│   │  (localhost)    │      │  (localhost)    │      │  (localhost)    │    │
-│   └─────────────────┘      └─────────────────┘      └─────────────────┘    │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+**3-Node Cluster Example:**
+
+| Server   | Role     | WolfScale | MariaDB   | Notes                          |
+|----------|----------|-----------|-----------|--------------------------------|
+| Server A | Leader   | node-1    | localhost | Handles all writes             |
+| Server B | Follower | node-2    | localhost | Receives replication from leader|
+| Server C | Follower | node-3    | localhost | Receives replication from leader|
+
+Each server runs both WolfScale and MariaDB locally. WolfScale connects to MariaDB via localhost.
 
 ### Why Co-locate WolfScale with MariaDB?
 
@@ -100,9 +94,8 @@ When running multiple MariaDB instances that need to stay synchronized, traditio
 
 Each node should connect to its local MariaDB:
 
-# On each server, database connects to localhost
 [database]
-host = "localhost"    # or "127.0.0.1"
+host = "localhost"
 port = 3306
 
 ### Ports to Open
@@ -126,18 +119,12 @@ Only consider this if you have constraints that prevent installation on database
 
 WolfScale can bridge two separate Galera clusters for cross-datacenter replication:
 
-┌─────────────────────────────┐         ┌─────────────────────────────┐
-│   Galera Cluster A          │         │   Galera Cluster B          │
-│   (Datacenter 1)            │         │   (Datacenter 2)            │
-│                             │         │                             │
-│  ┌─────┐ ┌─────┐ ┌─────┐    │         │  ┌─────┐ ┌─────┐ ┌─────┐    │
-│  │ DB1 │ │ DB2 │ │ DB3 │    │         │  │ DB4 │ │ DB5 │ │ DB6 │    │
-│  └─────┘ └─────┘ └──┬──┘    │         │  └──┬──┘ └─────┘ └─────┘    │
-│              ┌──────┴─────┐ │ WolfScale│ ┌──┴───────┐               │
-│              │ WolfScale  │◄├─────────┼─►│ WolfScale│               │
-│              │ (Leader)   │ │   WAN   │  │(Follower)│               │
-│              └────────────┘ │         │  └──────────┘               │
-└─────────────────────────────┘         └─────────────────────────────┘
+| Datacenter 1               | Datacenter 2               |
+|----------------------------|----------------------------|
+| Galera Cluster A (3 nodes) | Galera Cluster B (3 nodes) |
+| WolfScale Leader on DB3    | WolfScale Follower on DB4  |
+
+WolfScale replicates between clusters over WAN. Galera handles replication within each cluster.
 
 **How it works:**
 1. Install WolfScale Leader on one node in Cluster A
@@ -421,24 +408,14 @@ EXIT;
 
 ## Architecture
 
-┌─────────────────────────────────────────────────────────────────┐
-│                      WolfScale Cluster                          │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│   ┌──────────────┐    ┌──────────────┐    ┌──────────────┐      │
-│   │   Leader     │──▶│  Follower 1  │──▶│  Follower N  │      │
-│   │              │    │              │    │              │      │
-│   │  ┌────────┐  │    │  ┌────────┐  │    │  ┌────────┐  │      │
-│   │  │  WAL   │  │    │  │  WAL   │  │    │  │  WAL   │  │      │
-│   │  └────────┘  │    │  └────────┘  │    │  └────────┘  │      │
-│   │      │       │    │      │       │    │      │       │      │
-│   │      ▼       │    │      ▼       │    │      ▼       │      │
-│   │  ┌────────┐  │    │  ┌────────┐  │    │  ┌────────┐  │      │
-│   │  │MariaDB │  │    │  │MariaDB │  │    │  │MariaDB │  │          │
-│   │  └────────┘  │    │  └────────┘  │    │  └────────┘  │      │  
-│   └──────────────┘    └──────────────┘    └──────────────┘      │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+**Cluster Structure:**
+
+| Node     | Role     | Components                    | Replication          |
+|----------|----------|-------------------------------|----------------------|
+| Node 1   | Leader   | WAL + MariaDB                 | Sends to all followers|
+| Node 2-N | Follower | WAL + MariaDB                 | Receives from leader |
+
+**Data Flow:** Client Write → Leader WAL → Replicate to Followers → Apply to MariaDB
 
 ### Components
 

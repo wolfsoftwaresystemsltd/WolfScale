@@ -91,24 +91,13 @@ The new node will be in `NEEDS_MIGRATION` status until you run the migrate comma
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                     Applications                        │
-└─────────────────┬───────────────────────┬───────────────┘
-                  │ HTTP API              │ MySQL Protocol
-                  ▼                       ▼
-┌─────────────────────────────────────────────────────────┐
-│                    WolfScale Cluster                    │
-│  ┌─────────┐      ┌─────────┐      ┌─────────┐         │
-│  │ Leader  │◄────►│Follower │◄────►│Follower │         │
-│  │ (Node1) │      │ (Node2) │      │ (Node3) │         │
-│  └────┬────┘      └────┬────┘      └────┬────┘         │
-└───────┼────────────────┼────────────────┼───────────────┘
-        ▼                ▼                ▼
-   ┌─────────┐      ┌─────────┐      ┌─────────┐
-   │MariaDB 1│      │MariaDB 2│      │MariaDB 3│
-   └─────────┘      └─────────┘      └─────────┘
-```
+| Layer        | Component                                      |
+|--------------|------------------------------------------------|
+| Applications | Connect via HTTP API or MySQL Protocol         |
+| WolfScale    | Leader + Followers replicate via WAL           |
+| Database     | Each node has local MariaDB (localhost:3306)   |
+
+**Data Flow:** App → Any Node → Leader (for writes) → WAL → All Followers → Local MariaDB
 
 ## Cluster Sizing
 
