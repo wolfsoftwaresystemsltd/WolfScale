@@ -159,6 +159,9 @@ impl FollowerNode {
                         // Log but continue - non-fatal errors shouldn't stop replication
                         tracing::warn!("Failed to apply entry LSN {}: {} - continuing", entry.header.lsn, e);
                     }
+                    // Always update our LSN - even if the entry failed, we've "processed" it
+                    // This prevents re-processing the same entries forever
+                    let _ = self.cluster.record_heartbeat(&self.node_id, entry.header.lsn).await;
                 }
             }
 
