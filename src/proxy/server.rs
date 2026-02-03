@@ -74,20 +74,40 @@ fn is_write_query(query: &str) -> bool {
     // Strip leading comments (mysqldump adds /* ... */ style comments)
     let stripped = strip_leading_comments(query);
     let upper = stripped.trim().to_uppercase();
-    upper.starts_with("INSERT") ||
-    upper.starts_with("UPDATE") ||
-    upper.starts_with("DELETE") ||
+    
+    // DDL statements (CREATE covers TABLE, VIEW, TRIGGER, PROCEDURE, FUNCTION, INDEX, DATABASE, etc.)
     upper.starts_with("CREATE") ||
     upper.starts_with("ALTER") ||
     upper.starts_with("DROP") ||
+    upper.starts_with("RENAME") ||
     upper.starts_with("TRUNCATE") ||
+    // DML statements
+    upper.starts_with("INSERT") ||
+    upper.starts_with("UPDATE") ||
+    upper.starts_with("DELETE") ||
     upper.starts_with("REPLACE") ||
+    upper.starts_with("LOAD") ||  // LOAD DATA INFILE
+    upper.starts_with("CALL") ||  // Stored procedure calls
+    // Permissions
     upper.starts_with("GRANT") ||
     upper.starts_with("REVOKE") ||
+    // Lock statements
     upper.starts_with("LOCK") ||
     upper.starts_with("UNLOCK") ||
+    // Session/context
     upper.starts_with("SET") ||
-    upper.starts_with("USE")
+    upper.starts_with("USE") ||
+    // Transactions (needed for consistent replication)
+    upper.starts_with("START") ||  // START TRANSACTION
+    upper.starts_with("BEGIN") ||
+    upper.starts_with("COMMIT") ||
+    upper.starts_with("ROLLBACK") ||
+    upper.starts_with("SAVEPOINT") ||
+    // Maintenance
+    upper.starts_with("ANALYZE") ||
+    upper.starts_with("OPTIMIZE") ||
+    upper.starts_with("REPAIR") ||
+    upper.starts_with("FLUSH")
 }
 
 /// Strip leading SQL comments from a query
