@@ -489,13 +489,13 @@ async fn handle_connection(
         let n = if let Some(data) = pending_data.take() {
             let n = data.len();
             cmd_buf[..n].copy_from_slice(&data);
-            println!("[PROXY] Using pending data: {} bytes", n);
+            eeprintln!("[PROXY] Using pending data: {} bytes", n);
             n
         } else {
             match client.read(&mut cmd_buf).await {
                 Ok(0) => break,
                 Ok(n) => {
-                    println!("[PROXY] Read {} bytes from client", n);
+                    eprintln!("[PROXY] Read {} bytes from client", n);
                     n
                 },
                 Err(_) => break,
@@ -504,24 +504,24 @@ async fn handle_connection(
 
         // Log raw packet info
         if n >= 5 {
-            println!("[PROXY] Packet header: {:02x} {:02x} {:02x} {:02x}, cmd: {:02x}", 
+            eprintln!("[PROXY] Packet header: {:02x} {:02x} {:02x} {:02x}, cmd: {:02x}", 
                 cmd_buf[0], cmd_buf[1], cmd_buf[2], cmd_buf[3], cmd_buf[4]);
         }
 
         // Parse the complete packet to check query type
         let (is_write, query_opt) = if let Ok((packet, _)) = MySqlPacket::read(&cmd_buf[..n]) {
-            println!("[PROXY] Packet parsed successfully, command type: {:?}", packet.command());
+            eprintln!("[PROXY] Packet parsed successfully, command type: {:?}", packet.command());
             if let Some(query) = packet.query_string() {
-                println!("[PROXY] Query extracted: {}", query.chars().take(80).collect::<String>());
+                eprintln!("[PROXY] Query extracted: {}", query.chars().take(80).collect::<String>());
                 let write = is_write_query(&query);
-                println!("[PROXY] is_write_query returned: {}", write);
+                eprintln!("[PROXY] is_write_query returned: {}", write);
                 (write, Some(query))
             } else {
-                println!("[PROXY] No query string in packet (not COM_QUERY)");
+                eprintln!("[PROXY] No query string in packet (not COM_QUERY)");
                 (false, None)
             }
         } else {
-            println!("[PROXY] MySqlPacket::read FAILED for {} bytes", n);
+            eprintln!("[PROXY] MySqlPacket::read FAILED for {} bytes", n);
             (false, None)
         };
 
@@ -541,18 +541,18 @@ async fn handle_connection(
         // If this is a write query and we have a WAL writer, log it for replication
         // Only log if we are the leader - followers route to leader's proxy
         if is_write {
-            println!("[PROXY] WRITE DETECTED!");
+            eprintln!("[PROXY] WRITE DETECTED!");
             if let Some(ref query) = query_opt {
                 tracing::info!("WRITE detected: {}", query.chars().take(80).collect::<String>());
                 
                 // Check if we are the leader - only leader writes to WAL
                 let self_node = cluster.get_self().await;
-                println!("[PROXY] Node role: {:?}", self_node.role);
+                eprintln!("[PROXY] Node role: {:?}", self_node.role);
                 tracing::info!("Self node role: {:?}", self_node.role);
                 if self_node.role == NodeRole::Leader {
-                    println!("[PROXY] We are LEADER, checking WAL writer...");
+                    eprintln!("[PROXY] We are LEADER, checking WAL writer...");
                     if let Some(ref wal) = wal_writer {
-                        println!("[PROXY] WAL writer present, logging entry...");
+                        eprintln!("[PROXY] WAL writer present, logging entry...");
 
                         let table_name = extract_table_name(query);
                         
