@@ -228,9 +228,10 @@ impl FollowerNode {
                     success: true,
                     match_lsn: highest_applied_lsn,
                 };
-                tracing::info!("Sending ACK to {} with match_lsn={}", batch.leader_address, highest_applied_lsn);
-                if let Err(e) = self.message_tx.send((batch.leader_address, ack)).await {
-                    tracing::warn!("Failed to send ACK to leader: {}", e);
+                tracing::info!(">>> Sending ACK to {} with match_lsn={}", batch.leader_address, highest_applied_lsn);
+                match self.message_tx.send((batch.leader_address.clone(), ack)).await {
+                    Ok(_) => tracing::info!(">>> ACK sent successfully to {}", batch.leader_address),
+                    Err(e) => tracing::error!(">>> FAILED to send ACK: {}", e),
                 }
             }
 
