@@ -207,10 +207,11 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
         state_tracker.last_applied_lsn().await?);
 
     // Initialize cluster membership
+    // heartbeat_timeout = 3x heartbeat_interval to allow for some network jitter
     let cluster = Arc::new(ClusterMembership::new(
         config.node.id.clone(),
         config.advertise_address().to_string(),
-        config.heartbeat_interval(),
+        config.heartbeat_interval() * 3,  // Timeout is 3x heartbeat interval
         config.election_timeout(),
     ));
 
@@ -562,6 +563,12 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                     if current_heartbeat > last_checked_heartbeat {
                         last_checked_heartbeat = current_heartbeat;
                         follower_clone.reset_election_timer().await;
+                    }
+                    
+                    // Check for timed-out nodes (including leader)
+                    let timed_out = cluster.check_timeouts().await;
+                    for node_id in &timed_out {
+                        tracing::warn!("Node {} timed out", node_id);
                     }
                     
                     // Check if we won an election
