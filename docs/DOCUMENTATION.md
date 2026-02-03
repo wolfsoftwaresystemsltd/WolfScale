@@ -216,27 +216,47 @@ When a node joins the cluster:
 
 ## Leader Election
 
-### Automatic Failover
+### Deterministic Leader Election
 
-When the leader goes down:
-1. Followers detect missed heartbeats (timeout: 1.5-3 seconds)
-2. The eligible node starts an election
-3. New leader is elected and begins sending heartbeats
-4. Other nodes recognize the new leader and become followers
+WolfScale uses **deterministic leader election** based on node ID. No voting is required - the node with the lexicographically lowest ID among active, synced nodes becomes leader automatically.
 
-### Split-Brain Prevention
+**How it works:**
+1. Followers detect missed heartbeats from the leader (timeout: approximately 3x heartbeat interval)
+2. Each node checks if it has the lowest ID among active nodes
+3. The node with the lowest ID becomes leader immediately
+4. Other nodes recognize the new leader via heartbeats and become followers
 
-WolfScale uses a **deterministic tiebreaker** to prevent split-brain scenarios:
+**Benefits of deterministic election:**
 
-| Mechanism | Description |
-|-----------|-------------|
-| **Lowest Node ID** | Only the node with the lexicographically lowest ID among active nodes can become leader |
-| **No Voting Ties** | Deterministic selection means no conflicting elections |
-| **Predictable Failover** | You always know which node will become leader |
+| Benefit | Description |
+|---------|-------------|
+| **No split-brain** | Only one node can have the lowest ID |
+| **Predictable failover** | You always know which node will become leader |
+| **Instant transition** | No voting rounds or delays |
+| **Simple implementation** | No complex consensus protocol needed |
 
 **Example:**
 - If `wolftest1` (leader) goes down, and `wolftest2` and `wolftest3` remain
 - `wolftest2` will become leader because `"wolftest2" < "wolftest3"`
+
+### Node Rejoin Behavior
+
+When a previously failed node rejoins the cluster:
+
+1. The node starts as a **Follower** regardless of its ID
+2. It receives heartbeats from the current leader and learns the cluster state
+3. It syncs any missing WAL entries from the leader (status: **Syncing**)
+4. Once fully caught up, it transitions to **Active** status
+5. Only then can it participate in leader election
+
+**Important:** A node must be fully synced before it can become leader. This prevents a returning node with stale data from immediately stealing leadership.
+
+**Example scenario:**
+- `wolftest1` (lowest ID) was leader, goes down
+- `wolftest2` becomes the new leader
+- `wolftest1` comes back online - it joins as a follower
+- `wolftest1` syncs from `wolftest2` until caught up
+- Once `wolftest1` is **Active** and synced, it can reclaim leadership
 
 ### Database Health Monitoring
 
@@ -472,12 +492,12 @@ wolfscale start --log-level debug
 | Nodes | Quorum | Fault Tolerance | Recommendation |
 |-------|--------|-----------------|----------------|
 | 1 | 1 | None | Development only |
-| 2 | 2 | None | ⚠️ No auto-failover (needs both for quorum) |
-| 3 | 2 | 1 node | ✅ Minimum for production HA |
-| 5 | 3 | 2 nodes | ✅ Recommended for production |
+| 2 | 2 | None | No auto-failover (needs both for quorum) |
+| 3 | 2 | 1 node | Minimum for production HA |
+| 5 | 3 | 2 nodes | Recommended for production |
 | 7 | 4 | 3 nodes | High availability |
 
-> **Tip:** Always use an odd number of nodes. Even numbers (2, 4, 6) provide no additional fault tolerance compared to n-1 nodes, but require more nodes for quorum.
+**Tip:** Always use an odd number of nodes. Even numbers (2, 4, 6) provide no additional fault tolerance compared to n-1 nodes, but require more nodes for quorum.
 
 ### Complete 3-Node Cluster Example
 
