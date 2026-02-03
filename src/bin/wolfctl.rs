@@ -201,10 +201,9 @@ async fn list_servers(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> 
     println!("WolfScale Cluster Status");
     println!("========================");
     println!();
-    println!("Total: {} nodes  |  Active: {}  |  Quorum: {}", 
+    println!("Total: {} nodes  |  Active: {}", 
         info.summary.total_nodes,
-        info.summary.active_nodes,
-        if info.summary.has_quorum { "Yes" } else { "NO" }
+        info.summary.active_nodes
     );
     
     if let Some(leader) = &info.summary.leader_id {
@@ -276,7 +275,6 @@ async fn show_status(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
         println!("Leader:       {}", leader);
     }
     println!("Cluster Size: {}", status.cluster_size);
-    println!("Has Quorum:   {}", if status.has_quorum { "Yes" } else { "No" });
     println!();
 
     Ok(())
