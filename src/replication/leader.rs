@@ -268,10 +268,9 @@ impl LeaderNode {
                 continue;
             }
 
-            let next = {
-                let next_lsn = self.next_lsn.read().await;
-                *next_lsn.get(&peer.id).unwrap_or(&1)
-            };
+            // Use the peer's last_applied_lsn from cluster membership (updated by ACKs in main.rs)
+            // This is more reliable than internal next_lsn which requires handle_append_response to be called
+            let next = peer.last_applied_lsn + 1;
 
             // Read entries to send - must refresh index to see newly written entries
             {
