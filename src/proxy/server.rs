@@ -144,58 +144,86 @@ fn strip_leading_comments(query: &str) -> &str {
 /// When client connects with `mysql -D dbname` or `mysql dbname`, the database
 /// is included in the handshake response packet, not sent as a separate command
 fn extract_database_from_handshake(packet: &[u8]) -> Option<String> {
-    // MySQL Handshake Response packet structure (simplified):
-    // 4 bytes: packet header (length + sequence)
-    // 4 bytes: client capabilities
+    // MySQL HandshakeResponse41 packet structure:
+    // 4 bytes: packet header (3 bytes length + 1 byte sequence)
+    // 4 bytes: capability flags (lower 16 bits first, then upper 16 bits)
     // 4 bytes: max packet size
-    // 1 byte: charset
+    // 1 byte: character set
     // 23 bytes: reserved (zeros)
-    // NUL-terminated string: username
-    // Length-encoded auth response
-    // NUL-terminated string: database (if CLIENT_CONNECT_WITH_DB flag is set)
+    // string<NUL>: username
+    // string<length>: auth response (length prefixed if CLIENT_SECURE_CONNECTION)
+    // string<NUL>: database (if CLIENT_CONNECT_WITH_DB = 0x08 is set)
+    // string<NUL>: client plugin name (if CLIENT_PLUGIN_AUTH)
     
-    if packet.len() < 36 {
+    if packet.len() < 40 {
         return None;
     }
     
     // Skip packet header (4 bytes)
     let data = &packet[4..];
     
-    if data.len() < 32 {
+    if data.len() < 36 {
         return None;
     }
     
-    // Check CLIENT_CONNECT_WITH_DB capability flag (bit 3 = 0x08)
+    // Read capability flags (4 bytes, little-endian)
     let cap_flags = u32::from_le_bytes([data[0], data[1], data[2], data[3]]);
-    let has_db = (cap_flags & 0x08) != 0;
     
-    if !has_db {
+    // CLIENT_CONNECT_WITH_DB = 0x00000008
+    let has_connect_with_db = (cap_flags & 0x08) != 0;
+    // CLIENT_SECURE_CONNECTION = 0x00008000
+    let has_secure_connection = (cap_flags & 0x8000) != 0;
+    // CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA = 0x00200000
+    let has_lenenc_auth = (cap_flags & 0x00200000) != 0;
+    
+    if !has_connect_with_db {
         return None;
     }
     
-    // Skip: capabilities (4) + max_packet_size (4) + charset (1) + reserved (23) = 32 bytes
+    // Position after fixed fields: caps(4) + max_pkt(4) + charset(1) + reserved(23) = 32
     let mut pos = 32;
     
     // Skip username (NUL-terminated)
     while pos < data.len() && data[pos] != 0 {
         pos += 1;
     }
-    pos += 1; // Skip NUL
+    if pos >= data.len() {
+        return None;
+    }
+    pos += 1; // Skip NUL terminator
     
+    // Skip auth response
     if pos >= data.len() {
         return None;
     }
     
-    // Skip auth response (length-prefixed or NUL-terminated depending on plugin)
-    // Check CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA (0x00200000) or CLIENT_SECURE_CONNECTION (0x8000)
-    let secure_connection = (cap_flags & 0x8000) != 0;
-    
-    if secure_connection {
+    if has_secure_connection {
         // Length-prefixed auth data
-        let auth_len = data[pos] as usize;
-        pos += 1 + auth_len;
+        if has_lenenc_auth {
+            // Length-encoded integer for auth length
+            let first_byte = data[pos];
+            pos += 1;
+            let auth_len = if first_byte < 251 {
+                first_byte as usize
+            } else if first_byte == 252 && pos + 2 <= data.len() {
+                let len = u16::from_le_bytes([data[pos], data[pos + 1]]) as usize;
+                pos += 2;
+                len
+            } else if first_byte == 253 && pos + 3 <= data.len() {
+                let len = u32::from_le_bytes([data[pos], data[pos + 1], data[pos + 2], 0]) as usize;
+                pos += 3;
+                len
+            } else {
+                return None;
+            };
+            pos += auth_len;
+        } else {
+            // Simple length prefix (1 byte)
+            let auth_len = data[pos] as usize;
+            pos += 1 + auth_len;
+        }
     } else {
-        // NUL-terminated auth data
+        // NUL-terminated auth data (old style)
         while pos < data.len() && data[pos] != 0 {
             pos += 1;
         }
@@ -206,95 +234,17 @@ fn extract_database_from_handshake(packet: &[u8]) -> Option<String> {
         return None;
     }
     
-    // Now we should be at the database name (NUL-terminated)
+    // Now we're at the database name (NUL-terminated string)
     let db_start = pos;
     while pos < data.len() && data[pos] != 0 {
         pos += 1;
     }
     
     if pos > db_start {
-        String::from_utf8(data[db_start..pos].to_vec()).ok()
-    } else {
-        None
-    }
-}
-
-/// Query the current database from MariaDB using SELECT DATABASE()
-/// This is more reliable than parsing handshake packets
-async fn query_current_database(backend: &mut TcpStream, buf: &mut [u8]) -> Option<String> {
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    
-    // Build COM_QUERY packet for "SELECT DATABASE()"
-    let query = b"SELECT DATABASE()";
-    let payload_len = 1 + query.len(); // 1 byte for command + query
-    
-    // MySQL packet: 3 bytes length + 1 byte seq + payload
-    let mut packet = Vec::with_capacity(4 + payload_len);
-    packet.extend_from_slice(&(payload_len as u32).to_le_bytes()[..3]);
-    packet.push(0); // sequence number
-    packet.push(0x03); // COM_QUERY
-    packet.extend_from_slice(query);
-    
-    // Send query to backend
-    if backend.write_all(&packet).await.is_err() {
-        return None;
-    }
-    
-    // Read response
-    let n = match backend.read(buf).await {
-        Ok(n) if n > 0 => n,
-        _ => return None,
-    };
-    
-    // Parse result set to extract database name
-    // Response will be: column count packet, column def packet, EOF, row data packet, EOF
-    // The database name is in the row data packet as a length-prefixed string
-    // We need to find it - it's typically after several packets
-    
-    // Simple approach: scan for a recognizable database name pattern
-    // The row data contains a length-prefixed string with the database name
-    parse_database_from_result(&buf[..n])
-}
-
-/// Parse a database name from a SELECT DATABASE() result set
-fn parse_database_from_result(data: &[u8]) -> Option<String> {
-    // Skip through packets looking for row data
-    let mut pos = 0;
-    let mut packet_count = 0;
-    
-    while pos + 4 < data.len() && packet_count < 10 {
-        // Read packet header
-        let pkt_len = u32::from_le_bytes([data[pos], data[pos + 1], data[pos + 2], 0]) as usize;
-        
-        if pkt_len == 0 || pos + 4 + pkt_len > data.len() {
-            break;
-        }
-        
-        let payload = &data[pos + 4..pos + 4 + pkt_len];
-        pos += 4 + pkt_len;
-        packet_count += 1;
-        
-        // Skip column count, column definition, and EOF packets
-        // Row data packet will have a length-prefixed string
-        if payload.is_empty() {
-            continue;
-        }
-        
-        // Check for NULL (0xFB) or EOF (0xFE) packet
-        if payload[0] == 0xFB || payload[0] == 0xFE || payload[0] == 0xFF {
-            continue;
-        }
-        
-        // Try to parse as length-prefixed string (row data)
-        if packet_count >= 3 && payload[0] < 0xFB {
-            let str_len = payload[0] as usize;
-            if str_len > 0 && str_len < payload.len() {
-                if let Ok(s) = String::from_utf8(payload[1..1 + str_len].to_vec()) {
-                    // Verify it looks like a database name (alphanumeric, underscores)
-                    if s.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
-                        return Some(s);
-                    }
-                }
+        if let Ok(db_name) = String::from_utf8(data[db_start..pos].to_vec()) {
+            // Validate it looks like a reasonable database name
+            if !db_name.is_empty() && db_name.len() < 256 {
+                return Some(db_name);
             }
         }
     }
@@ -429,14 +379,6 @@ async fn handle_connection(
     }
     client.write_all(&handshake_buf[..n]).await?;
 
-    // Phase 3.5: If we didn't get database from handshake, query MariaDB for it
-    // This is more reliable than parsing the handshake packet
-    let detected_database = if initial_database.is_some() {
-        initial_database
-    } else {
-        query_current_database(&mut backend, &mut handshake_buf).await
-    };
-
     // Phase 4: Main command loop with smart routing
     let mut cmd_buf = vec![0u8; 16 * 1024 * 1024]; // 16MB max packet
     let mut result_buf = vec![0u8; 16 * 1024 * 1024];
@@ -444,8 +386,8 @@ async fn handle_connection(
     
     // Track current database context for replication
     // This is needed because followers need to know which database to execute statements in
-    // Initialize with database from handshake or query if present
-    let mut current_database: Option<String> = detected_database;
+    // Initialize with database from handshake if present
+    let mut current_database: Option<String> = initial_database;
     
     loop {
         // Read command from client
