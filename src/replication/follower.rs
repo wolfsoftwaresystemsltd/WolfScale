@@ -148,6 +148,12 @@ impl FollowerNode {
         Ok(())
     }
 
+    /// Reset the election timer (called when heartbeat is received)
+    pub async fn reset_election_timer(&self) {
+        self.election.reset_timer().await;
+        *self.last_heartbeat.write().await = Instant::now();
+    }
+
     /// Handle a heartbeat from the leader
     pub async fn handle_heartbeat(
         &self,
@@ -167,8 +173,9 @@ impl FollowerNode {
         *self.leader_id.write().await = Some(leader_id.clone());
         self.cluster.set_leader(&leader_id).await?;
 
-        // Update heartbeat time
+        // Update heartbeat time and reset election timer
         *self.last_heartbeat.write().await = Instant::now();
+        self.election.reset_timer().await;
 
         // Check if we need to sync
         let last_applied = *self.last_applied_lsn.read().await;
