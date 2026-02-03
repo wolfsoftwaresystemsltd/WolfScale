@@ -25,6 +25,8 @@ pub enum NodeStatus {
     Dropped,
     /// Node is offline/unreachable
     Offline,
+    /// Node needs full database migration (too far behind for WAL catch-up)
+    NeedsMigration,
 }
 
 impl std::fmt::Display for NodeStatus {
@@ -36,6 +38,7 @@ impl std::fmt::Display for NodeStatus {
             NodeStatus::Lagging => write!(f, "LAGGING"),
             NodeStatus::Dropped => write!(f, "DROPPED"),
             NodeStatus::Offline => write!(f, "OFFLINE"),
+            NodeStatus::NeedsMigration => write!(f, "NEEDS_MIGRATION"),
         }
     }
 }

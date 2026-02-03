@@ -115,6 +115,9 @@ impl HttpServer {
             // Admin operations
             .route("/admin/promote", post(handle_promote))
             .route("/admin/demote", post(handle_demote))
+            // Migration operations
+            .route("/dump/info", get(handle_dump_info))
+            .route("/dump", get(handle_dump))
             .with_state(state)
     }
 
@@ -632,6 +635,86 @@ async fn forward_to_leader<T: Serialize>(
                     code: "FORWARD_ERROR".to_string(),
                 }),
             ).into_response())
+        }
+    }
+}
+
+// ============ Migration Handlers ============
+
+/// Dump info response
+#[derive(Debug, Serialize)]
+struct DumpInfoResponse {
+    lsn: u64,
+    database: String,
+    node_id: String,
+}
+
+/// Get dump info (LSN and database name for migration)
+async fn handle_dump_info(
+    State(state): State<Arc<AppState>>,
+) -> impl IntoResponse {
+    // Get current cluster state to find our LSN
+    let self_node = state.cluster.get_self().await;
+    
+    Json(DumpInfoResponse {
+        lsn: self_node.last_applied_lsn,
+        database: "wolfscale".to_string(), // TODO: get from config
+        node_id: state.node_id.clone(),
+    })
+}
+
+/// Stream database dump for migration
+/// This executes mysqldump and streams the output
+async fn handle_dump(
+    State(state): State<Arc<AppState>>,
+) -> impl IntoResponse {
+    use axum::body::Body;
+    use tokio::process::Command;
+
+    // Only allow dump from leader or synced nodes
+    let self_node = state.cluster.get_self().await;
+    if self_node.status != crate::state::NodeStatus::Active {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Node is not in Active status - cannot provide dump".to_string(),
+        ).into_response();
+    }
+
+    // Execute mysqldump
+    // TODO: Get database credentials from config - for now use defaults
+    let output = Command::new("mysqldump")
+        .args([
+            "--all-databases",
+            "--single-transaction",
+            "--routines",
+            "--triggers",
+            "--events",
+            "-u", "root",
+        ])
+        .output()
+        .await;
+
+    match output {
+        Ok(result) => {
+            if result.status.success() {
+                (
+                    StatusCode::OK,
+                    [(axum::http::header::CONTENT_TYPE, "application/sql")],
+                    Body::from(result.stdout),
+                ).into_response()
+            } else {
+                let stderr = String::from_utf8_lossy(&result.stderr);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("mysqldump failed: {}", stderr),
+                ).into_response()
+            }
+        }
+        Err(e) => {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to execute mysqldump: {}", e),
+            ).into_response()
         }
     }
 }

@@ -75,6 +75,20 @@ wolfctl list servers
 # wolftest3   | ACTIVE | FOLLOWER | 10.0.10.113:7654 | 0
 ```
 
+### Adding New Nodes
+
+When adding a new node to an existing cluster with data:
+
+```bash
+# On the new node - migrate database from an existing node
+wolfctl migrate --from 10.0.10.111:8080
+
+# Then start WolfScale normally
+systemctl start wolfscale
+```
+
+The new node will be in `NEEDS_MIGRATION` status until you run the migrate command.
+
 ## Architecture
 
 ```

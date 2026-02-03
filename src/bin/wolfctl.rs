@@ -40,6 +40,12 @@ enum Commands {
     Promote,
     /// Demote this node from leader
     Demote,
+    /// Migrate database from another node (for adding new nodes to existing clusters)
+    Migrate {
+        /// Source node address (e.g., 10.0.10.111:8080 or http://wolftest1:8080)
+        #[arg(long)]
+        from: String,
+    },
     /// Check configuration file for errors
     CheckConfig {
         /// Path to config file to check (defaults to --config path)
@@ -172,6 +178,7 @@ async fn main() {
         Commands::Status => show_status(&endpoint).await,
         Commands::Promote => promote(&endpoint).await,
         Commands::Demote => demote(&endpoint).await,
+        Commands::Migrate { from } => migrate(from, &cli.config).await,
         Commands::CheckConfig { file } => {
             let config_path = file.clone().unwrap_or_else(|| cli.config.clone());
             check_config(&config_path)
@@ -525,6 +532,97 @@ fn check_config(path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     } else {
         println!("\x1b[1;32m✓ Configuration looks good!\x1b[0m");
     }
+    println!();
+
+    Ok(())
+}
+
+// ============ Migrate ============
+
+/// Response from dump endpoint
+#[derive(Debug, Deserialize)]
+struct DumpInfo {
+    lsn: u64,
+    database: String,
+}
+
+async fn migrate(source: &str, config_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    println!("\x1b[1;36mWolfScale Database Migration\x1b[0m");
+    println!("============================\n");
+
+    // Normalize source address
+    let source_endpoint = if source.starts_with("http://") || source.starts_with("https://") {
+        source.to_string()
+    } else {
+        format!("http://{}", source)
+    };
+
+    // Load local config to get database credentials
+    println!("Loading local configuration...");
+    let config_content = std::fs::read_to_string(config_path)?;
+    let config: FullConfig = toml::from_str(&config_content)?;
+
+    let db_host = config.database.host.as_deref().unwrap_or("localhost");
+    let db_port = config.database.port.unwrap_or(3306);
+    let db_user = config.database.user.as_deref().unwrap_or("root");
+    let db_pass = config.database.password.as_deref().unwrap_or("");
+
+    println!("  Local database: {}:{}", db_host, db_port);
+    println!("  Source node: {}", source_endpoint);
+    println!();
+
+    // Get dump info from source
+    println!("Requesting database dump from source...");
+    let client = reqwest::Client::new();
+    let info_url = format!("{}/dump/info", source_endpoint);
+    
+    let info_response = client.get(&info_url).send().await?;
+    if !info_response.status().is_success() {
+        return Err(format!("Source node returned error: {}", info_response.status()).into());
+    }
+    
+    let dump_info: DumpInfo = info_response.json().await?;
+    println!("  Source LSN: {}", dump_info.lsn);
+    println!("  Database: {}", dump_info.database);
+    println!();
+
+    // Stream the dump
+    println!("Streaming database dump...");
+    let dump_url = format!("{}/dump", source_endpoint);
+    let dump_response = client.get(&dump_url).send().await?;
+    
+    if !dump_response.status().is_success() {
+        return Err(format!("Failed to get dump: {}", dump_response.status()).into());
+    }
+
+    // Save dump to temp file
+    let temp_path = std::env::temp_dir().join("wolfscale_migration.sql");
+    let dump_bytes = dump_response.bytes().await?;
+    std::fs::write(&temp_path, &dump_bytes)?;
+    println!("  Downloaded {} bytes", dump_bytes.len());
+
+    // Apply dump using mysql client
+    println!("\nApplying dump to local database...");
+    let mysql_cmd = std::process::Command::new("mysql")
+        .arg("-h").arg(db_host)
+        .arg("-P").arg(db_port.to_string())
+        .arg("-u").arg(db_user)
+        .arg(format!("-p{}", db_pass))
+        .stdin(std::fs::File::open(&temp_path)?)
+        .output()?;
+
+    if !mysql_cmd.status.success() {
+        let stderr = String::from_utf8_lossy(&mysql_cmd.stderr);
+        return Err(format!("Failed to apply dump: {}", stderr).into());
+    }
+
+    // Clean up temp file
+    let _ = std::fs::remove_file(&temp_path);
+
+    println!("\x1b[32m✓ Migration complete!\x1b[0m");
+    println!();
+    println!("The database has been migrated from the source node.");
+    println!("You can now start WolfScale - it will sync from LSN {}.", dump_info.lsn);
     println!();
 
     Ok(())
