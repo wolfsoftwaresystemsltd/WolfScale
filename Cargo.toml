@@ -71,6 +71,9 @@ rand = "0.8"
 # MySQL protocol
 byteorder = "1"
 
+# Unix utilities (for root check)
+nix = { version = "0.27", features = ["user"] }
+
 [dev-dependencies]
 tempfile = "3"
 rand = "0.8"

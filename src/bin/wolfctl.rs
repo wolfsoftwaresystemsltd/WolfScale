@@ -52,6 +52,11 @@ enum Commands {
         #[arg(short, long)]
         file: Option<PathBuf>,
     },
+    /// Set the log level for the running service (requires sudo)
+    LogLevel {
+        /// Log level: debug, info, warn, error
+        level: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -183,6 +188,7 @@ async fn main() {
             let config_path = file.clone().unwrap_or_else(|| cli.config.clone());
             check_config(&config_path)
         }
+        Commands::LogLevel { level } => set_log_level(level),
     };
 
     if let Err(e) = result {
@@ -626,5 +632,77 @@ async fn migrate(source: &str, config_path: &PathBuf) -> Result<(), Box<dyn std:
     println!("You can now start WolfScale - it will sync from LSN {}.", dump_info.lsn);
     println!();
 
+    Ok(())
+}
+
+// ============ Log Level ============
+
+fn set_log_level(level: &str) -> Result<(), Box<dyn std::error::Error>> {
+    // Validate level
+    let valid_levels = ["debug", "info", "warn", "error", "trace", "off"];
+    let level_lower = level.to_lowercase();
+    
+    if !valid_levels.contains(&level_lower.as_str()) {
+        return Err(format!(
+            "Invalid log level '{}'. Valid levels: {}", 
+            level, 
+            valid_levels.join(", ")
+        ).into());
+    }
+
+    // Create systemd drop-in directory
+    let dropin_dir = "/etc/systemd/system/wolfscale.service.d";
+    let dropin_file = format!("{}/logging.conf", dropin_dir);
+    
+    // Check if running as root
+    if !nix::unistd::Uid::effective().is_root() {
+        println!("\x1b[1;33mNote:\x1b[0m This command requires sudo to modify systemd configuration.");
+        println!();
+        println!("Run: sudo wolfctl log-level {}", level);
+        return Ok(());
+    }
+
+    // Create directory
+    std::fs::create_dir_all(dropin_dir)?;
+    
+    // Determine RUST_LOG value
+    let rust_log = if level_lower == "off" {
+        "".to_string()
+    } else {
+        format!("wolfscale={}", level_lower)
+    };
+
+    // Write drop-in file
+    let content = format!(
+        "[Service]\nEnvironment=\"RUST_LOG={}\"\n",
+        rust_log
+    );
+    std::fs::write(&dropin_file, content)?;
+
+    println!("\x1b[1;32m✓\x1b[0m Log level set to: {}", level_lower);
+    
+    // Reload systemd and restart service
+    println!("Reloading systemd...");
+    let reload = std::process::Command::new("systemctl")
+        .args(["daemon-reload"])
+        .status()?;
+    
+    if !reload.success() {
+        return Err("Failed to reload systemd".into());
+    }
+
+    println!("Restarting wolfscale service...");
+    let restart = std::process::Command::new("systemctl")
+        .args(["restart", "wolfscale"])
+        .status()?;
+    
+    if !restart.success() {
+        return Err("Failed to restart wolfscale service".into());
+    }
+
+    println!("\x1b[1;32m✓\x1b[0m Service restarted with new log level");
+    println!();
+    println!("View logs: sudo journalctl -u wolfscale -f");
+    
     Ok(())
 }
