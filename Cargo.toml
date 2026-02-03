@@ -74,6 +74,9 @@ byteorder = "1"
 # Unix utilities (for root check)
 nix = { version = "0.27", features = ["user"] }
 
+# Ctrl+C handling
+ctrlc = "3.4"
+
 [dev-dependencies]
 tempfile = "3"
 rand = "0.8"

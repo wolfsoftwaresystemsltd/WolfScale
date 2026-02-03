@@ -871,6 +871,17 @@ wolfctl demote     # Step down from leadership
 wolfctl check-config         # Validate configuration file
 wolfctl check-config -f /path/to/config.toml  # Check specific file
 
+#### Live Statistics
+
+wolfctl stats
+
+Shows live throughput statistics, updating every second until Ctrl+C:
+- Node ID and role (Leader/Follower)
+- Current LSN (Log Sequence Number)
+- Writes per second (calculated from LSN changes)
+- Cluster node count
+- Follower replication lag (when running on leader)
+
 ### Configuration Validation
 
 The `check-config` command validates your configuration file and reports issues:

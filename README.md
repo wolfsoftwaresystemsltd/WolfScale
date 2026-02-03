@@ -73,6 +73,9 @@ wolfctl list servers
 # wolftest1   | ACTIVE | LEADER   | 10.0.10.111:7654 | 0
 # wolftest2   | ACTIVE | FOLLOWER | 10.0.10.112:7654 | 0
 # wolftest3   | ACTIVE | FOLLOWER | 10.0.10.113:7654 | 0
+
+# Live throughput monitoring (updates every second, Ctrl+C to exit)
+wolfctl stats
 ```
 
 ### Adding New Nodes

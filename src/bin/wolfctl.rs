@@ -57,6 +57,8 @@ enum Commands {
         /// Log level: debug, info, warn, error
         level: String,
     },
+    /// Show live stats (updates every second, Ctrl+C to exit)
+    Stats,
 }
 
 #[derive(Subcommand)]
@@ -122,6 +124,40 @@ struct StatusResponse {
 struct WriteResponse {
     success: bool,
     message: Option<String>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+struct StatsApiResponse {
+    #[serde(default)]
+    node_id: String,
+    #[serde(default)]
+    role: String,
+    #[serde(default)]
+    current_lsn: u64,
+    #[serde(default)]
+    commit_lsn: u64,
+    #[serde(default)]
+    uptime_seconds: u64,
+    #[serde(default)]
+    cluster_size: usize,
+    #[serde(default)]
+    active_nodes: usize,
+    #[serde(default)]
+    followers: Vec<FollowerStatsApi>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+struct FollowerStatsApi {
+    #[serde(default)]
+    node_id: String,
+    #[serde(default)]
+    last_applied_lsn: u64,
+    #[serde(default)]
+    lag: u64,
+    #[serde(default)]
+    status: String,
 }
 
 // ============ Config ============
@@ -190,6 +226,7 @@ async fn main() {
             check_config(&config_path)
         }
         Commands::LogLevel { level } => set_log_level(level),
+        Commands::Stats => show_stats(&endpoint).await,
     };
 
     if let Err(e) = result {
@@ -696,6 +733,121 @@ fn set_log_level(level: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("\x1b[1;32m✓\x1b[0m Service restarted with new log level");
     println!();
     println!("View logs: sudo journalctl -u wolfscale -f");
+    
+    Ok(())
+}
+
+// ============ Stats ============
+
+async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let url = format!("{}/stats", endpoint);
+    let client = reqwest::Client::new();
+    
+    // Track for throughput calculation
+    let mut last_lsn: Option<u64> = None;
+    let mut last_time = std::time::Instant::now();
+    let mut writes_per_sec: f64 = 0.0;
+    
+    // Hide cursor
+    print!("\x1b[?25l");
+    
+    // Set up Ctrl+C handler
+    let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+    let r = running.clone();
+    ctrlc::set_handler(move || {
+        r.store(false, std::sync::atomic::Ordering::SeqCst);
+    })?;
+    
+    println!();
+    println!("\x1b[1;36m╔══════════════════════════════════════════════════════════════╗\x1b[0m");
+    println!("\x1b[1;36m║\x1b[0m            \x1b[1;37mWolfScale Live Statistics\x1b[0m                         \x1b[1;36m║\x1b[0m");
+    println!("\x1b[1;36m╚══════════════════════════════════════════════════════════════╝\x1b[0m");
+    println!();
+    
+    // Main loop
+    while running.load(std::sync::atomic::Ordering::SeqCst) {
+        // Fetch stats
+        match client.get(&url).send().await {
+            Ok(response) if response.status().is_success() => {
+                match response.json::<StatsApiResponse>().await {
+                    Ok(stats) => {
+                        // Calculate throughput
+                        let now = std::time::Instant::now();
+                        let elapsed = now.duration_since(last_time).as_secs_f64();
+                        
+                        if let Some(prev_lsn) = last_lsn {
+                            if elapsed > 0.0 && stats.current_lsn > prev_lsn {
+                                let delta = stats.current_lsn - prev_lsn;
+                                writes_per_sec = delta as f64 / elapsed;
+                            } else if elapsed > 2.0 {
+                                // Decay if no activity
+                                writes_per_sec *= 0.5;
+                            }
+                        }
+                        last_lsn = Some(stats.current_lsn);
+                        last_time = now;
+                        
+                        // Move cursor up and clear lines for refresh
+                        print!("\x1b[8A\x1b[J");
+                        
+                        // Role with color
+                        let role_display = if stats.role == "Leader" {
+                            format!("\x1b[1;34m{}\x1b[0m", stats.role)
+                        } else {
+                            format!("\x1b[33m{}\x1b[0m", stats.role)
+                        };
+                        
+                        println!("  Node ID:        {}", stats.node_id);
+                        println!("  Role:           {}", role_display);
+                        println!("  Current LSN:    \x1b[1;32m{}\x1b[0m", stats.current_lsn);
+                        println!("  Writes/sec:     \x1b[1;36m{:.2}\x1b[0m", writes_per_sec);
+                        println!("  Cluster:        {}/{} nodes active", stats.active_nodes, stats.cluster_size);
+                        println!();
+                        
+                        // Follower replication status
+                        if !stats.followers.is_empty() && stats.role == "Leader" {
+                            println!("  \x1b[1mFollower Replication:\x1b[0m");
+                            for f in &stats.followers {
+                                let lag_color = if f.lag == 0 { "\x1b[32m" } else if f.lag < 100 { "\x1b[33m" } else { "\x1b[31m" };
+                                println!("    {} - LSN: {} (lag: {}{}{})", 
+                                    f.node_id, f.last_applied_lsn, lag_color, f.lag, "\x1b[0m");
+                            }
+                        } else {
+                            println!();
+                        }
+                        
+                        println!();
+                        println!("  \x1b[2mPress Ctrl+C to exit\x1b[0m");
+                    }
+                    Err(e) => {
+                        println!("  Error parsing stats: {}", e);
+                    }
+                }
+            }
+            Ok(response) => {
+                print!("\x1b[4A\x1b[J");
+                println!("  \x1b[31mAPI Error: {}\x1b[0m", response.status());
+                println!();
+                println!();
+                println!("  \x1b[2mPress Ctrl+C to exit\x1b[0m");
+            }
+            Err(e) => {
+                print!("\x1b[4A\x1b[J");
+                println!("  \x1b[31mConnection Error: {}\x1b[0m", e);
+                println!("  Is WolfScale running?");
+                println!();
+                println!("  \x1b[2mPress Ctrl+C to exit\x1b[0m");
+            }
+        }
+        
+        // Wait 1 second before next update
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    }
+    
+    // Show cursor again
+    print!("\x1b[?25h");
+    println!();
+    println!("Stats monitoring stopped.");
     
     Ok(())
 }

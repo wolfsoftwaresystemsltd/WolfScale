@@ -108,6 +108,7 @@ impl HttpServer {
             .route("/write/ddl", post(handle_ddl))
             // Status and info
             .route("/status", get(handle_status))
+            .route("/stats", get(handle_stats))
             .route("/health", get(handle_health))
             .route("/cluster", get(handle_cluster_info))
             .route("/cluster/nodes", get(handle_nodes))
@@ -216,6 +217,28 @@ pub struct HealthResponse {
     pub healthy: bool,
     pub node_id: String,
     pub is_leader: bool,
+}
+
+/// Stats response for throughput monitoring
+#[derive(Debug, Serialize)]
+pub struct StatsResponse {
+    pub node_id: String,
+    pub role: String,
+    pub current_lsn: u64,
+    pub commit_lsn: u64,
+    pub uptime_seconds: u64,
+    pub cluster_size: usize,
+    pub active_nodes: usize,
+    pub followers: Vec<FollowerStats>,
+}
+
+/// Follower stats for replication lag tracking
+#[derive(Debug, Serialize)]
+pub struct FollowerStats {
+    pub node_id: String,
+    pub last_applied_lsn: u64,
+    pub lag: u64,
+    pub status: String,
 }
 
 /// Cluster info response
@@ -462,6 +485,55 @@ async fn handle_health(
         healthy: true,
         node_id: state.node_id.clone(),
         is_leader: *state.is_leader.read().await,
+    })
+}
+
+/// Stats endpoint for live throughput monitoring
+async fn handle_stats(
+    State(state): State<Arc<AppState>>,
+) -> impl IntoResponse {
+    let leader = state.cluster.current_leader().await;
+    let self_node = state.cluster.get_self().await;
+    let all_nodes = state.cluster.all_nodes().await;
+    
+    // Determine role
+    let is_leader = leader.as_ref().map(|l| l.id == state.node_id).unwrap_or(false)
+        || *state.is_leader.read().await;
+    let role = if is_leader { "Leader" } else { "Follower" };
+    
+    // Calculate active nodes
+    let active_count = all_nodes.iter()
+        .filter(|n| n.status == crate::state::NodeStatus::Active)
+        .count();
+    
+    // Build follower stats (only meaningful for leader)
+    let current_lsn = self_node.last_applied_lsn;
+    let followers: Vec<FollowerStats> = all_nodes.iter()
+        .filter(|n| n.id != state.node_id)
+        .map(|n| {
+            let lag = if current_lsn > n.last_applied_lsn {
+                current_lsn - n.last_applied_lsn
+            } else {
+                0
+            };
+            FollowerStats {
+                node_id: n.id.clone(),
+                last_applied_lsn: n.last_applied_lsn,
+                lag,
+                status: format!("{:?}", n.status),
+            }
+        })
+        .collect();
+    
+    Json(StatsResponse {
+        node_id: state.node_id.clone(),
+        role: role.to_string(),
+        current_lsn,
+        commit_lsn: current_lsn, // For now, same as current
+        uptime_seconds: 0, // TODO: Track actual uptime
+        cluster_size: all_nodes.len(),
+        active_nodes: active_count,
+        followers,
     })
 }
 
