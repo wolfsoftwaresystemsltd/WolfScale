@@ -118,6 +118,7 @@ The new node will be in `NEEDS_MIGRATION` status until you run the migrate comma
 | 2     | 1 node failure    | Basic HA (not recommended)      |
 | 3     | 2 node failures   | Minimum for production          |
 | 5     | 4 node failures   | Recommended for production      |
+| 7     | 6 node failures   | High availability               |
 
 **Geo-Distribution:** Nodes can be deployed across different data centers or regions. Connect to your nearest node for low-latency reads - if the data isn't up-to-date, the request is automatically forwarded to the leader.
 
