@@ -94,22 +94,18 @@ impl LeaderNode {
 
     /// Start the leader loop
     pub async fn start(&self) -> Result<()> {
-        tracing::info!("Leader replication loop starting");
+        tracing::debug!("Leader replication loop starting");
         
         // Set ourselves as leader
-        tracing::info!("Setting ourselves as leader");
         self.cluster.set_leader(&self.node_id).await?;
 
         // Initialize follower state
-        tracing::info!("Initializing follower state");
         self.initialize_follower_state().await?;
-        tracing::info!("Follower state initialized, starting heartbeat loop");
 
         // Start heartbeat loop
         let heartbeat_interval = Duration::from_millis(self.config.heartbeat_interval_ms);
         let mut heartbeat_ticker = interval(heartbeat_interval);
         let mut db_check_counter = 0u64;
-        let mut tick_count = 0u64;
 
         loop {
             if *self.shutdown.read().await {
@@ -117,12 +113,6 @@ impl LeaderNode {
             }
 
             heartbeat_ticker.tick().await;
-            tick_count += 1;
-            
-            // Log every 10 ticks (5 seconds at 500ms interval)
-            if tick_count % 10 == 0 || tick_count <= 3 {
-                tracing::info!("Leader heartbeat tick #{}", tick_count);
-            }
             
             // Check database health every 5 heartbeats (to avoid too frequent checks)
             db_check_counter += 1;
@@ -265,17 +255,10 @@ impl LeaderNode {
     }
 
     /// Replicate entries to followers
-    /// Replicate entries to followers
     async fn replicate_to_followers(&self) -> Result<()> {
         let peers = self.cluster.peers().await;
         if peers.is_empty() {
-            tracing::info!("No peers registered - skipping replication");
             return Ok(());
-        }
-        
-        // Show all peers and their LSNs at start of replication cycle
-        for p in &peers {
-            tracing::info!("Peer status: id={}, status={:?}, lsn={}", p.id, p.status, p.last_applied_lsn);
         }
         
         let term = *self.term.read().await;
@@ -311,7 +294,7 @@ impl LeaderNode {
                 continue;
             }
 
-            tracing::info!("Replicating {} entries starting at LSN {} to {}", entries.len(), next, peer.id);
+            tracing::debug!("Replicating {} entries starting at LSN {} to {}", entries.len(), next, peer.id);
 
             // Get prev entry info
             let (prev_lsn, prev_term) = if next > 1 {
