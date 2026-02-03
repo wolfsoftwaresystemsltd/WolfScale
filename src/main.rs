@@ -191,6 +191,19 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
             return Err(e);
         }
     };
+    // Create a second WAL reader for sync requests (shared across async tasks)
+    let sync_wal_reader = match WalReader::new(
+        config.data_dir().clone(),
+        config.wal.segment_size_mb,
+        config.wal.compression,
+    ) {
+        Ok(r) => Arc::new(tokio::sync::RwLock::new(r)),
+        Err(e) => {
+            tracing::error!("Failed to initialize sync WAL reader: {}", e);
+            return Err(e);
+        }
+    };
+    let shared_wal_reader = Arc::clone(&sync_wal_reader);
 
     // Initialize state tracker
     let state_tracker = match StateTracker::new(
@@ -298,6 +311,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     let our_node_id = config.node.id.clone();
     let incoming_entry_tx = Arc::clone(&entry_tx);
     let incoming_heartbeat_time = Arc::clone(&shared_heartbeat_time);
+    let incoming_wal_reader = Arc::clone(&shared_wal_reader);
     tokio::spawn(async move {
         tracing::info!("Incoming message processing loop started");
         while let Some((peer_addr, message)) = incoming_rx.recv().await {
@@ -406,6 +420,56 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                     
                     // Record heartbeat from this peer
                     let _ = incoming_cluster.record_heartbeat(&node_id, 0).await;
+                }
+                wolfscale::replication::Message::SyncRequest { node_id, from_lsn, max_entries } => {
+                    // Leader handles sync requests from followers that need to catch up
+                    tracing::info!("Sync request from {} starting at LSN {}", node_id, from_lsn);
+                    
+                    // Read WAL entries and send them back
+                    let reader = incoming_wal_reader.read().await;
+                    match reader.read_batch(from_lsn, max_entries) {
+                        Ok(entries) => {
+                            let has_more = entries.last()
+                                .map(|e| e.header.lsn < from_lsn + max_entries as u64)
+                                .unwrap_or(false);
+                            
+                            let response = wolfscale::replication::Message::SyncResponse {
+                                from_lsn,
+                                entries,
+                                has_more,
+                            };
+                            
+                            // Send response back to the follower
+                            let _ = response_tx.send((peer_addr, response)).await;
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to read WAL for sync: {}", e);
+                        }
+                    }
+                }
+                wolfscale::replication::Message::SyncResponse { from_lsn, entries, has_more } => {
+                    // Follower receives WAL entries from leader to catch up
+                    tracing::info!("Sync response: {} entries from LSN {}, has_more={}", 
+                        entries.len(), from_lsn, has_more);
+                    
+                    // Send entries to the entry processing channel for application
+                    if !entries.is_empty() {
+                        if let Err(e) = incoming_entry_tx.send(entries).await {
+                            tracing::error!("Failed to queue sync entries for processing: {}", e);
+                        }
+                    }
+                    
+                    // If there are more entries, request the next batch
+                    if has_more {
+                        // Calculate next LSN to request
+                        let next_lsn = from_lsn + 1;  // Will be updated once we process entries
+                        let sync_request = wolfscale::replication::Message::SyncRequest {
+                            node_id: our_node_id.clone(),
+                            from_lsn: next_lsn,
+                            max_entries: 1000,
+                        };
+                        let _ = response_tx.send((peer_addr, sync_request)).await;
+                    }
                 }
                 _ => {
                     tracing::trace!("Ignoring message type {} from {}", message.type_name(), peer_addr);
