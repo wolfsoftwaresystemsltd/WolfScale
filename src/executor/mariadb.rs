@@ -69,6 +69,11 @@ impl MariaDbExecutor {
             Error::Database(sqlx::Error::Configuration("No pool".into()))
         })?;
 
+        // Acquire a dedicated connection for this batch to ensure session context (like USE) persists
+        let mut conn = pool.acquire().await.map_err(|e| {
+            Error::QueryExecution(format!("Failed to acquire connection from pool: {}", e))
+        })?;
+
         let statements = entry.to_sql();
         
         for sql in statements {
@@ -88,7 +93,7 @@ impl MariaDbExecutor {
                 tracing::debug!("Executing: {}", &stmt[..stmt.len().min(100)]);
                 
                 sqlx::query(stmt)
-                    .execute(pool)
+                    .execute(&mut *conn) // Use the same connection for all statements
                     .await
                     .map_err(|e| {
                         Error::QueryExecution(format!("Failed to execute '{}...': {}", 
