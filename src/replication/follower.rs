@@ -431,11 +431,10 @@ impl FollowerNode {
 
     /// Apply entries to database
     async fn apply_entry(&self, entry: &WalEntry) -> Result<()> {
-        // Persist to local WAL first
-        if let Err(e) = self.wal_writer.append(entry.entry.clone()).await {
-            tracing::error!("Failed to persist replicated entry to WAL: {}", e);
-            return Err(e);
-        }
+        // NOTE: We do NOT append to local WAL for replicated entries.
+        // The entries already have LSNs assigned by the leader.
+        // We just execute the SQL and track the applied state.
+        // This avoids the slow WAL append path for replication.
 
         // Execute against database
         if let Err(e) = self.executor.execute_entry(&entry.entry).await {
