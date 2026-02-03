@@ -154,6 +154,7 @@ impl ElectionCoordinator {
     }
 
     /// Start an election (only if we have the lowest ID to prevent split-brain)
+    /// With deterministic election, the node with the lowest ID becomes leader immediately
     pub async fn start_election(&self) -> Result<()> {
         // Deterministic tiebreaker: only the node with the lowest ID can become leader
         // This prevents split-brain when multiple nodes try to become leader simultaneously
@@ -174,52 +175,18 @@ impl ElectionCoordinator {
             *term
         };
 
-        // Transition to candidate
-        *self.state.write().await = ElectionState::Candidate;
-
-        // Vote for ourselves
-        *self.voted_for.write().await = Some(self.node_id.clone());
-        {
-            let mut votes = self.votes_received.write().await;
-            votes.clear();
-            votes.push(self.node_id.clone());
-        }
-
-        // Update cluster role
-        self.cluster.update_node(&self.node_id, |node| {
-            node.role = NodeRole::Candidate;
-        }).await?;
-
-        // Persist term and vote
+        // Persist term
         self.state_tracker.set_current_term(new_term).await?;
-        self.state_tracker.set_voted_for(Some(&self.node_id)).await?;
-
-        // Reset election timer
-        *self.election_timeout.write().await = Self::random_timeout(&self.config);
-        *self.last_heartbeat.write().await = Instant::now();
 
         tracing::info!(
-            "Starting election for term {} (node: {} has lowest ID)",
-            new_term,
-            self.node_id
+            "Node {} has lowest ID among active nodes - becoming leader for term {}",
+            self.node_id,
+            new_term
         );
 
-        // Send RequestVote to all peers
-        let last_lsn = *self.last_log_lsn.read().await;
-        let msg = Message::RequestVote {
-            term: new_term,
-            candidate_id: self.node_id.clone(),
-            last_log_lsn: last_lsn,
-            last_log_term: new_term - 1, // Approximate
-        };
-
-        let peers = self.cluster.peers().await;
-        for peer in peers {
-            let _ = self.message_tx.send((peer.address.clone(), msg.clone())).await;
-        }
-
-        // Check if we're the only node (instant win)
-        self.check_election_result().await?;
+        // With deterministic election, we become leader immediately
+        // No voting needed - lowest ID always wins
+        self.become_leader().await?;
 
         Ok(())
     }

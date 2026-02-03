@@ -171,18 +171,45 @@ WolfScale can bridge two separate Galera clusters for cross-datacenter replicati
 
 ### How Nodes Communicate
 
-WolfScale uses a heartbeat-based protocol for cluster communication:
+WolfScale uses a heartbeat-based protocol for cluster communication. All nodes participate in health monitoring:
 
-1. **Leader broadcasts heartbeats** to all followers every 500ms (configurable)
-2. **Heartbeats include cluster membership** so followers learn about all other nodes
-3. **Followers respond with acknowledgments** confirming they're alive
-4. **Leader tracks follower status** based on received responses
+**Leader Heartbeats:**
+1. The leader broadcasts heartbeats to all followers every 500ms (configurable)
+2. Heartbeats include cluster membership so followers learn about all other nodes
+3. Followers respond with acknowledgments confirming they are alive and their replication status
+4. The leader tracks follower status based on received responses
+
+**Peer-to-Peer Heartbeats:**
+1. All nodes (including followers) broadcast heartbeats to all known peers
+2. This enables every node to detect which other nodes are alive
+3. When the leader goes down, followers already know the status of other followers
+4. Proper health information is essential for correct leader election
+
+### Heartbeat Timing
+
+| Parameter | Default | Purpose |
+|-----------|---------|---------|
+| `heartbeat_interval_ms` | 500 | How often heartbeats are sent |
+| Heartbeat timeout | 3x interval | Node marked unhealthy after 3 missed heartbeats |
+| `election_timeout_ms` | 1500-3000 | How long to wait before starting election |
+
+### Node Status Transitions
+
+| Status | Meaning |
+|--------|---------|
+| **Active** | Node is healthy, receiving and responding to heartbeats |
+| **Lagging** | Node missed recent heartbeats (timeout exceeded) |
+| **Dropped** | Node has been unresponsive for extended period |
+| **Joining** | Node is connecting to the cluster |
+| **Syncing** | Follower is catching up on missed log entries |
+| **Offline** | Node is explicitly marked as unavailable |
 
 ### Cluster Membership Sync
 
 When a node joins the cluster:
 - It connects to peers listed in `cluster.peers` configuration
 - Upon receiving heartbeats from the leader, it learns about all cluster members
+- It starts sending peer heartbeats to all known nodes
 - All nodes eventually have a consistent view of cluster membership
 
 ---
@@ -229,8 +256,8 @@ WolfScale uses a simple quorum model:
 
 | Active Nodes | Has Quorum | Reason |
 |--------------|------------|--------|
-| **1 node** | ❌ No | Leader alone cannot replicate - data not protected |
-| **2+ nodes** | ✅ Yes | Leader can replicate writes to at least one follower |
+| **1 node** | No | Leader alone cannot replicate - data not protected |
+| **2+ nodes** | Yes | Leader can replicate writes to at least one follower |
 
 **Why 2 is the minimum for quorum:**
 - With 2 active nodes, the leader can send writes to at least one follower
@@ -238,7 +265,7 @@ WolfScale uses a simple quorum model:
 - If the leader fails, the follower has the latest data and can take over
 - A single node has no redundancy and would lose data if it fails
 
-> **Note:** Quorum status is displayed in `wolfctl list servers` output
+Quorum status is displayed in `wolfctl list servers` output.
 
 ---
 
