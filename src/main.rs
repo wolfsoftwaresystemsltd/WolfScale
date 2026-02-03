@@ -432,16 +432,24 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                     // Leader receives ACK from follower - update their progress
                     if success {
                         // Register the follower if we don't know it yet (same as HeartbeatResponse)
-                        if incoming_cluster.get_node(&node_id).await.is_none() {
+                        let node_existed = incoming_cluster.get_node(&node_id).await.is_some();
+                        if !node_existed {
                             let follower_addr = if let Some(colon_idx) = peer_addr.rfind(':') {
                                 format!("{}:7654", &peer_addr[..colon_idx])
                             } else {
                                 peer_addr.clone()
                             };
+                            tracing::debug!("Registering new follower {} at {}", node_id, follower_addr);
                             let _ = incoming_cluster.add_peer(node_id.clone(), follower_addr).await;
                         }
                         let _ = incoming_cluster.record_heartbeat(&node_id, match_lsn).await;
-                        tracing::debug!("Follower {} acknowledged up to LSN {}", node_id, match_lsn);
+                        // Verify the update was recorded
+                        if let Some(updated_node) = incoming_cluster.get_node(&node_id).await {
+                            tracing::debug!("Follower {} acknowledged up to LSN {}, cluster now shows lsn={}", 
+                                node_id, match_lsn, updated_node.last_applied_lsn);
+                        } else {
+                            tracing::warn!("Follower {} ACK received but node not found in cluster!", node_id);
+                        }
                     }
                 }
                 wolfscale::replication::Message::RequestVote { candidate_id, .. } => {

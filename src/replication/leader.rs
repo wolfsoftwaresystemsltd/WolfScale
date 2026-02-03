@@ -271,6 +271,7 @@ impl LeaderNode {
             // Use the peer's last_applied_lsn from cluster membership (updated by ACKs in main.rs)
             // This is more reliable than internal next_lsn which requires handle_append_response to be called
             let next = peer.last_applied_lsn + 1;
+            tracing::debug!("Peer {} has last_applied_lsn={}, will replicate from next={}", peer.id, peer.last_applied_lsn, next);
 
             // Read entries to send - must refresh index to see newly written entries
             {
