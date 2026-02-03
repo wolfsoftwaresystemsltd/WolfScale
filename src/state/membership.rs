@@ -244,6 +244,8 @@ impl ClusterMembership {
     }
 
     /// Check for timed-out nodes and update their status
+    /// Only times out nodes we've actually received heartbeats from (i.e., the leader)
+    /// Nodes learned from membership lists without direct heartbeats are not timed out
     pub async fn check_timeouts(&self) -> Vec<String> {
         let mut nodes = self.nodes.write().await;
         let mut timed_out = Vec::new();
@@ -251,6 +253,12 @@ impl ClusterMembership {
         for (id, node) in nodes.iter_mut() {
             if id == &self.node_id {
                 continue; // Skip self
+            }
+
+            // Only timeout nodes we've actually received heartbeats from
+            // Nodes learned from leader's membership list don't have heartbeats recorded
+            if node.last_heartbeat.is_none() {
+                continue; // Never received heartbeat from this node, skip
             }
 
             if !node.is_healthy(self.heartbeat_timeout) {
