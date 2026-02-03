@@ -97,15 +97,19 @@ impl LeaderNode {
         tracing::info!("Leader replication loop starting");
         
         // Set ourselves as leader
+        tracing::info!("Setting ourselves as leader");
         self.cluster.set_leader(&self.node_id).await?;
 
         // Initialize follower state
+        tracing::info!("Initializing follower state");
         self.initialize_follower_state().await?;
+        tracing::info!("Follower state initialized, starting heartbeat loop");
 
         // Start heartbeat loop
         let heartbeat_interval = Duration::from_millis(self.config.heartbeat_interval_ms);
         let mut heartbeat_ticker = interval(heartbeat_interval);
         let mut db_check_counter = 0u64;
+        let mut tick_count = 0u64;
 
         loop {
             if *self.shutdown.read().await {
@@ -113,9 +117,12 @@ impl LeaderNode {
             }
 
             heartbeat_ticker.tick().await;
+            tick_count += 1;
             
-            // Log that we're running (visible at INFO level)
-            tracing::trace!("Leader heartbeat tick");
+            // Log every 10 ticks (5 seconds at 500ms interval)
+            if tick_count % 10 == 0 || tick_count <= 3 {
+                tracing::info!("Leader heartbeat tick #{}", tick_count);
+            }
             
             // Check database health every 5 heartbeats (to avoid too frequent checks)
             db_check_counter += 1;
