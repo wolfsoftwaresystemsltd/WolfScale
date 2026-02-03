@@ -277,7 +277,6 @@ impl LeaderNode {
         for p in &peers {
             tracing::info!("Peer status: id={}, status={:?}, lsn={}", p.id, p.status, p.last_applied_lsn);
         }
-        }
         
         let term = *self.term.read().await;
         let commit_lsn = *self.commit_lsn.read().await;
