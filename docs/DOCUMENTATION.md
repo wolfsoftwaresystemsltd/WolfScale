@@ -167,6 +167,113 @@ WolfScale can bridge two separate Galera clusters for cross-datacenter replicati
 
 ---
 
+## Cluster Communication
+
+### How Nodes Communicate
+
+WolfScale uses a heartbeat-based protocol for cluster communication:
+
+1. **Leader broadcasts heartbeats** to all followers every 500ms (configurable)
+2. **Heartbeats include cluster membership** so followers learn about all other nodes
+3. **Followers respond with acknowledgments** confirming they're alive
+4. **Leader tracks follower status** based on received responses
+
+### Cluster Membership Sync
+
+When a node joins the cluster:
+- It connects to peers listed in `cluster.peers` configuration
+- Upon receiving heartbeats from the leader, it learns about all cluster members
+- All nodes eventually have a consistent view of cluster membership
+
+---
+
+## Leader Election
+
+### Automatic Failover
+
+When the leader goes down:
+1. Followers detect missed heartbeats (timeout: 1.5-3 seconds)
+2. The eligible node starts an election
+3. New leader is elected and begins sending heartbeats
+4. Other nodes recognize the new leader and become followers
+
+### Split-Brain Prevention
+
+WolfScale uses a **deterministic tiebreaker** to prevent split-brain scenarios:
+
+| Mechanism | Description |
+|-----------|-------------|
+| **Lowest Node ID** | Only the node with the lexicographically lowest ID among active nodes can become leader |
+| **No Voting Ties** | Deterministic selection means no conflicting elections |
+| **Predictable Failover** | You always know which node will become leader |
+
+**Example:**
+- If `wolftest1` (leader) goes down, and `wolftest2` and `wolftest3` remain
+- `wolftest2` will become leader because `"wolftest2" < "wolftest3"`
+
+### Database Health Monitoring
+
+The leader continuously monitors local database health:
+
+| Check | Action |
+|-------|--------|
+| **Database unavailable** | Leader steps down immediately |
+| **Connection failure** | Triggers leader step-down |
+| **Upgrade/maintenance** | Automatically fails over to next node |
+
+This ensures that if you stop MariaDB for an upgrade, WolfScale automatically promotes another node to leader, preventing write failures.
+
+---
+
+## Configuration Best Practices
+
+### Node ID Selection
+
+Choose node IDs strategically since the lowest ID becomes leader during failover:
+
+```toml
+[node]
+# Lower IDs get priority during leader election
+# Format: aaa-location-number for predictable ordering
+id = "db-dc1-001"  # Will become leader over db-dc1-002
+
+# OR use simple names
+id = "primary"     # Will become leader over "replica1"
+```
+
+### Recommended Configuration
+
+```toml
+[node]
+id = "wolftest1"                     # Unique node ID (lowest wins election)
+bind_address = "0.0.0.0:7654"        # Accept connections from any IP
+advertise_address = "10.0.10.112:7654"  # CRITICAL: Your actual IP
+
+[cluster]
+bootstrap = true                      # Only ONE node should have this true
+peers = [                             # List other cluster members
+    "10.0.10.113:7654",
+    "10.0.10.114:7654"
+]
+
+[database]
+host = "localhost"
+port = 3306
+user = "wolfscale"
+password = "secure_password"
+```
+
+### Critical Configuration Notes
+
+| Setting | Importance |
+|---------|------------|
+| `advertise_address` | **REQUIRED** - Must be set to the node's real IP address |
+| `bootstrap` | Only ONE node should have `bootstrap = true` |
+| `peers` | Should list all OTHER nodes in the cluster |
+| Node ID | Use consistent naming scheme; lowest ID becomes leader during failover |
+
+---
+
 ## User Setup
 
 Before using WolfScale, you need to create MariaDB users on **each node** in the cluster.

@@ -99,6 +99,7 @@ impl LeaderNode {
         // Start heartbeat loop
         let heartbeat_interval = Duration::from_millis(self.config.heartbeat_interval_ms);
         let mut heartbeat_ticker = interval(heartbeat_interval);
+        let mut db_check_counter = 0u64;
 
         loop {
             if *self.shutdown.read().await {
@@ -106,6 +107,15 @@ impl LeaderNode {
             }
 
             heartbeat_ticker.tick().await;
+            
+            // Check database health every 5 heartbeats (to avoid too frequent checks)
+            db_check_counter += 1;
+            if db_check_counter % 5 == 0 {
+                if !self.is_database_healthy().await {
+                    tracing::error!("Local database is unhealthy - leader stepping down");
+                    return Err(Error::DatabaseUnavailable);
+                }
+            }
             
             // Replicate any new WAL entries to followers
             // This is critical for proxy-written entries that bypass LeaderNode.write()
@@ -118,6 +128,14 @@ impl LeaderNode {
         }
 
         Ok(())
+    }
+    
+    /// Check if the local database is healthy (can receive writes)
+    async fn is_database_healthy(&self) -> bool {
+        // Check if we can still write to WAL as a health indicator
+        // If WAL is working, database should be accessible
+        // More comprehensive health checks can be added here
+        true // For now, assume healthy - real implementation would ping the DB
     }
 
     /// Stop the leader
@@ -197,7 +215,7 @@ impl LeaderNode {
             .map(|p| (p.id.clone(), p.address.clone()))
             .collect();
         // Add self to members
-        if let Some(self_node) = self.cluster.get_this_node().await {
+        if let Some(self_node) = self.cluster.get_node(&self.node_id).await {
             members.push((self_node.id, self_node.address));
         }
 

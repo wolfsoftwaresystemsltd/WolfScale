@@ -130,8 +130,37 @@ impl ElectionCoordinator {
         last.elapsed() > timeout
     }
 
-    /// Start an election
+    /// Check if this node has the lowest ID among active nodes (for deterministic election)
+    async fn has_lowest_id(&self) -> bool {
+        let peers = self.cluster.peers().await;
+        for peer in peers {
+            // Skip dropped/offline nodes
+            if peer.status == crate::state::NodeStatus::Dropped 
+                || peer.status == crate::state::NodeStatus::Offline {
+                continue;
+            }
+            // If any active peer has a lower ID, we don't have the lowest
+            if peer.id < self.node_id {
+                return false;
+            }
+        }
+        true
+    }
+
+    /// Start an election (only if we have the lowest ID to prevent split-brain)
     pub async fn start_election(&self) -> Result<()> {
+        // Deterministic tiebreaker: only the node with the lowest ID can become leader
+        // This prevents split-brain when multiple nodes try to become leader simultaneously
+        if !self.has_lowest_id().await {
+            tracing::debug!(
+                "Not starting election - node {} doesn't have lowest ID",
+                self.node_id
+            );
+            // Reset timer and wait - the node with the lowest ID will become leader
+            self.reset_timer().await;
+            return Ok(());
+        }
+
         // Increment term
         let new_term = {
             let mut term = self.term.write().await;
@@ -164,7 +193,7 @@ impl ElectionCoordinator {
         *self.last_heartbeat.write().await = Instant::now();
 
         tracing::info!(
-            "Starting election for term {} (node: {})",
+            "Starting election for term {} (node: {} has lowest ID)",
             new_term,
             self.node_id
         );

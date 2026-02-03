@@ -91,6 +91,9 @@ pub enum Error {
 
     #[error("Shutdown in progress")]
     ShuttingDown,
+
+    #[error("Local database is unavailable")]
+    DatabaseUnavailable,
 }
 
 impl Error {
@@ -108,7 +111,9 @@ impl Error {
     pub fn should_step_down(&self) -> bool {
         matches!(
             self,
-            Error::QuorumNotReached { .. } | Error::Network(_)
+            Error::QuorumNotReached { .. } 
+                | Error::Network(_)
+                | Error::DatabaseUnavailable
         )
     }
 }
