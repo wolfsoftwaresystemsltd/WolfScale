@@ -265,7 +265,11 @@ impl LeaderNode {
                 *next_lsn.get(&peer.id).unwrap_or(&1)
             };
 
-            // Read entries to send
+            // Read entries to send - must refresh index to see newly written entries
+            {
+                let mut reader = self.wal_reader.write().await;
+                let _ = reader.refresh_index();
+            }
             let reader = self.wal_reader.read().await;
             let entries = reader.read_batch(next, self.config.max_batch_entries)?;
             drop(reader);
