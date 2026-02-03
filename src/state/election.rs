@@ -157,6 +157,18 @@ impl ElectionCoordinator {
     /// Start an election (only if we have the lowest ID to prevent split-brain)
     /// With deterministic election, the node with the lowest ID becomes leader immediately
     pub async fn start_election(&self) -> Result<()> {
+        // Check if we're fully synced before attempting to become leader
+        // A node that just rejoined must catch up before taking leadership
+        let self_node = self.cluster.get_self().await;
+        if self_node.status != crate::state::NodeStatus::Active {
+            tracing::debug!(
+                "Not starting election - node {} is not fully synced (status: {:?})",
+                self.node_id,
+                self_node.status
+            );
+            return Ok(());
+        }
+
         // Deterministic tiebreaker: only the node with the lowest ID can become leader
         // This prevents split-brain when multiple nodes try to become leader simultaneously
         if !self.has_lowest_id().await {
