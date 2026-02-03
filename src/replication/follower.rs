@@ -429,8 +429,8 @@ impl FollowerNode {
     async fn apply_entry(&self, entry: &WalEntry) -> Result<()> {
         // NOTE: We do NOT append to local WAL for replicated entries.
         // The entries already have LSNs assigned by the leader.
-        // We just execute the SQL and track the applied state.
-        // This avoids the slow WAL append path for replication.
+        // We just execute the SQL - state tracking happens in the caller.
+        // This keeps apply_entry as fast as possible.
 
         // Execute against database
         if let Err(e) = self.executor.execute_entry(&entry.entry).await {
@@ -439,17 +439,6 @@ impl FollowerNode {
             // will decide whether to continue.
             return Err(e);
         }
-
-        // Record as applied
-        if let Some(table) = entry.entry.table_name() {
-            let pk_str = format!("{:?}", entry.header.lsn); 
-            let _ = self.state_tracker
-                .record_applied(entry.header.lsn, table, &pk_str)
-                .await;
-        }
-
-        // Update our own LSN in cluster membership so it shows in status
-        let _ = self.cluster.record_heartbeat(&self.node_id, entry.header.lsn).await;
 
         Ok(())
     }
