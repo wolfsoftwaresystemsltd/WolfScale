@@ -290,22 +290,19 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
             tracing::debug!("Received {} from {}", message.type_name(), peer_addr);
             
             match message {
-                wolfscale::replication::Message::Heartbeat { leader_id, commit_lsn, term } => {
-                    // Register the leader node if we don't know it yet
-                    // The peer_addr is the connection source - extract the IP and use cluster port
-                    let leader_addr = if let Some(colon_idx) = peer_addr.rfind(':') {
-                        // Use the peer's IP with the standard cluster port
-                        format!("{}:7654", &peer_addr[..colon_idx])
-                    } else {
-                        peer_addr.clone()
-                    };
-                    
-                    // Add leader to cluster if not present (also remove any synthetic peer with same address)
-                    if incoming_cluster.get_node(&leader_id).await.is_none() {
-                        // Remove any existing synthetic peer with this address (e.g. "peer-10.0.10.112-7654")
-                        let synthetic_id = format!("peer-{}", leader_addr.replace(':', "-"));
-                        let _ = incoming_cluster.remove_peer(&synthetic_id).await;
-                        let _ = incoming_cluster.add_peer(leader_id.clone(), leader_addr.clone()).await;
+                wolfscale::replication::Message::Heartbeat { leader_id, commit_lsn, term, members } => {
+                    // Sync cluster membership from leader - this is how followers learn about each other
+                    for (member_id, member_addr) in members {
+                        if member_id == our_node_id {
+                            continue;  // Skip self
+                        }
+                        
+                        if incoming_cluster.get_node(&member_id).await.is_none() {
+                            // Remove any synthetic peer with this address
+                            let synthetic_id = format!("peer-{}", member_addr.replace(':', "-"));
+                            let _ = incoming_cluster.remove_peer(&synthetic_id).await;
+                            let _ = incoming_cluster.add_peer(member_id.clone(), member_addr.clone()).await;
+                        }
                     }
                     
                     // Update cluster: mark sender as leader
@@ -315,7 +312,19 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                     // Record the heartbeat
                     let _ = incoming_cluster.record_heartbeat(&leader_id, commit_lsn).await;
                     
-                    // Send HeartbeatResponse back to the leader using the extracted address
+                    // Get leader address for response (should now be in cluster)
+                    let leader_addr = if let Some(node) = incoming_cluster.get_node(&leader_id).await {
+                        node.address
+                    } else {
+                        // Fallback: extract from peer_addr
+                        if let Some(colon_idx) = peer_addr.rfind(':') {
+                            format!("{}:7654", &peer_addr[..colon_idx])
+                        } else {
+                            peer_addr.clone()
+                        }
+                    };
+                    
+                    // Send HeartbeatResponse back to the leader
                     let response = wolfscale::replication::Message::HeartbeatResponse {
                         node_id: our_node_id.clone(),
                         term,

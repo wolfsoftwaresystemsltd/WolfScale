@@ -11,11 +11,13 @@ use crate::state::NodeState;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Message {
     // ========== Heartbeat/Health ==========
-    /// Heartbeat from leader
+    /// Heartbeat from leader (includes cluster membership)
     Heartbeat {
         term: u64,
         leader_id: String,
         commit_lsn: Lsn,
+        /// Cluster membership: (node_id, address) pairs
+        members: Vec<(String, String)>,
     },
 
     /// Heartbeat response

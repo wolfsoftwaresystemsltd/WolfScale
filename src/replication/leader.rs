@@ -190,13 +190,24 @@ impl LeaderNode {
         let term = *self.term.read().await;
         let commit_lsn = *self.commit_lsn.read().await;
 
+        // Build membership list from all known nodes
+        let peers = self.cluster.peers().await;
+        let mut members: Vec<(String, String)> = peers
+            .iter()
+            .map(|p| (p.id.clone(), p.address.clone()))
+            .collect();
+        // Add self to members
+        if let Some(self_node) = self.cluster.get_this_node().await {
+            members.push((self_node.id, self_node.address));
+        }
+
         let msg = Message::Heartbeat {
             term,
             leader_id: self.node_id.clone(),
             commit_lsn,
+            members,
         };
 
-        let peers = self.cluster.peers().await;
         for peer in peers {
             if peer.status != NodeStatus::Dropped {
                 // Send address directly so delivery loop doesn't need to look up
