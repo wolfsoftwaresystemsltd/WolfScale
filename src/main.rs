@@ -312,6 +312,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     // Start INCOMING message processing loop - handles messages from peers
     // NOTE: Cannot call FollowerNode/LeaderNode methods here as they contain non-Send types (rusqlite)
     let incoming_cluster = Arc::clone(&cluster);
+    tracing::info!("Message loop cluster Arc ptr: {:p}", Arc::as_ptr(&incoming_cluster));
     let response_tx = outgoing_tx.clone();  
     let our_node_id = config.node.id.clone();
     let incoming_heartbeat_time = Arc::clone(&shared_heartbeat_time);
@@ -533,6 +534,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
 
     if is_leader {
         tracing::info!("Starting LEADER components");
+        tracing::info!("LeaderNode cluster Arc ptr: {:p}", Arc::as_ptr(&cluster));
 
         let leader = Arc::new(LeaderNode::new(
             config.node.id.clone(),
