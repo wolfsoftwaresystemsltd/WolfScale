@@ -296,14 +296,18 @@ impl ClusterMembership {
         nodes
             .values()
             .filter(|n| n.id != self.node_id)
+            .filter(|n| !n.id.starts_with("peer-"))  // Filter out synthetic peers
             .cloned()
             .collect()
     }
 
-    /// Get all nodes
+    /// Get all nodes (excluding synthetic peers)
     pub async fn all_nodes(&self) -> Vec<NodeState> {
         let nodes = self.nodes.read().await;
-        nodes.values().cloned().collect()
+        nodes.values()
+            .filter(|n| !n.id.starts_with("peer-"))  // Filter out synthetic peers
+            .cloned()
+            .collect()
     }
 
     /// Get the current leader (if known)
