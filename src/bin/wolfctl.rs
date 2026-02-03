@@ -86,6 +86,7 @@ struct ClusterSummary {
     has_quorum: bool,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct NodeState {
     #[serde(default)]

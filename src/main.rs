@@ -140,6 +140,21 @@ fn init_logging(level: &str) {
 
 /// Start the WolfScale node
 async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
+    // Print ASCII art banner
+    println!(r#"
+ █     █░ ▒█████   ██▓      █████▒ ██████  ▄████▄   ▄▄▄       ██▓    ▓█████ 
+▓█░ █ ░█░▒██▒  ██▒▓██▒    ▓██   ▒▒██    ▒ ▒██▀ ▀█  ▒████▄    ▓██▒    ▓█   ▀ 
+▒█░ █ ░█ ▒██░  ██▒▒██░    ▒████ ░░ ▓██▄   ▒ ▓███▄░▒██  ▀█▄  ▒██░    ▒███   
+░█░ █ ░█ ▒██   ██░▒██░    ░▓█▒  ░  ▒   ██▒░▓█  ▀█▓░██▄▄▄▄██ ▒██░    ▒▓█  ▄ 
+░░██▒██▓ ░ ████▓▒░░██████▒░▒█░   ▒██████▒▒░▒▓███▀▒ ▓█   ▓██▒░██████▒░▒████▒
+░ ▓░▒ ▒  ░ ▒░▒░▒░ ░ ▒░▓  ░ ▒ ░   ▒ ▒▓▒ ▒ ░ ░▒   ▒  ▒▒   ▓▒█░░ ▒░▓  ░░░ ▒░ ░
+  ▒ ░ ░    ░ ▒ ▒░ ░ ░ ▒  ░ ░     ░ ░▒  ░ ░  ░   ░   ▒   ▒▒ ░░ ░ ▒  ░ ░ ░  ░
+  ░   ░  ░ ░ ░ ▒    ░ ░    ░ ░   ░  ░  ░  ░ ░   ░   ░   ▒     ░ ░      ░   
+    ░        ░ ░      ░  ░             ░        ░       ░  ░    ░  ░   ░  ░
+                                                                           
+        (C) Wolf Software Systems Ltd -- https://wolf.uk.com
+"#);
+
     tracing::info!("Starting WolfScale node...");
 
     // Load configuration
