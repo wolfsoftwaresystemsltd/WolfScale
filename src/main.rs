@@ -390,9 +390,6 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                         std::sync::atomic::Ordering::Relaxed
                     );
                     
-                    // Get the highest LSN from this batch for ACK
-                    let match_lsn = entries.last().map(|e| e.header.lsn).unwrap_or(0);
-                    
                     // Forward entries to FollowerNode for processing
                     // (we can't call FollowerNode.apply_entry directly due to Send trait constraints)
                     if !entries.is_empty() {
@@ -401,14 +398,17 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                         }
                     }
                     
-                    // Send AppendEntriesResponse back to the leader - THIS IS THE KEY FIX
-                    // The leader needs this to advance its next_lsn tracking
+                    // Send AppendEntriesResponse back to the leader
+                    // IMPORTANT: Only report actually applied LSN, not the batch's highest LSN!
+                    // The entries are processed asynchronously by FollowerNode, which updates
+                    // cluster membership after each entry is applied. The leader will see
+                    // the updated peer.last_applied_lsn on subsequent replication cycles.
                     let last_applied = incoming_cluster.get_self().await.last_applied_lsn;
                     let response = wolfscale::replication::Message::AppendEntriesResponse {
                         node_id: our_node_id.clone(),
                         term,
                         success: true,
-                        match_lsn: std::cmp::max(match_lsn, last_applied),
+                        match_lsn: last_applied,  // Only ACK what we've actually processed
                     };
                     // Use registered leader address from cluster, not the ephemeral source port
                     let leader_addr = incoming_cluster.get_node(&leader_id).await
