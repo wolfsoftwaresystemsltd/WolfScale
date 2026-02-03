@@ -6,7 +6,6 @@
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::{mpsc, RwLock};
-use tokio::time::interval;
 
 use super::protocol::Message;
 use super::ReplicationConfig;
@@ -139,7 +138,7 @@ impl FollowerNode {
         tracing::info!("Follower starting with last_applied_lsn={}", last_lsn);
 
         // Take ownership of the receiver
-        let mut entry_rx = {
+        let entry_rx = {
             let mut guard = self.entry_rx.lock().await;
             guard.take()
         };
