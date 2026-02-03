@@ -11,7 +11,6 @@ use tokio::time::interval;
 use super::protocol::Message;
 use super::ReplicationConfig;
 use crate::wal::entry::{Lsn, WalEntry};
-use crate::wal::WalWriter;
 use crate::state::{ClusterMembership, StateTracker, ElectionCoordinator, ElectionConfig, ElectionState};
 use crate::executor::MariaDbExecutor;
 use crate::error::{Error, Result};
@@ -29,8 +28,6 @@ pub struct ReplicationBatch {
 pub struct FollowerNode {
     /// Node ID
     node_id: String,
-    /// WAL writer (for local persistence)
-    wal_writer: WalWriter,
     /// State tracker
     state_tracker: Arc<StateTracker>,
     /// Cluster membership
@@ -65,7 +62,7 @@ impl FollowerNode {
     /// Create a new follower node
     pub fn new(
         node_id: String,
-        wal_writer: WalWriter,
+        _wal_writer: crate::wal::WalWriter,  // kept for API compatibility but unused
         state_tracker: Arc<StateTracker>,
         cluster: Arc<ClusterMembership>,
         executor: Arc<MariaDbExecutor>,
@@ -84,7 +81,6 @@ impl FollowerNode {
 
         Self {
             node_id,
-            wal_writer,
             state_tracker,
             cluster,
             executor,
