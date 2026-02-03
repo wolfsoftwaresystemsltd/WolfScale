@@ -357,7 +357,18 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                         last_applied_lsn: last_applied,
                         success: true,
                     };
-                    let _ = response_tx.send((peer_addr, response)).await;
+                    // Use registered leader address from cluster, not the ephemeral source port
+                    let leader_addr = incoming_cluster.get_node(&leader_id).await
+                        .map(|n| n.address.clone())
+                        .unwrap_or_else(|| {
+                            // Fallback: replace ephemeral port with cluster port
+                            if let Some(colon_idx) = peer_addr.rfind(':') {
+                                format!("{}:7654", &peer_addr[..colon_idx])
+                            } else {
+                                peer_addr.clone()
+                            }
+                        });
+                    let _ = response_tx.send((leader_addr, response)).await;
                 }
                 wolfscale::replication::Message::AppendEntries { term, leader_id, prev_lsn: _, prev_term: _, entries, leader_commit_lsn: _ } => {
                     tracing::debug!("RECEIVED {} entries from leader {}", entries.len(), leader_id);
@@ -384,7 +395,18 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                         success: true,
                         match_lsn: std::cmp::max(match_lsn, last_applied),
                     };
-                    let _ = response_tx.send((peer_addr, response)).await;
+                    // Use registered leader address from cluster, not the ephemeral source port
+                    let leader_addr = incoming_cluster.get_node(&leader_id).await
+                        .map(|n| n.address.clone())
+                        .unwrap_or_else(|| {
+                            // Fallback: replace ephemeral port with cluster port
+                            if let Some(colon_idx) = peer_addr.rfind(':') {
+                                format!("{}:7654", &peer_addr[..colon_idx])
+                            } else {
+                                peer_addr.clone()
+                            }
+                        });
+                    let _ = response_tx.send((leader_addr, response)).await;
                 }
                 wolfscale::replication::Message::HeartbeatResponse { node_id, success, last_applied_lsn, .. } => {
                     // Leader receives response from follower - mark follower as active

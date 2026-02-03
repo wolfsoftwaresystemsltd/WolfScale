@@ -434,18 +434,22 @@ async fn handle_ddl(
 async fn handle_status(
     State(state): State<Arc<AppState>>,
 ) -> impl IntoResponse {
-    let is_leader = *state.is_leader.read().await;
     let leader = state.cluster.current_leader().await;
+    let self_node = state.cluster.get_self().await;
     let size = state.cluster.size().await;
     let has_quorum = state.cluster.has_quorum().await;
+
+    // Determine if we're the leader - check both the flag and if the leader_id matches us
+    let is_leader = leader.as_ref().map(|l| l.id == state.node_id).unwrap_or(false)
+        || *state.is_leader.read().await;
 
     Json(StatusResponse {
         node_id: state.node_id.clone(),
         is_leader,
         leader_id: leader.map(|l| l.id),
         term: 1,
-        last_applied_lsn: 0,
-        commit_lsn: 0,
+        last_applied_lsn: self_node.last_applied_lsn,
+        commit_lsn: self_node.last_applied_lsn,
         cluster_size: size,
         has_quorum,
     })
