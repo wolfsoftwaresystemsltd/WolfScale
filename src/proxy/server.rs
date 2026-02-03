@@ -396,19 +396,41 @@ async fn handle_connection(
     client.write_all(&handshake_buf[..n]).await?;
 
     // Phase 2: Relay client's handshake response to backend
+    // IMPORTANT: With mysql -e, the client may send the query immediately after auth.
+    // A single read() could get both packets. We must parse only the first packet
+    // (handshake response) and save any extra bytes for the command loop.
     let mut response_buf = vec![0u8; 65536];
-    let n = client.read(&mut response_buf).await?;
-    if n == 0 {
+    let bytes_read = client.read(&mut response_buf).await?;
+    if bytes_read == 0 {
         return Ok(());
     }
     
-    // Try to extract database name from handshake response
-    let initial_database = extract_database_from_handshake(&response_buf[..n]);
+    // Parse the first packet's length from the 4-byte header
+    let first_packet_len = if bytes_read >= 4 {
+        let payload_len = (response_buf[0] as usize) 
+            | ((response_buf[1] as usize) << 8) 
+            | ((response_buf[2] as usize) << 16);
+        4 + payload_len // header + payload
+    } else {
+        bytes_read // Not enough for header, send what we have
+    };
     
-    backend.write_all(&response_buf[..n]).await?;
+    // Clamp to actual bytes read
+    let first_packet_end = first_packet_len.min(bytes_read);
+    
+    // Try to extract database name from handshake response
+    let initial_database = extract_database_from_handshake(&response_buf[..first_packet_end]);
+    
+    // Forward ONLY the first packet (handshake response) to backend
+    backend.write_all(&response_buf[..first_packet_end]).await?;
+    
+    // Save any extra bytes (could be COM_QUERY from -e) for the command loop
+    let mut leftover_bytes: Vec<u8> = Vec::new();
+    if bytes_read > first_packet_end {
+        leftover_bytes = response_buf[first_packet_end..bytes_read].to_vec();
+    }
 
     // Phase 3: Simple auth completion - read one response from backend
-    // Most connections just get OK or Error. Auth switch is rare.
     let n = backend.read(&mut handshake_buf).await?;
     if n == 0 {
         return Ok(());
@@ -417,16 +439,27 @@ async fn handle_connection(
     
     // Check if auth failed
     if n > 4 && handshake_buf[4] == 0xFF {
-        // Error packet - client will disconnect
         return Ok(());
     }
     
     // Handle auth switch if needed (0xFE that's not EOF)
     if n > 4 && handshake_buf[4] == 0xFE && n > 9 {
-        // Likely auth switch - relay client response
-        let n = client.read(&mut response_buf).await?;
+        // Auth switch - relay client response
+        // Note: with auth switch, leftover_bytes would be auth data, not query
+        let n = if !leftover_bytes.is_empty() {
+            // Use leftover bytes first
+            let n = leftover_bytes.len();
+            backend.write_all(&leftover_bytes).await?;
+            leftover_bytes.clear();
+            n
+        } else {
+            let n = client.read(&mut response_buf).await?;
+            if n > 0 {
+                backend.write_all(&response_buf[..n]).await?;
+            }
+            n
+        };
         if n > 0 {
-            backend.write_all(&response_buf[..n]).await?;
             // Get final auth result
             let n = backend.read(&mut handshake_buf).await?;
             if n > 0 {
@@ -442,24 +475,34 @@ async fn handle_connection(
     let current_backend_addr = initial_backend_addr;
     
     // Track current database context for replication
-    // This is needed because followers need to know which database to execute statements in
-    // Initialize with database from handshake if present
     let mut current_database: Option<String> = initial_database;
     
+    // Process leftover bytes from auth phase first (contains query from mysql -e)
+    let mut first_iteration = true;
+    
     loop {
-        // Read complete MySQL packet from client using proper framing
-        // This ensures we get the full packet even with pipelined/batched input
-        let n = match read_mysql_packet(&mut client, &mut cmd_buf).await {
-            Ok(n) => n,
-            Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
-                // Client disconnected cleanly
-                break;
-            }
-            Err(_) => {
-                // Connection error
-                break;
+        // Get the next packet - either from leftover bytes or from client
+        let n = if first_iteration && !leftover_bytes.is_empty() {
+            // First iteration: use leftover bytes from auth phase
+            // These contain the COM_QUERY when using mysql -e
+            let n = leftover_bytes.len();
+            cmd_buf[..n].copy_from_slice(&leftover_bytes);
+            first_iteration = false;
+            n
+        } else {
+            first_iteration = false;
+            // Read complete MySQL packet from client using proper framing
+            match read_mysql_packet(&mut client, &mut cmd_buf).await {
+                Ok(n) => n,
+                Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
+                    break;
+                }
+                Err(_) => {
+                    break;
+                }
             }
         };
+
 
         // Parse the complete packet to check query type
         let (is_write, query_opt) = if let Ok((packet, _)) = MySqlPacket::read(&cmd_buf[..n]) {
