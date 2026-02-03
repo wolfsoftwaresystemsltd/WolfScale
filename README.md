@@ -105,28 +105,7 @@ wolfctl list servers
 | 3     | 1 node failure  | Minimum for production     |
 | 5     | 2 node failures | Recommended for production |
 
-## Configuration
-
-```toml
-[node]
-id = "node1"                    # Lowest ID becomes leader
-bind_address = "0.0.0.0:7654"
-
-[database]
-host = "localhost"
-port = 3306
-user = "wolfscale"
-password = "secret"
-
-[cluster]
-peers = ["node2:7654", "node3:7654"]
-heartbeat_interval_ms = 500
-election_timeout_ms = 2000
-
-[proxy]
-enabled = true
-bind_address = "0.0.0.0:8007"
-```
+> **Note:** The install wizard creates your configuration file automatically. See the [full documentation](docs/DOCUMENTATION.md) for advanced configuration options.
 
 ## Documentation
 
