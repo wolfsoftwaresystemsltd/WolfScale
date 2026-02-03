@@ -260,6 +260,11 @@ impl LeaderNode {
              return Ok(());
         }
         
+        // Debug: show all peers and their LSNs at start of replication cycle
+        for p in &peers {
+            tracing::debug!("peers() returned: id={}, addr={}, lsn={}", p.id, p.address, p.last_applied_lsn);
+        }
+        
         let term = *self.term.read().await;
         let commit_lsn = *self.commit_lsn.read().await;
 

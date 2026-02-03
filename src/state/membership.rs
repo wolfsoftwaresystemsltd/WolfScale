@@ -221,8 +221,10 @@ impl ClusterMembership {
     pub async fn record_heartbeat(&self, id: &str, lsn: Lsn) -> Result<()> {
         let mut nodes = self.nodes.write().await;
         if let Some(node) = nodes.get_mut(id) {
+            let old_lsn = node.last_applied_lsn;
             node.touch();
             node.last_applied_lsn = lsn;
+            tracing::trace!("record_heartbeat: updated node '{}' lsn {} -> {}", id, old_lsn, lsn);
             
             // Update status based on current state
             match node.status {
@@ -242,6 +244,8 @@ impl ClusterMembership {
                 }
                 _ => {}
             }
+        } else {
+            tracing::warn!("record_heartbeat: node '{}' NOT FOUND in cluster membership!", id);
         }
         Ok(())
     }
