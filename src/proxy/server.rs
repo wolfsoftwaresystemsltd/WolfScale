@@ -219,6 +219,89 @@ fn extract_database_from_handshake(packet: &[u8]) -> Option<String> {
     }
 }
 
+/// Query the current database from MariaDB using SELECT DATABASE()
+/// This is more reliable than parsing handshake packets
+async fn query_current_database(backend: &mut TcpStream, buf: &mut [u8]) -> Option<String> {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    
+    // Build COM_QUERY packet for "SELECT DATABASE()"
+    let query = b"SELECT DATABASE()";
+    let payload_len = 1 + query.len(); // 1 byte for command + query
+    
+    // MySQL packet: 3 bytes length + 1 byte seq + payload
+    let mut packet = Vec::with_capacity(4 + payload_len);
+    packet.extend_from_slice(&(payload_len as u32).to_le_bytes()[..3]);
+    packet.push(0); // sequence number
+    packet.push(0x03); // COM_QUERY
+    packet.extend_from_slice(query);
+    
+    // Send query to backend
+    if backend.write_all(&packet).await.is_err() {
+        return None;
+    }
+    
+    // Read response
+    let n = match backend.read(buf).await {
+        Ok(n) if n > 0 => n,
+        _ => return None,
+    };
+    
+    // Parse result set to extract database name
+    // Response will be: column count packet, column def packet, EOF, row data packet, EOF
+    // The database name is in the row data packet as a length-prefixed string
+    // We need to find it - it's typically after several packets
+    
+    // Simple approach: scan for a recognizable database name pattern
+    // The row data contains a length-prefixed string with the database name
+    parse_database_from_result(&buf[..n])
+}
+
+/// Parse a database name from a SELECT DATABASE() result set
+fn parse_database_from_result(data: &[u8]) -> Option<String> {
+    // Skip through packets looking for row data
+    let mut pos = 0;
+    let mut packet_count = 0;
+    
+    while pos + 4 < data.len() && packet_count < 10 {
+        // Read packet header
+        let pkt_len = u32::from_le_bytes([data[pos], data[pos + 1], data[pos + 2], 0]) as usize;
+        
+        if pkt_len == 0 || pos + 4 + pkt_len > data.len() {
+            break;
+        }
+        
+        let payload = &data[pos + 4..pos + 4 + pkt_len];
+        pos += 4 + pkt_len;
+        packet_count += 1;
+        
+        // Skip column count, column definition, and EOF packets
+        // Row data packet will have a length-prefixed string
+        if payload.is_empty() {
+            continue;
+        }
+        
+        // Check for NULL (0xFB) or EOF (0xFE) packet
+        if payload[0] == 0xFB || payload[0] == 0xFE || payload[0] == 0xFF {
+            continue;
+        }
+        
+        // Try to parse as length-prefixed string (row data)
+        if packet_count >= 3 && payload[0] < 0xFB {
+            let str_len = payload[0] as usize;
+            if str_len > 0 && str_len < payload.len() {
+                if let Ok(s) = String::from_utf8(payload[1..1 + str_len].to_vec()) {
+                    // Verify it looks like a database name (alphanumeric, underscores)
+                    if s.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
+                        return Some(s);
+                    }
+                }
+            }
+        }
+    }
+    
+    None
+}
+
 /// Extract table name from a SQL query (best effort)
 fn extract_table_name(query: &str) -> Option<String> {
     let upper = query.trim().to_uppercase();
@@ -336,9 +419,6 @@ async fn handle_connection(
     // Try to extract database name from handshake response
     // The database name is embedded in the handshake when client connects with -D flag or db on cmdline
     let initial_database = extract_database_from_handshake(&response_buf[..n]);
-    if let Some(ref db) = initial_database {
-        tracing::debug!("Client connected with database: {}", db);
-    }
     
     backend.write_all(&response_buf[..n]).await?;
 
@@ -349,6 +429,14 @@ async fn handle_connection(
     }
     client.write_all(&handshake_buf[..n]).await?;
 
+    // Phase 3.5: If we didn't get database from handshake, query MariaDB for it
+    // This is more reliable than parsing the handshake packet
+    let detected_database = if initial_database.is_some() {
+        initial_database
+    } else {
+        query_current_database(&mut backend, &mut handshake_buf).await
+    };
+
     // Phase 4: Main command loop with smart routing
     let mut cmd_buf = vec![0u8; 16 * 1024 * 1024]; // 16MB max packet
     let mut result_buf = vec![0u8; 16 * 1024 * 1024];
@@ -356,8 +444,8 @@ async fn handle_connection(
     
     // Track current database context for replication
     // This is needed because followers need to know which database to execute statements in
-    // Initialize with database from handshake if present
-    let mut current_database: Option<String> = initial_database;
+    // Initialize with database from handshake or query if present
+    let mut current_database: Option<String> = detected_database;
     
     loop {
         // Read command from client
