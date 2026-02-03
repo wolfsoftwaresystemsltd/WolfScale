@@ -159,6 +159,25 @@ impl ClusterMembership {
     /// Add a peer node
     pub async fn add_peer(&self, id: String, address: String) -> Result<()> {
         let mut nodes = self.nodes.write().await;
+        
+        // First, remove any synthetic peer with the same address
+        // Synthetic IDs are formatted as "peer-{address-with-dashes}"
+        let synthetic_id = format!("peer-{}", address.replace(':', "-"));
+        nodes.remove(&synthetic_id);
+        
+        // Also remove any other nodes with the same address but different ID
+        // (except if they're already using the same ID we're adding)
+        let nodes_to_remove: Vec<String> = nodes.iter()
+            .filter(|(existing_id, node)| {
+                node.address == address && *existing_id != &id && existing_id.starts_with("peer-")
+            })
+            .map(|(k, _)| k.clone())
+            .collect();
+        
+        for remove_id in nodes_to_remove {
+            nodes.remove(&remove_id);
+        }
+        
         if !nodes.contains_key(&id) {
             nodes.insert(id.clone(), NodeState::new(id, address));
         }

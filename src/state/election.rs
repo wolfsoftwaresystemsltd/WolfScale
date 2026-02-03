@@ -134,6 +134,10 @@ impl ElectionCoordinator {
     async fn has_lowest_id(&self) -> bool {
         let peers = self.cluster.peers().await;
         for peer in peers {
+            // Skip synthetic peers (they don't participate in elections)
+            if peer.id.starts_with("peer-") {
+                continue;
+            }
             // Skip dropped/offline nodes
             if peer.status == crate::state::NodeStatus::Dropped 
                 || peer.status == crate::state::NodeStatus::Offline {
@@ -141,9 +145,11 @@ impl ElectionCoordinator {
             }
             // If any active peer has a lower ID, we don't have the lowest
             if peer.id < self.node_id {
+                tracing::debug!("Node {} has lower ID than us ({})", peer.id, self.node_id);
                 return false;
             }
         }
+        tracing::info!("Node {} has the lowest ID - eligible for leader election", self.node_id);
         true
     }
 
