@@ -70,7 +70,6 @@ When running multiple MariaDB instances that need to stay synchronized, traditio
 
 **WolfScale should be installed on the same machine as each MariaDB server.** This is the ideal configuration for several reasons:
 
-```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           3-Node Cluster Example                            │
 ├─────────────────────────────────────────────────────────────────────────────┤
@@ -86,7 +85,6 @@ When running multiple MariaDB instances that need to stay synchronized, traditio
 │   └─────────────────┘      └─────────────────┘      └─────────────────┘    │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
-```
 
 ### Why Co-locate WolfScale with MariaDB?
 
@@ -102,12 +100,10 @@ When running multiple MariaDB instances that need to stay synchronized, traditio
 
 Each node should connect to its local MariaDB:
 
-```toml
 # On each server, database connects to localhost
 [database]
 host = "localhost"    # or "127.0.0.1"
 port = 3306
-```
 
 ### Ports to Open
 
@@ -130,7 +126,6 @@ Only consider this if you have constraints that prevent installation on database
 
 WolfScale can bridge two separate Galera clusters for cross-datacenter replication:
 
-```
 ┌─────────────────────────────┐         ┌─────────────────────────────┐
 │   Galera Cluster A          │         │   Galera Cluster B          │
 │   (Datacenter 1)            │         │   (Datacenter 2)            │
@@ -143,7 +138,6 @@ WolfScale can bridge two separate Galera clusters for cross-datacenter replicati
 │              │ (Leader)   │ │   WAN   │  │(Follower)│               │
 │              └────────────┘ │         │  └──────────┘               │
 └─────────────────────────────┘         └─────────────────────────────┘
-```
 
 **How it works:**
 1. Install WolfScale Leader on one node in Cluster A
@@ -330,7 +324,6 @@ When adding a fresh node to a cluster that already has data, the WAL won't conta
 
 Choose node IDs strategically since the lowest ID becomes leader during failover:
 
-```toml
 [node]
 # Lower IDs get priority during leader election
 # Format: aaa-location-number for predictable ordering
@@ -338,11 +331,9 @@ id = "db-dc1-001"  # Will become leader over db-dc1-002
 
 # OR use simple names
 id = "primary"     # Will become leader over "replica1"
-```
 
 ### Recommended Configuration
 
-```toml
 [node]
 id = "wolftest1"                     # Unique node ID (lowest wins election)
 bind_address = "0.0.0.0:7654"        # Accept connections from any IP
@@ -360,7 +351,6 @@ host = "localhost"
 port = 3306
 user = "wolfscale"
 password = "secure_password"
-```
 
 ### Critical Configuration Notes
 
@@ -388,7 +378,6 @@ Before using WolfScale, you need to create MariaDB users on **each node** in the
 
 Run these commands on **each node** by connecting directly to local MariaDB:
 
-```bash
 # Connect to local MariaDB as root
 sudo mariadb -u root
 
@@ -404,7 +393,6 @@ GRANT ALL PRIVILEGES ON your_database.* TO 'appuser'@'localhost';
 
 FLUSH PRIVILEGES;
 EXIT;
-```
 
 > **Note:** The `%` wildcard allows connections from any host. Use more specific hostnames for better security.
 
@@ -437,7 +425,6 @@ EXIT;
 │   └──────────────┘    └──────────────┘    └──────────────┘      │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
-```
 
 ### Components
 
@@ -503,22 +490,18 @@ WolfScale uses Raft-style leader election to automatically promote a follower to
 
 **Configuration:**
 
-```toml
 [cluster]
 election_timeout_min_ms = 1500    # Minimum timeout before election
 election_timeout_max_ms = 3000    # Maximum timeout (randomized for split-brain prevention)
 disable_auto_election = false     # Set to true for manual promotion only
-```
 
 **Monitoring failover:**
 
-```bash
 # Check cluster status
 curl http://localhost:8080/cluster
 
 # View logs for election messages
 wolfscale start --log-level debug
-```
 
 **Cluster Sizing Guide:**
 
@@ -537,7 +520,6 @@ wolfscale start --log-level debug
 Here are the complete `[node]` and `[cluster]` sections for a 3-node cluster:
 
 **Node 1 (10.0.10.10) - Initial Leader:**
-```toml
 [node]
 id = "node-1"
 bind_address = "0.0.0.0:7654"
@@ -547,10 +529,8 @@ data_dir = "/var/lib/wolfscale/node-1"
 [cluster]
 bootstrap = true
 peers = ["10.0.10.11:7654", "10.0.10.12:7654"]
-```
 
 **Node 2 (10.0.10.11):**
-```toml
 [node]
 id = "node-2"
 bind_address = "0.0.0.0:7654"
@@ -560,10 +540,8 @@ data_dir = "/var/lib/wolfscale/node-2"
 [cluster]
 bootstrap = false
 peers = ["10.0.10.10:7654", "10.0.10.12:7654"]
-```
 
 **Node 3 (10.0.10.12):**
-```toml
 [node]
 id = "node-3"
 bind_address = "0.0.0.0:7654"
@@ -573,7 +551,6 @@ data_dir = "/var/lib/wolfscale/node-3"
 [cluster]
 bootstrap = false
 peers = ["10.0.10.10:7654", "10.0.10.11:7654"]
-```
 
 > [!IMPORTANT]
 > - Each node's `peers` list contains all OTHER nodes (never itself)
@@ -585,9 +562,7 @@ peers = ["10.0.10.10:7654", "10.0.10.11:7654"]
 
 Followers automatically forward write requests to the current leader, so clients can send writes to any node:
 
-```
 Client -> Follower -> Leader -> Replication -> Response
-```
 
 **Benefits:**
 - Clients don't need to track which node is the leader
@@ -607,9 +582,7 @@ Client -> Follower -> Leader -> Replication -> Response
 
 Every WolfScale node includes a **built-in MySQL protocol proxy**, allowing applications to connect as if it were a regular MariaDB server:
 
-```
 mysql -h any-node -P 8007 -u user -p
-```
 
 **How it works:**
 1. Application connects to any node on port 8007
@@ -643,9 +616,7 @@ mysql -h any-node -P 8007 -u user -p
 
 You can also run a dedicated proxy on a separate machine:
 
-```bash
 wolfscale proxy --listen 0.0.0.0:8007 --config wolfscale.toml
-```
 
 ---
 
@@ -653,7 +624,6 @@ wolfscale proxy --listen 0.0.0.0:8007 --config wolfscale.toml
 
 ### Configuration File (`wolfscale.toml`)
 
-```toml
 [node]
 id = "node-1"                      # Unique node identifier
 bind_address = "0.0.0.0:7654"      # What to listen on
@@ -689,7 +659,6 @@ bind_address = "0.0.0.0:8080"      # HTTP API port
 [proxy]
 enabled = true                     # Built-in MySQL proxy (default: true)
 bind_address = "0.0.0.0:3307"      # MySQL proxy port
-```
 
 ---
 
@@ -714,25 +683,21 @@ bind_address = "0.0.0.0:3307"      # MySQL proxy port
 
 Use the included `run.sh` script for development and testing:
 
-```bash
 ./run.sh start              # Start as follower node
 ./run.sh start --bootstrap  # Start as leader (first node)
 ./run.sh proxy              # Start MySQL proxy on port 8007
 ./run.sh status             # Check cluster status
 ./run.sh info               # Show node info
-```
 
 ### Installing as a System Service
 
 Use `install_service.sh` to install WolfScale as a systemd service:
 
-```bash
 # Install as cluster node
 sudo ./install_service.sh node
 
 # Install as MySQL proxy
 sudo ./install_service.sh proxy
-```
 
 **Interactive Configuration:** If no `wolfscale.toml` exists, the installer will ask:
 - Node ID (defaults to hostname)
@@ -744,13 +709,11 @@ sudo ./install_service.sh proxy
 
 **Service Commands:**
 
-```bash
 sudo systemctl start wolfscale      # Start
 sudo systemctl stop wolfscale       # Stop
 sudo systemctl enable wolfscale     # Start on boot
 sudo systemctl status wolfscale     # Check status
 sudo journalctl -u wolfscale -f     # View logs
-```
 
 **File Locations:**
 | Path | Description |
@@ -768,15 +731,12 @@ sudo journalctl -u wolfscale -f     # View logs
 
 On the new machine, initialize a configuration file:
 
-```bash
 wolfscale init --node-id node-2 --output wolfscale.toml
-```
 
 ### Step 2: Configure the New Node
 
 Edit `wolfscale.toml` on the new node:
 
-```toml
 [node]
 id = "node-2"                           # Must be unique across cluster
 bind_address = "0.0.0.0:7654"
@@ -793,13 +753,10 @@ database = "myapp"
 [cluster]
 bootstrap = false                        # Only leader has bootstrap=true
 peers = ["10.0.10.10:7654", "10.0.10.12:7654"]  # All OTHER nodes (with ports!)
-```
 
 ### Step 3: Join the Cluster
 
-```bash
 wolfscale join leader-host:7654
-```
 
 This will:
 1. Connect to the leader and register as a follower
@@ -808,11 +765,9 @@ This will:
 
 ### Alternative: Install as a Service
 
-```bash
 sudo ./scripts/install-service.sh --node-id node-2
 sudo nano /etc/wolfscale/wolfscale.toml  # Add leader to peers
 sudo systemctl start wolfscale
-```
 
 ### Configuration Comparison
 
@@ -824,11 +779,9 @@ sudo systemctl start wolfscale
 
 ### Verify the Cluster
 
-```bash
 # From any node
 curl http://localhost:8080/cluster
 curl http://localhost:8080/cluster/nodes
-```
 
 ### Adding a Node with an Empty Database
 
@@ -850,7 +803,6 @@ When you add a new node with no data in its local MariaDB:
 
 If `retention_hours = 168` (7 days), WAL entries older than 7 days are deleted. For established clusters:
 
-```bash
 # Option 1: New cluster with complete WAL - just join
 wolfscale join leader:7654
 
@@ -863,7 +815,6 @@ mysql -u wolfscale -p myapp < backup.sql
 
 # Step 3: Now join - WolfScale catches up from the backup point
 wolfscale join leader:7654
-```
 
 > **Tip:** For production clusters, consider using longer `retention_hours` or keeping database backups readily available for new node provisioning.
 
@@ -873,7 +824,6 @@ wolfscale join leader:7654
 
 ### Write Operations
 
-```bash
 # Insert
 curl -X POST http://localhost:8080/write/insert \
   -H "Content-Type: application/json" \
@@ -893,15 +843,12 @@ curl -X POST http://localhost:8080/write/delete \
 curl -X POST http://localhost:8080/write/ddl \
   -H "Content-Type: application/json" \
   -d '{"ddl": "ALTER TABLE users ADD COLUMN email VARCHAR(255)"}'
-```
 
 ### Status Endpoints
 
-```bash
 curl http://localhost:8080/health    # Health check
 curl http://localhost:8080/status    # Node status
 curl http://localhost:8080/cluster   # Cluster info
-```
 
 ---
 
@@ -913,17 +860,13 @@ curl http://localhost:8080/cluster   # Cluster info
 
 The `wolfctl` binary is automatically installed to `/usr/local/bin` when using the setup script. For manual installations:
 
-```bash
 sudo cp target/release/wolfctl /usr/local/bin/
-```
 
 ### Commands
 
 #### List Cluster Servers
 
-```bash
 wolfctl list servers
-```
 
 Shows status of all nodes in the cluster:
 - Node ID and address
@@ -933,28 +876,22 @@ Shows status of all nodes in the cluster:
 
 #### Show Node Status
 
-```bash
 wolfctl status
-```
 
 Shows status of the local node.
 
 #### Promote/Demote
 
-```bash
 wolfctl promote    # Request leader promotion
 wolfctl demote     # Step down from leadership
 wolfctl check-config         # Validate configuration file
 wolfctl check-config -f /path/to/config.toml  # Check specific file
-```
 
 ### Configuration Validation
 
 The `check-config` command validates your configuration file and reports issues:
 
-```bash
 wolfctl check-config
-```
 
 It checks for:
 - **Typos** in key names (e.g., `dvertise_address` instead of `advertise_address`)
@@ -971,7 +908,6 @@ It checks for:
 
 ### Examples
 
-```bash
 # Check cluster status from any node
 wolfctl list servers
 
@@ -980,7 +916,6 @@ wolfctl -e http://192.168.1.10:8080 list servers
 
 # Quick health check
 wolfctl status
-```
 
 ---
 
@@ -994,18 +929,15 @@ wolfctl status
 
 ## Directory Structure
 
-```
 /var/lib/wolfscale/<node-id>/
 ├── wal/           # Write-ahead log segments
 ├── state/         # SQLite state database
 └── data/          # Other runtime data
-```
 
 ---
 
 ## Building from Source
 
-```bash
 # Debug build
 cargo build
 
@@ -1017,4 +949,3 @@ cargo install --path .
 
 # Run tests
 cargo test
-```
