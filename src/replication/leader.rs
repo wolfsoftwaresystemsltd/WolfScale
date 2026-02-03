@@ -9,10 +9,10 @@ use std::time::Duration;
 use tokio::sync::{mpsc, RwLock, oneshot};
 use tokio::time::interval;
 
-use super::protocol::Message;
-use super::ReplicationConfig;
-use crate::wal::entry::{LogEntry, Lsn};
+use crate::wal::entry::{Lsn, WalEntry, LogEntry};
 use crate::wal::{WalWriter, WalReader};
+use crate::replication::{Message, ReplicationConfig};
+use crate::executor::MariaDbExecutor;
 use crate::state::{ClusterMembership, StateTracker, NodeStatus};
 use crate::error::{Error, Result};
 
@@ -56,6 +56,8 @@ pub struct LeaderNode {
     match_lsn: RwLock<LsnMap>,
     /// Message sender for outbound messages
     message_tx: mpsc::Sender<(String, Message)>,
+    /// Database executor for health checks
+    executor: Option<Arc<MariaDbExecutor>>,
     /// Shutdown signal
     shutdown: RwLock<bool>,
 }
@@ -70,6 +72,7 @@ impl LeaderNode {
         cluster: Arc<ClusterMembership>,
         config: ReplicationConfig,
         message_tx: mpsc::Sender<(String, Message)>,
+        executor: Option<Arc<MariaDbExecutor>>,
     ) -> Self {
         Self {
             node_id,
@@ -84,6 +87,7 @@ impl LeaderNode {
             next_lsn: RwLock::new(HashMap::new()),
             match_lsn: RwLock::new(HashMap::new()),
             message_tx,
+            executor,
             shutdown: RwLock::new(false),
         }
     }
@@ -132,10 +136,19 @@ impl LeaderNode {
     
     /// Check if the local database is healthy (can receive writes)
     async fn is_database_healthy(&self) -> bool {
-        // Check if we can still write to WAL as a health indicator
-        // If WAL is working, database should be accessible
-        // More comprehensive health checks can be added here
-        true // For now, assume healthy - real implementation would ping the DB
+        // Use the executor to check database health via SELECT 1
+        if let Some(ref executor) = self.executor {
+            match executor.health_check().await {
+                Ok(healthy) => healthy,
+                Err(e) => {
+                    tracing::error!("Database health check failed: {}", e);
+                    false
+                }
+            }
+        } else {
+            // No executor available - assume healthy (e.g., during testing)
+            true
+        }
     }
 
     /// Stop the leader

@@ -533,6 +533,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                 replication_timeout_ms: config.cluster.election_timeout_ms,
             },
             msg_tx,
+            Some(Arc::clone(&executor)),
         );
 
         // Start all components
