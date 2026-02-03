@@ -372,12 +372,55 @@ async fn handle_connection(
     
     backend.write_all(&response_buf[..n]).await?;
 
-    // Phase 3: Relay auth result from backend to client
-    let n = backend.read(&mut handshake_buf).await?;
-    if n == 0 {
-        return Ok(());
+    // Phase 3: Complete authentication (may require multiple round-trips)
+    // MySQL/MariaDB may send: OK packet (0x00), Error (0xFF), or Auth Switch Request (0xFE)
+    // We need to relay all auth packets until we get OK or Error
+    loop {
+        let n = backend.read(&mut handshake_buf).await?;
+        if n == 0 {
+            return Ok(());
+        }
+        client.write_all(&handshake_buf[..n]).await?;
+        
+        // Check the packet type (after 4-byte header)
+        if n > 4 {
+            let packet_type = handshake_buf[4];
+            match packet_type {
+                0x00 => {
+                    // OK packet - authentication complete
+                    break;
+                }
+                0xFF => {
+                    // Error packet - authentication failed, let client handle it
+                    // Stay in loop to handle any additional packets, client will disconnect
+                    break;
+                }
+                0xFE if n < 9 => {
+                    // EOF packet in old protocol (< 9 bytes) - treat as auth complete
+                    break;
+                }
+                0xFE => {
+                    // Auth switch request - need to relay client's response
+                    let n = client.read(&mut response_buf).await?;
+                    if n == 0 {
+                        return Ok(());
+                    }
+                    backend.write_all(&response_buf[..n]).await?;
+                    // Continue loop to get next auth response from server
+                }
+                _ => {
+                    // Other packet (could be more auth data, like RSA public key)
+                    // Check if client needs to respond
+                    let n = client.read(&mut response_buf).await?;
+                    if n == 0 {
+                        return Ok(());
+                    }
+                    backend.write_all(&response_buf[..n]).await?;
+                }
+            }
+        }
     }
-    client.write_all(&handshake_buf[..n]).await?;
+
 
     // Phase 4: Main command loop with smart routing
     let mut cmd_buf = vec![0u8; 16 * 1024 * 1024]; // 16MB max packet
@@ -405,13 +448,24 @@ async fn handle_connection(
 
         // Parse packet to check query type
         let (is_write, query_opt) = if let Ok((packet, _)) = MySqlPacket::read(&cmd_buf[..n]) {
+            // Log command type for debugging
+            if let Some(cmd) = packet.command() {
+                tracing::debug!("Received command: {:?}", cmd);
+            }
+            
             if let Some(query) = packet.query_string() {
+                tracing::debug!("Query string: {}", query.chars().take(80).collect::<String>());
                 let write = is_write_query(&query);
+                tracing::debug!("is_write_query result: {}", write);
                 (write, Some(query))
             } else {
+                // Not a query packet (could be ping, quit, etc)
+                tracing::debug!("No query string in packet, first byte: 0x{:02x}", 
+                    packet.payload.first().copied().unwrap_or(0));
                 (false, None)
             }
         } else {
+            tracing::warn!("Failed to parse MySQL packet, {} bytes received", n);
             (false, None)
         };
 
