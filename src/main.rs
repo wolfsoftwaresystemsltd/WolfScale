@@ -257,10 +257,13 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     let (entry_tx, entry_rx) = tokio::sync::mpsc::channel::<Vec<wolfscale::wal::entry::WalEntry>>(1000);
     let entry_tx = Arc::new(entry_tx);
     let entry_rx = Arc::new(tokio::sync::Mutex::new(entry_rx));
-    // Heartbeat notification channel: used to notify follower to reset election timer
-    let (heartbeat_tx, heartbeat_rx) = tokio::sync::mpsc::channel::<()>(100);
-    let heartbeat_tx = Arc::new(heartbeat_tx);
-    let heartbeat_rx = Arc::new(tokio::sync::Mutex::new(heartbeat_rx));
+    // Shared heartbeat timestamp: updated by incoming loop, read by follower to reset election timer
+    let shared_heartbeat_time = Arc::new(std::sync::atomic::AtomicU64::new(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64
+    ));
     
     let network_server = NetworkServer::new(
         config.node.bind_address.clone(),
@@ -293,7 +296,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     let response_tx = outgoing_tx.clone();  // Use outgoing channel to send responses
     let our_node_id = config.node.id.clone();
     let incoming_entry_tx = Arc::clone(&entry_tx);
-    let incoming_heartbeat_tx = Arc::clone(&heartbeat_tx);
+    let incoming_heartbeat_time = Arc::clone(&shared_heartbeat_time);
     tokio::spawn(async move {
         tracing::info!("Incoming message processing loop started");
         while let Some((peer_addr, message)) = incoming_rx.recv().await {
@@ -324,8 +327,14 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                     // Record the heartbeat
                     let _ = incoming_cluster.record_heartbeat(&leader_id, commit_lsn).await;
                     
-                    // Notify follower to reset election timer
-                    let _ = incoming_heartbeat_tx.send(()).await;
+                    // Update shared heartbeat timestamp for election timer reset
+                    incoming_heartbeat_time.store(
+                        std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap()
+                            .as_millis() as u64,
+                        std::sync::atomic::Ordering::Relaxed
+                    );
                     
                     // Get leader address for response (should now be in cluster)
                     let leader_addr = if let Some(node) = incoming_cluster.get_node(&leader_id).await {
@@ -533,30 +542,11 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
             tracing::info!("Entry processing loop stopped");
         });
 
-        // Heartbeat listener - resets election timer when heartbeats are received
-        let follower_for_heartbeat = Arc::clone(&follower);
-        let heartbeat_rx_clone = Arc::clone(&heartbeat_rx);
-        tokio::spawn(async move {
-            tracing::info!("Heartbeat listener started");
-            loop {
-                let notification = {
-                    let mut rx = heartbeat_rx_clone.lock().await;
-                    rx.recv().await
-                };
-                
-                if notification.is_some() {
-                    // Reset election timer on heartbeat
-                    follower_for_heartbeat.reset_election_timer().await;
-                } else {
-                    break;
-                }
-            }
-            tracing::info!("Heartbeat listener stopped");
-        });
-
-        // Role transition loop - monitors for election wins
+        // Role transition loop - monitors for election wins and checks heartbeat
         let role_check_interval = Duration::from_millis(100);
         let mut role_ticker = tokio::time::interval(role_check_interval);
+        let follower_heartbeat_time = Arc::clone(&shared_heartbeat_time);
+        let mut last_checked_heartbeat: u64 = 0;
 
         loop {
             tokio::select! {
@@ -567,6 +557,13 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                     break;
                 }
                 _ = role_ticker.tick() => {
+                    // Check for new heartbeat and reset election timer
+                    let current_heartbeat = follower_heartbeat_time.load(std::sync::atomic::Ordering::Relaxed);
+                    if current_heartbeat > last_checked_heartbeat {
+                        last_checked_heartbeat = current_heartbeat;
+                        follower_clone.reset_election_timer().await;
+                    }
+                    
                     // Check if we won an election
                     if follower_clone.is_leader().await {
                         tracing::info!("Election won! Transitioning from FOLLOWER to LEADER");
