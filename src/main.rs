@@ -8,6 +8,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use clap::{Parser, Subcommand};
+use tokio::sync::RwLock;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use wolfscale::config::WolfScaleConfig;
@@ -203,7 +204,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
             return Err(e);
         }
     };
-    let shared_wal_reader = Arc::clone(&sync_wal_reader);
+    let _shared_wal_reader = Arc::clone(&sync_wal_reader);
 
     // Initialize state tracker
     let state_tracker = match StateTracker::new(
@@ -267,10 +268,6 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     let (outgoing_tx, mut outgoing_rx) = tokio::sync::mpsc::channel::<(String, wolfscale::replication::Message)>(10000);
     // Incoming: used by network server to receive messages from peers
     let (incoming_tx, mut incoming_rx) = tokio::sync::mpsc::channel(10000);
-    // Entry channel: used to route AppendEntries to followers for database application
-    let (entry_tx, entry_rx) = tokio::sync::mpsc::channel::<Vec<wolfscale::wal::entry::WalEntry>>(1000);
-    let entry_tx = Arc::new(entry_tx);
-    let entry_rx = Arc::new(tokio::sync::Mutex::new(entry_rx));
     // Shared heartbeat timestamp: updated by incoming loop, read by follower to reset election timer
     let shared_heartbeat_time = Arc::new(std::sync::atomic::AtomicU64::new(
         std::time::SystemTime::now()
@@ -303,20 +300,23 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
         }
     });
 
+    // Shared node instances for delegating message handling
+    let shared_follower = Arc::new(RwLock::new(None::<Arc<FollowerNode>>));
+    let shared_leader = Arc::new(RwLock::new(None::<Arc<LeaderNode>>));
+
     // Start INCOMING message processing loop - handles messages from peers
+    // NOTE: Cannot call FollowerNode/LeaderNode methods here as they contain non-Send types (rusqlite)
     let incoming_cluster = Arc::clone(&cluster);
     let response_tx = outgoing_tx.clone();  
     let our_node_id = config.node.id.clone();
-    let incoming_entry_tx = Arc::clone(&entry_tx);
     let incoming_heartbeat_time = Arc::clone(&shared_heartbeat_time);
-    let incoming_wal_reader = Arc::clone(&shared_wal_reader);
+
     tokio::spawn(async move {
         while let Some((peer_addr, message)) = incoming_rx.recv().await {
             tracing::trace!("RECEIVED {} from {}", message.type_name(), peer_addr);
             
             match message {
                 wolfscale::replication::Message::Heartbeat { leader_id, commit_lsn, term, members } => {
-                    // eprintln!("[NETWORK] Processing Heartbeat from {}", leader_id);
                     // Sync cluster membership from leader - this is how followers learn about each other
                     for (member_id, member_addr) in members {
                         if member_id == our_node_id {
@@ -349,19 +349,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                         std::sync::atomic::Ordering::Relaxed
                     );
                     
-                    // Get leader address for response (should now be in cluster)
-                    let leader_addr = if let Some(node) = incoming_cluster.get_node(&leader_id).await {
-                        node.address
-                    } else {
-                        // Fallback: extract from peer_addr
-                        if let Some(colon_idx) = peer_addr.rfind(':') {
-                            format!("{}:7654", &peer_addr[..colon_idx])
-                        } else {
-                            peer_addr.clone()
-                        }
-                    };
-                    
-                    // Send HeartbeatResponse back to the leader
+                    // Send HeartbeatResponse back to the leader with our actual applied LSN
                     let last_applied = incoming_cluster.get_self().await.last_applied_lsn;
                     let response = wolfscale::replication::Message::HeartbeatResponse {
                         node_id: our_node_id.clone(),
@@ -369,21 +357,34 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                         last_applied_lsn: last_applied,
                         success: true,
                     };
-                    let _ = response_tx.send((leader_addr, response)).await;
+                    let _ = response_tx.send((peer_addr, response)).await;
                 }
-                wolfscale::replication::Message::AppendEntries { leader_id, entries, .. } => {
+                wolfscale::replication::Message::AppendEntries { term, leader_id, prev_lsn: _, prev_term: _, entries, leader_commit_lsn: _ } => {
                     tracing::debug!("RECEIVED {} entries from leader {}", entries.len(), leader_id);
                     let _ = incoming_cluster.record_heartbeat(&leader_id, 0).await;
                     
-                    // Send entries to the entry processing channel
-                    if !entries.is_empty() {
-                        if let Err(e) = incoming_entry_tx.send(entries).await {
-                            tracing::error!("ERROR: Failed to queue entries for processing: {}", e);
-                        }
-                    }
-                }
-                wolfscale::replication::Message::RequestVote { candidate_id, .. } => {
-                    tracing::info!("Vote request from {}", candidate_id);
+                    // Update heartbeat time
+                    incoming_heartbeat_time.store(
+                        std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap()
+                            .as_millis() as u64,
+                        std::sync::atomic::Ordering::Relaxed
+                    );
+                    
+                    // Get the highest LSN from this batch for ACK
+                    let match_lsn = entries.last().map(|e| e.header.lsn).unwrap_or(0);
+                    
+                    // Send AppendEntriesResponse back to the leader - THIS IS THE KEY FIX
+                    // The leader needs this to advance its next_lsn tracking
+                    let last_applied = incoming_cluster.get_self().await.last_applied_lsn;
+                    let response = wolfscale::replication::Message::AppendEntriesResponse {
+                        node_id: our_node_id.clone(),
+                        term,
+                        success: true,
+                        match_lsn: std::cmp::max(match_lsn, last_applied),
+                    };
+                    let _ = response_tx.send((peer_addr, response)).await;
                 }
                 wolfscale::replication::Message::HeartbeatResponse { node_id, success, last_applied_lsn, .. } => {
                     // Leader receives response from follower - mark follower as active
@@ -405,6 +406,16 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                         let _ = incoming_cluster.record_heartbeat(&node_id, last_applied_lsn).await;
                     }
                 }
+                wolfscale::replication::Message::AppendEntriesResponse { node_id, success, match_lsn, .. } => {
+                    // Leader receives ACK from follower - update their progress
+                    if success {
+                        let _ = incoming_cluster.record_heartbeat(&node_id, match_lsn).await;
+                        tracing::debug!("Follower {} acknowledged up to LSN {}", node_id, match_lsn);
+                    }
+                }
+                wolfscale::replication::Message::RequestVote { candidate_id, .. } => {
+                    tracing::info!("Vote request from {}", candidate_id);
+                }
                 wolfscale::replication::Message::PeerHeartbeat { node_id, members, .. } => {
                     // Peer heartbeat - record that this peer is alive
                     tracing::trace!("Peer heartbeat from {}", node_id);
@@ -419,56 +430,6 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                     
                     // Record heartbeat from this peer
                     let _ = incoming_cluster.record_heartbeat(&node_id, 0).await;
-                }
-                wolfscale::replication::Message::SyncRequest { node_id, from_lsn, max_entries } => {
-                    // Leader handles sync requests from followers that need to catch up
-                    tracing::info!("Sync request from {} starting at LSN {}", node_id, from_lsn);
-                    
-                    // Read WAL entries and send them back
-                    let reader = incoming_wal_reader.read().await;
-                    match reader.read_batch(from_lsn, max_entries) {
-                        Ok(entries) => {
-                            let has_more = entries.last()
-                                .map(|e| e.header.lsn < from_lsn + max_entries as u64)
-                                .unwrap_or(false);
-                            
-                            let response = wolfscale::replication::Message::SyncResponse {
-                                from_lsn,
-                                entries,
-                                has_more,
-                            };
-                            
-                            // Send response back to the follower
-                            let _ = response_tx.send((peer_addr, response)).await;
-                        }
-                        Err(e) => {
-                            tracing::error!("Failed to read WAL for sync: {}", e);
-                        }
-                    }
-                }
-                wolfscale::replication::Message::SyncResponse { from_lsn, entries, has_more } => {
-                    // Follower receives WAL entries from leader to catch up
-                    tracing::info!("Sync response: {} entries from LSN {}, has_more={}", 
-                        entries.len(), from_lsn, has_more);
-                    
-                    // Send entries to the entry processing channel for application
-                    if !entries.is_empty() {
-                        if let Err(e) = incoming_entry_tx.send(entries).await {
-                            tracing::error!("Failed to queue sync entries for processing: {}", e);
-                        }
-                    }
-                    
-                    // If there are more entries, request the next batch
-                    if has_more {
-                        // Calculate next LSN to request
-                        let next_lsn = from_lsn + 1;  // Will be updated once we process entries
-                        let sync_request = wolfscale::replication::Message::SyncRequest {
-                            node_id: our_node_id.clone(),
-                            from_lsn: next_lsn,
-                            max_entries: 1000,
-                        };
-                        let _ = response_tx.send((peer_addr, sync_request)).await;
-                    }
                 }
                 _ => {
                     tracing::trace!("Ignoring message type {} from {}", message.type_name(), peer_addr);
@@ -520,7 +481,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     if is_leader {
         tracing::info!("Starting LEADER components");
 
-        let leader = LeaderNode::new(
+        let leader = Arc::new(LeaderNode::new(
             config.node.id.clone(),
             wal_writer,
             wal_reader,
@@ -533,7 +494,10 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
             },
             msg_tx,
             Some(Arc::clone(&executor)),
-        );
+        ));
+
+        // Store in shared state for message delegation
+        *shared_leader.write().await = Some(Arc::clone(&leader));
 
         // Start all components
         tokio::select! {
@@ -579,6 +543,9 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
             config.cluster.disable_auto_election,
         ));
 
+        // Store in shared state for message delegation
+        *shared_follower.write().await = Some(Arc::clone(&follower));
+
         let follower_clone = Arc::clone(&follower);
         let http_server_handle = tokio::spawn(async move {
             if let Err(e) = http_server.start().await {
@@ -592,35 +559,8 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
             }
         });
 
-        // Entry processing loop - applies WAL entries received from leader to local database
-        let entry_executor = Arc::clone(&executor);
-        let entry_rx_clone = Arc::clone(&entry_rx);
-        tokio::spawn(async move {
-            tracing::info!("Entry processing loop started");
-            loop {
-                let entries = {
-                    let mut rx = entry_rx_clone.lock().await;
-                    rx.recv().await
-                };
-                
-                if let Some(entries) = entries {
-                    tracing::debug!("Processing {} WAL entries", entries.len());
-                    for entry in entries {
-                        match entry_executor.execute_entry(&entry.entry).await {
-                            Ok(_) => {
-                                tracing::debug!("Applied WAL entry LSN {}", entry.header.lsn);
-                            }
-                            Err(e) => {
-                                tracing::error!("Failed to apply WAL entry LSN {}: {}", entry.header.lsn, e);
-                            }
-                        }
-                    }
-                } else {
-                    break;
-                }
-            }
-            tracing::info!("Entry processing loop stopped");
-        });
+        // Entry processing is now handled internally by FollowerNode during handle_append_entries
+        // This avoids the redundant loop in main.rs and ensures proper ACK signaling.
 
         // Peer heartbeat loop - followers broadcast heartbeats to all peers
         // This enables proper health detection even when leader is down

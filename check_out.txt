@@ -1,0 +1,71 @@
+    Checking wolfscale v0.3.0 (/home/paulc/NetBeansProjects/wolfscale)
+warning: unused variable: `incoming_wal_reader`
+   --> src/main.rs:312:9
+    |
+312 |     let incoming_wal_reader = Arc::clone(&shared_wal_reader);
+    |         ^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_incoming_wal_reader`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+error: future cannot be sent between threads safely
+   --> src/main.rs:316:5
+    |
+316 | /     tokio::spawn(async move {
+317 | |         while let Some((peer_addr, message)) = incoming_rx.recv().await {
+318 | |             tracing::trace!("RECEIVED {} from {}", message.type_name(), peer_addr);
+...   |
+431 | |         tracing::info!("Incoming message processing loop stopped");
+432 | |     });
+    | |______^ future created by async block is not `Send`
+    |
+    = help: within `rusqlite::Connection`, the trait `Sync` is not implemented for `RefCell<rusqlite::inner_connection::InnerConnection>`
+    = note: if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` instead
+note: future is not `Send` as this value is used across an await
+   --> src/main.rs:357:117
+    |
+355 |                     let follower_guard = loop_follower.read().await;
+    |                         -------------- has type `tokio::sync::RwLockReadGuard<'_, Option<Arc<FollowerNode>>>` which is not `Send`
+356 |                     if let Some(ref follower) = *follower_guard {
+357 |                         match follower.handle_append_entries(term, leader_id.clone(), 0, 0, Vec::new(), commit_lsn).await {
+    |                                                                                                                     ^^^^^ await occurs here, with `follower_guard` maybe used later
+note: required by a bound in `tokio::spawn`
+   --> /home/paulc/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.49.0/src/task/spawn.rs:171:21
+    |
+169 |     pub fn spawn<F>(future: F) -> JoinHandle<F::Output>
+    |            ----- required by a bound in this function
+170 |     where
+171 |         F: Future + Send + 'static,
+    |                     ^^^^ required by this bound in `spawn`
+
+error: future cannot be sent between threads safely
+   --> src/main.rs:316:5
+    |
+316 | /     tokio::spawn(async move {
+317 | |         while let Some((peer_addr, message)) = incoming_rx.recv().await {
+318 | |             tracing::trace!("RECEIVED {} from {}", message.type_name(), peer_addr);
+...   |
+431 | |         tracing::info!("Incoming message processing loop stopped");
+432 | |     });
+    | |______^ future created by async block is not `Send`
+    |
+    = help: within `rusqlite::Connection`, the trait `Sync` is not implemented for `RefCell<hashlink::lru_cache::LruCache<Arc<str>, rusqlite::raw_statement::RawStatement>>`
+    = note: if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` instead
+note: future is not `Send` as this value is used across an await
+   --> src/main.rs:357:117
+    |
+355 |                     let follower_guard = loop_follower.read().await;
+    |                         -------------- has type `tokio::sync::RwLockReadGuard<'_, Option<Arc<FollowerNode>>>` which is not `Send`
+356 |                     if let Some(ref follower) = *follower_guard {
+357 |                         match follower.handle_append_entries(term, leader_id.clone(), 0, 0, Vec::new(), commit_lsn).await {
+    |                                                                                                                     ^^^^^ await occurs here, with `follower_guard` maybe used later
+note: required by a bound in `tokio::spawn`
+   --> /home/paulc/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.49.0/src/task/spawn.rs:171:21
+    |
+169 |     pub fn spawn<F>(future: F) -> JoinHandle<F::Output>
+    |            ----- required by a bound in this function
+170 |     where
+171 |         F: Future + Send + 'static,
+    |                     ^^^^ required by this bound in `spawn`
+
+warning: `wolfscale` (bin "wolfscale") generated 1 warning
+error: could not compile `wolfscale` (bin "wolfscale") due to 2 previous errors; 1 warning emitted
