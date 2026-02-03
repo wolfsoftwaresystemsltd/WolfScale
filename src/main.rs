@@ -362,7 +362,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                     };
                     
                     // Send HeartbeatResponse back to the leader
-                    let last_applied = incoming_cluster.get_self().await.replication_lsn;
+                    let last_applied = incoming_cluster.get_self().await.last_applied_lsn;
                     let response = wolfscale::replication::Message::HeartbeatResponse {
                         node_id: our_node_id.clone(),
                         term,
