@@ -164,10 +164,15 @@ impl FollowerNode {
             if let Some(batch) = maybe_entries {
                 tracing::info!("Processing {} replicated entries from leader", batch.entries.len());
                 let mut highest_applied_lsn = *self.last_applied_lsn.read().await;
+                tracing::info!("Current last_applied_lsn before processing: {}", highest_applied_lsn);
+                
+                let mut processed_count = 0usize;
+                let mut skipped_count = 0usize;
                 
                 for entry in &batch.entries {
                     // Skip entries we've already applied
                     if entry.header.lsn <= highest_applied_lsn {
+                        skipped_count += 1;
                         continue;
                     }
                     
@@ -178,8 +183,12 @@ impl FollowerNode {
                     // Always update our LSN - even if the entry failed, we've "processed" it
                     // This prevents re-processing the same entries forever
                     highest_applied_lsn = entry.header.lsn;
+                    processed_count += 1;
                     let _ = self.cluster.record_heartbeat(&self.node_id, entry.header.lsn).await;
                 }
+                
+                tracing::info!("Processed {} entries, skipped {}, highest_applied_lsn now: {}", 
+                    processed_count, skipped_count, highest_applied_lsn);
                 
                 // Update our internal tracking
                 *self.last_applied_lsn.write().await = highest_applied_lsn;
@@ -191,6 +200,7 @@ impl FollowerNode {
                     success: true,
                     match_lsn: highest_applied_lsn,
                 };
+                tracing::info!("Sending ACK to {} with match_lsn={}", batch.leader_address, highest_applied_lsn);
                 if let Err(e) = self.message_tx.send((batch.leader_address, ack)).await {
                     tracing::warn!("Failed to send ACK to leader: {}", e);
                 }
