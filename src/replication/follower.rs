@@ -346,6 +346,9 @@ impl FollowerNode {
                 .await;
         }
 
+        // Update our own LSN in cluster membership so it shows in status
+        let _ = self.cluster.record_heartbeat(&self.node_id, entry.header.lsn).await;
+
         Ok(())
     }
 

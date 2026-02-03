@@ -180,6 +180,9 @@ impl LeaderNode {
         // Append to local WAL
         let lsn = self.wal_writer.append(entry.clone()).await?;
 
+        // Update our own LSN in cluster membership so it shows in status
+        let _ = self.cluster.record_heartbeat(&self.node_id, lsn).await;
+
         let quorum_size = self.cluster.quorum_size().await;
 
         // If we're the only node, immediately commit
