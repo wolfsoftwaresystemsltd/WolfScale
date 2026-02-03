@@ -119,6 +119,8 @@ The new node will be in `NEEDS_MIGRATION` status until you run the migrate comma
 | 3     | 2 node failures   | Minimum for production          |
 | 5     | 4 node failures   | Recommended for production      |
 
+**Geo-Distribution:** Nodes can be deployed across different data centers or regions. Connect to your nearest node for low-latency reads - if the data isn't up-to-date, the request is automatically forwarded to the leader.
+
 > **Note:** WolfScale doesn't use quorum - only one node needs to survive. While the cluster can run on a single remaining node, it's recommended to maintain at least 2 active nodes for redundancy.
 
 > **Note:** The install wizard creates your configuration file automatically. See the [full documentation](docs/DOCUMENTATION.md) for advanced configuration options.

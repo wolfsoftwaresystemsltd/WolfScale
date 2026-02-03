@@ -529,6 +529,12 @@ wolfscale start --log-level debug
 
 **Note:** WolfScale doesn't use quorum - only one node needs to survive. While the cluster can run on a single remaining node, it's recommended to maintain at least 2 active nodes for redundancy.
 
+**Geo-Distribution:** Nodes can be deployed across different data centers or regions for:
+- **Low-latency reads** - Connect to your nearest node
+- **Disaster recovery** - Survive entire datacenter failures
+- **Automatic forwarding** - If a follower doesn't have up-to-date data, reads are forwarded to the leader
+- **Write forwarding** - All writes are automatically forwarded to the leader regardless of which node you connect to
+
 ### Complete 3-Node Cluster Example
 
 Here are the complete `[node]` and `[cluster]` sections for a 3-node cluster:
