@@ -315,10 +315,12 @@ impl ClusterMembership {
         (size / 2) + 1
     }
 
-    /// Check if we have quorum
+    /// Check if we have quorum (at least 2 active nodes = leader + one follower)
     pub async fn has_quorum(&self) -> bool {
         let active = self.active_nodes().await.len();
-        active >= self.quorum_size().await
+        // We have quorum if there are at least 2 active nodes
+        // (leader can replicate writes to at least one follower)
+        active >= 2
     }
 
     /// Update replication lag for all nodes
