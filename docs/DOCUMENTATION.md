@@ -25,7 +25,7 @@ When running multiple MariaDB instances that need to stay synchronized, traditio
 | **Conflict Handling** | No conflicts (single leader) | Certification-based conflict detection |
 | **Complexity** | Simpler architecture | More complex (wsrep, flow control) |
 | **Write Latency** | Low (leader commits locally) | Higher (synchronous certification) |
-| **Network Tolerance** | WAL catch-up for partitions | Stricter quorum requirements |
+| **Network Tolerance** | WAL catch-up for partitions | Stricter network requirements |
 | **Implementation** | Standalone Rust binary | Patched MariaDB (wsrep) |
 
 ### WolfScale Advantages
@@ -270,23 +270,6 @@ The leader continuously monitors local database health:
 
 This ensures that if you stop MariaDB for an upgrade, WolfScale automatically promotes another node to leader, preventing write failures.
 
-### Quorum
-
-WolfScale uses a simple quorum model:
-
-| Active Nodes | Has Quorum | Reason |
-|--------------|------------|--------|
-| **1 node** | No | Leader alone cannot replicate - data not protected |
-| **2+ nodes** | Yes | Leader can replicate writes to at least one follower |
-
-**Why 2 is the minimum for quorum:**
-- With 2 active nodes, the leader can send writes to at least one follower
-- This ensures at least one replica has the data before confirming the write
-- If the leader fails, the follower has the latest data and can take over
-- A single node has no redundancy and would lose data if it fails
-
-Quorum status is displayed in `wolfctl list servers` output.
-
 ---
 
 ## Configuration Best Practices
@@ -426,7 +409,7 @@ EXIT;
 2. Leader generates a Snowflake ID (if needed) and logs the operation to the WAL
 3. Leader replicates the entry to all followers
 4. Followers apply the entry to their local MariaDB and acknowledge
-5. Leader confirms the write once quorum is reached
+5. Leader confirms the write once replication is complete
 
 ### 2. WAL (Write-Ahead Log)
 
@@ -485,19 +468,17 @@ curl http://localhost:8080/cluster
 wolfscale start --log-level debug
 ```
 
-> **Note:** For best reliability, deploy an odd number of nodes (3, 5, 7) to ensure quorum can be established during network partitions.
-
 **Cluster Sizing Guide:**
 
-| Nodes | Quorum | Fault Tolerance | Recommendation |
-|-------|--------|-----------------|----------------|
-| 1 | 1 | None | Development only |
-| 2 | 2 | None | No auto-failover (needs both for quorum) |
-| 3 | 2 | 1 node | Minimum for production HA |
-| 5 | 3 | 2 nodes | Recommended for production |
-| 7 | 4 | 3 nodes | High availability |
+| Nodes | Fault Tolerance | Use Case                     |
+|-------|-----------------|------------------------------|
+| 1     | None            | Development only             |
+| 2     | None            | Testing, no auto-failover    |
+| 3     | 1 node failure  | Minimum for production       |
+| 5     | 2 node failures | Recommended for production   |
+| 7     | 3 node failures | High availability            |
 
-**Tip:** Always use an odd number of nodes. Even numbers (2, 4, 6) provide no additional fault tolerance compared to n-1 nodes, but require more nodes for quorum.
+**Tip:** Use an odd number of nodes for best fault tolerance.
 
 ### Complete 3-Node Cluster Example
 
