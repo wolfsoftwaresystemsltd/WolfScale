@@ -748,8 +748,8 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut last_time = std::time::Instant::now();
     let mut writes_per_sec: f64 = 0.0;
     
-    // Hide cursor
-    print!("\x1b[?25l");
+    // Hide cursor and clear screen
+    print!("\x1b[?25l\x1b[2J\x1b[H");
     
     // Set up Ctrl+C handler
     let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
@@ -758,14 +758,17 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
         r.store(false, std::sync::atomic::Ordering::SeqCst);
     })?;
     
-    println!();
-    println!("\x1b[1;36m╔══════════════════════════════════════════════════════════════╗\x1b[0m");
-    println!("\x1b[1;36m║\x1b[0m            \x1b[1;37mWolfScale Live Statistics\x1b[0m                         \x1b[1;36m║\x1b[0m");
-    println!("\x1b[1;36m╚══════════════════════════════════════════════════════════════╝\x1b[0m");
-    println!();
-    
     // Main loop
     while running.load(std::sync::atomic::Ordering::SeqCst) {
+        // Clear screen and move cursor to top
+        print!("\x1b[H\x1b[J");
+        
+        println!();
+        println!("\x1b[1;36m╔══════════════════════════════════════════════════════════════╗\x1b[0m");
+        println!("\x1b[1;36m║\x1b[0m            \x1b[1;37mWolfScale Live Statistics\x1b[0m                         \x1b[1;36m║\x1b[0m");
+        println!("\x1b[1;36m╚══════════════════════════════════════════════════════════════╝\x1b[0m");
+        println!();
+        
         // Fetch stats
         match client.get(&url).send().await {
             Ok(response) if response.status().is_success() => {
@@ -786,9 +789,6 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
                         }
                         last_lsn = Some(stats.current_lsn);
                         last_time = now;
-                        
-                        // Move cursor up and clear lines for refresh
-                        print!("\x1b[8A\x1b[J");
                         
                         // Role with color
                         let role_display = if stats.role == "Leader" {
