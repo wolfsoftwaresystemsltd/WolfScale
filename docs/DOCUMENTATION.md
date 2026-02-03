@@ -847,7 +847,23 @@ Shows status of the local node.
 ```bash
 wolfctl promote    # Request leader promotion
 wolfctl demote     # Step down from leadership
+wolfctl check-config         # Validate configuration file
+wolfctl check-config -f /path/to/config.toml  # Check specific file
 ```
+
+### Configuration Validation
+
+The `check-config` command validates your configuration file and reports issues:
+
+```bash
+wolfctl check-config
+```
+
+It checks for:
+- **Typos** in key names (e.g., `dvertise_address` instead of `advertise_address`)
+- **Missing required fields** like `advertise_address` or `node.id`
+- **Self-referencing peers** (listing your own IP in the peers list)
+- **Bootstrap conflicts** (warns if bootstrap is enabled)
 
 ### Options
 

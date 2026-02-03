@@ -303,6 +303,8 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                             let _ = incoming_cluster.remove_peer(&synthetic_id).await;
                             let _ = incoming_cluster.add_peer(member_id.clone(), member_addr.clone()).await;
                         }
+                        // Mark this node as active (leader says they're in the cluster)
+                        let _ = incoming_cluster.record_heartbeat(&member_id, 0).await;
                     }
                     
                     // Update cluster: mark sender as leader
