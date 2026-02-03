@@ -296,6 +296,32 @@ When a node goes down while writes continue on the new leader, the returning nod
 - All missed writes are applied in order via WAL replay
 - Underlying database (MariaDB) receives all changes before leadership is allowed
 
+### Adding New Nodes to Existing Clusters
+
+When adding a fresh node to a cluster that already has data, the WAL won't contain the complete history. Use `wolfctl migrate` to copy the database:
+
+| Step | Command                                      |
+|------|----------------------------------------------|
+| 1    | Install WolfScale on new node                |
+| 2    | `wolfctl migrate --from 10.0.10.111:8080`    |
+| 3    | `systemctl start wolfscale`                  |
+
+**What happens during migration:**
+
+| Step | Action                                      |
+|------|---------------------------------------------|
+| 1    | Connect to source node's HTTP API           |
+| 2    | Request mysqldump from source               |
+| 3    | Stream and apply to local database          |
+| 4    | Record source LSN as starting point         |
+| 5    | Normal WAL sync takes over from that LSN    |
+
+**NeedsMigration Status:**
+- Nodes that can't catch up via WAL enter `NEEDS_MIGRATION` status
+- These nodes won't participate in cluster operations
+- Run `wolfctl migrate` to resolve this status
+- After migration, node transitions to `Syncing` then `Active`
+
 ---
 
 ## Configuration Best Practices
