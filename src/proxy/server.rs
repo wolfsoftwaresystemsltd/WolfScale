@@ -140,6 +140,85 @@ fn strip_leading_comments(query: &str) -> &str {
     s
 }
 
+/// Extract database name from MySQL handshake response packet
+/// When client connects with `mysql -D dbname` or `mysql dbname`, the database
+/// is included in the handshake response packet, not sent as a separate command
+fn extract_database_from_handshake(packet: &[u8]) -> Option<String> {
+    // MySQL Handshake Response packet structure (simplified):
+    // 4 bytes: packet header (length + sequence)
+    // 4 bytes: client capabilities
+    // 4 bytes: max packet size
+    // 1 byte: charset
+    // 23 bytes: reserved (zeros)
+    // NUL-terminated string: username
+    // Length-encoded auth response
+    // NUL-terminated string: database (if CLIENT_CONNECT_WITH_DB flag is set)
+    
+    if packet.len() < 36 {
+        return None;
+    }
+    
+    // Skip packet header (4 bytes)
+    let data = &packet[4..];
+    
+    if data.len() < 32 {
+        return None;
+    }
+    
+    // Check CLIENT_CONNECT_WITH_DB capability flag (bit 3 = 0x08)
+    let cap_flags = u32::from_le_bytes([data[0], data[1], data[2], data[3]]);
+    let has_db = (cap_flags & 0x08) != 0;
+    
+    if !has_db {
+        return None;
+    }
+    
+    // Skip: capabilities (4) + max_packet_size (4) + charset (1) + reserved (23) = 32 bytes
+    let mut pos = 32;
+    
+    // Skip username (NUL-terminated)
+    while pos < data.len() && data[pos] != 0 {
+        pos += 1;
+    }
+    pos += 1; // Skip NUL
+    
+    if pos >= data.len() {
+        return None;
+    }
+    
+    // Skip auth response (length-prefixed or NUL-terminated depending on plugin)
+    // Check CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA (0x00200000) or CLIENT_SECURE_CONNECTION (0x8000)
+    let secure_connection = (cap_flags & 0x8000) != 0;
+    
+    if secure_connection {
+        // Length-prefixed auth data
+        let auth_len = data[pos] as usize;
+        pos += 1 + auth_len;
+    } else {
+        // NUL-terminated auth data
+        while pos < data.len() && data[pos] != 0 {
+            pos += 1;
+        }
+        pos += 1;
+    }
+    
+    if pos >= data.len() {
+        return None;
+    }
+    
+    // Now we should be at the database name (NUL-terminated)
+    let db_start = pos;
+    while pos < data.len() && data[pos] != 0 {
+        pos += 1;
+    }
+    
+    if pos > db_start {
+        String::from_utf8(data[db_start..pos].to_vec()).ok()
+    } else {
+        None
+    }
+}
+
 /// Extract table name from a SQL query (best effort)
 fn extract_table_name(query: &str) -> Option<String> {
     let upper = query.trim().to_uppercase();
@@ -253,6 +332,14 @@ async fn handle_connection(
     if n == 0 {
         return Ok(());
     }
+    
+    // Try to extract database name from handshake response
+    // The database name is embedded in the handshake when client connects with -D flag or db on cmdline
+    let initial_database = extract_database_from_handshake(&response_buf[..n]);
+    if let Some(ref db) = initial_database {
+        tracing::debug!("Client connected with database: {}", db);
+    }
+    
     backend.write_all(&response_buf[..n]).await?;
 
     // Phase 3: Relay auth result from backend to client
@@ -269,7 +356,8 @@ async fn handle_connection(
     
     // Track current database context for replication
     // This is needed because followers need to know which database to execute statements in
-    let mut current_database: Option<String> = None;
+    // Initialize with database from handshake if present
+    let mut current_database: Option<String> = initial_database;
     
     loop {
         // Read command from client
