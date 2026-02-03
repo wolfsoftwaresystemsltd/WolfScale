@@ -306,7 +306,8 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
 
     // Channel for forwarding entries from message loop to FollowerNode
     // (We can't call FollowerNode methods directly due to Send trait constraints on rusqlite)
-    let (entry_tx, entry_rx) = tokio::sync::mpsc::channel::<Vec<wolfscale::wal::entry::WalEntry>>(100);
+    // Uses ReplicationBatch so FollowerNode can send ACK after processing
+    let (entry_tx, entry_rx) = tokio::sync::mpsc::channel::<wolfscale::replication::ReplicationBatch>(100);
     let shared_entry_rx = Arc::new(tokio::sync::Mutex::new(Some(entry_rx)));
 
     // Start INCOMING message processing loop - handles messages from peers
@@ -390,27 +391,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                         std::sync::atomic::Ordering::Relaxed
                     );
                     
-                    // Forward entries to FollowerNode for processing
-                    // (we can't call FollowerNode.apply_entry directly due to Send trait constraints)
-                    if !entries.is_empty() {
-                        if let Err(e) = incoming_entry_tx.send(entries).await {
-                            tracing::error!("Failed to forward entries to follower: {}", e);
-                        }
-                    }
-                    
-                    // Send AppendEntriesResponse back to the leader
-                    // IMPORTANT: Only report actually applied LSN, not the batch's highest LSN!
-                    // The entries are processed asynchronously by FollowerNode, which updates
-                    // cluster membership after each entry is applied. The leader will see
-                    // the updated peer.last_applied_lsn on subsequent replication cycles.
-                    let last_applied = incoming_cluster.get_self().await.last_applied_lsn;
-                    let response = wolfscale::replication::Message::AppendEntriesResponse {
-                        node_id: our_node_id.clone(),
-                        term,
-                        success: true,
-                        match_lsn: last_applied,  // Only ACK what we've actually processed
-                    };
-                    // Use registered leader address from cluster, not the ephemeral source port
+                    // Get leader address for ACK response
                     let leader_addr = incoming_cluster.get_node(&leader_id).await
                         .map(|n| n.address.clone())
                         .unwrap_or_else(|| {
@@ -421,7 +402,21 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                                 peer_addr.clone()
                             }
                         });
-                    let _ = response_tx.send((leader_addr, response)).await;
+                    
+                    // Forward entries to FollowerNode for processing
+                    // FollowerNode will send ACK after entries are applied
+                    if !entries.is_empty() {
+                        let batch = wolfscale::replication::ReplicationBatch {
+                            entries,
+                            term,
+                            leader_id,
+                            leader_address: leader_addr,
+                        };
+                        if let Err(e) = incoming_entry_tx.send(batch).await {
+                            tracing::error!("Failed to forward entries to follower: {}", e);
+                        }
+                    }
+                    // NOTE: No ACK here - FollowerNode sends ACK after processing
                 }
                 wolfscale::replication::Message::HeartbeatResponse { node_id, success, last_applied_lsn, .. } => {
                     // Leader receives response from follower - mark follower as active

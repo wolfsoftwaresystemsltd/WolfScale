@@ -8,7 +8,7 @@ mod follower;
 
 pub use protocol::{Message, FrameHeader};
 pub use leader::LeaderNode;
-pub use follower::FollowerNode;
+pub use follower::{FollowerNode, ReplicationBatch};
 
 /// Configuration for replication
 #[derive(Debug, Clone)]

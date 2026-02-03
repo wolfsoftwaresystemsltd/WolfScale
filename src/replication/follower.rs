@@ -16,6 +16,15 @@ use crate::state::{ClusterMembership, StateTracker, ElectionCoordinator, Electio
 use crate::executor::MariaDbExecutor;
 use crate::error::{Error, Result};
 
+/// Batch of entries to replicate with metadata for ACK
+#[derive(Clone)]
+pub struct ReplicationBatch {
+    pub entries: Vec<WalEntry>,
+    pub term: u64,
+    pub leader_id: String,
+    pub leader_address: String,
+}
+
 /// Follower node state
 pub struct FollowerNode {
     /// Node ID
@@ -49,7 +58,7 @@ pub struct FollowerNode {
     /// Was this node previously a leader (prevents auto re-election)
     was_leader: RwLock<bool>,
     /// Channel to receive entries from message loop (due to Send trait constraints)
-    entry_rx: tokio::sync::Mutex<Option<mpsc::Receiver<Vec<crate::wal::entry::WalEntry>>>>,
+    entry_rx: tokio::sync::Mutex<Option<mpsc::Receiver<ReplicationBatch>>>,
 }
 
 impl FollowerNode {
@@ -122,7 +131,7 @@ impl FollowerNode {
     }
 
     /// Set the entry receiver channel (for receiving entries from message loop)
-    pub async fn set_entry_receiver(&self, rx: mpsc::Receiver<Vec<crate::wal::entry::WalEntry>>) {
+    pub async fn set_entry_receiver(&self, rx: mpsc::Receiver<ReplicationBatch>) {
         *self.entry_rx.lock().await = Some(rx);
     }
 
@@ -152,16 +161,38 @@ impl FollowerNode {
             drop(entry_rx_guard);
 
             // Process any received entries
-            if let Some(entries) = maybe_entries {
-                tracing::info!("Processing {} replicated entries from leader", entries.len());
-                for entry in &entries {
+            if let Some(batch) = maybe_entries {
+                tracing::info!("Processing {} replicated entries from leader", batch.entries.len());
+                let mut highest_applied_lsn = *self.last_applied_lsn.read().await;
+                
+                for entry in &batch.entries {
+                    // Skip entries we've already applied
+                    if entry.header.lsn <= highest_applied_lsn {
+                        continue;
+                    }
+                    
                     if let Err(e) = self.apply_entry(entry).await {
                         // Log but continue - non-fatal errors shouldn't stop replication
                         tracing::warn!("Failed to apply entry LSN {}: {} - continuing", entry.header.lsn, e);
                     }
                     // Always update our LSN - even if the entry failed, we've "processed" it
                     // This prevents re-processing the same entries forever
+                    highest_applied_lsn = entry.header.lsn;
                     let _ = self.cluster.record_heartbeat(&self.node_id, entry.header.lsn).await;
+                }
+                
+                // Update our internal tracking
+                *self.last_applied_lsn.write().await = highest_applied_lsn;
+                
+                // Send ACK to leader AFTER entries are applied
+                let ack = Message::AppendEntriesResponse {
+                    node_id: self.node_id.clone(),
+                    term: batch.term,
+                    success: true,
+                    match_lsn: highest_applied_lsn,
+                };
+                if let Err(e) = self.message_tx.send((batch.leader_address, ack)).await {
+                    tracing::warn!("Failed to send ACK to leader: {}", e);
                 }
             }
 
