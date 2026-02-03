@@ -71,7 +71,9 @@ impl ProxyServer {
 
 /// Check if a query is a write operation
 fn is_write_query(query: &str) -> bool {
-    let upper = query.trim().to_uppercase();
+    // Strip leading comments (mysqldump adds /* ... */ style comments)
+    let stripped = strip_leading_comments(query);
+    let upper = stripped.trim().to_uppercase();
     upper.starts_with("INSERT") ||
     upper.starts_with("UPDATE") ||
     upper.starts_with("DELETE") ||
@@ -81,7 +83,41 @@ fn is_write_query(query: &str) -> bool {
     upper.starts_with("TRUNCATE") ||
     upper.starts_with("REPLACE") ||
     upper.starts_with("GRANT") ||
-    upper.starts_with("REVOKE")
+    upper.starts_with("REVOKE") ||
+    upper.starts_with("LOCK") ||
+    upper.starts_with("UNLOCK") ||
+    upper.starts_with("SET") ||
+    upper.starts_with("USE")
+}
+
+/// Strip leading SQL comments from a query
+fn strip_leading_comments(query: &str) -> &str {
+    let mut s = query.trim();
+    loop {
+        // Strip /* ... */ comments
+        if s.starts_with("/*") {
+            if let Some(end) = s.find("*/") {
+                s = s[end + 2..].trim_start();
+                continue;
+            }
+        }
+        // Strip -- comments (to end of line)
+        if s.starts_with("--") {
+            if let Some(end) = s.find('\n') {
+                s = s[end + 1..].trim_start();
+                continue;
+            }
+        }
+        // Strip # comments (to end of line)  
+        if s.starts_with("#") {
+            if let Some(end) = s.find('\n') {
+                s = s[end + 1..].trim_start();
+                continue;
+            }
+        }
+        break;
+    }
+    s
 }
 
 /// Extract table name from a SQL query (best effort)
