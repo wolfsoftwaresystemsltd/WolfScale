@@ -396,78 +396,44 @@ async fn handle_connection(
     client.write_all(&handshake_buf[..n]).await?;
 
     // Phase 2: Relay client's handshake response to backend
-    // CRITICAL: Use framed reading to ensure we only read the handshake response.
-    // With mysql -e, the client sends the COM_QUERY immediately after the handshake.
-    // A regular read() could consume both packets, causing the query to be forwarded
-    // during auth but never detected in the command loop.
-    let mut response_buf = vec![0u8; 16384];
-    let n = match read_mysql_packet(&mut client, &mut response_buf).await {
-        Ok(n) => n,
-        Err(_) => return Ok(()),
-    };
+    let mut response_buf = vec![0u8; 65536];
+    let n = client.read(&mut response_buf).await?;
+    if n == 0 {
+        return Ok(());
+    }
     
     // Try to extract database name from handshake response
-    // The database name is embedded in the handshake when client connects with -D flag or db on cmdline
     let initial_database = extract_database_from_handshake(&response_buf[..n]);
     
     backend.write_all(&response_buf[..n]).await?;
 
-    // Phase 3: Complete authentication (may require multiple round-trips)
-    // MySQL/MariaDB may send: OK packet (0x00 or 0xFE), Error (0xFF), or Auth Switch Request (0xFE + plugin)
-    // We need to relay all auth packets until we get OK or Error
-    loop {
-        let n = backend.read(&mut handshake_buf).await?;
-        if n == 0 {
-            return Ok(());
-        }
-        client.write_all(&handshake_buf[..n]).await?;
-        
-        // Check the packet type (after 4-byte header)
-        if n > 4 {
-            let packet_type = handshake_buf[4];
-            match packet_type {
-                0x00 => {
-                    // OK packet (traditional) - authentication complete
-                    break;
-                }
-                0xFF => {
-                    // Error packet - authentication failed
-                    break;
-                }
-                0xFE => {
-                    // Could be: EOF, OK (with CLIENT_DEPRECATE_EOF), or Auth Switch
-                    // EOF: small packet (< 9 bytes total)
-                    // OK: 0xFE followed by 0x00 (affected_rows=0) 
-                    // Auth Switch: 0xFE followed by plugin name (ASCII letter)
-                    if n < 9 {
-                        // EOF packet - auth complete
-                        break;
-                    } else if n > 5 && handshake_buf[5] == 0x00 {
-                        // OK packet with CLIENT_DEPRECATE_EOF (affected_rows=0)
-                        break;
-                    } else if n > 5 && handshake_buf[5].is_ascii_alphabetic() {
-                        // Auth switch request - relay client's response using framed read
-                        let n = match read_mysql_packet(&mut client, &mut response_buf).await {
-                            Ok(n) => n,
-                            Err(_) => return Ok(()),
-                        };
-                        backend.write_all(&response_buf[..n]).await?;
-                        // Continue loop to get next auth response
-
-                    } else {
-                        // Likely OK packet with non-zero affected_rows, treat as auth complete
-                        break;
-                    }
-                }
-                _ => {
-                    // Unknown packet type during auth - treat as auth complete
-                    // DO NOT try to read from client here, as that would consume the query
-                    break;
-                }
+    // Phase 3: Simple auth completion - read one response from backend
+    // Most connections just get OK or Error. Auth switch is rare.
+    let n = backend.read(&mut handshake_buf).await?;
+    if n == 0 {
+        return Ok(());
+    }
+    client.write_all(&handshake_buf[..n]).await?;
+    
+    // Check if auth failed
+    if n > 4 && handshake_buf[4] == 0xFF {
+        // Error packet - client will disconnect
+        return Ok(());
+    }
+    
+    // Handle auth switch if needed (0xFE that's not EOF)
+    if n > 4 && handshake_buf[4] == 0xFE && n > 9 {
+        // Likely auth switch - relay client response
+        let n = client.read(&mut response_buf).await?;
+        if n > 0 {
+            backend.write_all(&response_buf[..n]).await?;
+            // Get final auth result
+            let n = backend.read(&mut handshake_buf).await?;
+            if n > 0 {
+                client.write_all(&handshake_buf[..n]).await?;
             }
         }
     }
-
 
 
     // Phase 4: Main command loop with smart routing
