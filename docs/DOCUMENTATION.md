@@ -316,6 +316,20 @@ When adding a fresh node to a cluster that already has data, the WAL won't conta
 - Run `wolfctl migrate` to resolve this status
 - After migration, node transitions to `Syncing` then `Active`
 
+**When Migration is NOT Needed:**
+
+If your new node already has the data, WolfScale will sync normally via WAL:
+
+| Scenario                                | Action Required         |
+|-----------------------------------------|-------------------------|
+| Manually restored mysqldump first       | Just start WolfScale    |
+| Cloned VM from existing node            | Just start WolfScale    |
+| Database already has all the data       | Just start WolfScale    |
+| Empty database, WAL covers the gap      | Just start WolfScale    |
+| Empty database, WAL too old for gap     | Run `wolfctl migrate`   |
+
+The `wolfctl migrate` command is only needed when the new node's database is empty AND the WAL has been rotated/truncated so it doesn't contain the historical entries needed.
+
 ---
 
 ## Configuration Best Practices
