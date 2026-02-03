@@ -119,7 +119,7 @@ The new node will be in `NEEDS_MIGRATION` status until you run the migrate comma
 | 3     | 2 node failures   | Minimum for production          |
 | 5     | 4 node failures   | Recommended for production      |
 
-> **Note:** WolfScale doesn't use quorum - only one node needs to survive. More nodes = more read capacity and redundancy.
+> **Note:** WolfScale doesn't use quorum - only one node needs to survive. While the cluster can run on a single remaining node, it's recommended to maintain at least 2 active nodes for redundancy.
 
 > **Note:** The install wizard creates your configuration file automatically. See the [full documentation](docs/DOCUMENTATION.md) for advanced configuration options.
 
