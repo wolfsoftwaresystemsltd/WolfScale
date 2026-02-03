@@ -198,10 +198,15 @@ impl FollowerNode {
                         continue;
                     }
                     
+                    tracing::debug!("Applying entry LSN {}", entry.header.lsn);
+                    
                     if let Err(e) = self.apply_entry(entry).await {
                         // Log but continue - non-fatal errors shouldn't stop replication
                         tracing::warn!("Failed to apply entry LSN {}: {} - continuing", entry.header.lsn, e);
                     }
+                    
+                    tracing::debug!("Entry LSN {} applied, updating state", entry.header.lsn);
+                    
                     // Always update our LSN - even if the entry failed, we've "processed" it
                     // This prevents re-processing the same entries forever
                     highest_applied_lsn = entry.header.lsn;
@@ -211,9 +216,9 @@ impl FollowerNode {
                     *self.last_applied_lsn.write().await = highest_applied_lsn;
                     let _ = self.cluster.record_heartbeat(&self.node_id, entry.header.lsn).await;
                     
-                    // Checkpoint progress every 100 entries 
+                    // Log progress every 100 entries 
                     if processed_count % 100 == 0 {
-                        tracing::debug!("Checkpoint: processed {} entries, at LSN {}", processed_count, highest_applied_lsn);
+                        tracing::info!("Progress: processed {} entries, at LSN {}", processed_count, highest_applied_lsn);
                     }
                 }
                 
