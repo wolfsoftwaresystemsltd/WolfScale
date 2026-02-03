@@ -76,15 +76,25 @@ impl MariaDbExecutor {
                 continue;
             }
 
-            tracing::debug!("Executing: {}", &sql[..sql.len().min(100)]);
-            
-            sqlx::query(&sql)
-                .execute(pool)
-                .await
-                .map_err(|e| {
-                    Error::QueryExecution(format!("Failed to execute '{}...': {}", 
-                        &sql[..sql.len().min(50)], e))
-                })?;
+            // Split on semicolons to handle multi-statement SQL
+            // This is needed because sqlx doesn't support multi-statement queries
+            // and we may have "USE dbname; CREATE TABLE..." from replication
+            for single_stmt in split_sql_statements(&sql) {
+                let stmt = single_stmt.trim();
+                if stmt.is_empty() {
+                    continue;
+                }
+
+                tracing::debug!("Executing: {}", &stmt[..stmt.len().min(100)]);
+                
+                sqlx::query(stmt)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| {
+                        Error::QueryExecution(format!("Failed to execute '{}...': {}", 
+                            &stmt[..stmt.len().min(50)], e))
+                    })?;
+            }
         }
 
         Ok(())
@@ -297,4 +307,50 @@ mod tests {
         assert!(sql[0].contains("`users`"));
         assert!(sql[0].contains("'Alice'"));
     }
+}
+
+/// Split SQL string on semicolons, respecting string literals
+/// This handles cases like: "USE db; CREATE TABLE foo (name VARCHAR(50));"
+fn split_sql_statements(sql: &str) -> Vec<&str> {
+    let mut statements = Vec::new();
+    let mut start = 0;
+    let mut in_string = false;
+    let mut string_char = '"';
+    let mut chars = sql.char_indices().peekable();
+    
+    while let Some((i, c)) = chars.next() {
+        if in_string {
+            if c == string_char {
+                // Check for escaped quote
+                if chars.peek().map(|(_, nc)| *nc == string_char).unwrap_or(false) {
+                    chars.next(); // Skip escaped quote
+                } else {
+                    in_string = false;
+                }
+            }
+        } else {
+            match c {
+                '\'' | '"' => {
+                    in_string = true;
+                    string_char = c;
+                }
+                ';' => {
+                    let stmt = sql[start..i].trim();
+                    if !stmt.is_empty() {
+                        statements.push(stmt);
+                    }
+                    start = i + 1;
+                }
+                _ => {}
+            }
+        }
+    }
+    
+    // Add remaining content
+    let remaining = sql[start..].trim();
+    if !remaining.is_empty() {
+        statements.push(remaining);
+    }
+    
+    statements
 }
