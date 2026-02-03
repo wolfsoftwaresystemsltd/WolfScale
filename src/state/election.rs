@@ -66,7 +66,8 @@ pub struct ElectionCoordinator {
     state_tracker: Arc<StateTracker>,
     /// Last log LSN (for vote comparison)
     last_log_lsn: RwLock<Lsn>,
-    /// Message sender
+    /// Message sender (kept for potential future use)
+    #[allow(dead_code)]
     message_tx: mpsc::Sender<(String, Message)>,
 }
 
