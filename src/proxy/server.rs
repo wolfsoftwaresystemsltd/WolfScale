@@ -267,6 +267,10 @@ async fn handle_connection(
     let mut result_buf = vec![0u8; 16 * 1024 * 1024];
     let current_backend_addr = initial_backend_addr;
     
+    // Track current database context for replication
+    // This is needed because followers need to know which database to execute statements in
+    let mut current_database: Option<String> = None;
+    
     loop {
         // Read command from client
         let n = match client.read(&mut cmd_buf).await {
@@ -293,6 +297,18 @@ async fn handle_connection(
             (false, None)
         };
 
+        // Track database context changes (USE statements or COM_INIT_DB)
+        if let Some(ref query) = query_opt {
+            let upper = query.trim().to_uppercase();
+            if upper.starts_with("USE ") || upper.starts_with("USE`") {
+                // Extract database name from USE statement
+                let db_name = query.trim()[3..].trim().trim_matches('`').trim_matches(';').to_string();
+                if !db_name.is_empty() {
+                    current_database = Some(db_name);
+                }
+            }
+        }
+
         // If this is a write query and we have a WAL writer, log it for replication
         // Only log if we are the leader - followers route to leader's proxy
         if is_write {
@@ -304,8 +320,26 @@ async fn handle_connection(
                 if self_node.role == NodeRole::Leader {
                     if let Some(ref wal) = wal_writer {
                         let table_name = extract_table_name(query);
+                        
+                        // Build SQL with database context for replication
+                        // This ensures followers execute in the correct database
+                        let sql_for_wal = if let Some(ref db) = current_database {
+                            let upper = query.trim().to_uppercase();
+                            // Don't prepend USE for database-level operations or USE itself
+                            if upper.starts_with("USE ") || 
+                               upper.starts_with("CREATE DATABASE") || 
+                               upper.starts_with("DROP DATABASE") ||
+                               upper.starts_with("ALTER DATABASE") {
+                                query.clone()
+                            } else {
+                                format!("USE `{}`; {}", db, query)
+                            }
+                        } else {
+                            query.clone()
+                        };
+                        
                         let entry = LogEntry::RawSql {
-                            sql: query.clone(),
+                            sql: sql_for_wal,
                             affects_table: table_name,
                         };
                         
