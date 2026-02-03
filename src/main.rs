@@ -662,15 +662,24 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
         let follower_heartbeat_time = Arc::clone(&shared_heartbeat_time);
         let mut last_checked_heartbeat: u64 = 0;
 
+        // Spawn follower entry processing in separate task (so it doesn't get cancelled by select)
+        let follower_task = {
+            let follower_for_task = Arc::clone(&follower_clone);
+            tokio::spawn(async move {
+                if let Err(e) = follower_for_task.start().await {
+                    tracing::error!("Follower error: {}", e);
+                }
+            })
+        };
+
         loop {
             tokio::select! {
-                result = follower_clone.start() => {
-                    if let Err(e) = result {
-                        tracing::error!("Follower error: {}", e);
-                    }
-                    break;
-                }
                 _ = role_ticker.tick() => {
+                    // Check if follower task finished
+                    if follower_task.is_finished() {
+                        break;
+                    }
+                    
                     // Check for new heartbeat and reset election timer
                     let current_heartbeat = follower_heartbeat_time.load(std::sync::atomic::Ordering::Relaxed);
                     if current_heartbeat > last_checked_heartbeat {
