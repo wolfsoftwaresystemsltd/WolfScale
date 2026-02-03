@@ -162,10 +162,32 @@ impl FollowerNode {
 
             // Process any received entries
             if let Some(batch) = maybe_entries {
-                tracing::info!("Processing {} replicated entries from leader", batch.entries.len());
-                let mut highest_applied_lsn = *self.last_applied_lsn.read().await;
-                tracing::info!("Current last_applied_lsn before processing: {}", highest_applied_lsn);
+                let current_lsn = *self.last_applied_lsn.read().await;
                 
+                // Check if this batch has any new entries
+                let batch_max_lsn = batch.entries.last().map(|e| e.header.lsn).unwrap_or(0);
+                if batch_max_lsn <= current_lsn {
+                    // This entire batch is stale (we've already processed these entries)
+                    // This can happen when batches queue up while we're processing
+                    tracing::debug!("Skipping stale batch (max_lsn={} <= current={})", batch_max_lsn, current_lsn);
+                    
+                    // Still send ACK so leader knows our position
+                    let ack = Message::AppendEntriesResponse {
+                        node_id: self.node_id.clone(),
+                        term: batch.term,
+                        success: true,
+                        match_lsn: current_lsn,
+                    };
+                    let _ = self.message_tx.send((batch.leader_address, ack)).await;
+                    continue;
+                }
+                
+                tracing::info!("Processing {} replicated entries from leader (LSN {} to {})", 
+                    batch.entries.len(),
+                    batch.entries.first().map(|e| e.header.lsn).unwrap_or(0),
+                    batch_max_lsn);
+                
+                let mut highest_applied_lsn = current_lsn;
                 let mut processed_count = 0usize;
                 let mut skipped_count = 0usize;
                 
