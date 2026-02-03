@@ -223,6 +223,23 @@ The leader continuously monitors local database health:
 
 This ensures that if you stop MariaDB for an upgrade, WolfScale automatically promotes another node to leader, preventing write failures.
 
+### Quorum
+
+WolfScale uses a simple quorum model:
+
+| Active Nodes | Has Quorum | Reason |
+|--------------|------------|--------|
+| **1 node** | ❌ No | Leader alone cannot replicate - data not protected |
+| **2+ nodes** | ✅ Yes | Leader can replicate writes to at least one follower |
+
+**Why 2 is the minimum for quorum:**
+- With 2 active nodes, the leader can send writes to at least one follower
+- This ensures at least one replica has the data before confirming the write
+- If the leader fails, the follower has the latest data and can take over
+- A single node has no redundancy and would lose data if it fails
+
+> **Note:** Quorum status is displayed in `wolfctl list servers` output
+
 ---
 
 ## Configuration Best Practices
