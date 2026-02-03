@@ -431,6 +431,15 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                 wolfscale::replication::Message::AppendEntriesResponse { node_id, success, match_lsn, .. } => {
                     // Leader receives ACK from follower - update their progress
                     if success {
+                        // Register the follower if we don't know it yet (same as HeartbeatResponse)
+                        if incoming_cluster.get_node(&node_id).await.is_none() {
+                            let follower_addr = if let Some(colon_idx) = peer_addr.rfind(':') {
+                                format!("{}:7654", &peer_addr[..colon_idx])
+                            } else {
+                                peer_addr.clone()
+                            };
+                            let _ = incoming_cluster.add_peer(node_id.clone(), follower_addr).await;
+                        }
                         let _ = incoming_cluster.record_heartbeat(&node_id, match_lsn).await;
                         tracing::debug!("Follower {} acknowledged up to LSN {}", node_id, match_lsn);
                     }
