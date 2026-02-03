@@ -62,6 +62,7 @@ struct ClusterInfoResponse {
     nodes: Vec<NodeState>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct ClusterSummary {
     #[serde(default)]
@@ -90,6 +91,7 @@ struct NodeState {
     replication_lag: u64,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct StatusResponse {
     #[serde(default)]

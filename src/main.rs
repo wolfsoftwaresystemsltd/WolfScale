@@ -253,6 +253,10 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     let (outgoing_tx, mut outgoing_rx) = tokio::sync::mpsc::channel::<(String, wolfscale::replication::Message)>(10000);
     // Incoming: used by network server to receive messages from peers
     let (incoming_tx, mut incoming_rx) = tokio::sync::mpsc::channel(10000);
+    // Entry channel: used to route AppendEntries to followers for database application
+    let (entry_tx, entry_rx) = tokio::sync::mpsc::channel::<Vec<wolfscale::wal::entry::WalEntry>>(1000);
+    let entry_tx = Arc::new(entry_tx);
+    let entry_rx = Arc::new(tokio::sync::Mutex::new(entry_rx));
     
     let network_server = NetworkServer::new(
         config.node.bind_address.clone(),
@@ -284,6 +288,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     let incoming_cluster = Arc::clone(&cluster);
     let response_tx = outgoing_tx.clone();  // Use outgoing channel to send responses
     let our_node_id = config.node.id.clone();
+    let incoming_entry_tx = Arc::clone(&entry_tx);
     tokio::spawn(async move {
         tracing::info!("Incoming message processing loop started");
         while let Some((peer_addr, message)) = incoming_rx.recv().await {
@@ -336,8 +341,15 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                     let _ = response_tx.send((leader_addr, response)).await;
                 }
                 wolfscale::replication::Message::AppendEntries { leader_id, entries, .. } => {
-                    tracing::debug!("Received {} entries from leader {}", entries.len(), leader_id);
+                    tracing::info!("Received {} entries from leader {}", entries.len(), leader_id);
                     let _ = incoming_cluster.record_heartbeat(&leader_id, 0).await;
+                    
+                    // Send entries to the entry processing channel
+                    if !entries.is_empty() {
+                        if let Err(e) = incoming_entry_tx.send(entries).await {
+                            tracing::error!("Failed to queue entries for processing: {}", e);
+                        }
+                    }
                 }
                 wolfscale::replication::Message::RequestVote { candidate_id, .. } => {
                     tracing::info!("Vote request from {}", candidate_id);
@@ -481,6 +493,36 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
             if let Err(e) = network_server.start().await {
                 tracing::error!("Network server error: {}", e);
             }
+        });
+
+        // Entry processing loop - applies WAL entries received from leader to local database
+        let entry_executor = Arc::clone(&executor);
+        let entry_rx_clone = Arc::clone(&entry_rx);
+        tokio::spawn(async move {
+            tracing::info!("Entry processing loop started");
+            loop {
+                let entries = {
+                    let mut rx = entry_rx_clone.lock().await;
+                    rx.recv().await
+                };
+                
+                if let Some(entries) = entries {
+                    tracing::info!("Processing {} WAL entries", entries.len());
+                    for entry in entries {
+                        match entry_executor.execute_entry(&entry.entry).await {
+                            Ok(_) => {
+                                tracing::debug!("Applied WAL entry LSN {}", entry.header.lsn);
+                            }
+                            Err(e) => {
+                                tracing::error!("Failed to apply WAL entry LSN {}: {}", entry.header.lsn, e);
+                            }
+                        }
+                    }
+                } else {
+                    break;
+                }
+            }
+            tracing::info!("Entry processing loop stopped");
         });
 
         // Role transition loop - monitors for election wins
