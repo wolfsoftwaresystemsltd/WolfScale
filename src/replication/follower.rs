@@ -137,16 +137,6 @@ impl FollowerNode {
         *self.last_applied_lsn.write().await = last_lsn;
         tracing::info!("Follower starting with last_applied_lsn={}", last_lsn);
 
-        // Take ownership of the receiver
-        let entry_rx = {
-            let mut guard = self.entry_rx.lock().await;
-            guard.take()
-        };
-
-        let Some(mut rx) = entry_rx else {
-            return Err(crate::error::Error::Internal("No entry receiver configured".into()));
-        };
-
         // Start monitoring loop
         let heartbeat_check = Duration::from_millis(self.config.heartbeat_interval_ms * 2);
         
@@ -155,19 +145,28 @@ impl FollowerNode {
                 break;
             }
 
-            // Wait for entries OR heartbeat timeout
+            // Try to receive entries from channel
+            let maybe_batch = {
+                let mut guard = self.entry_rx.lock().await;
+                if let Some(ref mut rx) = *guard {
+                    // Use try_recv to avoid blocking - we'll sleep if nothing available
+                    rx.try_recv().ok()
+                } else {
+                    None
+                }
+            };
+
+            // Process any received entries
+            if let Some(batch) = maybe_batch {
+                self.process_batch(batch).await;
+                // Immediately check for more entries without sleeping
+                continue;
+            }
+
+            // No entries available, wait a bit before checking again
             tokio::select! {
-                maybe_batch = rx.recv() => {
-                    match maybe_batch {
-                        Some(batch) => {
-                            self.process_batch(batch).await;
-                        }
-                        None => {
-                            // Channel closed, exit
-                            tracing::warn!("Entry channel closed, follower stopping");
-                            break;
-                        }
-                    }
+                _ = tokio::time::sleep(Duration::from_millis(10)) => {
+                    // Short sleep between polls
                 }
                 _ = tokio::time::sleep(heartbeat_check) => {
                     // Check for leader timeout periodically
