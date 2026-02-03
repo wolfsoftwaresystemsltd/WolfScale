@@ -134,6 +134,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Support
 
+- **Discord:** [Join our community](https://discord.gg/q9qMjHjUQY)
 - **Website:** [wolf.uk.com](https://wolf.uk.com)
 - **Issues:** [GitHub Issues](https://github.com/wolfsoftwaresystemsltd/WolfScale/issues)
 - **Support Us:** [Patreon](https://www.patreon.com/15362110/join)
