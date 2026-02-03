@@ -267,11 +267,10 @@ impl WriterInner {
             }
         }
 
-        // Sync if configured
-        if self.config.fsync {
-            if let Some(segment) = self.current_segment.as_ref() {
-                segment.sync()?;
-            }
+        // Always sync to ensure entries are visible to readers (replication needs this)
+        // The fsync config controls whether we use fsync vs sync_data
+        if let Some(segment) = self.current_segment.as_ref() {
+            segment.sync()?;
         }
 
         // Send responses
