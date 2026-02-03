@@ -72,6 +72,7 @@ impl ProxyServer {
 /// Read a complete MySQL packet from a stream using proper framing.
 /// MySQL packets have a 4-byte header: 3 bytes length + 1 byte sequence ID.
 /// This function reads the header first, then reads exactly the payload bytes.
+#[allow(dead_code)]
 async fn read_mysql_packet(stream: &mut TcpStream, buf: &mut [u8]) -> std::io::Result<usize> {
     use tokio::io::AsyncReadExt;
     
@@ -468,7 +469,6 @@ async fn handle_connection(
         }
     }
 
-
     // Phase 4: Main command loop with smart routing
     let mut cmd_buf = vec![0u8; 16 * 1024 * 1024]; // 16MB max packet
     let mut result_buf = vec![0u8; 16 * 1024 * 1024];
@@ -477,31 +477,27 @@ async fn handle_connection(
     // Track current database context for replication
     let mut current_database: Option<String> = initial_database;
     
-    // Process leftover bytes from auth phase first (contains query from mysql -e)
-    let mut first_iteration = true;
+    // If we have leftover bytes from auth phase (mysql -e), process them first
+    let mut pending_data: Option<Vec<u8>> = if !leftover_bytes.is_empty() {
+        Some(leftover_bytes)
+    } else {
+        None
+    };
     
     loop {
-        // Get the next packet - either from leftover bytes or from client
-        let n = if first_iteration && !leftover_bytes.is_empty() {
-            // First iteration: use leftover bytes from auth phase
-            // These contain the COM_QUERY when using mysql -e
-            let n = leftover_bytes.len();
-            cmd_buf[..n].copy_from_slice(&leftover_bytes);
-            first_iteration = false;
+        // Get packet data from pending data or read from client
+        let n = if let Some(data) = pending_data.take() {
+            let n = data.len();
+            cmd_buf[..n].copy_from_slice(&data);
             n
         } else {
-            first_iteration = false;
-            // Read complete MySQL packet from client using proper framing
-            match read_mysql_packet(&mut client, &mut cmd_buf).await {
+            match client.read(&mut cmd_buf).await {
+                Ok(0) => break,
                 Ok(n) => n,
-                Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
-                    break;
-                }
-                Err(_) => {
-                    break;
-                }
+                Err(_) => break,
             }
         };
+
 
 
         // Parse the complete packet to check query type
