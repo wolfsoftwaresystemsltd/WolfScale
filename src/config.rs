@@ -54,7 +54,7 @@ pub struct NodeConfig {
 }
 
 /// Database connection configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DatabaseConfig {
     /// MariaDB host
     pub host: String,

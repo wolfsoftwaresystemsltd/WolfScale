@@ -371,7 +371,7 @@ struct NodeConfig {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 struct DatabaseConfig {
     host: Option<String>,
     port: Option<u16>,
