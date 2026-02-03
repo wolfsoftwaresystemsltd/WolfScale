@@ -396,11 +396,15 @@ async fn handle_connection(
     client.write_all(&handshake_buf[..n]).await?;
 
     // Phase 2: Relay client's handshake response to backend
-    let mut response_buf = vec![0u8; 4096];
-    let n = client.read(&mut response_buf).await?;
-    if n == 0 {
-        return Ok(());
-    }
+    // CRITICAL: Use framed reading to ensure we only read the handshake response.
+    // With mysql -e, the client sends the COM_QUERY immediately after the handshake.
+    // A regular read() could consume both packets, causing the query to be forwarded
+    // during auth but never detected in the command loop.
+    let mut response_buf = vec![0u8; 16384];
+    let n = match read_mysql_packet(&mut client, &mut response_buf).await {
+        Ok(n) => n,
+        Err(_) => return Ok(()),
+    };
     
     // Try to extract database name from handshake response
     // The database name is embedded in the handshake when client connects with -D flag or db on cmdline
@@ -442,13 +446,14 @@ async fn handle_connection(
                         // OK packet with CLIENT_DEPRECATE_EOF (affected_rows=0)
                         break;
                     } else if n > 5 && handshake_buf[5].is_ascii_alphabetic() {
-                        // Auth switch request - relay client's response
-                        let n = client.read(&mut response_buf).await?;
-                        if n == 0 {
-                            return Ok(());
-                        }
+                        // Auth switch request - relay client's response using framed read
+                        let n = match read_mysql_packet(&mut client, &mut response_buf).await {
+                            Ok(n) => n,
+                            Err(_) => return Ok(()),
+                        };
                         backend.write_all(&response_buf[..n]).await?;
                         // Continue loop to get next auth response
+
                     } else {
                         // Likely OK packet with non-zero affected_rows, treat as auth complete
                         break;
