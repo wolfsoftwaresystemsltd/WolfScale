@@ -112,11 +112,26 @@ impl MySqlPacket {
     }
 
     /// Get query string (for COM_QUERY packets)
+    /// Also handles COM_INIT_DB by converting to USE statement
     pub fn query_string(&self) -> Option<String> {
-        if self.payload.len() > 1 && self.payload[0] == 0x03 {
-            String::from_utf8(self.payload[1..].to_vec()).ok()
-        } else {
-            None
+        if self.payload.is_empty() {
+            return None;
+        }
+        
+        match self.payload[0] {
+            // COM_QUERY (0x03) - regular query
+            0x03 if self.payload.len() > 1 => {
+                String::from_utf8(self.payload[1..].to_vec()).ok()
+            }
+            // COM_INIT_DB (0x02) - database selection, convert to USE statement
+            0x02 if self.payload.len() > 1 => {
+                if let Ok(db_name) = String::from_utf8(self.payload[1..].to_vec()) {
+                    Some(format!("USE `{}`", db_name))
+                } else {
+                    None
+                }
+            }
+            _ => None,
         }
     }
 
