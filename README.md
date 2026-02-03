@@ -2,7 +2,7 @@
 
 <div align="center">
 
-**High-Performance Distributed MariaDB Synchronization Manager**
+**High-Availability MariaDB Replication with Automatic Failover**
 
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -14,133 +14,65 @@
 
 ---
 
-> ⚠️ **Work in Progress** — This project is currently under active development and testing. APIs and features may change. Use in production at your own risk.
+WolfScale is a lightweight, high-availability replication layer for MariaDB clusters. It provides **automatic leader election** with deterministic failover, **WAL-based replication** for strong consistency, and a **MySQL-compatible proxy** for transparent routing—all in a single Rust binary.
 
-WolfScale keeps multiple MariaDB databases in sync using a Write-Ahead Log (WAL) with automatic leader election and failover. Perfect for distributed applications that need strong consistency across database replicas.
+## Why WolfScale?
 
-## Features
+| Feature | Benefit |
+|---------|---------|
+| **Zero Write Conflicts** | Single-leader model eliminates certification failures |
+| **Predictable Failover** | Lowest node ID always wins—you know exactly who becomes leader |
+| **Safe Node Rejoin** | Returning nodes sync via WAL before taking leadership |
+| **Transparent Proxy** | Connect via MySQL protocol—no application changes needed |
+| **Single Binary** | No patched databases, no complex dependencies |
 
-- **Write-Ahead Log (WAL)** — Durable logging with optional LZ4 compression
-- **Automatic Leader Election** — Raft-style elections with automatic failover
-- **Write Forwarding** — Send writes to any node; they're routed to the leader
-- **MySQL Proxy Mode** — Native MySQL protocol proxy for transparent routing
-- **HTTP API** — RESTful API for writes and cluster management
-- **Snowflake IDs** — Distributed unique ID generation
+## Key Features
 
-## Installation
+### Deterministic Leader Election
+No voting, no split-brain. The node with the lowest ID among active nodes becomes leader immediately. Simple, predictable, reliable.
 
-### Quick Install (Recommended)
+### WAL-Based Replication
+Write-Ahead Log with LZ4 compression ensures all changes are durably replicated. Nodes that fall behind automatically catch up via WAL sync.
 
-Run this on any Ubuntu/Debian or Fedora/RHEL server:
+### Disaster Recovery Built-In
+When a leader fails:
+1. New leader is elected instantly (lowest ID wins)
+2. Old leader rejoins as follower when it returns
+3. Old leader syncs all missed writes before becoming eligible for leadership again
+
+### MySQL Proxy Mode
+```bash
+# Connect like a normal MySQL client
+mysql -h wolfscale-host -P 8007 -u user -p
+
+# Writes automatically route to leader
+# Reads distributed across followers
+```
+
+### Real-Time Health Monitoring
+Leader continuously monitors database health. If MariaDB goes down, WolfScale steps down and fails over to the next node—automatically.
+
+## Quick Start
+
+### One-Line Install
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/setup.sh | bash
 ```
 
-Or with wget:
-```bash
-wget -qO- https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/setup.sh | bash
-```
+This automatically installs dependencies, builds WolfScale, and runs the interactive configuration wizard.
 
-This automatically:
-- Detects your distro (apt or dnf)
-- Installs all dependencies (git, build tools, OpenSSL)
-- Installs Rust
-- Clones, builds, and installs WolfScale
-- Runs the interactive configuration wizard
-
-<details>
-<summary><strong>Manual Installation</strong></summary>
+### Cluster Commands
 
 ```bash
-# Install Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source ~/.cargo/env
+# Check cluster status
+wolfctl list servers
 
-# Install dependencies (Ubuntu/Debian)
-sudo apt update && sudo apt install -y git build-essential pkg-config libssl-dev
-
-# Or for Fedora/RHEL:
-# sudo dnf install -y git gcc gcc-c++ make openssl-devel pkg-config
-
-# Clone and build
-git clone https://github.com/wolfsoftwaresystemsltd/WolfScale.git
-cd WolfScale
-cargo build --release
-
-# Install as service
-sudo ./install_service.sh
-```
-
-</details>
-
-### Connect
-
-```bash
-# Via MySQL proxy (recommended)
-mariadb -h 127.0.0.1 -P 8007 -u your_user -p
-
-# Check status
-sudo systemctl status wolfscale
-curl http://localhost:8080/health
-```
-
-## Usage
-
-### CLI Commands
-
-| Command | Description |
-|---------|-------------|
-| `wolfscale start --bootstrap` | Start as initial leader |
-| `wolfscale start` | Start as follower |
-| `wolfscale proxy --listen 0.0.0.0:8007` | Start MySQL proxy |
-| `wolfscale status` | Check cluster status |
-| `wolfscale info` | Show node configuration |
-
-### MySQL Proxy Mode
-
-Connect to WolfScale like a regular MySQL server:
-
-```bash
-mysql -h wolfscale-host -P 8007 -u user -p
-```
-
-Writes are automatically routed to the leader. SQL errors pass through unchanged.
-
-### HTTP API
-
-```bash
-# Insert data
-curl -X POST http://localhost:8080/write/insert \
-  -H "Content-Type: application/json" \
-  -d '{"table": "users", "values": {"name": "Alice", "email": "alice@example.com"}}'
-
-# Check status
-curl http://localhost:8080/status
-```
-
-## Configuration
-
-Create `wolfscale.toml`:
-
-```toml
-[node]
-id = "node-1"
-bind_address = "0.0.0.0:7400"
-
-[database]
-host = "127.0.0.1"
-port = 3306
-user = "wolfscale"
-password = "secret"
-
-[cluster]
-peers = ["192.168.1.11:7400", "192.168.1.12:7400"]
-heartbeat_interval_ms = 500
-election_timeout_ms = 2000
-
-[api]
-bind_address = "0.0.0.0:8080"
+# Sample output:
+# ID          | STATUS | ROLE     | ADDRESS         | LAG
+# wolftest1   | ACTIVE | LEADER   | 10.0.10.111:7654 | 0
+# wolftest2   | ACTIVE | FOLLOWER | 10.0.10.112:7654 | 0
+# wolftest3   | ACTIVE | FOLLOWER | 10.0.10.113:7654 | 0
 ```
 
 ## Architecture
@@ -164,9 +96,46 @@ bind_address = "0.0.0.0:8080"
    └─────────┘      └─────────┘      └─────────┘
 ```
 
+## Cluster Sizing
+
+| Nodes | Fault Tolerance | Use Case                   |
+|-------|-----------------|----------------------------|
+| 1     | None            | Development only           |
+| 2     | None            | Testing, no auto-failover  |
+| 3     | 1 node failure  | Minimum for production     |
+| 5     | 2 node failures | Recommended for production |
+
+## Configuration
+
+```toml
+[node]
+id = "node1"                    # Lowest ID becomes leader
+bind_address = "0.0.0.0:7654"
+
+[database]
+host = "localhost"
+port = 3306
+user = "wolfscale"
+password = "secret"
+
+[cluster]
+peers = ["node2:7654", "node3:7654"]
+heartbeat_interval_ms = 500
+election_timeout_ms = 2000
+
+[proxy]
+enabled = true
+bind_address = "0.0.0.0:8007"
+```
+
 ## Documentation
 
-See [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md) for full documentation.
+See [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md) for complete documentation including:
+- Cluster communication and heartbeat timing
+- Leader election and node status transitions
+- Disaster recovery and WAL catch-up
+- Configuration best practices
+- API reference
 
 ---
 
