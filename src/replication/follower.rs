@@ -206,14 +206,19 @@ impl FollowerNode {
                     // This prevents re-processing the same entries forever
                     highest_applied_lsn = entry.header.lsn;
                     processed_count += 1;
+                    
+                    // Update internal state IMMEDIATELY so we don't reprocess on next batch
+                    *self.last_applied_lsn.write().await = highest_applied_lsn;
                     let _ = self.cluster.record_heartbeat(&self.node_id, entry.header.lsn).await;
+                    
+                    // Checkpoint progress every 100 entries 
+                    if processed_count % 100 == 0 {
+                        tracing::debug!("Checkpoint: processed {} entries, at LSN {}", processed_count, highest_applied_lsn);
+                    }
                 }
                 
                 tracing::info!("Processed {} entries, skipped {}, highest_applied_lsn now: {}", 
                     processed_count, skipped_count, highest_applied_lsn);
-                
-                // Update our internal tracking
-                *self.last_applied_lsn.write().await = highest_applied_lsn;
                 
                 // Send ACK to leader AFTER entries are applied
                 let ack = Message::AppendEntriesResponse {
