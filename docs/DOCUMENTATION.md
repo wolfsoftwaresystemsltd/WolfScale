@@ -19,34 +19,34 @@ When running multiple MariaDB instances that need to stay synchronized, traditio
 
 ### Comparison Overview
 
-| Aspect | WolfScale | Galera Cluster |
-|--------|-----------|----------------|
-| **Replication Model** | Leader-based (single writer) | Multi-master (any node can write) |
-| **Conflict Handling** | No conflicts (single leader) | Certification-based conflict detection |
-| **Complexity** | Simpler architecture | More complex (wsrep, flow control) |
-| **Write Latency** | Low (leader commits locally) | Higher (synchronous certification) |
-| **Network Tolerance** | WAL catch-up for partitions | Stricter network requirements |
-| **Implementation** | Standalone Rust binary | Patched MariaDB (wsrep) |
+| Aspect              | WolfScale                        | Galera Cluster                        |
+|---------------------|----------------------------------|---------------------------------------|
+| Replication Model   | Leader-based (single writer)     | Multi-master (any node can write)     |
+| Conflict Handling   | No conflicts (single leader)     | Certification-based conflict detection|
+| Complexity          | Simpler architecture             | More complex (wsrep, flow control)    |
+| Write Latency       | Low (leader commits locally)     | Higher (synchronous certification)    |
+| Network Tolerance   | WAL catch-up for partitions      | Stricter network requirements         |
+| Implementation      | Standalone Rust binary           | Patched MariaDB (wsrep)               |
 
 ### WolfScale Advantages
 
-| Advantage | Description |
-|-----------|-------------|
-| **No Write Conflicts** | Single leader model eliminates certification failures |
-| **Simpler Recovery** | WAL-based catch-up is straightforward vs Galera's SST/IST |
-| **Lower Write Latency** | Leader commits immediately, replicates asynchronously |
-| **Lightweight** | Pure Rust binary, no patched database binaries required |
-| **Explicit Control** | HTTP API gives fine-grained control over write operations |
-| **Easier Debugging** | Single write path makes tracing issues simpler |
+| Advantage              | Description                                              |
+|------------------------|----------------------------------------------------------|
+| No Write Conflicts     | Single leader model eliminates certification failures    |
+| Simpler Recovery       | WAL-based catch-up is straightforward vs Galera SST/IST  |
+| Lower Write Latency    | Leader commits immediately, replicates asynchronously    |
+| Lightweight            | Pure Rust binary, no patched database binaries required  |
+| Explicit Control       | HTTP API gives fine-grained control over write operations|
+| Easier Debugging       | Single write path makes tracing issues simpler           |
 
 ### Galera Cluster Advantages
 
-| Advantage | Description |
-|-----------|-------------|
-| **Multi-Master** | Write to any node in the cluster |
-| **Transparent** | No application changes required |
-| **Mature** | Battle-tested in production environments |
-| **Built-in** | Included in MariaDB Galera Cluster distribution |
+| Advantage              | Description                                              |
+|------------------------|----------------------------------------------------------|
+| Multi-Master           | Write to any node in the cluster                         |
+| Transparent            | No application changes required                          |
+| Mature                 | Battle-tested in production environments                 |
+| Built-in               | Included in MariaDB Galera Cluster distribution          |
 
 ### When to Choose WolfScale
 
@@ -90,13 +90,13 @@ When running multiple MariaDB instances that need to stay synchronized, traditio
 
 ### Why Co-locate WolfScale with MariaDB?
 
-| Benefit | Description |
-|---------|-------------|
-| **Minimal Latency** | Local socket/localhost connections to MariaDB are faster than network connections |
-| **Reliability** | No additional network hops that could fail between WolfScale and the database |
-| **Simpler Networking** | Only WolfScale cluster ports need to be exposed, not MariaDB ports |
-| **Better Security** | MariaDB can bind to localhost only, reducing attack surface |
-| **Easier Management** | Each server is self-contained with both components |
+| Benefit             | Description                                                   |
+|---------------------|---------------------------------------------------------------|
+| Minimal Latency     | Local socket/localhost connections are faster than network    |
+| Reliability         | No additional network hops that could fail                    |
+| Simpler Networking  | Only WolfScale cluster ports need to be exposed               |
+| Better Security     | MariaDB can bind to localhost only, reducing attack surface   |
+| Easier Management   | Each server is self-contained with both components            |
 
 ### Node Configuration
 
@@ -111,11 +111,11 @@ port = 3306
 
 ### Ports to Open
 
-| Port | Purpose | Expose To |
-|------|---------|-----------|
-| `7654` | WolfScale cluster communication | Other cluster nodes only |
-| `8080` | WolfScale HTTP API | Application servers / internal |
-| `3306` | MariaDB | Localhost only (no external) |
+| Port   | Purpose                          | Expose To                      |
+|--------|----------------------------------|--------------------------------|
+| 7654   | WolfScale cluster communication  | Other cluster nodes only       |
+| 8080   | WolfScale HTTP API               | Application servers / internal |
+| 3306   | MariaDB                          | Localhost only (no external)   |
 
 ### Alternative: Dedicated WolfScale Server (Not Recommended)
 
