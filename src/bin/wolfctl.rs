@@ -222,17 +222,21 @@ async fn list_servers(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> 
 
     // Print nodes
     for node in &info.nodes {
+        // Pad status to fixed width BEFORE adding color codes
+        let status_padded = format!("{:<10}", node.status);
         let status_colored = match node.status.as_str() {
-            "Active" => format!("\x1b[32m{}\x1b[0m", node.status),  // Green
-            "Joining" => format!("\x1b[33m{}\x1b[0m", node.status), // Yellow
-            "Lagging" => format!("\x1b[33m{}\x1b[0m", node.status), // Yellow
-            "Offline" => format!("\x1b[31m{}\x1b[0m", node.status), // Red
-            _ => node.status.clone(),
+            "Active" => format!("\x1b[32m{}\x1b[0m", status_padded),  // Green
+            "Joining" => format!("\x1b[33m{}\x1b[0m", status_padded), // Yellow
+            "Lagging" => format!("\x1b[33m{}\x1b[0m", status_padded), // Yellow
+            "Offline" => format!("\x1b[31m{}\x1b[0m", status_padded), // Red
+            _ => status_padded,
         };
 
+        // Pad role to fixed width BEFORE adding color codes
+        let role_padded = format!("{:<10}", node.role);
         let role_colored = match node.role.as_str() {
-            "Leader" => format!("\x1b[1;34m{}\x1b[0m", node.role),  // Bold Blue
-            _ => node.role.clone(),
+            "Leader" => format!("\x1b[1;34m{}\x1b[0m", role_padded),  // Bold Blue
+            _ => role_padded,
         };
 
         let lag_display = if node.replication_lag == 0 {
@@ -241,7 +245,7 @@ async fn list_servers(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> 
             format!("{}", node.replication_lag)
         };
 
-        println!("{:<20} {:<25} {:<20} {:<20} {:<12} {:<8}",
+        println!("{:<20} {:<25} {} {} {:<12} {:<8}",
             node.id,
             node.address,
             status_colored,
