@@ -69,6 +69,42 @@ impl ProxyServer {
     }
 }
 
+/// Read a complete MySQL packet from a stream using proper framing.
+/// MySQL packets have a 4-byte header: 3 bytes length + 1 byte sequence ID.
+/// This function reads the header first, then reads exactly the payload bytes.
+async fn read_mysql_packet(stream: &mut TcpStream, buf: &mut [u8]) -> std::io::Result<usize> {
+    use tokio::io::AsyncReadExt;
+    
+    // Read the 4-byte header first
+    let mut header = [0u8; 4];
+    stream.read_exact(&mut header).await?;
+    
+    // Parse payload length (3 bytes, little-endian)
+    let payload_len = (header[0] as usize) 
+        | ((header[1] as usize) << 8) 
+        | ((header[2] as usize) << 16);
+    
+    let total_len = 4 + payload_len;
+    
+    // Ensure buffer is large enough
+    if total_len > buf.len() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!("Packet too large: {} bytes", total_len)
+        ));
+    }
+    
+    // Copy header to buffer
+    buf[0..4].copy_from_slice(&header);
+    
+    // Read exact payload bytes
+    if payload_len > 0 {
+        stream.read_exact(&mut buf[4..total_len]).await?;
+    }
+    
+    Ok(total_len)
+}
+
 /// Check if a query is a write operation
 fn is_write_query(query: &str) -> bool {
     // Strip leading comments (mysqldump adds /* ... */ style comments)
@@ -433,41 +469,32 @@ async fn handle_connection(
     let mut current_database: Option<String> = initial_database;
     
     loop {
-        // Read command from client
-        let n = match client.read(&mut cmd_buf).await {
-            Ok(0) => {
-                tracing::debug!("Client disconnected");
+        // Read complete MySQL packet from client using proper framing
+        // This ensures we get the full packet even with pipelined/batched input
+        let n = match read_mysql_packet(&mut client, &mut cmd_buf).await {
+            Ok(n) => n,
+            Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
+                // Client disconnected cleanly
                 break;
             }
-            Ok(n) => n,
-            Err(e) => {
-                tracing::debug!("Client read error: {}", e);
+            Err(_) => {
+                // Connection error
                 break;
             }
         };
 
-        // Parse packet to check query type
+        // Parse the complete packet to check query type
         let (is_write, query_opt) = if let Ok((packet, _)) = MySqlPacket::read(&cmd_buf[..n]) {
-            // Log command type for debugging
-            if let Some(cmd) = packet.command() {
-                tracing::debug!("Received command: {:?}", cmd);
-            }
-            
             if let Some(query) = packet.query_string() {
-                tracing::debug!("Query string: {}", query.chars().take(80).collect::<String>());
                 let write = is_write_query(&query);
-                tracing::debug!("is_write_query result: {}", write);
                 (write, Some(query))
             } else {
-                // Not a query packet (could be ping, quit, etc)
-                tracing::debug!("No query string in packet, first byte: 0x{:02x}", 
-                    packet.payload.first().copied().unwrap_or(0));
                 (false, None)
             }
         } else {
-            tracing::warn!("Failed to parse MySQL packet, {} bytes received", n);
             (false, None)
         };
+
 
         // Track database context changes (USE statements or COM_INIT_DB)
         if let Some(ref query) = query_opt {
