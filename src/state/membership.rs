@@ -223,8 +223,11 @@ impl ClusterMembership {
         if let Some(node) = nodes.get_mut(id) {
             let old_lsn = node.last_applied_lsn;
             node.touch();
-            node.last_applied_lsn = lsn;
-            tracing::trace!("record_heartbeat: updated node '{}' lsn {} -> {}", id, old_lsn, lsn);
+            // Only update LSN if the new value is higher - prevents PeerHeartbeat from resetting progress
+            if lsn > node.last_applied_lsn {
+                node.last_applied_lsn = lsn;
+                tracing::trace!("record_heartbeat: updated node '{}' lsn {} -> {}", id, old_lsn, lsn);
+            }
             
             // Update status based on current state
             match node.status {
