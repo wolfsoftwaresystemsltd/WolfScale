@@ -409,7 +409,7 @@ async fn handle_connection(
     backend.write_all(&response_buf[..n]).await?;
 
     // Phase 3: Complete authentication (may require multiple round-trips)
-    // MySQL/MariaDB may send: OK packet (0x00), Error (0xFF), or Auth Switch Request (0xFE)
+    // MySQL/MariaDB may send: OK packet (0x00 or 0xFE), Error (0xFF), or Auth Switch Request (0xFE + plugin)
     // We need to relay all auth packets until we get OK or Error
     loop {
         let n = backend.read(&mut handshake_buf).await?;
@@ -423,39 +423,46 @@ async fn handle_connection(
             let packet_type = handshake_buf[4];
             match packet_type {
                 0x00 => {
-                    // OK packet - authentication complete
+                    // OK packet (traditional) - authentication complete
                     break;
                 }
                 0xFF => {
-                    // Error packet - authentication failed, let client handle it
-                    // Stay in loop to handle any additional packets, client will disconnect
-                    break;
-                }
-                0xFE if n < 9 => {
-                    // EOF packet in old protocol (< 9 bytes) - treat as auth complete
+                    // Error packet - authentication failed
                     break;
                 }
                 0xFE => {
-                    // Auth switch request - need to relay client's response
-                    let n = client.read(&mut response_buf).await?;
-                    if n == 0 {
-                        return Ok(());
+                    // Could be: EOF, OK (with CLIENT_DEPRECATE_EOF), or Auth Switch
+                    // EOF: small packet (< 9 bytes total)
+                    // OK: 0xFE followed by 0x00 (affected_rows=0) 
+                    // Auth Switch: 0xFE followed by plugin name (ASCII letter)
+                    if n < 9 {
+                        // EOF packet - auth complete
+                        break;
+                    } else if n > 5 && handshake_buf[5] == 0x00 {
+                        // OK packet with CLIENT_DEPRECATE_EOF (affected_rows=0)
+                        break;
+                    } else if n > 5 && handshake_buf[5].is_ascii_alphabetic() {
+                        // Auth switch request - relay client's response
+                        let n = client.read(&mut response_buf).await?;
+                        if n == 0 {
+                            return Ok(());
+                        }
+                        backend.write_all(&response_buf[..n]).await?;
+                        // Continue loop to get next auth response
+                    } else {
+                        // Likely OK packet with non-zero affected_rows, treat as auth complete
+                        break;
                     }
-                    backend.write_all(&response_buf[..n]).await?;
-                    // Continue loop to get next auth response from server
                 }
                 _ => {
-                    // Other packet (could be more auth data, like RSA public key)
-                    // Check if client needs to respond
-                    let n = client.read(&mut response_buf).await?;
-                    if n == 0 {
-                        return Ok(());
-                    }
-                    backend.write_all(&response_buf[..n]).await?;
+                    // Unknown packet type during auth - treat as auth complete
+                    // DO NOT try to read from client here, as that would consume the query
+                    break;
                 }
             }
         }
     }
+
 
 
     // Phase 4: Main command loop with smart routing
@@ -512,7 +519,6 @@ async fn handle_connection(
         // Only log if we are the leader - followers route to leader's proxy
         if is_write {
             if let Some(ref query) = query_opt {
-                tracing::info!("WRITE query: {}", query.chars().take(100).collect::<String>());
                 
                 // Check if we are the leader - only leader writes to WAL
                 let self_node = cluster.get_self().await;
