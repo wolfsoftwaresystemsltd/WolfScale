@@ -580,12 +580,15 @@ async fn handle_connection(
                         
                         match wal.append(entry).await {
                             Ok(lsn) => {
+                                eprintln!("[PROXY] SUCCESS: Write query logged to WAL with LSN {}", lsn);
                                 tracing::debug!("Write query logged to WAL with LSN {}", lsn);
                             }
                             Err(e) => {
+                                eprintln!("[PROXY] ERROR: Failed to log write query to WAL: {}", e);
                                 tracing::error!("Failed to log write query to WAL: {}", e);
                             }
                         }
+
                     }
                 }
             }

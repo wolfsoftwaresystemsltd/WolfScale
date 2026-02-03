@@ -293,16 +293,17 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     // Start OUTGOING message delivery loop - sends queued messages to peers
     let delivery_client = Arc::clone(&network_client);
     tokio::spawn(async move {
-        tracing::info!("Outgoing message delivery loop started");
+        // eprintln!("[NETWORK] Outgoing message delivery loop started");
         while let Some((target_address, message)) = outgoing_rx.recv().await {
-            tracing::info!("SENDING {} to {}", message.type_name(), target_address);
+            eprintln!("[NETWORK] SENDING {} to {}", message.type_name(), target_address);
             
             match delivery_client.send_async(&target_address, message).await {
-                Ok(()) => tracing::info!("SENT successfully to {}", target_address),
-                Err(e) => tracing::error!("FAILED to deliver to {}: {}", target_address, e),
+                Ok(()) => {
+                    // eprintln!("[NETWORK] SENT successfully to {}", target_address);
+                }
+                Err(e) => eprintln!("[NETWORK] FAILED to deliver to {}: {}", target_address, e),
             }
         }
-        tracing::info!("Outgoing message delivery loop stopped");
     });
 
     // Start INCOMING message processing loop - handles messages from peers
@@ -313,12 +314,13 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     let incoming_heartbeat_time = Arc::clone(&shared_heartbeat_time);
     let incoming_wal_reader = Arc::clone(&shared_wal_reader);
     tokio::spawn(async move {
-        tracing::info!("Incoming message processing loop started");
+        eprintln!("[NETWORK] Incoming message processing loop started");
         while let Some((peer_addr, message)) = incoming_rx.recv().await {
-            tracing::debug!("Received {} from {}", message.type_name(), peer_addr);
+            eprintln!("[NETWORK] RECEIVED {} from {}", message.type_name(), peer_addr);
             
             match message {
                 wolfscale::replication::Message::Heartbeat { leader_id, commit_lsn, term, members } => {
+                    // eprintln!("[NETWORK] Processing Heartbeat from {}", leader_id);
                     // Sync cluster membership from leader - this is how followers learn about each other
                     for (member_id, member_addr) in members {
                         if member_id == our_node_id {
@@ -373,13 +375,15 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                     let _ = response_tx.send((leader_addr, response)).await;
                 }
                 wolfscale::replication::Message::AppendEntries { leader_id, entries, .. } => {
-                    tracing::info!("Received {} entries from leader {}", entries.len(), leader_id);
+                    eprintln!("[NETWORK] RECEIVED {} entries from leader {}", entries.len(), leader_id);
                     let _ = incoming_cluster.record_heartbeat(&leader_id, 0).await;
                     
                     // Send entries to the entry processing channel
                     if !entries.is_empty() {
                         if let Err(e) = incoming_entry_tx.send(entries).await {
-                            tracing::error!("Failed to queue entries for processing: {}", e);
+                            eprintln!("[NETWORK] ERROR: Failed to queue entries for processing: {}", e);
+                        } else {
+                            // eprintln!("[NETWORK] Queued {} entries for processing", entries_count);
                         }
                     }
                 }
@@ -597,7 +601,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
         let entry_executor = Arc::clone(&executor);
         let entry_rx_clone = Arc::clone(&entry_rx);
         tokio::spawn(async move {
-            tracing::info!("Entry processing loop started");
+            eprintln!("[FOLLOWER] Entry processing loop started");
             loop {
                 let entries = {
                     let mut rx = entry_rx_clone.lock().await;
@@ -605,14 +609,14 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                 };
                 
                 if let Some(entries) = entries {
-                    tracing::info!("Processing {} WAL entries", entries.len());
+                    eprintln!("[FOLLOWER] Processing {} WAL entries", entries.len());
                     for entry in entries {
                         match entry_executor.execute_entry(&entry.entry).await {
                             Ok(_) => {
-                                tracing::debug!("Applied WAL entry LSN {}", entry.header.lsn);
+                                eprintln!("[FOLLOWER] SUCCESS: Applied WAL entry LSN {}", entry.header.lsn);
                             }
                             Err(e) => {
-                                tracing::error!("Failed to apply WAL entry LSN {}: {}", entry.header.lsn, e);
+                                eprintln!("[FOLLOWER] ERROR: Failed to apply WAL entry LSN {}: {}", entry.header.lsn, e);
                             }
                         }
                     }
@@ -620,7 +624,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                     break;
                 }
             }
-            tracing::info!("Entry processing loop stopped");
+            eprintln!("[FOLLOWER] Entry processing loop stopped");
         });
 
         // Peer heartbeat loop - followers broadcast heartbeats to all peers

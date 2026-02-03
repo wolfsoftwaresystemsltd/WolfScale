@@ -252,6 +252,11 @@ impl LeaderNode {
     /// Replicate entries to followers
     async fn replicate_to_followers(&self) -> Result<()> {
         let peers = self.cluster.peers().await;
+        if peers.is_empty() {
+             // eprintln!("[LEADER] No peers found for replication");
+             return Ok(());
+        }
+        
         let term = *self.term.read().await;
         let commit_lsn = *self.commit_lsn.read().await;
 
@@ -268,15 +273,28 @@ impl LeaderNode {
             // Read entries to send - must refresh index to see newly written entries
             {
                 let mut reader = self.wal_reader.write().await;
-                let _ = reader.refresh_index();
+                if let Err(e) = reader.refresh_index() {
+                    eprintln!("[LEADER] Failed to refresh WAL index: {}", e);
+                }
             }
+            
             let reader = self.wal_reader.read().await;
-            let entries = reader.read_batch(next, self.config.max_batch_entries)?;
+            let entries = match reader.read_batch(next, self.config.max_batch_entries) {
+                Ok(e) => e,
+                Err(e) => {
+                    eprintln!("[LEADER] Failed to read WAL batch for peer {}: {}", peer.id, e);
+                    continue;
+                }
+            };
             drop(reader);
 
             if entries.is_empty() {
+                // If we're at the end of the log, nothing to do
                 continue;
             }
+
+            eprintln!("[LEADER] Replicating {} entries (starting at LSN {}) to peer {} ({})", 
+                entries.len(), next, peer.id, peer.address);
 
             // Get prev entry info
             let (prev_lsn, prev_term) = if next > 1 {
@@ -299,7 +317,9 @@ impl LeaderNode {
                 leader_commit_lsn: commit_lsn,
             };
 
-            let _ = self.message_tx.send((peer.address.clone(), msg)).await;
+            if let Err(e) = self.message_tx.send((peer.address.clone(), msg)).await {
+                eprintln!("[LEADER] Failed to queue replication message to peer {}: {}", peer.id, e);
+            }
         }
 
         Ok(())
