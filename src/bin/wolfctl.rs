@@ -562,10 +562,11 @@ async fn migrate(source: &str, config_path: &PathBuf) -> Result<(), Box<dyn std:
     let config_content = std::fs::read_to_string(config_path)?;
     let config: FullConfig = toml::from_str(&config_content)?;
 
-    let db_host = config.database.host.as_deref().unwrap_or("localhost");
-    let db_port = config.database.port.unwrap_or(3306);
-    let db_user = config.database.user.as_deref().unwrap_or("root");
-    let db_pass = config.database.password.as_deref().unwrap_or("");
+    let db_config = config.database.unwrap_or_default();
+    let db_host = db_config.host.as_deref().unwrap_or("localhost");
+    let db_port = db_config.port.unwrap_or(3306);
+    let db_user = db_config.user.as_deref().unwrap_or("root");
+    let db_pass = db_config.password.as_deref().unwrap_or("");
 
     println!("  Local database: {}:{}", db_host, db_port);
     println!("  Source node: {}", source_endpoint);

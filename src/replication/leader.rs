@@ -9,7 +9,7 @@ use std::time::Duration;
 use tokio::sync::{mpsc, RwLock, oneshot};
 use tokio::time::interval;
 
-use crate::wal::entry::{Lsn, WalEntry, LogEntry};
+use crate::wal::entry::{Lsn, LogEntry};
 use crate::wal::{WalWriter, WalReader};
 use crate::replication::{Message, ReplicationConfig};
 use crate::executor::MariaDbExecutor;

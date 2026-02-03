@@ -724,6 +724,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                                 replication_timeout_ms: config.cluster.election_timeout_ms,
                             },
                             msg_tx.clone(),
+                            executor.clone(),
                         );
 
                         tracing::info!("Now running as LEADER");
