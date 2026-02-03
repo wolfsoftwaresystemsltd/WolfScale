@@ -269,12 +269,14 @@ impl LeaderNode {
     async fn replicate_to_followers(&self) -> Result<()> {
         let peers = self.cluster.peers().await;
         if peers.is_empty() {
-             return Ok(());
+            tracing::info!("No peers registered - skipping replication");
+            return Ok(());
         }
         
-        // Debug: show all peers and their LSNs at start of replication cycle
+        // Show all peers and their LSNs at start of replication cycle
         for p in &peers {
-            tracing::debug!("peers() returned: id={}, addr={}, lsn={}", p.id, p.address, p.last_applied_lsn);
+            tracing::info!("Peer status: id={}, status={:?}, lsn={}", p.id, p.status, p.last_applied_lsn);
+        }
         }
         
         let term = *self.term.read().await;

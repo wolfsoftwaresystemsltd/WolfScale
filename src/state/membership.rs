@@ -303,7 +303,8 @@ impl ClusterMembership {
         nodes
             .values()
             .filter(|n| n.id != self.node_id)
-            .filter(|n| !n.id.starts_with("peer-"))  // Filter out synthetic peers
+            // Note: we include synthetic peers (peer-*) because they're needed for 
+            // initial replication before followers identify themselves with their real IDs
             .cloned()
             .collect()
     }
