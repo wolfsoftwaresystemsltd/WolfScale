@@ -489,42 +489,26 @@ async fn handle_connection(
         let n = if let Some(data) = pending_data.take() {
             let n = data.len();
             cmd_buf[..n].copy_from_slice(&data);
-            eprintln!("[PROXY] Using pending data: {} bytes", n);
             n
         } else {
             match client.read(&mut cmd_buf).await {
                 Ok(0) => break,
-                Ok(n) => {
-                    eprintln!("[PROXY] Read {} bytes from client", n);
-                    n
-                },
+                Ok(n) => n,
                 Err(_) => break,
             }
         };
 
-        // Log raw packet info
-        if n >= 5 {
-            eprintln!("[PROXY] Packet header: {:02x} {:02x} {:02x} {:02x}, cmd: {:02x}", 
-                cmd_buf[0], cmd_buf[1], cmd_buf[2], cmd_buf[3], cmd_buf[4]);
-        }
-
         // Parse the complete packet to check query type
         let (is_write, query_opt) = if let Ok((packet, _)) = MySqlPacket::read(&cmd_buf[..n]) {
-            eprintln!("[PROXY] Packet parsed successfully, command type: {:?}", packet.command());
             if let Some(query) = packet.query_string() {
-                eprintln!("[PROXY] Query extracted: {}", query.chars().take(80).collect::<String>());
                 let write = is_write_query(&query);
-                eprintln!("[PROXY] is_write_query returned: {}", write);
                 (write, Some(query))
             } else {
-                eprintln!("[PROXY] No query string in packet (not COM_QUERY)");
                 (false, None)
             }
         } else {
-            eprintln!("[PROXY] MySqlPacket::read FAILED for {} bytes", n);
             (false, None)
         };
-
 
         // Track database context changes (USE statements or COM_INIT_DB)
         if let Some(ref query) = query_opt {
@@ -541,19 +525,13 @@ async fn handle_connection(
         // If this is a write query and we have a WAL writer, log it for replication
         // Only log if we are the leader - followers route to leader's proxy
         if is_write {
-            eprintln!("[PROXY] WRITE DETECTED!");
             if let Some(ref query) = query_opt {
                 tracing::info!("WRITE detected: {}", query.chars().take(80).collect::<String>());
                 
                 // Check if we are the leader - only leader writes to WAL
                 let self_node = cluster.get_self().await;
-                eprintln!("[PROXY] Node role: {:?}", self_node.role);
-                tracing::info!("Self node role: {:?}", self_node.role);
                 if self_node.role == NodeRole::Leader {
-                    eprintln!("[PROXY] We are LEADER, checking WAL writer...");
                     if let Some(ref wal) = wal_writer {
-                        eprintln!("[PROXY] WAL writer present, logging entry...");
-
                         let table_name = extract_table_name(query);
                         
                         // Build SQL with database context for replication
@@ -580,11 +558,9 @@ async fn handle_connection(
                         
                         match wal.append(entry).await {
                             Ok(lsn) => {
-                                eprintln!("[PROXY] SUCCESS: Write query logged to WAL with LSN {}", lsn);
                                 tracing::debug!("Write query logged to WAL with LSN {}", lsn);
                             }
                             Err(e) => {
-                                eprintln!("[PROXY] ERROR: Failed to log write query to WAL: {}", e);
                                 tracing::error!("Failed to log write query to WAL: {}", e);
                             }
                         }

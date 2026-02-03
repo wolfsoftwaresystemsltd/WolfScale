@@ -249,26 +249,30 @@ impl FollowerNode {
         let mut match_lsn = last_applied;
         for entry in entries {
             if entry.header.lsn <= last_applied {
-                // Already applied, skip
                 continue;
             }
 
-            // Apply to database
+            // Apply to local log and database
             match self.apply_entry(&entry).await {
                 Ok(_) => {
                     match_lsn = entry.header.lsn;
                 }
                 Err(e) => {
-                    tracing::error!("Failed to apply entry {}: {}", entry.header.lsn, e);
-                    break;
+                    // Log error but continue to next entry if it's an application error
+                    // This prevents a single bad query from stopping all replication
+                    tracing::error!("Follower failed to apply entry LSN {}: {}", entry.header.lsn, e);
+                    
+                    // We still advance match_lsn because we've "processed" this entry (even if with error)
+                    // and we don't want the leader to keep sending it.
+                    match_lsn = entry.header.lsn;
                 }
             }
         }
 
-        // Update last applied
+        // Update last applied if we moved forward
         if match_lsn > last_applied {
             *self.last_applied_lsn.write().await = match_lsn;
-            self.state_tracker.set_last_applied_lsn(match_lsn).await?;
+            let _ = self.state_tracker.set_last_applied_lsn(match_lsn).await;
         }
 
         Ok(Message::AppendEntriesResponse {
@@ -318,20 +322,28 @@ impl FollowerNode {
         Ok(())
     }
 
-    /// Apply a WAL entry to the local database
+    /// Apply entries to database
     async fn apply_entry(&self, entry: &WalEntry) -> Result<()> {
         // Persist to local WAL first
-        self.wal_writer.append(entry.entry.clone()).await?;
+        if let Err(e) = self.wal_writer.append(entry.entry.clone()).await {
+            tracing::error!("Failed to persist replicated entry to WAL: {}", e);
+            return Err(e);
+        }
 
         // Execute against database
-        self.executor.execute_entry(&entry.entry).await?;
+        if let Err(e) = self.executor.execute_entry(&entry.entry).await {
+            // Check if this is a non-fatal SQL error (e.g. key constraint, etc.)
+            // For now, we log it and return it, but the caller (handle_append_entries)
+            // will decide whether to continue.
+            return Err(e);
+        }
 
         // Record as applied
         if let Some(table) = entry.entry.table_name() {
-            let pk_str = format!("{:?}", entry.header.lsn); // Use LSN as simple identifier
-            self.state_tracker
+            let pk_str = format!("{:?}", entry.header.lsn); 
+            let _ = self.state_tracker
                 .record_applied(entry.header.lsn, table, &pk_str)
-                .await?;
+                .await;
         }
 
         Ok(())
