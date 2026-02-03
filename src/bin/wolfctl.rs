@@ -229,9 +229,9 @@ async fn list_servers(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> 
     println!();
 
     // Print table header
-    println!("{:<20} {:<25} {:<10} {:<10} {:<12} {:<8}",
-        "NODE ID", "ADDRESS", "STATUS", "ROLE", "LSN", "LAG");
-    println!("{}", "-".repeat(85));
+    println!("{:<20} {:<25} {:<10} {:<10}",
+        "NODE ID", "ADDRESS", "STATUS", "ROLE");
+    println!("{}", "-".repeat(65));
 
     // Print nodes
     for node in &info.nodes {
@@ -252,19 +252,11 @@ async fn list_servers(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> 
             _ => role_padded,
         };
 
-        let lag_display = if node.replication_lag == 0 {
-            "-".to_string()
-        } else {
-            format!("{}", node.replication_lag)
-        };
-
-        println!("{:<20} {:<25} {} {} {:<12} {:<8}",
+        println!("{:<20} {:<25} {} {}",
             node.id,
             node.address,
             status_colored,
-            role_colored,
-            node.last_applied_lsn,
-            lag_display
+            role_colored
         );
     }
     println!();
