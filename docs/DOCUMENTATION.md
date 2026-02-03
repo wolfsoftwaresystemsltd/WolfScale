@@ -270,6 +270,32 @@ The leader continuously monitors local database health:
 
 This ensures that if you stop MariaDB for an upgrade, WolfScale automatically promotes another node to leader, preventing write failures.
 
+### Disaster Recovery and WAL Catch-Up
+
+When a node goes down while writes continue on the new leader, the returning node uses **WAL catch-up** to synchronize:
+
+**The Scenario:**
+1. `wolftest1` (leader) goes down - writes stop on its database
+2. `wolftest2` becomes leader - writes continue on wolftest2's database
+3. `wolftest1` returns - its database is now "behind"
+
+**How WolfScale Handles This:**
+
+| Step | What Happens                                                     |
+|------|------------------------------------------------------------------|
+| 1    | Returning node connects to current leader                        |
+| 2    | Node receives heartbeat with leader's current LSN                |
+| 3    | Node detects its LSN is behind and sends SyncRequest             |
+| 4    | Leader reads WAL entries and sends SyncResponse                  |
+| 5    | Follower applies entries to local database                       |
+| 6    | Process repeats until follower catches up                        |
+| 7    | Once LSN matches, node status becomes Active                     |
+
+**Key Safety Guarantees:**
+- Node cannot become leader until status is **Active**
+- All missed writes are applied in order via WAL replay
+- Underlying database (MariaDB) receives all changes before leadership is allowed
+
 ---
 
 ## Configuration Best Practices
