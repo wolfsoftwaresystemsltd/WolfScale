@@ -537,46 +537,33 @@ wolfscale start --log-level debug
 
 ### Complete 3-Node Cluster Example
 
-Here are the complete `[node]` and `[cluster]` sections for a 3-node cluster:
+All nodes use the same peer list - WolfScale ignores its own address:
 
-**Node 1 (10.0.10.10) - Initial Leader:**
+**All Nodes - Same Cluster Section:**
+
+[cluster]
+peers = ["10.0.10.10:7654", "10.0.10.11:7654", "10.0.10.12:7654"]
+
+**Node 1 (10.0.10.10):**
 [node]
 id = "node-1"
 bind_address = "0.0.0.0:7654"
 advertise_address = "10.0.10.10:7654"
-data_dir = "/var/lib/wolfscale/node-1"
-
-[cluster]
-bootstrap = true
-peers = ["10.0.10.11:7654", "10.0.10.12:7654"]
 
 **Node 2 (10.0.10.11):**
 [node]
 id = "node-2"
 bind_address = "0.0.0.0:7654"
 advertise_address = "10.0.10.11:7654"
-data_dir = "/var/lib/wolfscale/node-2"
-
-[cluster]
-bootstrap = false
-peers = ["10.0.10.10:7654", "10.0.10.12:7654"]
 
 **Node 3 (10.0.10.12):**
 [node]
 id = "node-3"
 bind_address = "0.0.0.0:7654"
 advertise_address = "10.0.10.12:7654"
-data_dir = "/var/lib/wolfscale/node-3"
 
-[cluster]
-bootstrap = false
-peers = ["10.0.10.10:7654", "10.0.10.11:7654"]
-
-> [!IMPORTANT]
-> - Each node's `peers` list contains all OTHER nodes (never itself)
-> - Only ONE node has `bootstrap = true` (the initial leader)
-> - All peer addresses must include the port (`:7654`)
-> - `advertise_address` must be an IP that other nodes can reach (not `0.0.0.0`)
+> [!TIP]
+> Use the same configuration file across all nodes - just change the `[node]` section for each host.
 
 ### 6. Write Forwarding
 
