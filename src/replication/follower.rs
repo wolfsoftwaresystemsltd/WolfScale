@@ -101,7 +101,7 @@ impl FollowerNode {
     /// Create with was_leader flag set (for rejoining nodes)
     pub fn new_rejoining(
         node_id: String,
-        wal_writer: WalWriter,
+        wal_writer: crate::wal::WalWriter,
         state_tracker: Arc<StateTracker>,
         cluster: Arc<ClusterMembership>,
         executor: Arc<MariaDbExecutor>,
