@@ -256,6 +256,7 @@ pub enum LogEntry {
         sql: String,
         affects_table: Option<String>,
         /// Database context (from USE statement) - prepended as USE before execution
+        #[serde(default)]
         database: Option<String>,
     },
 
