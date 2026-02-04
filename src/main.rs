@@ -322,9 +322,9 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     // Channel for forwarding entries from message loop to FollowerNode
     // FollowerNode contains rusqlite which isn't Send, so we can't call it from spawned task
     // Using channel to pass entries - follower loop processes them and sends ACK
-    // IMPORTANT: Small buffer (2) to prevent memory exhaustion with large batches.
-    // Back-pressure will slow message receipt if follower can't keep up.
-    let (entry_tx, entry_rx) = tokio::sync::mpsc::channel::<wolfscale::replication::ReplicationBatch>(2);
+    // IMPORTANT: Small buffer (10) to prevent memory exhaustion with large batches.
+    // Blocking send provides back-pressure when follower can't keep up.
+    let (entry_tx, entry_rx) = tokio::sync::mpsc::channel::<wolfscale::replication::ReplicationBatch>(10);
     let shared_entry_rx = Arc::new(tokio::sync::Mutex::new(Some(entry_rx)));
 
     // Start INCOMING message processing loop - handles messages from peers
@@ -431,30 +431,15 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                             leader_id: leader_id.clone(),
                             leader_address: leader_addr,
                         };
-                        // Try sending with retries - don't drop entries if queue is temporarily full
-                        let mut sent = false;
-                        for attempt in 0..50 {  // Try for up to ~5 seconds
-                            match incoming_entry_tx.try_send(batch.clone()) {
-                                Ok(()) => {
-                                    tracing::debug!("Forwarded batch LSN {}-{} to follower processing", first_lsn, last_lsn);
-                                    sent = true;
-                                    break;
-                                }
-                                Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => {
-                                    if attempt == 0 {
-                                        tracing::warn!("Entry processing queue full for LSN {}-{}, waiting...", first_lsn, last_lsn);
-                                    }
-                                    // Short delay - but this runs in spawned task so won't block main thread
-                                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                                }
-                                Err(e) => {
-                                    tracing::error!("Failed to forward entries to follower: {}", e);
-                                    break;
-                                }
+                        // Use blocking send - will wait until there's space in the channel.
+                        // Back-pressure naturally slows processing when follower can't keep up.
+                        match incoming_entry_tx.send(batch).await {
+                            Ok(()) => {
+                                tracing::debug!("Forwarded batch LSN {}-{} to follower processing", first_lsn, last_lsn);
                             }
-                        }
-                        if !sent {
-                            tracing::error!("DROPPED batch LSN {}-{} after 50 retries - queue persistently full!", first_lsn, last_lsn);
+                            Err(e) => {
+                                tracing::error!("Failed to forward entries to follower (channel closed): {}", e);
+                            }
                         }
                     }
                     // NOTE: No ACK here - FollowerNode sends ACK after processing
