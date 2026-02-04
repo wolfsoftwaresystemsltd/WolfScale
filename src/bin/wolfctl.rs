@@ -748,14 +748,14 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut last_time = std::time::Instant::now();
     let mut writes_per_sec: f64 = 0.0;
     
-    // Throughput history for graph (last 30 samples)
-    let mut throughput_history: Vec<f64> = vec![0.0; 30];
-    let mut peak_throughput: f64 = 10.0; // Minimum scale
+    // Throughput history for graph (last 40 samples)
+    let mut throughput_history: Vec<f64> = vec![0.0; 40];
+    let mut peak_throughput: f64 = 10.0;
     let mut total_writes: u64 = 0;
     let start_time = std::time::Instant::now();
     
-    // Hide cursor and clear screen
-    print!("\x1b[?25l\x1b[2J\x1b[H");
+    // Hide cursor
+    print!("\x1b[?25l");
     
     // Set up Ctrl+C handler
     let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
@@ -769,10 +769,10 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
         // Clear screen and move cursor to top
         print!("\x1b[H\x1b[J");
         
+        // Header
         println!();
-        println!("\x1b[1;36m╔══════════════════════════════════════════════════════════════════════╗\x1b[0m");
-        println!("\x1b[1;36m║\x1b[0m              \x1b[1;37m🐺 WolfScale Live Statistics\x1b[0m                              \x1b[1;36m║\x1b[0m");
-        println!("\x1b[1;36m╚══════════════════════════════════════════════════════════════════════╝\x1b[0m");
+        println!("  \x1b[1;36mWolfScale Live Statistics\x1b[0m");
+        println!("  {}",  "=".repeat(50));
         println!();
         
         // Fetch stats
@@ -790,7 +790,6 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
                                 writes_per_sec = delta as f64 / elapsed;
                                 total_writes += delta;
                             } else if elapsed > 2.0 {
-                                // Decay if no activity
                                 writes_per_sec *= 0.5;
                             }
                         }
@@ -803,86 +802,71 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
                         
                         // Update peak for graph scale
                         if writes_per_sec > peak_throughput {
-                            peak_throughput = writes_per_sec * 1.2; // 20% headroom
+                            peak_throughput = writes_per_sec * 1.2;
                         }
                         
                         // Calculate average throughput
                         let uptime_secs = start_time.elapsed().as_secs_f64();
                         let avg_throughput = if uptime_secs > 0.0 { total_writes as f64 / uptime_secs } else { 0.0 };
                         
-                        // Role with color and emoji
-                        let (role_display, role_emoji) = if stats.role == "Leader" {
-                            (format!("\x1b[1;34m{}\x1b[0m", stats.role), "👑")
+                        // Role with color
+                        let role_str = if stats.role == "Leader" {
+                            format!("\x1b[1;34m{}\x1b[0m", stats.role)
                         } else {
-                            (format!("\x1b[33m{}\x1b[0m", stats.role), "📡")
+                            format!("\x1b[33m{}\x1b[0m", stats.role)
                         };
                         
-                        // Status section
-                        println!("  \x1b[1mNode:\x1b[0m   {} {} {}", stats.node_id, role_emoji, role_display);
-                        println!("  \x1b[1mCluster:\x1b[0m {}/{} nodes active", stats.active_nodes, stats.cluster_size);
+                        // Node info
+                        println!("  Node:     {}  [{}]", stats.node_id, role_str);
+                        println!("  Cluster:  {}/{} nodes active", stats.active_nodes, stats.cluster_size);
+                        println!("  LSN:      {}", stats.current_lsn);
                         println!();
                         
-                        // Throughput metrics box
-                        println!("  \x1b[1;36m┌─────────────────────────────────────────────────────────────────┐\x1b[0m");
-                        println!("  \x1b[1;36m│\x1b[0m  \x1b[1mThroughput\x1b[0m                                                      \x1b[1;36m│\x1b[0m");
-                        println!("  \x1b[1;36m├─────────────────────────────────────────────────────────────────┤\x1b[0m");
-                        
-                        // Format throughput with appropriate units
-                        let (current_val, current_unit) = format_throughput(writes_per_sec);
-                        let (avg_val, avg_unit) = format_throughput(avg_throughput);
-                        let (peak_val, peak_unit) = format_throughput(peak_throughput);
-                        
-                        println!("  \x1b[1;36m│\x1b[0m  Current: \x1b[1;32m{:>8.1} {}/s\x1b[0m   Avg: \x1b[1;33m{:>8.1} {}/s\x1b[0m   Peak: \x1b[1;35m{:>8.1} {}/s\x1b[0m   \x1b[1;36m│\x1b[0m",
-                            current_val, current_unit, avg_val, avg_unit, peak_val, peak_unit);
-                        println!("  \x1b[1;36m│\x1b[0m  LSN: \x1b[1m{}\x1b[0m  |  Total writes this session: \x1b[1m{}\x1b[0m{}\x1b[1;36m│\x1b[0m", 
-                            stats.current_lsn, 
-                            total_writes,
-                            " ".repeat(21 - total_writes.to_string().len().min(20)));
-                        println!("  \x1b[1;36m└─────────────────────────────────────────────────────────────────┘\x1b[0m");
+                        // Throughput section
+                        println!("  \x1b[1mThroughput\x1b[0m");
+                        println!("  {}", "-".repeat(50));
+                        println!("  Current:  \x1b[1;32m{:>10.1}/s\x1b[0m", writes_per_sec);
+                        println!("  Average:  \x1b[1;33m{:>10.1}/s\x1b[0m", avg_throughput);
+                        println!("  Peak:     \x1b[1;35m{:>10.1}/s\x1b[0m", peak_throughput);
+                        println!("  Total:    {:>10}", total_writes);
                         println!();
                         
                         // ASCII Graph
-                        println!("  \x1b[1mThroughput History (last 30s):\x1b[0m");
+                        println!("  \x1b[1mHistory (last 40s)\x1b[0m");
                         draw_ascii_graph(&throughput_history, peak_throughput);
-                        println!();
                         
-                        // Follower replication status with bar graphs
+                        // Follower replication status
                         if !stats.followers.is_empty() && stats.role == "Leader" {
-                            println!("  \x1b[1mFollower Replication Status:\x1b[0m");
-                            println!("  \x1b[2m{}\x1b[0m", "─".repeat(65));
-                            
-                            // Find max lag for scaling
-                            let max_lag = stats.followers.iter().map(|f| f.lag).max().unwrap_or(1).max(1);
+                            println!();
+                            println!("  \x1b[1mFollowers\x1b[0m");
+                            println!("  {}", "-".repeat(50));
                             
                             for f in &stats.followers {
-                                let status_icon = match f.status.as_str() {
-                                    "Active" => "\x1b[32m●\x1b[0m",
-                                    "Syncing" => "\x1b[33m◐\x1b[0m",
-                                    "Lagging" => "\x1b[33m◑\x1b[0m",
-                                    "Dropped" => "\x1b[31m○\x1b[0m",
-                                    _ => "?",
+                                let status_char = match f.status.as_str() {
+                                    "Active" => "\x1b[32m[OK]\x1b[0m",
+                                    "Syncing" => "\x1b[33m[..]\x1b[0m",
+                                    "Lagging" => "\x1b[33m[!!]\x1b[0m",
+                                    "Dropped" => "\x1b[31m[XX]\x1b[0m",
+                                    _ => "[??]",
                                 };
                                 
-                                // Lag bar (max 30 chars)
-                                let bar_len = if max_lag > 0 {
-                                    ((f.lag as f64 / max_lag as f64) * 30.0) as usize
-                                } else { 0 };
-                                let bar_color = if f.lag == 0 { "\x1b[32m" } 
-                                    else if f.lag < 100 { "\x1b[33m" } 
-                                    else { "\x1b[31m" };
+                                let lag_display = if f.lag == 0 {
+                                    "\x1b[32m0\x1b[0m".to_string()
+                                } else if f.lag < 100 {
+                                    format!("\x1b[33m{}\x1b[0m", f.lag)
+                                } else {
+                                    format!("\x1b[31m{}\x1b[0m", f.lag)
+                                };
                                 
-                                let bar = format!("{}{}{}", bar_color, "█".repeat(bar_len.min(30)), "\x1b[0m");
-                                let padding = " ".repeat(30 - bar_len.min(30));
-                                
-                                println!("  {} {:12} LSN:{:>12}  Lag: {:>6} {}{}", 
-                                    status_icon, f.node_id, f.last_applied_lsn, f.lag, bar, padding);
+                                println!("  {} {:15} LSN: {:>10}  Lag: {:>6}", 
+                                    status_char, f.node_id, f.last_applied_lsn, lag_display);
                             }
-                            println!();
                         }
                         
                         // Footer
+                        println!();
                         let uptime_fmt = format_duration(start_time.elapsed());
-                        println!("  \x1b[2mSession: {} | Press Ctrl+C to exit\x1b[0m", uptime_fmt);
+                        println!("  \x1b[2mSession: {} | Ctrl+C to exit\x1b[0m", uptime_fmt);
                     }
                     Err(e) => {
                         println!("  Error parsing stats: {}", e);
@@ -891,14 +875,12 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
             }
             Ok(response) => {
                 println!("  \x1b[31mAPI Error: {}\x1b[0m", response.status());
-                println!();
-                println!("  \x1b[2mPress Ctrl+C to exit\x1b[0m");
+                println!("  \x1b[2mCtrl+C to exit\x1b[0m");
             }
             Err(e) => {
                 println!("  \x1b[31mConnection Error: {}\x1b[0m", e);
                 println!("  Is WolfScale running?");
-                println!();
-                println!("  \x1b[2mPress Ctrl+C to exit\x1b[0m");
+                println!("  \x1b[2mCtrl+C to exit\x1b[0m");
             }
         }
         
@@ -916,48 +898,38 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
 
 /// Draw an ASCII graph of throughput history
 fn draw_ascii_graph(history: &[f64], max_val: f64) {
-    let graph_height = 8;
+    let graph_height = 6;
     let graph_width = history.len();
-    
-    // Characters for different fill levels
-    let blocks = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
     
     // Draw from top to bottom
     for row in (0..graph_height).rev() {
         let threshold = (row as f64 / graph_height as f64) * max_val;
         
-        // Y-axis label on first row
+        // Y-axis label
         if row == graph_height - 1 {
-            print!("  {:>6.0} │", max_val);
+            print!("  {:>6.0} |", max_val);
         } else if row == 0 {
-            print!("  {:>6} │", "0");
+            print!("       0 |");
         } else {
-            print!("         │");
+            print!("         |");
         }
         
         // Draw bars
         for &val in history {
-            if val >= threshold + (max_val / graph_height as f64) {
-                print!("\x1b[32m█\x1b[0m");
-            } else if val >= threshold {
-                // Partial fill
-                let fraction = (val - threshold) / (max_val / graph_height as f64);
-                let block_idx = (fraction * 7.0) as usize;
-                print!("\x1b[32m{}\x1b[0m", blocks[block_idx.min(7)]);
+            if val >= threshold {
+                print!("\x1b[32m#\x1b[0m");
             } else {
                 print!(" ");
             }
         }
-        println!("│");
+        println!("|");
     }
     
     // X-axis
-    print!("         └");
-    print!("{}", "─".repeat(graph_width));
-    println!("┘");
-    print!("          ");
-    print!("{}30s ago", " ".repeat(graph_width/2 - 6));
-    println!("now");
+    print!("         +");
+    print!("{}", "-".repeat(graph_width));
+    println!("+");
+    println!("          {:^width$}", "40s ago              now", width = graph_width);
 }
 
 /// Format throughput with appropriate units (K, M suffix)
