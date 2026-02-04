@@ -286,17 +286,24 @@ impl LeaderNode {
                 continue;
             }
 
+            // Get FRESH peer state from cluster first - the snapshot may be stale
+            let current_peer_lsn = if let Some(fresh_peer) = self.cluster.get_node(&peer.id).await {
+                fresh_peer.last_applied_lsn
+            } else {
+                peer.last_applied_lsn // Fallback to snapshot if node disappeared
+            };
+            
             // Check if this peer has pending replication (waiting for ACK)
             // Skip if we're still waiting, unless it's been more than 5 seconds (stale)
-            // OR the peer's LSN has advanced (meaning ACK was received via cluster membership)
+            // OR the peer's LSN has changed (meaning ACK was received via cluster membership)
             {
                 let mut pending = self.pending_replication.write().await;
                 if let Some((pending_lsn, sent_at)) = pending.get(&peer.id) {
-                    // Check if peer's LSN has advanced past our pending LSN
+                    // Check if peer's LSN has advanced past our pending LSN OR went backwards (restart)
                     // This means ACK was received and processed via cluster membership
-                    if peer.last_applied_lsn >= *pending_lsn {
-                        tracing::debug!("Peer {} ACK received (lsn {} >= pending {}), clearing pending", 
-                            peer.id, peer.last_applied_lsn, pending_lsn);
+                    if current_peer_lsn >= *pending_lsn || current_peer_lsn < peer.last_applied_lsn {
+                        tracing::debug!("Peer {} ACK received (lsn {} vs pending {}), clearing pending", 
+                            peer.id, current_peer_lsn, pending_lsn);
                         pending.remove(&peer.id);
                         // Continue to send next batch
                     } else {
@@ -307,7 +314,7 @@ impl LeaderNode {
                             continue;
                         } else {
                             tracing::warn!("Peer {} pending ACK timed out after {}s (at lsn {}, pending {}), will retry", 
-                                peer.id, elapsed.as_secs(), peer.last_applied_lsn, pending_lsn);
+                                peer.id, elapsed.as_secs(), current_peer_lsn, pending_lsn);
                             // Clear the stale pending entry so we can retry
                             pending.remove(&peer.id);
                         }
@@ -315,10 +322,9 @@ impl LeaderNode {
                 }
             }
 
-            // Use the peer's last_applied_lsn from cluster membership (updated by ACKs in main.rs)
-            // This is more reliable than internal next_lsn which requires handle_append_response to be called
-            let next = peer.last_applied_lsn + 1;
-            tracing::debug!("Peer {} has last_applied_lsn={}, will replicate from next={}", peer.id, peer.last_applied_lsn, next);
+            // Use the FRESH peer LSN for replication (current_peer_lsn was fetched at start of loop)
+            let next = current_peer_lsn + 1;
+            tracing::debug!("Peer {} has last_applied_lsn={}, will replicate from next={}", peer.id, current_peer_lsn, next);
 
             let reader = self.wal_reader.read().await;
             let entries = match reader.read_batch(next, self.config.max_batch_entries) {
