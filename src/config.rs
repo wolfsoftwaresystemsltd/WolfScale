@@ -227,7 +227,7 @@ fn default_fsync() -> bool {
 }
 
 fn default_heartbeat_interval_ms() -> u64 {
-    500
+    200
 }
 
 fn default_election_timeout_ms() -> u64 {
@@ -243,7 +243,7 @@ fn default_election_timeout_max_ms() -> u64 {
 }
 
 fn default_max_batch_entries() -> usize {
-    1000
+    5000
 }
 
 fn default_true() -> bool {

@@ -218,14 +218,16 @@ impl FollowerNode {
             highest_applied = entry.header.lsn;
             processed += 1;
             
-            // Update state every entry to survive crashes
-            *self.last_applied_lsn.write().await = highest_applied;
-            
-            // Log progress
+            // Batch state updates: save every 100 entries for performance
+            // This trades some crash-recovery granularity for much better throughput
             if processed % 100 == 0 {
+                *self.last_applied_lsn.write().await = highest_applied;
                 tracing::info!("Progress: {} entries processed, at LSN {}", processed, highest_applied);
             }
         }
+        
+        // Final state update to ensure we don't lose progress
+        *self.last_applied_lsn.write().await = highest_applied;
         
         tracing::info!("Batch complete: processed={}, skipped={}, lsn={}", processed, skipped, highest_applied);
         

@@ -264,6 +264,12 @@ impl LeaderNode {
         let term = *self.term.read().await;
         let commit_lsn = *self.commit_lsn.read().await;
 
+        // Refresh WAL index ONCE per replication cycle (not per peer)
+        {
+            let mut reader = self.wal_reader.write().await;
+            let _ = reader.refresh_index();
+        }
+
         for peer in peers {
             if peer.status == NodeStatus::Dropped || peer.status == NodeStatus::Offline {
                 continue;
@@ -274,12 +280,6 @@ impl LeaderNode {
             let next = peer.last_applied_lsn + 1;
             tracing::debug!("Peer {} has last_applied_lsn={}, will replicate from next={}", peer.id, peer.last_applied_lsn, next);
 
-            // Read entries to send - must refresh index to see newly written entries
-            {
-                let mut reader = self.wal_reader.write().await;
-                let _ = reader.refresh_index();
-            }
-            
             let reader = self.wal_reader.read().await;
             let entries = match reader.read_batch(next, self.config.max_batch_entries) {
                 Ok(e) => e,
