@@ -436,7 +436,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                         // Leader will resend if ACK times out, so dropping here is safe.
                         match incoming_entry_tx.try_send(batch) {
                             Ok(()) => {
-                                tracing::debug!("Forwarded batch LSN {}-{} to follower processing", first_lsn, last_lsn);
+                                tracing::info!("FORWARDED batch LSN {}-{} to follower channel", first_lsn, last_lsn);
                             }
                             Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => {
                                 // Queue full - likely processing previous batch. Leader will resend.
