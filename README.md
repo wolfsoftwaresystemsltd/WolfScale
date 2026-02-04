@@ -28,17 +28,37 @@ WolfScale is a lightweight, high-availability replication layer for MariaDB clus
 
 ## Key Features
 
+| Category | Feature | Description |
+|----------|---------|-------------|
+| **Replication** | WAL-Based Sync | LZ4-compressed Write-Ahead Log for strong consistency |
+| | Binlog Mode | Capture writes from MySQL/MariaDB binlog (v3.0+) |
+| | Write Forwarding | Followers automatically forward writes to leader |
+| **High Availability** | Deterministic Leader Election | Lowest node ID wins—predictable, instant failover |
+| | Automatic Catch-Up | Returning nodes sync via WAL before leadership |
+| | Health Monitoring | Leader monitors database, auto-demotes on failure |
+| **Connectivity** | MySQL Proxy | Native MySQL protocol on port 8007 |
+| | HTTP API | RESTful API for writes and cluster management |
+| | wolfctl CLI | `list servers`, `stats`, `migrate`, `binlog-setup` |
+| **Deployment** | Single Binary | No patched databases, minimal dependencies |
+| | Any MySQL/MariaDB | Works with standalone, Galera, Percona, RDS |
+| | Geo-Distribution | Deploy nodes across regions and data centers |
+
+### Binlog Replication Mode (v3.0+)
+
+Capture writes directly from any MySQL-compatible database:
+
+```bash
+# Auto-detect binlog position and generate config
+wolfctl binlog-setup
+
+# Supports: MariaDB, MySQL, Galera, Percona, Amazon RDS
+```
+
 ### Deterministic Leader Election
-No voting, no split-brain. The node with the lowest ID among active nodes becomes leader immediately. Simple, predictable, reliable.
+No voting, no split-brain. The node with the lowest ID among active nodes becomes leader immediately.
 
 ### WAL-Based Replication
-Write-Ahead Log with LZ4 compression ensures all changes are durably replicated. Nodes that fall behind automatically catch up via WAL sync.
-
-### Disaster Recovery Built-In
-When a leader fails:
-1. New leader is elected instantly (lowest ID wins)
-2. Old leader rejoins as follower when it returns
-3. Old leader syncs all missed writes before becoming eligible for leadership again
+Write-Ahead Log with LZ4 compression ensures all changes are durably replicated. Nodes that fall behind automatically catch up.
 
 ### MySQL Proxy Mode
 ```bash

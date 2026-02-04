@@ -59,6 +59,21 @@ enum Commands {
     },
     /// Show live stats (updates every second, Ctrl+C to exit)
     Stats,
+    /// Setup binlog replication by detecting current position from MariaDB
+    BinlogSetup {
+        /// MariaDB host to connect to (defaults to config database host)
+        #[arg(long)]
+        host: Option<String>,
+        /// MariaDB port (defaults to 3306)
+        #[arg(long)]
+        port: Option<u16>,
+        /// Database user (defaults to config database user)
+        #[arg(long)]
+        user: Option<String>,
+        /// Database password (defaults to config database password)
+        #[arg(long)]
+        password: Option<String>,
+    },
     /// Reset WAL and state on all nodes (DESTRUCTIVE - requires restart)
     Reset {
         /// Skip confirmation prompt
@@ -233,6 +248,9 @@ async fn main() {
         }
         Commands::LogLevel { level } => set_log_level(level),
         Commands::Stats => show_stats(&endpoint).await,
+        Commands::BinlogSetup { host, port, user, password } => {
+            binlog_setup(&cli.config, host.clone(), *port, user.clone(), password.clone()).await
+        }
         Commands::Reset { force } => reset_cluster(&endpoint, *force).await,
     };
 
@@ -667,6 +685,119 @@ async fn migrate(source: &str, config_path: &PathBuf) -> Result<(), Box<dyn std:
     println!();
     println!("The database has been migrated from the source node.");
     println!("You can now start WolfScale - it will sync from LSN {}.", dump_info.lsn);
+    println!();
+
+    Ok(())
+}
+
+// ============ Binlog Setup ============
+
+async fn binlog_setup(
+    config_path: &PathBuf,
+    host: Option<String>,
+    port: Option<u16>,
+    user: Option<String>,
+    password: Option<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    println!();
+    println!("\x1b[1;36m╔══════════════════════════════════════════════════════════════╗\x1b[0m");
+    println!("\x1b[1;36m║\x1b[0m            \x1b[1;37mWolfScale Binlog Replication Setup\x1b[0m              \x1b[1;36m║\x1b[0m");
+    println!("\x1b[1;36m╚══════════════════════════════════════════════════════════════╝\x1b[0m");
+    println!();
+
+    // Load config to get database settings if not overridden
+    let (db_host, db_port, db_user, db_pass) = if config_path.exists() {
+        let content = std::fs::read_to_string(config_path)?;
+        let config: FullConfig = toml::from_str(&content)?;
+        let db = config.database.unwrap_or_default();
+        (
+            host.unwrap_or_else(|| db.host.unwrap_or_else(|| "localhost".to_string())),
+            port.unwrap_or(db.port.unwrap_or(3306)),
+            user.unwrap_or_else(|| db.user.unwrap_or_else(|| "root".to_string())),
+            password.unwrap_or_else(|| db.password.unwrap_or_default()),
+        )
+    } else {
+        (
+            host.unwrap_or_else(|| "localhost".to_string()),
+            port.unwrap_or(3306),
+            user.unwrap_or_else(|| "root".to_string()),
+            password.unwrap_or_default(),
+        )
+    };
+
+    println!("Connecting to MariaDB at {}:{}...", db_host, db_port);
+
+    // Use mysql command to get binlog position
+    let output = std::process::Command::new("mysql")
+        .arg("-h").arg(&db_host)
+        .arg("-P").arg(db_port.to_string())
+        .arg("-u").arg(&db_user)
+        .arg(format!("-p{}", db_pass))
+        .arg("-N")  // No column names
+        .arg("-e").arg("SHOW MASTER STATUS")
+        .output()?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        
+        // Check if binlog is not enabled
+        if stderr.contains("Access denied") {
+            return Err("Access denied - check database credentials".into());
+        }
+        
+        return Err(format!("Failed to query MariaDB: {}", stderr).into());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let lines: Vec<&str> = stdout.trim().lines().collect();
+    
+    if lines.is_empty() || stdout.trim().is_empty() {
+        println!();
+        println!("\x1b[1;31m✗ Binary logging is NOT enabled!\x1b[0m");
+        println!();
+        println!("To enable binlog, add to your MariaDB config (my.cnf):");
+        println!();
+        println!("  [mysqld]");
+        println!("  log_bin = mysql-bin");
+        println!("  binlog_format = MIXED");
+        println!("  server_id = 1");
+        println!();
+        println!("Then restart MariaDB and run this command again.");
+        return Ok(());
+    }
+
+    // Parse output: File  Position  Binlog_Do_DB  Binlog_Ignore_DB
+    let parts: Vec<&str> = lines[0].split_whitespace().collect();
+    if parts.len() < 2 {
+        return Err("Unexpected output from SHOW MASTER STATUS".into());
+    }
+
+    let binlog_file = parts[0];
+    let binlog_pos: u64 = parts[1].parse()?;
+
+    println!("\x1b[1;32m✓\x1b[0m Binary logging is enabled");
+    println!();
+    println!("Current binlog position:");
+    println!("  File:     {}", binlog_file);
+    println!("  Position: {}", binlog_pos);
+    println!();
+
+    // Generate unique server ID (based on last octet of host IP + random)
+    let server_id = 1001 + (std::process::id() % 1000);
+
+    println!("\x1b[1;33mAdd this to your WolfScale config.toml:\x1b[0m");
+    println!();
+    println!("┌────────────────────────────────────────────────────────┐");
+    println!("│ [replication]                                          │");
+    println!("│ mode = \"binlog\"                                        │");
+    println!("│                                                        │");
+    println!("│ [binlog]                                               │");
+    println!("│ server_id = {}                                       │", server_id);
+    println!("│ start_file = \"{}\"                           │", binlog_file);
+    println!("│ start_position = {}                                   │", binlog_pos);
+    println!("└────────────────────────────────────────────────────────┘");
+    println!();
+    println!("\x1b[1;36mNote:\x1b[0m server_id must be unique across all MySQL replicas.");
     println!();
 
     Ok(())

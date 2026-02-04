@@ -148,28 +148,46 @@ WolfScale replicates between clusters over WAN. Galera handles replication withi
 
 ### Binlog Replication Mode (v3.0+)
 
-For existing Galera clusters where you can't route writes through WolfScale's proxy, use **binlog mode** to capture writes directly from MariaDB's binary log:
+For existing databases where you can't route writes through WolfScale's proxy, use **binlog mode** to capture writes directly from the binary log:
 
 ```toml
 [replication]
 mode = "binlog"  # Capture from binlog instead of proxy
 
 [binlog]
-server_id = 1001  # Unique ID (must not conflict with Galera node IDs)
+server_id = 1001  # Unique ID (must not conflict with existing replica IDs)
 ```
 
+**Supported Databases:**
+
+| Database | Works? | Notes |
+|----------|--------|-------|
+| MariaDB standalone | ✓ | Just enable `log_bin` |
+| MariaDB Galera | ✓ | Connect to any node |
+| MySQL standalone | ✓ | Standard replication |
+| Percona Server | ✓ | MySQL-compatible |
+| Amazon RDS MySQL | ✓ | Enable binlog retention |
+
 **How it works:**
-1. WolfScale connects to MariaDB as a replica (like a MySQL slave)
+1. WolfScale connects to the database as a replica (like a MySQL slave)
 2. Reads the binary log stream in real-time
 3. Converts binlog events to WAL entries
 4. Replicates to WolfScale followers as normal
 
 **Requirements:**
-- MariaDB must have binary logging enabled (`log_bin = mysql-bin`)
+- Binary logging must be enabled (`log_bin = mysql-bin`)
 - Recommended: `binlog_format = MIXED` or `STATEMENT`
 - The `server_id` must be unique across all replicas
 
-**Important:** Only run WolfScale binlog mode on ONE node per Galera cluster - all Galera nodes have identical data.
+**Easy Setup with wolfctl:**
+
+```bash
+wolfctl binlog-setup
+```
+
+This command connects to your database, detects the current binlog position, and outputs the config snippet to add to your config.toml.
+
+**Important:** Only run WolfScale binlog mode on ONE node per cluster - all cluster nodes have identical data.
 
 ---
 
