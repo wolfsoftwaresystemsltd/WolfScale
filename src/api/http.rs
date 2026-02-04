@@ -36,6 +36,8 @@ pub struct AppState {
     pub cluster: Arc<ClusterMembership>,
     /// Write handler
     pub write_handler: RwLock<Option<WriteHandler>>,
+    /// Data directory for WAL and state
+    pub data_dir: std::path::PathBuf,
 }
 
 /// Write handler callback
@@ -53,12 +55,14 @@ impl HttpServer {
         config: ApiConfig,
         node_id: String,
         cluster: Arc<ClusterMembership>,
+        data_dir: std::path::PathBuf,
     ) -> Self {
         let state = Arc::new(AppState {
             node_id,
             is_leader: RwLock::new(false),
             cluster,
             write_handler: RwLock::new(None),
+            data_dir,
         });
 
         Self { config, state }
@@ -70,12 +74,14 @@ impl HttpServer {
         node_id: String,
         cluster: Arc<ClusterMembership>,
         write_handler: WriteHandler,
+        data_dir: std::path::PathBuf,
     ) -> Self {
         let state = Arc::new(AppState {
             node_id,
             is_leader: RwLock::new(true), // If we have write handler, we're the leader
             cluster,
             write_handler: RwLock::new(Some(write_handler)),
+            data_dir,
         });
 
         Self { config, state }
@@ -116,6 +122,7 @@ impl HttpServer {
             // Admin operations
             .route("/admin/promote", post(handle_promote))
             .route("/admin/demote", post(handle_demote))
+            .route("/admin/reset", post(handle_reset))
             // Migration operations
             .route("/dump/info", get(handle_dump_info))
             .route("/dump", get(handle_dump))
@@ -590,6 +597,59 @@ async fn handle_demote(
         lsn: None,
         message: Some("Demotion requested".to_string()),
     })
+}
+
+/// Reset WAL and state - clears all log entries and resets LSN to 0
+async fn handle_reset(
+    State(state): State<Arc<AppState>>,
+) -> impl IntoResponse {
+    tracing::warn!("WAL reset requested for node {}", state.node_id);
+    
+    // Clear WAL directory
+    let wal_dir = state.data_dir.join("wal");
+    let mut wal_cleared = false;
+    if wal_dir.exists() {
+        if let Err(e) = std::fs::remove_dir_all(&wal_dir) {
+            tracing::error!("Failed to remove WAL directory: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(WriteResponse {
+                success: false,
+                lsn: None,
+                message: Some(format!("Failed to clear WAL: {}", e)),
+            }));
+        }
+        // Recreate empty directory
+        if let Err(e) = std::fs::create_dir_all(&wal_dir) {
+            tracing::error!("Failed to recreate WAL directory: {}", e);
+        }
+        wal_cleared = true;
+    }
+    
+    // Clear state database
+    let state_dir = state.data_dir.join("state");
+    let mut state_cleared = false;
+    if state_dir.exists() {
+        if let Err(e) = std::fs::remove_dir_all(&state_dir) {
+            tracing::error!("Failed to remove state directory: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(WriteResponse {
+                success: false,
+                lsn: None,
+                message: Some(format!("Failed to clear state: {}", e)),
+            }));
+        }
+        // Recreate empty directory
+        if let Err(e) = std::fs::create_dir_all(&state_dir) {
+            tracing::error!("Failed to recreate state directory: {}", e);
+        }
+        state_cleared = true;
+    }
+    
+    tracing::warn!("WAL reset completed: wal_cleared={}, state_cleared={}", wal_cleared, state_cleared);
+    
+    (StatusCode::OK, Json(WriteResponse {
+        success: true,
+        lsn: Some(0),
+        message: Some(format!("Reset complete. WAL cleared: {}, State cleared: {}. Restart required.", wal_cleared, state_cleared)),
+    }))
 }
 
 // ============ Helpers ============

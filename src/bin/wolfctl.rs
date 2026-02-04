@@ -59,6 +59,12 @@ enum Commands {
     },
     /// Show live stats (updates every second, Ctrl+C to exit)
     Stats,
+    /// Reset WAL and state on all nodes (DESTRUCTIVE - requires restart)
+    Reset {
+        /// Skip confirmation prompt
+        #[arg(long)]
+        force: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -227,6 +233,7 @@ async fn main() {
         }
         Commands::LogLevel { level } => set_log_level(level),
         Commands::Stats => show_stats(&endpoint).await,
+        Commands::Reset { force } => reset_cluster(&endpoint, *force).await,
     };
 
     if let Err(e) = result {
@@ -892,6 +899,76 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
     print!("\x1b[?25h");
     println!();
     println!("Stats monitoring stopped.");
+    
+    Ok(())
+}
+
+/// Reset WAL and state on all cluster nodes
+async fn reset_cluster(endpoint: &str, force: bool) -> Result<(), Box<dyn std::error::Error>> {
+    println!();
+    println!("\x1b[1;31m WARNING: This will DESTROY all WAL and state data!\x1b[0m");
+    println!();
+    
+    // Get all nodes
+    let client = reqwest::Client::new();
+    let cluster_url = format!("{}/cluster", endpoint);
+    
+    let response = client.get(&cluster_url).send().await?;
+    if !response.status().is_success() {
+        return Err(format!("Failed to get cluster info: {}", response.status()).into());
+    }
+    
+    let cluster: ClusterInfoResponse = response.json().await?;
+    
+    println!("Nodes to reset:");
+    for node in &cluster.nodes {
+        println!("  - {} ({})", node.id, node.address);
+    }
+    println!();
+    
+    if !force {
+        println!("Type 'RESET' to confirm: ");
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input)?;
+        if input.trim() != "RESET" {
+            println!("Aborted.");
+            return Ok(());
+        }
+    }
+    
+    println!();
+    println!("Resetting nodes...");
+    
+    // Reset each node
+    let mut success_count = 0;
+    let mut error_count = 0;
+    
+    for node in &cluster.nodes {
+        let reset_url = format!("http://{}/admin/reset", node.address);
+        print!("  {} ... ", node.id);
+        
+        match client.post(&reset_url).send().await {
+            Ok(response) if response.status().is_success() => {
+                println!("\x1b[32mOK\x1b[0m");
+                success_count += 1;
+            }
+            Ok(response) => {
+                println!("\x1b[31mFAILED ({})\x1b[0m", response.status());
+                error_count += 1;
+            }
+            Err(e) => {
+                println!("\x1b[31mERROR: {}\x1b[0m", e);
+                error_count += 1;
+            }
+        }
+    }
+    
+    println!();
+    println!("Reset complete: {} succeeded, {} failed", success_count, error_count);
+    println!();
+    println!("\x1b[1;33mIMPORTANT: You must restart all WolfScale services!\x1b[0m");
+    println!("  sudo systemctl restart wolfscale");
+    println!();
     
     Ok(())
 }

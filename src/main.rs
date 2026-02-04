@@ -511,6 +511,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
         config.api.clone(),
         config.node.id.clone(),
         Arc::clone(&cluster),
+        config.data_dir().clone(),
     );
 
     // Determine role BEFORE starting proxy - leader if bootstrap CLI flag, config bootstrap, or no peers
