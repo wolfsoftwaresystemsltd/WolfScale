@@ -184,6 +184,7 @@ impl FollowerNode {
                     self.message_tx.clone(),
                     self.node_id.clone(),
                     Arc::clone(&self.last_applied_lsn),
+                    Arc::clone(&self.state_tracker),
                 ).await;
                 
                 // Immediately check for more entries (no sleep)
@@ -556,6 +557,7 @@ async fn process_batch_background(
     message_tx: mpsc::Sender<(String, Message)>,
     node_id: String,
     last_applied_lsn: Arc<RwLock<Lsn>>,
+    state_tracker: Arc<StateTracker>,
 ) {
     let current_lsn = *last_applied_lsn.read().await;
     let batch_max_lsn = batch.entries.last().map(|e| e.header.lsn).unwrap_or(0);
@@ -660,6 +662,11 @@ async fn process_batch_background(
     
     // Final state update to ensure we don't lose progress
     *last_applied_lsn.write().await = highest_applied;
+    
+    // Persist to SQLite so it survives restarts
+    if let Err(e) = state_tracker.set_last_applied_lsn(highest_applied).await {
+        tracing::warn!("Failed to persist last_applied_lsn: {}", e);
+    }
     
     tracing::info!("Batch complete: processed={}, skipped={}, lsn={}", processed, skipped, highest_applied);
     
