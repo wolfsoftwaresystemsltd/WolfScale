@@ -189,13 +189,27 @@ This command connects to your database, detects the current binlog position, and
 
 **Step-by-Step Setup:**
 
+0. **Enable Binary Logging** (if not already enabled):
+   
+   Add to `/etc/mysql/mariadb.conf.d/50-server.cnf` (or your MariaDB config):
+   ```ini
+   [mysqld]
+   log_bin = mysql-bin
+   binlog_format = MIXED
+   server_id = 1
+   ```
+   Then restart MariaDB:
+   ```bash
+   systemctl restart mariadb
+   ```
+
 1. **Initial Data Sync** (for new clusters without existing data):
    ```bash
    # On source database - dump with binlog position
-   mysqldump --single-transaction --master-data=2 --all-databases > dump.sql
+   mariadb-dump --single-transaction --master-data=2 --all-databases > dump.sql
    
    # Import on WolfScale target cluster
-   mysql < dump.sql
+   mariadb < dump.sql
    ```
 
 2. **Configure Binlog Mode:**
