@@ -595,8 +595,20 @@ async fn process_batch_background(
         tracing::debug!("Executing LSN {}: {}", entry.header.lsn, sql_preview);
         
         let start = std::time::Instant::now();
-        if let Err(e) = executor.execute_entry(&entry.entry).await {
-            tracing::warn!("Entry LSN {} failed: {} - continuing", entry.header.lsn, e);
+        // Use timeout to prevent indefinite hangs - DDL can sometimes block
+        let execute_result = tokio::time::timeout(
+            std::time::Duration::from_secs(30),
+            executor.execute_entry(&entry.entry)
+        ).await;
+        
+        match execute_result {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => {
+                tracing::warn!("Entry LSN {} failed: {} - continuing", entry.header.lsn, e);
+            }
+            Err(_) => {
+                tracing::error!("Entry LSN {} TIMED OUT after 30s - skipping: {}", entry.header.lsn, sql_preview);
+            }
         }
         let elapsed = start.elapsed();
         if elapsed > std::time::Duration::from_secs(1) {
