@@ -506,43 +506,97 @@ fn split_sql_statements(sql: &str) -> Vec<&str> {
     let mut start = 0;
     let mut in_string = false;
     let mut string_char = '"';
-    let mut escape_next = false;  // Track backslash escaping
+    let mut in_backtick = false;
+    let mut in_line_comment = false;
+    let mut in_block_comment = false;
+    let mut escape_next = false;
     let mut chars = sql.char_indices().peekable();
     
     while let Some((i, c)) = chars.next() {
+        // Handle escape sequences (only applies inside strings)
         if escape_next {
-            // This character is escaped, skip it
             escape_next = false;
             continue;
         }
         
+        // Check for end of line comment
+        if in_line_comment {
+            if c == '\n' {
+                in_line_comment = false;
+            }
+            continue;
+        }
+        
+        // Check for end of block comment
+        if in_block_comment {
+            if c == '*' && chars.peek().map(|(_, nc)| *nc == '/').unwrap_or(false) {
+                chars.next(); // consume the '/'
+                in_block_comment = false;
+            }
+            continue;
+        }
+        
+        // Inside a string literal
         if in_string {
             if c == '\\' {
-                // Backslash escapes the next character
                 escape_next = true;
             } else if c == string_char {
-                // Check for doubled quote escape (MySQL also supports this)
                 if chars.peek().map(|(_, nc)| *nc == string_char).unwrap_or(false) {
-                    chars.next(); // Skip the escaped quote
+                    chars.next(); // Skip doubled quote
                 } else {
                     in_string = false;
                 }
             }
-        } else {
-            match c {
-                '\'' | '"' => {
-                    in_string = true;
-                    string_char = c;
+            continue;
+        }
+        
+        // Inside backtick identifier
+        if in_backtick {
+            if c == '`' {
+                if chars.peek().map(|(_, nc)| *nc == '`').unwrap_or(false) {
+                    chars.next(); // Skip doubled backtick
+                } else {
+                    in_backtick = false;
                 }
-                ';' => {
-                    let stmt = sql[start..i].trim();
-                    if !stmt.is_empty() {
-                        statements.push(stmt);
-                    }
-                    start = i + 1;
-                }
-                _ => {}
             }
+            continue;
+        }
+        
+        // Normal parsing - not in string, comment, or backtick
+        match c {
+            '\'' | '"' => {
+                in_string = true;
+                string_char = c;
+            }
+            '`' => {
+                in_backtick = true;
+            }
+            '-' => {
+                // Check for -- line comment
+                if chars.peek().map(|(_, nc)| *nc == '-').unwrap_or(false) {
+                    chars.next();
+                    in_line_comment = true;
+                }
+            }
+            '/' => {
+                // Check for /* block comment
+                if chars.peek().map(|(_, nc)| *nc == '*').unwrap_or(false) {
+                    chars.next();
+                    in_block_comment = true;
+                }
+            }
+            '#' => {
+                // MySQL also uses # for line comments
+                in_line_comment = true;
+            }
+            ';' => {
+                let stmt = sql[start..i].trim();
+                if !stmt.is_empty() {
+                    statements.push(stmt);
+                }
+                start = i + 1;
+            }
+            _ => {}
         }
     }
     
