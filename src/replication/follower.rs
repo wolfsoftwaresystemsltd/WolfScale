@@ -53,7 +53,8 @@ pub struct FollowerNode {
     disable_auto_election: bool,
     /// Was this node previously a leader (prevents auto re-election)
     was_leader: RwLock<bool>,
-    // NOTE: entry_rx channel removed - entries now processed directly via handle_append_entries
+    /// Channel to receive entries from message loop (message loop can't call us directly - not Send)
+    entry_rx: tokio::sync::Mutex<Option<mpsc::Receiver<ReplicationBatch>>>,
 }
 
 impl FollowerNode {
@@ -92,6 +93,7 @@ impl FollowerNode {
             election,
             disable_auto_election,
             was_leader: RwLock::new(false),
+            entry_rx: tokio::sync::Mutex::new(None),
         }
     }
 
@@ -123,32 +125,82 @@ impl FollowerNode {
         node
     }
 
-    // NOTE: set_entry_receiver removed - entries now processed directly via handle_append_entries
+    /// Set the entry receiver channel (for receiving entries from message loop)
+    pub async fn set_entry_receiver(&self, rx: mpsc::Receiver<ReplicationBatch>) {
+        *self.entry_rx.lock().await = Some(rx);
+    }
 
     /// Start the follower loop
     /// 
-    /// This loop now only handles election timeouts.
-    /// Entry processing is done directly in the message handler via handle_append_entries.
+    /// This loop handles both entry processing AND election timeouts.
+    /// Entries come via channel from message loop (message loop can't call us directly - not Send)
     pub async fn start(&self) -> Result<()> {
         // Load last applied LSN from state
         let last_lsn = self.state_tracker.last_applied_lsn().await?;
         *self.last_applied_lsn.write().await = last_lsn;
         tracing::info!("Follower starting with last_applied_lsn={}", last_lsn);
 
-        // Simple monitoring loop - just check for leader timeouts
-        let check_interval = Duration::from_millis(self.config.heartbeat_interval_ms);
-        let mut interval = tokio::time::interval(check_interval);
+        // Monitoring loop - process entries AND check for leader timeouts
+        let heartbeat_check = Duration::from_millis(self.config.heartbeat_interval_ms * 2);
+        let mut loop_count: u64 = 0;
         
         loop {
-            interval.tick().await;
+            loop_count += 1;
+            if loop_count % 1000 == 1 {
+                tracing::debug!("Follower loop iteration {}", loop_count);
+            }
             
             if *self.shutdown.read().await {
                 break;
             }
 
-            // Check for leader timeout (may trigger election)
-            if let Err(e) = self.check_leader_timeout().await {
-                tracing::warn!("Leader timeout check failed: {}", e);
+            // Try to receive entries from channel
+            let maybe_batch = {
+                let mut guard = self.entry_rx.lock().await;
+                if let Some(ref mut rx) = *guard {
+                    rx.try_recv().ok()
+                } else {
+                    // Log once if channel not connected
+                    static LOGGED_NO_CHANNEL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+                    if !LOGGED_NO_CHANNEL.swap(true, std::sync::atomic::Ordering::Relaxed) {
+                        tracing::error!("Follower entry_rx channel not connected!");
+                    }
+                    None
+                }
+            };
+
+            // Process entries inline (no spawning - simpler and prevents memory issues)
+            if let Some(batch) = maybe_batch {
+                tracing::info!("Processing batch of {} entries (LSN {} to {})", 
+                    batch.entries.len(),
+                    batch.entries.first().map(|e| e.header.lsn).unwrap_or(0),
+                    batch.entries.last().map(|e| e.header.lsn).unwrap_or(0));
+                    
+                // Process inline using the helper function
+                process_batch_background(
+                    batch,
+                    Arc::clone(&self.executor),
+                    Arc::clone(&self.cluster),
+                    self.message_tx.clone(),
+                    self.node_id.clone(),
+                    Arc::clone(&self.last_applied_lsn),
+                ).await;
+                
+                // Immediately check for more entries (no sleep)
+                continue;
+            }
+
+            // No entries available, wait a bit before checking again
+            tokio::select! {
+                _ = tokio::time::sleep(Duration::from_millis(10)) => {
+                    // Short sleep between polls
+                }
+                _ = tokio::time::sleep(heartbeat_check) => {
+                    // Check for leader timeout periodically
+                    if let Err(e) = self.check_leader_timeout().await {
+                        tracing::warn!("Leader timeout check failed: {}", e);
+                    }
+                }
             }
         }
 
@@ -486,7 +538,7 @@ impl FollowerNode {
 }
 
 /// Standalone batch processing function for background execution.
-/// This runs in a spawned task to avoid blocking the follower's main loop.
+/// This runs inline to avoid blocking the follower's main loop.
 async fn process_batch_background(
     batch: ReplicationBatch,
     executor: Arc<MariaDbExecutor>,
@@ -565,6 +617,7 @@ async fn process_batch_background(
 }
 
 /// Send ACK in background processing
+#[allow(dead_code)]
 async fn send_ack_background(
     message_tx: &mpsc::Sender<(String, Message)>,
     batch: &ReplicationBatch,

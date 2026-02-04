@@ -319,18 +319,19 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     let shared_follower = Arc::new(RwLock::new(None::<Arc<FollowerNode>>));
     let shared_leader = Arc::new(RwLock::new(None::<Arc<LeaderNode>>));
 
-    // Shared entry channel - REMOVED: now using direct follower call
-    // Previous channel-based approach caused entries to pile up without processing
+    // Channel for forwarding entries from message loop to FollowerNode
+    // FollowerNode contains rusqlite which isn't Send, so we can't call it from spawned task
+    // Using channel to pass entries - follower loop processes them and sends ACK
+    let (entry_tx, entry_rx) = tokio::sync::mpsc::channel::<wolfscale::replication::ReplicationBatch>(100);
+    let shared_entry_rx = Arc::new(tokio::sync::Mutex::new(Some(entry_rx)));
 
     // Start INCOMING message processing loop - handles messages from peers
-    // Now uses shared_follower to process entries directly
     let incoming_cluster = Arc::clone(&cluster);
     tracing::info!("Message loop cluster Arc ptr: {:p}", Arc::as_ptr(&incoming_cluster));
     let response_tx = outgoing_tx.clone();  
     let our_node_id = config.node.id.clone();
     let incoming_heartbeat_time = Arc::clone(&shared_heartbeat_time);
-    let incoming_follower = Arc::clone(&shared_follower);
-
+    let incoming_entry_tx = entry_tx;
 
     tokio::spawn(async move {
         while let Some((peer_addr, message)) = incoming_rx.recv().await {
@@ -391,7 +392,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                         });
                     let _ = response_tx.send((leader_addr, response)).await;
                 }
-                wolfscale::replication::Message::AppendEntries { term, leader_id, prev_lsn, prev_term, entries, leader_commit_lsn } => {
+                wolfscale::replication::Message::AppendEntries { term, leader_id, prev_lsn: _, prev_term: _, entries, leader_commit_lsn: _ } => {
                     tracing::debug!("RECEIVED {} entries from leader {}", entries.len(), leader_id);
                     let _ = incoming_cluster.record_heartbeat(&leader_id, 0).await;
                     
@@ -416,21 +417,30 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                             }
                         });
                     
-                    // Process entries DIRECTLY via follower - no channel!
-                    // This is synchronous and sends ACK immediately after processing
-                    if let Some(follower) = incoming_follower.read().await.as_ref() {
-                        match follower.handle_append_entries(term, leader_id.clone(), prev_lsn, prev_term, entries, leader_commit_lsn).await {
-                            Ok(ack) => {
-                                // Send ACK back to leader
-                                let _ = response_tx.send((leader_addr, ack)).await;
+                    // Forward entries to FollowerNode for processing via channel
+                    // (FollowerNode isn't Send, so we can't call it directly from spawned task)
+                    // FollowerNode will process and send ACK after entries are applied
+                    if !entries.is_empty() {
+                        let batch = wolfscale::replication::ReplicationBatch {
+                            entries,
+                            term,
+                            leader_id,
+                            leader_address: leader_addr,
+                        };
+                        // Use try_send to avoid blocking message loop (which handles heartbeats)
+                        match incoming_entry_tx.try_send(batch) {
+                            Ok(()) => {
+                                tracing::debug!("Forwarded batch to follower processing");
+                            }
+                            Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => {
+                                tracing::warn!("Entry processing queue full - applying backpressure");
                             }
                             Err(e) => {
-                                tracing::error!("Failed to process entries: {}", e);
+                                tracing::error!("Failed to forward entries to follower: {}", e);
                             }
                         }
-                    } else {
-                        tracing::warn!("Follower not yet initialized, dropping {} entries", entries.len());
                     }
+                    // NOTE: No ACK here - FollowerNode sends ACK after processing
                 }
                 wolfscale::replication::Message::HeartbeatResponse { node_id, success, last_applied_lsn, .. } => {
                     // Leader receives response from follower - mark follower as active
@@ -617,8 +627,11 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
             config.cluster.disable_auto_election,
         ));
 
-        // Entry processing is now handled directly in message loop via handle_append_entries
-        // (Removed channel-based approach that caused entries to pile up)
+        // Connect the entry channel to the follower
+        // This allows the message loop to forward entries for processing
+        if let Some(rx) = shared_entry_rx.lock().await.take() {
+            follower.set_entry_receiver(rx).await;
+        }
 
         // Store in shared state for message delegation
         *shared_follower.write().await = Some(Arc::clone(&follower));

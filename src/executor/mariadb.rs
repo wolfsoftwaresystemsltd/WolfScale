@@ -130,6 +130,16 @@ impl MariaDbExecutor {
                         Error::Database(sqlx::Error::Configuration("No server pool".into()))
                     })?;
                     
+                    // For DROP DATABASE, close the db_pool first to release any metadata locks
+                    // held by idle pool connections (even idle connections can block DROP)
+                    if stmt.to_uppercase().starts_with("DROP DATABASE") {
+                        let mut pool_guard = self.pool.write().await;
+                        if let Some(pool) = pool_guard.take() {
+                            tracing::info!("Closing db_pool before DROP DATABASE");
+                            pool.close().await;
+                        }
+                    }
+                    
                     let start = std::time::Instant::now();
                     sqlx::query(stmt)
                         .execute(server_pool)

@@ -59,7 +59,7 @@ fi
 # Ensure cargo is in PATH
 export PATH="$HOME/.cargo/bin:$PATH"
 
-# Clone repository
+# Clone or update repository
 INSTALL_DIR="/opt/wolfscale-src"
 echo ""
 echo "Cloning WolfScale repository..."
@@ -67,7 +67,9 @@ echo "Cloning WolfScale repository..."
 if [ -d "$INSTALL_DIR" ]; then
     echo "  Updating existing installation..."
     cd "$INSTALL_DIR"
-    sudo git pull
+    # Use fetch + reset instead of pull to handle force-pushes cleanly
+    sudo git fetch origin
+    sudo git reset --hard origin/main
 else
     sudo git clone https://github.com/wolfsoftwaresystemsltd/WolfScale.git "$INSTALL_DIR"
     cd "$INSTALL_DIR"
