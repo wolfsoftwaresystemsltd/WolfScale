@@ -139,8 +139,14 @@ impl FollowerNode {
 
         // Start monitoring loop
         let heartbeat_check = Duration::from_millis(self.config.heartbeat_interval_ms * 2);
+        let mut loop_count: u64 = 0;
         
         loop {
+            loop_count += 1;
+            if loop_count % 100 == 1 {
+                tracing::info!("Follower loop iteration {}", loop_count);
+            }
+            
             if *self.shutdown.read().await {
                 break;
             }
@@ -152,6 +158,11 @@ impl FollowerNode {
                     // Use try_recv to avoid blocking - we'll sleep if nothing available
                     rx.try_recv().ok()
                 } else {
+                    // Log once if channel not connected
+                    static LOGGED_NO_CHANNEL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+                    if !LOGGED_NO_CHANNEL.swap(true, std::sync::atomic::Ordering::Relaxed) {
+                        tracing::error!("Follower entry_rx channel not connected!");
+                    }
                     None
                 }
             };
@@ -159,6 +170,11 @@ impl FollowerNode {
             // Process entries - push to processing channel (bounded to prevent memory leak)
             // If channel is full, this will block which provides natural backpressure
             if let Some(batch) = maybe_batch {
+                tracing::info!("Received batch of {} entries (LSN {} to {})", 
+                    batch.entries.len(),
+                    batch.entries.first().map(|e| e.header.lsn).unwrap_or(0),
+                    batch.entries.last().map(|e| e.header.lsn).unwrap_or(0));
+                    
                 // Clone Arc refs for processing
                 let executor = Arc::clone(&self.executor);
                 let cluster = Arc::clone(&self.cluster);
@@ -564,9 +580,23 @@ async fn process_batch_background(
             continue;
         }
         
-        // Execute the SQL
+        // Execute the SQL - log what we're doing
+        let sql_stmts = entry.entry.to_sql();
+        let sql_preview = if sql_stmts.is_empty() {
+            "noop".to_string()
+        } else {
+            let first = &sql_stmts[0];
+            if first.len() > 100 { format!("{}...", &first[..100]) } else { first.clone() }
+        };
+        tracing::debug!("Executing LSN {}: {}", entry.header.lsn, sql_preview);
+        
+        let start = std::time::Instant::now();
         if let Err(e) = executor.execute_entry(&entry.entry).await {
             tracing::warn!("Entry LSN {} failed: {} - continuing", entry.header.lsn, e);
+        }
+        let elapsed = start.elapsed();
+        if elapsed > std::time::Duration::from_secs(1) {
+            tracing::warn!("Entry LSN {} took {:.1}s to execute: {}", entry.header.lsn, elapsed.as_secs_f64(), sql_preview);
         }
         
         // Mark as processed regardless of success/failure
