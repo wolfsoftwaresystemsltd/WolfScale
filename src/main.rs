@@ -322,7 +322,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     // Channel for forwarding entries from message loop to FollowerNode
     // (We can't call FollowerNode methods directly due to Send trait constraints on rusqlite)
     // Uses ReplicationBatch so FollowerNode can send ACK after processing
-    let (entry_tx, entry_rx) = tokio::sync::mpsc::channel::<wolfscale::replication::ReplicationBatch>(100);
+    let (entry_tx, entry_rx) = tokio::sync::mpsc::channel::<wolfscale::replication::ReplicationBatch>(10000);
     let shared_entry_rx = Arc::new(tokio::sync::Mutex::new(Some(entry_rx)));
 
     // Start INCOMING message processing loop - handles messages from peers
