@@ -440,7 +440,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                             }
                             Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => {
                                 // Queue full - likely processing previous batch. Leader will resend.
-                                tracing::trace!("Queue full, dropping batch LSN {}-{} (will be resent)", first_lsn, last_lsn);
+                                tracing::warn!("Queue full, dropping batch LSN {}-{} (will be resent)", first_lsn, last_lsn);
                             }
                             Err(e) => {
                                 tracing::error!("Failed to forward entries to follower (channel closed): {}", e);
