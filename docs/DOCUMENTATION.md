@@ -187,7 +187,34 @@ wolfctl binlog-setup
 
 This command connects to your database, detects the current binlog position, and outputs the config snippet to add to your config.toml.
 
-**Important:** Only run WolfScale binlog mode on ONE node per cluster - all cluster nodes have identical data.
+**Step-by-Step Setup:**
+
+1. **Initial Data Sync** (for new clusters without existing data):
+   ```bash
+   # On source database - dump with binlog position
+   mysqldump --single-transaction --master-data=2 --all-databases > dump.sql
+   
+   # Import on WolfScale target cluster
+   mysql < dump.sql
+   ```
+
+2. **Configure Binlog Mode:**
+   ```bash
+   # Detect binlog position and generate config
+   wolfctl binlog-setup
+   
+   # Add the output to /etc/wolfscale/config.toml
+   ```
+
+3. **Start WolfScale:**
+   ```bash
+   systemctl restart wolfscale
+   
+   # Monitor replication
+   wolfctl stats
+   ```
+
+**Important:** Only run WolfScale binlog mode on ONE node per source cluster - all cluster nodes have identical data.
 
 ---
 
