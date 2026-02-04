@@ -932,16 +932,7 @@ fn draw_ascii_graph(history: &[f64], max_val: f64) {
     println!("          {:^width$}", "40s ago              now", width = graph_width);
 }
 
-/// Format throughput with appropriate units (K, M suffix)
-fn format_throughput(val: f64) -> (f64, &'static str) {
-    if val >= 1_000_000.0 {
-        (val / 1_000_000.0, "M")
-    } else if val >= 1_000.0 {
-        (val / 1_000.0, "K")
-    } else {
-        (val, " ")
-    }
-}
+
 
 /// Format duration as human-readable string
 fn format_duration(d: std::time::Duration) -> String {
