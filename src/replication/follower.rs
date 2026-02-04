@@ -55,6 +55,8 @@ pub struct FollowerNode {
     was_leader: RwLock<bool>,
     /// Channel to receive entries from message loop (due to Send trait constraints)
     entry_rx: tokio::sync::Mutex<Option<mpsc::Receiver<ReplicationBatch>>>,
+    /// Lock to ensure sequential batch processing (prevents out-of-order execution)
+    processing_lock: Arc<tokio::sync::Mutex<()>>,
 }
 
 impl FollowerNode {
@@ -94,6 +96,7 @@ impl FollowerNode {
             disable_auto_election,
             was_leader: RwLock::new(false),
             entry_rx: tokio::sync::Mutex::new(None),
+            processing_lock: Arc::new(tokio::sync::Mutex::new(())),
         }
     }
 
@@ -164,9 +167,12 @@ impl FollowerNode {
                 let message_tx = self.message_tx.clone();
                 let node_id = self.node_id.clone();
                 let last_applied_lsn = Arc::clone(&self.last_applied_lsn);
+                let processing_lock = Arc::clone(&self.processing_lock);
                 
                 // Spawn batch processing in background so heartbeats continue uninterrupted
+                // CRITICAL: Acquire lock to ensure sequential processing (prevents out-of-order execution)
                 tokio::spawn(async move {
+                    let _guard = processing_lock.lock().await;
                     process_batch_background(
                         batch,
                         executor,
