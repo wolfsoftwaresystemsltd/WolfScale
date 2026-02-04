@@ -460,6 +460,7 @@ async fn handle_ddl(
         LogEntry::RawSql {
             sql: req.ddl,
             affects_table: req.table,
+            database: None,
         }
     };
 

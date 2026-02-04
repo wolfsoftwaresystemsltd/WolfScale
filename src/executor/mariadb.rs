@@ -118,15 +118,35 @@ impl MariaDbExecutor {
 
         let statements = entry.to_sql();
         
+        // Acquire a SINGLE connection from the pool and use it for ALL statements
+        // This is critical: USE database only affects the connection it runs on,
+        // so we must keep using the same connection for the entire entry
+        let pool_guard = self.pool.read().await;
+        
+        // Acquire connection once at the start (if we have a pool)
+        let mut conn_opt = if let Some(p) = pool_guard.as_ref() {
+            match p.acquire().await {
+                Ok(c) => Some(c),
+                Err(e) => {
+                    tracing::warn!("Could not acquire connection: {}", e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+        drop(pool_guard);  // Release the read lock
+        
+        // For each SQL statement group
         for sql in statements {
             if sql.is_empty() {
                 continue;
             }
 
             // Split on semicolons to handle multi-statement SQL
-            // This is needed because sqlx doesn't support multi-statement queries
-            // and we may have "USE dbname; CREATE TABLE..." from replication
-            for single_stmt in split_sql_statements(&sql) {
+            let stmts: Vec<&str> = split_sql_statements(&sql);
+            
+            for single_stmt in stmts {
                 let stmt = single_stmt.trim();
                 if stmt.is_empty() {
                     continue;
@@ -134,21 +154,21 @@ impl MariaDbExecutor {
 
                 tracing::debug!("Executing: {}", &stmt[..stmt.len().min(100)]);
                 
-                // Use server pool for database-level DDL operations
-                // Note: DDL can be slow (DROP DATABASE with locks) - let it complete, just log
+                // Use server pool for database-level DDL operations (CREATE/DROP DATABASE)
                 if Self::is_database_ddl(stmt) {
                     tracing::info!("Executing DDL: {}", &stmt[..stmt.len().min(50)]);
                     let server_pool = self.server_pool.as_ref().ok_or_else(|| {
                         Error::Database(sqlx::Error::Configuration("No server pool".into()))
                     })?;
                     
-                    // For DROP DATABASE, close the db_pool first to release any metadata locks
-                    // held by idle pool connections (even idle connections can block DROP)
+                    // For DROP DATABASE, close the db_pool first to release metadata locks
                     if stmt.to_uppercase().starts_with("DROP DATABASE") {
-                        let mut pool_guard = self.pool.write().await;
-                        if let Some(pool) = pool_guard.take() {
+                        // Drop our held connection first
+                        conn_opt = None;
+                        let mut pool_write = self.pool.write().await;
+                        if let Some(p) = pool_write.take() {
                             tracing::info!("Closing db_pool before DROP DATABASE");
-                            pool.close().await;
+                            p.close().await;
                         }
                     }
                     
@@ -165,39 +185,42 @@ impl MariaDbExecutor {
                         tracing::warn!("DDL took {:.1}s: {}", elapsed.as_secs_f64(), &stmt[..stmt.len().min(50)]);
                     }
                     
-                    // If we just created a database that matches our config, reconnect db pool NOW (sync)
+                    // After CREATE DATABASE, try to reconnect db pool
                     if stmt.to_uppercase().starts_with("CREATE DATABASE") {
                         tracing::info!("CREATE DATABASE completed, reconnecting db_pool...");
                         if let Err(e) = self.try_reconnect_db_pool_sync().await {
                             tracing::warn!("Could not reconnect to database pool: {}", e);
                         }
-                    }
-                } else {
-                    // Normal statements use the database pool
-                    // If pool is None, try to reconnect first
-                    {
+                        // Re-acquire a connection for subsequent statements
                         let pool_guard = self.pool.read().await;
-                        if pool_guard.is_none() {
-                            drop(pool_guard);  // Release read lock before trying reconnect
-                            tracing::info!("Database pool not available, attempting to reconnect...");
-                            if let Err(e) = self.try_reconnect_db_pool_sync().await {
-                                tracing::warn!("Could not reconnect database pool: {}", e);
-                            }
+                        if let Some(p) = pool_guard.as_ref() {
+                            conn_opt = p.acquire().await.ok();
                         }
                     }
-                    
-                    let pool_guard = self.pool.read().await;
-                    let pool = pool_guard.as_ref().ok_or_else(|| {
-                        Error::Database(sqlx::Error::Configuration("No database pool available".into()))
-                    })?;
-                    
-                    sqlx::query(stmt)
-                        .execute(pool)
-                        .await
-                        .map_err(|e| {
-                            Error::QueryExecution(format!("Failed to execute '{}...': {}", 
-                                &stmt[..stmt.len().min(50)], e))
-                        })?;
+                } else {
+                    // Normal statements - use our held connection
+                    if let Some(ref mut conn) = conn_opt {
+                        sqlx::query(stmt)
+                            .execute(&mut **conn)
+                            .await
+                            .map_err(|e| {
+                                Error::QueryExecution(format!("Failed to execute '{}...': {}", 
+                                    &stmt[..stmt.len().min(50)], e))
+                            })?;
+                    } else {
+                        // Fallback: try server_pool
+                        if let Some(server_pool) = &self.server_pool {
+                            sqlx::query(stmt)
+                                .execute(server_pool)
+                                .await
+                                .map_err(|e| {
+                                    Error::QueryExecution(format!("Failed to execute (fallback) '{}...': {}", 
+                                        &stmt[..stmt.len().min(50)], e))
+                                })?;
+                        } else {
+                            return Err(Error::Database(sqlx::Error::Configuration("No connection available".into())));
+                        }
+                    }
                 }
             }
         }

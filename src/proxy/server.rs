@@ -554,6 +554,7 @@ async fn handle_connection(
                         let entry = LogEntry::RawSql {
                             sql: sql_for_wal,
                             affects_table: table_name,
+                            database: current_database.clone(),
                         };
                         
                         match wal.append(entry).await {

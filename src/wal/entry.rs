@@ -255,6 +255,8 @@ pub enum LogEntry {
     RawSql {
         sql: String,
         affects_table: Option<String>,
+        /// Database context (from USE statement) - prepended as USE before execution
+        database: Option<String>,
     },
 
     /// No-op entry (used for leader election heartbeats)
