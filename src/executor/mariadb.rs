@@ -123,12 +123,14 @@ impl MariaDbExecutor {
                 tracing::debug!("Executing: {}", &stmt[..stmt.len().min(100)]);
                 
                 // Use server pool for database-level DDL operations
+                // Note: DDL can be slow (DROP DATABASE with locks) - let it complete, just log
                 if Self::is_database_ddl(stmt) {
-                    tracing::info!("Using server pool for DDL: {}", &stmt[..stmt.len().min(50)]);
+                    tracing::info!("Executing DDL: {}", &stmt[..stmt.len().min(50)]);
                     let server_pool = self.server_pool.as_ref().ok_or_else(|| {
                         Error::Database(sqlx::Error::Configuration("No server pool".into()))
                     })?;
                     
+                    let start = std::time::Instant::now();
                     sqlx::query(stmt)
                         .execute(server_pool)
                         .await
@@ -136,6 +138,10 @@ impl MariaDbExecutor {
                             Error::QueryExecution(format!("Failed to execute DDL '{}...': {}", 
                                 &stmt[..stmt.len().min(50)], e))
                         })?;
+                    let elapsed = start.elapsed();
+                    if elapsed > Duration::from_secs(5) {
+                        tracing::warn!("DDL took {:.1}s: {}", elapsed.as_secs_f64(), &stmt[..stmt.len().min(50)]);
+                    }
                     
                     // If we just created a database that matches our config, try to reconnect db pool
                     if stmt.to_uppercase().starts_with("CREATE DATABASE") {

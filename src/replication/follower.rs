@@ -53,8 +53,7 @@ pub struct FollowerNode {
     disable_auto_election: bool,
     /// Was this node previously a leader (prevents auto re-election)
     was_leader: RwLock<bool>,
-    /// Channel to receive entries from message loop (due to Send trait constraints)
-    entry_rx: tokio::sync::Mutex<Option<mpsc::Receiver<ReplicationBatch>>>,
+    // NOTE: entry_rx channel removed - entries now processed directly via handle_append_entries
 }
 
 impl FollowerNode {
@@ -93,7 +92,6 @@ impl FollowerNode {
             election,
             disable_auto_election,
             was_leader: RwLock::new(false),
-            entry_rx: tokio::sync::Mutex::new(None),
         }
     }
 
@@ -125,88 +123,32 @@ impl FollowerNode {
         node
     }
 
-    /// Set the entry receiver channel (for receiving entries from message loop)
-    pub async fn set_entry_receiver(&self, rx: mpsc::Receiver<ReplicationBatch>) {
-        *self.entry_rx.lock().await = Some(rx);
-    }
+    // NOTE: set_entry_receiver removed - entries now processed directly via handle_append_entries
 
     /// Start the follower loop
+    /// 
+    /// This loop now only handles election timeouts.
+    /// Entry processing is done directly in the message handler via handle_append_entries.
     pub async fn start(&self) -> Result<()> {
         // Load last applied LSN from state
         let last_lsn = self.state_tracker.last_applied_lsn().await?;
         *self.last_applied_lsn.write().await = last_lsn;
         tracing::info!("Follower starting with last_applied_lsn={}", last_lsn);
 
-        // Start monitoring loop
-        let heartbeat_check = Duration::from_millis(self.config.heartbeat_interval_ms * 2);
-        let mut loop_count: u64 = 0;
+        // Simple monitoring loop - just check for leader timeouts
+        let check_interval = Duration::from_millis(self.config.heartbeat_interval_ms);
+        let mut interval = tokio::time::interval(check_interval);
         
         loop {
-            loop_count += 1;
-            if loop_count % 100 == 1 {
-                tracing::info!("Follower loop iteration {}", loop_count);
-            }
+            interval.tick().await;
             
             if *self.shutdown.read().await {
                 break;
             }
 
-            // Try to receive entries from channel
-            let maybe_batch = {
-                let mut guard = self.entry_rx.lock().await;
-                if let Some(ref mut rx) = *guard {
-                    // Use try_recv to avoid blocking - we'll sleep if nothing available
-                    rx.try_recv().ok()
-                } else {
-                    // Log once if channel not connected
-                    static LOGGED_NO_CHANNEL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-                    if !LOGGED_NO_CHANNEL.swap(true, std::sync::atomic::Ordering::Relaxed) {
-                        tracing::error!("Follower entry_rx channel not connected!");
-                    }
-                    None
-                }
-            };
-
-            // Process entries - push to processing channel (bounded to prevent memory leak)
-            // If channel is full, this will block which provides natural backpressure
-            if let Some(batch) = maybe_batch {
-                tracing::info!("Received batch of {} entries (LSN {} to {})", 
-                    batch.entries.len(),
-                    batch.entries.first().map(|e| e.header.lsn).unwrap_or(0),
-                    batch.entries.last().map(|e| e.header.lsn).unwrap_or(0));
-                    
-                // Clone Arc refs for processing
-                let executor = Arc::clone(&self.executor);
-                let cluster = Arc::clone(&self.cluster);
-                let message_tx = self.message_tx.clone();
-                let node_id = self.node_id.clone();
-                let last_applied_lsn = Arc::clone(&self.last_applied_lsn);
-                
-                // Process inline - simpler and prevents memory leak from spawned tasks
-                // The processing is async so it yields, allowing heartbeats to be received
-                process_batch_background(
-                    batch,
-                    executor,
-                    cluster,
-                    message_tx,
-                    node_id,
-                    last_applied_lsn,
-                ).await;
-                // Immediately check for more entries
-                continue;
-            }
-
-            // No entries available, wait a bit before checking again
-            tokio::select! {
-                _ = tokio::time::sleep(Duration::from_millis(10)) => {
-                    // Short sleep between polls
-                }
-                _ = tokio::time::sleep(heartbeat_check) => {
-                    // Check for leader timeout periodically
-                    if let Err(e) = self.check_leader_timeout().await {
-                        tracing::warn!("Leader timeout check failed: {}", e);
-                    }
-                }
+            // Check for leader timeout (may trigger election)
+            if let Err(e) = self.check_leader_timeout().await {
+                tracing::warn!("Leader timeout check failed: {}", e);
             }
         }
 
