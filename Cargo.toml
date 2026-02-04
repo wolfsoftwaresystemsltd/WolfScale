@@ -1,6 +1,6 @@
 [package]
 name = "wolfscale"
-version = "2.2.0"
+version = "3.0.0"
 edition = "2021"
 authors = ["WolfScale Team"]
 description = "Distributed MariaDB synchronization manager"
@@ -70,6 +70,7 @@ rand = "0.8"
 
 # MySQL protocol
 byteorder = "1"
+sha1 = "0.10"
 
 # Unix utilities (for root check)
 nix = { version = "0.27", features = ["user"] }

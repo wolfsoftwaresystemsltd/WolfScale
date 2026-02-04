@@ -33,6 +33,14 @@ pub struct WolfScaleConfig {
     /// MySQL proxy configuration
     #[serde(default)]
     pub proxy: ProxyConfig,
+    
+    /// Replication mode configuration
+    #[serde(default)]
+    pub replication: ReplicationModeConfig,
+    
+    /// Binlog configuration (when replication.mode = "binlog")
+    #[serde(default)]
+    pub binlog: BinlogConfig,
 }
 
 /// Node-specific configuration
@@ -193,6 +201,33 @@ pub struct ProxyConfig {
     pub bind_address: String,
 }
 
+/// Replication mode configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReplicationModeConfig {
+    /// Replication mode: "proxy" (default) or "binlog"
+    /// - proxy: Captures writes through WolfScale's MySQL proxy
+    /// - binlog: Reads from MariaDB's binary log (for external Galera clusters)
+    #[serde(default = "default_replication_mode")]
+    pub mode: String,
+}
+
+/// Binlog configuration (when replication.mode = "binlog")
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BinlogConfig {
+    /// Unique server ID for binlog replication
+    /// Must be unique across all MySQL replicas (including Galera nodes)
+    #[serde(default = "default_binlog_server_id")]
+    pub server_id: u32,
+    
+    /// Starting binlog file (optional - auto-detect from SHOW MASTER STATUS if not set)
+    #[serde(default)]
+    pub start_file: Option<String>,
+    
+    /// Starting binlog position (optional - uses current position if not set)
+    #[serde(default)]
+    pub start_position: Option<u64>,
+}
+
 // Default value functions
 fn default_db_port() -> u16 {
     3306
@@ -270,6 +305,14 @@ fn default_data_dir() -> PathBuf {
     PathBuf::from("/var/lib/wolfscale")
 }
 
+fn default_replication_mode() -> String {
+    "proxy".to_string()
+}
+
+fn default_binlog_server_id() -> u32 {
+    1001
+}
+
 impl Default for ApiConfig {
     fn default() -> Self {
         Self {
@@ -295,6 +338,24 @@ impl Default for ProxyConfig {
         Self {
             enabled: true,
             bind_address: default_proxy_address(),
+        }
+    }
+}
+
+impl Default for ReplicationModeConfig {
+    fn default() -> Self {
+        Self {
+            mode: default_replication_mode(),
+        }
+    }
+}
+
+impl Default for BinlogConfig {
+    fn default() -> Self {
+        Self {
+            server_id: default_binlog_server_id(),
+            start_file: None,
+            start_position: None,
         }
     }
 }

@@ -30,6 +30,7 @@ pub mod network;
 pub mod api;
 pub mod id;
 pub mod proxy;
+pub mod binlog;
 
 pub use config::WolfScaleConfig;
 pub use error::{Error, Result};

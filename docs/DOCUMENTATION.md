@@ -146,6 +146,31 @@ WolfScale replicates between clusters over WAN. Galera handles replication withi
 - The follower cluster is effectively read-only for replicated data
 - Plan for which cluster should be primary during normal operations
 
+### Binlog Replication Mode (v3.0+)
+
+For existing Galera clusters where you can't route writes through WolfScale's proxy, use **binlog mode** to capture writes directly from MariaDB's binary log:
+
+```toml
+[replication]
+mode = "binlog"  # Capture from binlog instead of proxy
+
+[binlog]
+server_id = 1001  # Unique ID (must not conflict with Galera node IDs)
+```
+
+**How it works:**
+1. WolfScale connects to MariaDB as a replica (like a MySQL slave)
+2. Reads the binary log stream in real-time
+3. Converts binlog events to WAL entries
+4. Replicates to WolfScale followers as normal
+
+**Requirements:**
+- MariaDB must have binary logging enabled (`log_bin = mysql-bin`)
+- Recommended: `binlog_format = MIXED` or `STATEMENT`
+- The `server_id` must be unique across all replicas
+
+**Important:** Only run WolfScale binlog mode on ONE node per Galera cluster - all Galera nodes have identical data.
+
 ---
 
 ## Cluster Communication
