@@ -60,6 +60,9 @@ pub struct LeaderNode {
     executor: Option<Arc<MariaDbExecutor>>,
     /// Shutdown signal
     shutdown: RwLock<bool>,
+    /// Track pending replication per peer - (sent_up_to_lsn, sent_at_time)
+    /// If pending, don't send more until ACK received
+    pending_replication: RwLock<std::collections::HashMap<String, (Lsn, std::time::Instant)>>,
 }
 
 impl LeaderNode {
@@ -89,6 +92,7 @@ impl LeaderNode {
             message_tx,
             executor,
             shutdown: RwLock::new(false),
+            pending_replication: RwLock::new(std::collections::HashMap::new()),
         }
     }
 
@@ -275,6 +279,23 @@ impl LeaderNode {
                 continue;
             }
 
+            // Check if this peer has pending replication (waiting for ACK)
+            // Skip if we're still waiting, unless it's been more than 5 seconds (stale)
+            {
+                let pending = self.pending_replication.read().await;
+                if let Some((pending_lsn, sent_at)) = pending.get(&peer.id) {
+                    let elapsed = sent_at.elapsed();
+                    if elapsed < std::time::Duration::from_secs(5) {
+                        tracing::trace!("Skipping peer {} - pending ACK for LSN {} ({}ms ago)", 
+                            peer.id, pending_lsn, elapsed.as_millis());
+                        continue;
+                    } else {
+                        tracing::warn!("Peer {} pending ACK timed out after {}s, will retry", 
+                            peer.id, elapsed.as_secs());
+                    }
+                }
+            }
+
             // Use the peer's last_applied_lsn from cluster membership (updated by ACKs in main.rs)
             // This is more reliable than internal next_lsn which requires handle_append_response to be called
             let next = peer.last_applied_lsn + 1;
@@ -294,6 +315,7 @@ impl LeaderNode {
                 continue;
             }
 
+            let batch_max_lsn = entries.last().map(|e| e.header.lsn).unwrap_or(next);
             tracing::debug!("Replicating {} entries starting at LSN {} to {}", entries.len(), next, peer.id);
 
             // Get prev entry info
@@ -317,6 +339,12 @@ impl LeaderNode {
                 leader_commit_lsn: commit_lsn,
             };
 
+            // Mark as pending BEFORE sending
+            {
+                let mut pending = self.pending_replication.write().await;
+                pending.insert(peer.id.clone(), (batch_max_lsn, std::time::Instant::now()));
+            }
+
             let _ = self.message_tx.send((peer.address.clone(), msg)).await;
         }
 
@@ -339,6 +367,12 @@ impl LeaderNode {
         }
 
         if success {
+            // Clear pending replication for this peer - they ACK'd, we can send more
+            {
+                let mut pending = self.pending_replication.write().await;
+                pending.remove(node_id);
+            }
+
             // Update match_lsn for this follower
             {
                 let mut matches = self.match_lsn.write().await;
@@ -361,6 +395,11 @@ impl LeaderNode {
             self.acknowledge_writes(match_lsn).await?;
         } else {
             // Follower rejected, decrement next_lsn and retry
+            // Also clear pending so we can retry
+            {
+                let mut pending = self.pending_replication.write().await;
+                pending.remove(node_id);
+            }
             let mut nexts = self.next_lsn.write().await;
             if let Some(next) = nexts.get_mut(node_id) {
                 if *next > 1 {
