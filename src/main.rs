@@ -545,6 +545,9 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     // Determine role BEFORE starting proxy
     // Priority-based election: lowest node ID is leader
     // Bootstrap flag forces this node to be leader (for initial cluster setup)
+    // Check BOTH CLI arg AND config file
+    let bootstrap = bootstrap || config.cluster.bootstrap;
+    
     let is_leader = if bootstrap {
         tracing::info!("Bootstrap mode - starting as leader");
         true
