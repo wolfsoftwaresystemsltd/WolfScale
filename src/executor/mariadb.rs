@@ -27,7 +27,7 @@ pub struct MariaDbExecutor {
 impl MariaDbExecutor {
     /// Create a new executor with a connection pool
     pub async fn new(config: &DatabaseConfig) -> Result<Self> {
-        // Server-level URL (no specific database)
+        // Server-level URL (no specific database) - always available
         let server_url = format!(
             "mysql://{}:{}@{}:{}",
             config.user,
@@ -36,35 +36,43 @@ impl MariaDbExecutor {
             config.port
         );
 
-        // Database-specific URL
-        let db_url = match &config.database {
-            Some(db) => format!(
-                "mysql://{}:{}@{}:{}/{}",
-                config.user,
-                config.password,
-                config.host,
-                config.port,
-                db
-            ),
-            None => server_url.clone(),
-        };
-
-        // Create server-level pool for DDL operations
+        // Create server-level pool for DDL operations - this always works
         let server_pool = MySqlPoolOptions::new()
             .max_connections(2)
             .acquire_timeout(Duration::from_secs(config.connect_timeout_secs))
             .connect(&server_url)
             .await?;
 
-        // Create database-level pool for normal operations
-        let db_pool = MySqlPoolOptions::new()
-            .max_connections(config.pool_size)
-            .acquire_timeout(Duration::from_secs(config.connect_timeout_secs))
-            .connect(&db_url)
-            .await?;
+        // Try to connect to database pool, but don't fail if database doesn't exist
+        let db_pool = if let Some(db) = &config.database {
+            let db_url = format!(
+                "mysql://{}:{}@{}:{}/{}",
+                config.user,
+                config.password,
+                config.host,
+                config.port,
+                db
+            );
+
+            match MySqlPoolOptions::new()
+                .max_connections(config.pool_size)
+                .acquire_timeout(Duration::from_secs(config.connect_timeout_secs))
+                .connect(&db_url)
+                .await
+            {
+                Ok(pool) => Some(pool),
+                Err(e) => {
+                    tracing::warn!("Could not connect to database '{}': {}. Will connect later.", db, e);
+                    None
+                }
+            }
+        } else {
+            // No specific database - use server pool for everything
+            Some(server_pool.clone())
+        };
 
         Ok(Self {
-            pool: Arc::new(RwLock::new(Some(db_pool))),
+            pool: Arc::new(RwLock::new(db_pool)),
             server_pool: Some(server_pool),
             config: Some(config.clone()),
             is_mock: false,
@@ -157,34 +165,47 @@ impl MariaDbExecutor {
     }
 
     /// Try to reconnect the database pool after CREATE DATABASE
+    /// This is spawned as a background task to avoid blocking entry processing
     async fn try_reconnect_db_pool(&self) -> Result<()> {
-        let config = self.config.as_ref().ok_or_else(|| {
-            Error::Database(sqlx::Error::Configuration("No config for reconnection".into()))
-        })?;
+        let config = match self.config.as_ref() {
+            Some(c) => c.clone(),
+            None => return Ok(()),  // No config, nothing to do
+        };
 
-        if let Some(db) = &config.database {
-            let db_url = format!(
-                "mysql://{}:{}@{}:{}/{}",
-                config.user,
-                config.password,
-                config.host,
-                config.port,
-                db
-            );
+        let pool = Arc::clone(&self.pool);
+        
+        // Spawn reconnection in background to not block entry processing
+        tokio::spawn(async move {
+            if let Some(db) = &config.database {
+                let db_url = format!(
+                    "mysql://{}:{}@{}:{}/{}",
+                    config.user,
+                    config.password,
+                    config.host,
+                    config.port,
+                    db
+                );
 
-            tracing::info!("Attempting to reconnect database pool to {}", db);
-            
-            let new_pool = MySqlPoolOptions::new()
-                .max_connections(config.pool_size)
-                .acquire_timeout(Duration::from_secs(config.connect_timeout_secs))
-                .connect(&db_url)
-                .await?;
-
-            let mut pool_guard = self.pool.write().await;
-            *pool_guard = Some(new_pool);
-            
-            tracing::info!("Successfully reconnected database pool");
-        }
+                tracing::info!("Attempting to reconnect database pool to {} (background)", db);
+                
+                // Use short timeout - if it fails, we'll try again later
+                match MySqlPoolOptions::new()
+                    .max_connections(config.pool_size)
+                    .acquire_timeout(Duration::from_secs(5))
+                    .connect(&db_url)
+                    .await
+                {
+                    Ok(new_pool) => {
+                        let mut pool_guard = pool.write().await;
+                        *pool_guard = Some(new_pool);
+                        tracing::info!("Successfully reconnected database pool");
+                    }
+                    Err(e) => {
+                        tracing::warn!("Background pool reconnection failed: {}. Will retry on next CREATE DATABASE.", e);
+                    }
+                }
+            }
+        });
 
         Ok(())
     }
