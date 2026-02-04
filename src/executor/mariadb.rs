@@ -4,6 +4,7 @@
 
 use std::sync::Arc;
 use std::time::Duration;
+use std::collections::HashMap;
 use sqlx::{MySqlPool, Row};
 use sqlx::mysql::MySqlPoolOptions;
 use tokio::sync::RwLock;
@@ -18,6 +19,8 @@ pub struct MariaDbExecutor {
     pool: Arc<RwLock<Option<MySqlPool>>>,
     /// Server-level connection pool (for DDL operations like DROP/CREATE DATABASE)
     server_pool: Option<MySqlPool>,
+    /// Cache of database-specific pools (created on demand for replication)
+    db_pools: Arc<RwLock<HashMap<String, MySqlPool>>>,
     /// Config for reconnection
     config: Option<DatabaseConfig>,
     /// Whether this is a mock executor (for testing)
@@ -86,6 +89,7 @@ impl MariaDbExecutor {
         Ok(Self {
             pool: Arc::new(RwLock::new(db_pool)),
             server_pool: Some(server_pool),
+            db_pools: Arc::new(RwLock::new(HashMap::new())),
             config: Some(config.clone()),
             is_mock: false,
         })
@@ -96,6 +100,7 @@ impl MariaDbExecutor {
         Self {
             pool: Arc::new(RwLock::new(None)),
             server_pool: None,
+            db_pools: Arc::new(RwLock::new(HashMap::new())),
             config: None,
             is_mock: true,
         }
@@ -110,40 +115,119 @@ impl MariaDbExecutor {
         upper.starts_with("DROP SCHEMA")
     }
 
+    /// Get or create a connection pool for a specific database
+    /// This is used when replicating entries that target a specific database
+    async fn get_or_create_db_pool(&self, database: &str) -> Result<MySqlPool> {
+        // First check if we already have a pool for this database
+        {
+            let pools = self.db_pools.read().await;
+            if let Some(pool) = pools.get(database) {
+                return Ok(pool.clone());
+            }
+        }
+
+        // Need to create a new pool - get config
+        let config = self.config.as_ref().ok_or_else(|| {
+            Error::Database(sqlx::Error::Configuration("No config available to create pool".into()))
+        })?;
+
+        let db_url = format!(
+            "mysql://{}:{}@{}:{}/{}",
+            config.user,
+            config.password,
+            config.host,
+            config.port,
+            database
+        );
+
+        tracing::info!("Creating on-demand connection pool for database '{}'", database);
+
+        let pool = MySqlPoolOptions::new()
+            .max_connections(config.pool_size)
+            .acquire_timeout(Duration::from_secs(config.connect_timeout_secs))
+            .connect(&db_url)
+            .await
+            .map_err(|e| {
+                Error::Database(sqlx::Error::Configuration(
+                    format!("Failed to connect to database '{}': {}", database, e).into()
+                ))
+            })?;
+
+        // Store in cache
+        {
+            let mut pools = self.db_pools.write().await;
+            pools.insert(database.to_string(), pool.clone());
+        }
+
+        tracing::info!("Successfully created pool for database '{}'", database);
+        Ok(pool)
+    }
+
+    /// Invalidate (remove) a cached database pool - called after DROP DATABASE
+    async fn invalidate_db_pool(&self, database: &str) {
+        let mut pools = self.db_pools.write().await;
+        if let Some(pool) = pools.remove(database) {
+            tracing::info!("Invalidating pool for dropped database '{}'", database);
+            pool.close().await;
+        }
+    }
+
     /// Execute a log entry
     pub async fn execute_entry(&self, entry: &LogEntry) -> Result<()> {
         if self.is_mock {
             return Ok(());
         }
 
-        let statements = entry.to_sql();
-        
-        // Acquire a SINGLE connection from the pool and use it for ALL statements
-        // This is critical: USE database only affects the connection it runs on,
-        // so we must keep using the same connection for the entire entry
-        let pool_guard = self.pool.read().await;
-        
-        // Acquire connection once at the start (if we have a pool)
-        let mut conn_opt = if let Some(p) = pool_guard.as_ref() {
-            match p.acquire().await {
+        // Extract database name from entry (only RawSql has this field currently)
+        let target_database = match entry {
+            LogEntry::RawSql { database, .. } => database.clone(),
+            _ => None,
+        };
+
+        // Get the appropriate pool for this entry
+        // If entry specifies a database, try to get/create a pool for that database
+        // Otherwise fall back to the main pool or server pool
+        let pool_to_use: Option<MySqlPool> = if let Some(ref db_name) = target_database {
+            // Entry specifies a database - create a pool for it on demand
+            match self.get_or_create_db_pool(db_name).await {
+                Ok(pool) => {
+                    tracing::debug!("Using database-specific pool for '{}'", db_name);
+                    Some(pool)
+                }
+                Err(e) => {
+                    tracing::warn!("Could not get pool for database '{}': {}", db_name, e);
+                    None
+                }
+            }
+        } else {
+            // No specific database - use the main pool
+            let pool_guard = self.pool.read().await;
+            pool_guard.clone()
+        };
+
+        // Acquire a connection from the chosen pool
+        let mut conn_opt = if let Some(ref pool) = pool_to_use {
+            match pool.acquire().await {
                 Ok(c) => Some(c),
                 Err(e) => {
-                    tracing::warn!("Could not acquire connection: {}", e);
+                    tracing::warn!("Could not acquire connection from pool: {}", e);
                     None
                 }
             }
         } else {
             None
         };
-        drop(pool_guard);  // Release the read lock
+
+        let statements = entry.to_sql();
         
-        // For each SQL statement group
+        // For each SQL statement
         for sql in statements {
             if sql.is_empty() {
                 continue;
             }
 
             // Split on semicolons to handle multi-statement SQL
+            // IMPORTANT: Skip USE statements since we're now using database-specific pools
             let stmts: Vec<&str> = split_sql_statements(&sql);
             
             for single_stmt in stmts {
@@ -152,7 +236,14 @@ impl MariaDbExecutor {
                     continue;
                 }
 
-                tracing::debug!("Executing: {}", &stmt[..stmt.len().min(100)]);
+                // Skip USE statements - we handle database selection via pools now
+                let upper = stmt.to_uppercase();
+                if upper.starts_with("USE ") || upper.starts_with("USE`") {
+                    tracing::debug!("Skipping USE statement (using database-specific pool instead): {}", stmt);
+                    continue;
+                }
+
+                tracing::debug!("Executing on db={:?}: {}", target_database, &stmt[..stmt.len().min(80)]);
                 
                 // Use server pool for database-level DDL operations (CREATE/DROP DATABASE)
                 if Self::is_database_ddl(stmt) {
@@ -161,18 +252,21 @@ impl MariaDbExecutor {
                         Error::Database(sqlx::Error::Configuration("No server pool".into()))
                     })?;
                     
-                    // CRITICAL: Before any DDL, drop the db_pool connection to ensure
-                    // all previous statements have completed. DDL on server_pool would
-                    // otherwise race with pending statements on db_pool.
+                    // Release any held connection before DDL
                     if conn_opt.is_some() {
-                        tracing::info!("Releasing db_pool connection before DDL to ensure ordering");
+                        tracing::info!("Releasing connection before DDL to ensure ordering");
                         conn_opt = None;
-                        // Give MariaDB a moment to finish any pending operations
                         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
                     }
                     
-                    // For DROP DATABASE, also close the entire pool to release metadata locks
-                    if stmt.to_uppercase().starts_with("DROP DATABASE") {
+                    // For DROP DATABASE, invalidate the cached pool for that database
+                    if upper.starts_with("DROP DATABASE") {
+                        // Extract database name from DROP DATABASE statement
+                        let db_name = extract_database_name_from_ddl(stmt);
+                        if let Some(db) = db_name {
+                            self.invalidate_db_pool(&db).await;
+                        }
+                        // Also close the main pool if it was connected to this database
                         let mut pool_write = self.pool.write().await;
                         if let Some(p) = pool_write.take() {
                             tracing::info!("Closing db_pool before DROP DATABASE");
@@ -193,16 +287,11 @@ impl MariaDbExecutor {
                         tracing::warn!("DDL took {:.1}s: {}", elapsed.as_secs_f64(), &stmt[..stmt.len().min(50)]);
                     }
                     
-                    // After CREATE DATABASE, try to reconnect db pool
-                    if stmt.to_uppercase().starts_with("CREATE DATABASE") {
+                    // After CREATE DATABASE, try to reconnect main db pool
+                    if upper.starts_with("CREATE DATABASE") {
                         tracing::info!("CREATE DATABASE completed, reconnecting db_pool...");
                         if let Err(e) = self.try_reconnect_db_pool_sync().await {
                             tracing::warn!("Could not reconnect to database pool: {}", e);
-                        }
-                        // Re-acquire a connection for subsequent statements
-                        let pool_guard = self.pool.read().await;
-                        if let Some(p) = pool_guard.as_ref() {
-                            conn_opt = p.acquire().await.ok();
                         }
                     }
                 } else {
@@ -216,15 +305,28 @@ impl MariaDbExecutor {
                                     &stmt[..stmt.len().min(50)], e))
                             })?;
                     } else {
-                        // Fallback: try server_pool
+                        // No database-specific pool - try server_pool as fallback
                         if let Some(server_pool) = &self.server_pool {
-                            sqlx::query(stmt)
-                                .execute(server_pool)
-                                .await
-                                .map_err(|e| {
-                                    Error::QueryExecution(format!("Failed to execute (fallback) '{}...': {}", 
-                                        &stmt[..stmt.len().min(50)], e))
-                                })?;
+                            // Acquire and hold a connection from server_pool
+                            match server_pool.acquire().await {
+                                Ok(mut server_conn) => {
+                                    sqlx::query(stmt)
+                                        .execute(&mut *server_conn)
+                                        .await
+                                        .map_err(|e| {
+                                            Error::QueryExecution(format!("Failed to execute (fallback) '{}...': {}", 
+                                                &stmt[..stmt.len().min(50)], e))
+                                        })?;
+                                    // Keep this connection for subsequent statements
+                                    conn_opt = Some(server_conn.into());
+                                }
+                                Err(e) => {
+                                    return Err(Error::QueryExecution(format!(
+                                        "No database connection available for '{}...': {}",
+                                        &stmt[..stmt.len().min(50)], e
+                                    )));
+                                }
+                            }
                         } else {
                             return Err(Error::Database(sqlx::Error::Configuration("No connection available".into())));
                         }
@@ -505,6 +607,48 @@ mod tests {
         assert!(sql[0].contains("`users`"));
         assert!(sql[0].contains("'Alice'"));
     }
+}
+
+/// Extract database name from a CREATE/DROP DATABASE statement
+fn extract_database_name_from_ddl(stmt: &str) -> Option<String> {
+    let upper = stmt.trim().to_uppercase();
+    let stmt_trimmed = stmt.trim();
+    
+    // Handle DROP DATABASE [IF EXISTS] `dbname`
+    // Handle CREATE DATABASE [IF NOT EXISTS] `dbname`
+    let keywords = ["DROP DATABASE", "DROP SCHEMA", "CREATE DATABASE", "CREATE SCHEMA"];
+    
+    for kw in &keywords {
+        if upper.starts_with(kw) {
+            let rest = &stmt_trimmed[kw.len()..].trim_start();
+            
+            // Skip IF EXISTS / IF NOT EXISTS
+            let rest = if rest.to_uppercase().starts_with("IF EXISTS") {
+                rest[9..].trim_start()
+            } else if rest.to_uppercase().starts_with("IF NOT EXISTS") {
+                rest[13..].trim_start()
+            } else {
+                rest
+            };
+            
+            // Extract the database name (may be backtick-quoted or unquoted)
+            let db_name = if rest.starts_with('`') {
+                // Backtick-quoted
+                let end = rest[1..].find('`').map(|i| i + 1)?;
+                &rest[1..end]
+            } else {
+                // Unquoted - take until whitespace or semicolon
+                rest.split(|c: char| c.is_whitespace() || c == ';')
+                    .next()?
+            };
+            
+            if !db_name.is_empty() {
+                return Some(db_name.to_string());
+            }
+        }
+    }
+    
+    None
 }
 
 /// Split SQL string on semicolons, respecting string literals

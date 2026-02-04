@@ -534,25 +534,10 @@ async fn handle_connection(
                     if let Some(ref wal) = wal_writer {
                         let table_name = extract_table_name(query);
                         
-                        // Build SQL with database context for replication
-                        // This ensures followers execute in the correct database
-                        let sql_for_wal = if let Some(ref db) = current_database {
-                            let upper = query.trim().to_uppercase();
-                            // Don't prepend USE for database-level operations or USE itself
-                            if upper.starts_with("USE ") || 
-                               upper.starts_with("CREATE DATABASE") || 
-                               upper.starts_with("DROP DATABASE") ||
-                               upper.starts_with("ALTER DATABASE") {
-                                query.clone()
-                            } else {
-                                format!("USE `{}`; {}", db, query)
-                            }
-                        } else {
-                            query.clone()
-                        };
-                        
+                        // Store the query with database context for replication
+                        // Followers will use the database field to create appropriate connections
                         let entry = LogEntry::RawSql {
-                            sql: sql_for_wal,
+                            sql: query.clone(),
                             affects_table: table_name,
                             database: current_database.clone(),
                         };
