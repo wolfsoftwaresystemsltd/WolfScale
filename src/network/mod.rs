@@ -11,6 +11,9 @@ pub use client::NetworkClient;
 use crate::replication::{Message, FrameHeader};
 use crate::error::{Error, Result};
 
+/// Maximum allowed message size (1 GB) - prevents memory exhaustion from malformed messages
+const MAX_MESSAGE_SIZE: usize = 1024 * 1024 * 1024;
+
 /// Read a framed message from a reader
 pub async fn read_message<R: tokio::io::AsyncRead + Unpin>(reader: &mut R) -> Result<Message> {
     use tokio::io::AsyncReadExt;
@@ -20,8 +23,24 @@ pub async fn read_message<R: tokio::io::AsyncRead + Unpin>(reader: &mut R) -> Re
     reader.read_exact(&mut header_bytes).await?;
     let header = FrameHeader::from_bytes(&header_bytes);
 
+    // Safety check for message size - prevent memory exhaustion
+    let msg_len = header.length as usize;
+    if msg_len > MAX_MESSAGE_SIZE {
+        return Err(Error::Network(format!(
+            "Message too large: {} bytes (max {} bytes)", 
+            msg_len, MAX_MESSAGE_SIZE
+        )));
+    }
+    
+    // Log large messages for debugging
+    if msg_len > 10 * 1024 * 1024 {
+        tracing::warn!("Receiving large message: {} MB", msg_len / (1024 * 1024));
+    } else if msg_len > 1024 * 1024 {
+        tracing::debug!("Receiving large message: {} KB", msg_len / 1024);
+    }
+
     // Read body
-    let mut body = vec![0u8; header.length as usize];
+    let mut body = vec![0u8; msg_len];
     reader.read_exact(&mut body).await?;
 
     // Verify checksum

@@ -239,20 +239,20 @@ impl Message {
 /// Frame header for length-prefixed messages
 #[derive(Debug, Clone, Copy)]
 pub struct FrameHeader {
-    /// Message length
-    pub length: u32,
+    /// Message length (u64 to support very large messages)
+    pub length: u64,
     /// Message checksum
     pub checksum: u32,
 }
 
 impl FrameHeader {
-    /// Header size in bytes
-    pub const SIZE: usize = 8;
+    /// Header size in bytes (8 for u64 length + 4 for checksum + 4 padding = 16)
+    pub const SIZE: usize = 16;
 
     /// Create a new frame header
     pub fn new(data: &[u8]) -> Self {
         Self {
-            length: data.len() as u32,
+            length: data.len() as u64,
             checksum: crc32fast::hash(data),
         }
     }
@@ -260,16 +260,17 @@ impl FrameHeader {
     /// Serialize header to bytes
     pub fn to_bytes(&self) -> [u8; Self::SIZE] {
         let mut bytes = [0u8; Self::SIZE];
-        bytes[0..4].copy_from_slice(&self.length.to_le_bytes());
-        bytes[4..8].copy_from_slice(&self.checksum.to_le_bytes());
+        bytes[0..8].copy_from_slice(&self.length.to_le_bytes());
+        bytes[8..12].copy_from_slice(&self.checksum.to_le_bytes());
+        // bytes[12..16] reserved for future use
         bytes
     }
 
     /// Deserialize header from bytes
     pub fn from_bytes(bytes: &[u8; Self::SIZE]) -> Self {
         Self {
-            length: u32::from_le_bytes(bytes[0..4].try_into().unwrap()),
-            checksum: u32::from_le_bytes(bytes[4..8].try_into().unwrap()),
+            length: u64::from_le_bytes(bytes[0..8].try_into().unwrap()),
+            checksum: u32::from_le_bytes(bytes[8..12].try_into().unwrap()),
         }
     }
 }
