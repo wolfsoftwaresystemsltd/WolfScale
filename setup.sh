@@ -70,6 +70,11 @@ if [ -d "$INSTALL_DIR" ]; then
     # Use fetch + reset instead of pull to handle force-pushes cleanly
     sudo git fetch origin
     sudo git reset --hard origin/main
+    # Clear logs to prevent huge log files from accumulating
+    if [ -f "/var/log/wolfscale/wolfscale.log" ]; then
+        echo "  Clearing logs..."
+        sudo truncate -s 0 /var/log/wolfscale/wolfscale.log
+    fi
 else
     sudo git clone https://github.com/wolfsoftwaresystemsltd/WolfScale.git "$INSTALL_DIR"
     cd "$INSTALL_DIR"

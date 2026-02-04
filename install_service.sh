@@ -221,6 +221,13 @@ ReadWritePaths=/var/lib/wolfscale /var/log/wolfscale
 WantedBy=multi-user.target
 EOF
 
+# Install logrotate configuration
+LOGROTATE_SRC="$SCRIPT_DIR/wolfscale.logrotate"
+if [ -f "$LOGROTATE_SRC" ]; then
+    cp "$LOGROTATE_SRC" /etc/logrotate.d/wolfscale
+    echo "Installed log rotation configuration"
+fi
+
 # Reload systemd
 systemctl daemon-reload
 

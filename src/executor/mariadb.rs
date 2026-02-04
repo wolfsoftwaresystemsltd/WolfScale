@@ -67,8 +67,9 @@ impl MariaDbExecutor {
                 }
             }
         } else {
-            // No specific database - use server pool for everything
-            Some(server_pool.clone())
+            // No specific database configured - DDL will use server_pool directly
+            // Don't clone server_pool here as closing the clone would close server_pool too
+            None
         };
 
         Ok(Self {
