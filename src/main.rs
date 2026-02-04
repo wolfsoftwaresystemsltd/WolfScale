@@ -431,11 +431,16 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                             leader_id: leader_id.clone(),
                             leader_address: leader_addr,
                         };
-                        // Use blocking send - will wait until there's space in the channel.
-                        // Back-pressure naturally slows processing when follower can't keep up.
-                        match incoming_entry_tx.send(batch).await {
+                        // Use try_send - CRITICAL: Must not block the message loop!
+                        // If queue is full, we're receiving faster than processing.
+                        // Leader will resend if ACK times out, so dropping here is safe.
+                        match incoming_entry_tx.try_send(batch) {
                             Ok(()) => {
                                 tracing::debug!("Forwarded batch LSN {}-{} to follower processing", first_lsn, last_lsn);
+                            }
+                            Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => {
+                                // Queue full - likely processing previous batch. Leader will resend.
+                                tracing::trace!("Queue full, dropping batch LSN {}-{} (will be resent)", first_lsn, last_lsn);
                             }
                             Err(e) => {
                                 tracing::error!("Failed to forward entries to follower (channel closed): {}", e);
