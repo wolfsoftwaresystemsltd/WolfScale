@@ -288,17 +288,29 @@ impl LeaderNode {
 
             // Check if this peer has pending replication (waiting for ACK)
             // Skip if we're still waiting, unless it's been more than 5 seconds (stale)
+            // OR the peer's LSN has advanced (meaning ACK was received via cluster membership)
             {
-                let pending = self.pending_replication.read().await;
+                let mut pending = self.pending_replication.write().await;
                 if let Some((pending_lsn, sent_at)) = pending.get(&peer.id) {
-                    let elapsed = sent_at.elapsed();
-                    if elapsed < std::time::Duration::from_secs(5) {
-                        tracing::trace!("Skipping peer {} - pending ACK for LSN {} ({}ms ago)", 
-                            peer.id, pending_lsn, elapsed.as_millis());
-                        continue;
+                    // Check if peer's LSN has advanced past our pending LSN
+                    // This means ACK was received and processed via cluster membership
+                    if peer.last_applied_lsn >= *pending_lsn {
+                        tracing::debug!("Peer {} ACK received (lsn {} >= pending {}), clearing pending", 
+                            peer.id, peer.last_applied_lsn, pending_lsn);
+                        pending.remove(&peer.id);
+                        // Continue to send next batch
                     } else {
-                        tracing::warn!("Peer {} pending ACK timed out after {}s, will retry", 
-                            peer.id, elapsed.as_secs());
+                        let elapsed = sent_at.elapsed();
+                        if elapsed < std::time::Duration::from_secs(5) {
+                            tracing::trace!("Skipping peer {} - pending ACK for LSN {} ({}ms ago)", 
+                                peer.id, pending_lsn, elapsed.as_millis());
+                            continue;
+                        } else {
+                            tracing::warn!("Peer {} pending ACK timed out after {}s (at lsn {}, pending {}), will retry", 
+                                peer.id, elapsed.as_secs(), peer.last_applied_lsn, pending_lsn);
+                            // Clear the stale pending entry so we can retry
+                            pending.remove(&peer.id);
+                        }
                     }
                 }
             }

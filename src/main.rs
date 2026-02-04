@@ -492,6 +492,10 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                             let _ = incoming_cluster.add_peer(node_id.clone(), follower_addr).await;
                         }
                         let _ = incoming_cluster.record_heartbeat(&node_id, match_lsn).await;
+                        
+                        // Note: We rely on the leader's replication loop checking peer.last_applied_lsn
+                        // to detect that ACKs have been received via cluster membership updates
+                        
                         // Verify the update was recorded
                         if let Some(updated_node) = incoming_cluster.get_node(&node_id).await {
                             tracing::debug!("Follower {} acknowledged up to LSN {}, cluster now shows lsn={}", 
