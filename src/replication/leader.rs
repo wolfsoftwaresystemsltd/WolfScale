@@ -103,6 +103,13 @@ impl LeaderNode {
         // Set ourselves as leader
         self.cluster.set_leader(&self.node_id).await?;
 
+        // Initialize our own LSN from WAL - critical for restart recovery
+        let current_lsn = self.wal_writer.current_lsn().await;
+        if current_lsn > 0 {
+            tracing::info!("Leader initializing with WAL at LSN {}", current_lsn);
+            let _ = self.cluster.record_heartbeat(&self.node_id, current_lsn).await;
+        }
+
         // Initialize follower state
         self.initialize_follower_state().await?;
 
