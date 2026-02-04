@@ -373,6 +373,94 @@ impl ElectionCoordinator {
 
         Ok(())
     }
+    
+    /// Check if this node should reclaim leadership (returning higher-priority node)
+    /// Returns true if we have the lowest ID and are caught up with the current leader
+    pub async fn should_reclaim_leadership(&self) -> bool {
+        // Only followers can reclaim leadership
+        if *self.state.read().await != ElectionState::Follower {
+            return false;
+        }
+        
+        // Check if we have the lowest ID
+        if !self.has_lowest_id().await {
+            return false;
+        }
+        
+        // Check if we're caught up with the leader
+        let leader_opt = self.cluster.current_leader().await;
+        if leader_opt.is_none() {
+            // No leader, we can become leader
+            return true;
+        }
+        
+        let leader = leader_opt.unwrap();
+        let self_node = self.cluster.get_self().await;
+        
+        // We must be caught up (our LSN >= leader's LSN) and active
+        if self_node.status != crate::state::NodeStatus::Active {
+            tracing::debug!("Not reclaiming leadership - not fully synced (status: {:?})", self_node.status);
+            return false;
+        }
+        
+        // Check if our LSN is at least as high as the leader's
+        if self_node.last_applied_lsn < leader.last_applied_lsn {
+            tracing::debug!(
+                "Not reclaiming leadership - behind leader (our: {}, leader: {})",
+                self_node.last_applied_lsn, leader.last_applied_lsn
+            );
+            return false;
+        }
+        
+        tracing::info!(
+            "Node {} is eligible to reclaim leadership (lowest ID and caught up at LSN {})",
+            self.node_id, self_node.last_applied_lsn
+        );
+        true
+    }
+    
+    /// Check if current leader should yield to a higher-priority (lower-ID) node
+    /// Returns Some(node_id) if a lower-ID node is caught up and should become leader
+    pub async fn should_yield_leadership(&self) -> Option<String> {
+        // Only leaders need to check this
+        if *self.state.read().await != ElectionState::Leader {
+            return None;
+        }
+        
+        let self_node = self.cluster.get_self().await;
+        let peers = self.cluster.peers().await;
+        
+        for peer in peers {
+            // Skip synthetic peers
+            if peer.id.starts_with("peer-") {
+                continue;
+            }
+            // Skip dropped/offline nodes
+            if peer.status == crate::state::NodeStatus::Dropped 
+                || peer.status == crate::state::NodeStatus::Offline {
+                continue;
+            }
+            
+            // Check if this peer has a lower ID (higher priority)
+            if peer.id < self.node_id {
+                // Check if they're caught up
+                if peer.last_applied_lsn >= self_node.last_applied_lsn {
+                    tracing::info!(
+                        "Higher-priority node {} is caught up (LSN {}), yielding leadership",
+                        peer.id, peer.last_applied_lsn
+                    );
+                    return Some(peer.id.clone());
+                } else {
+                    tracing::debug!(
+                        "Higher-priority node {} exists but is behind (our: {}, their: {})",
+                        peer.id, self_node.last_applied_lsn, peer.last_applied_lsn
+                    );
+                }
+            }
+        }
+        
+        None
+    }
 }
 
 #[cfg(test)]

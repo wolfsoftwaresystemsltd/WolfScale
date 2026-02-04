@@ -142,9 +142,56 @@ impl LeaderNode {
             
             self.send_heartbeats().await?;
             self.check_commit_progress().await?;
+            // Check if we should yield to a higher-priority node that has caught up
+            if let Some(higher_priority_node) = self.check_for_priority_yield().await {
+                tracing::info!(
+                    "Yielding leadership to higher-priority node: {}",
+                    higher_priority_node
+                );
+                // Return success - main.rs will restart as follower
+                // The higher-priority node will become leader
+                return Ok(());
+            }
         }
 
         Ok(())
+    }
+    
+    /// Check if a higher-priority (lower-ID) node is caught up and should become leader
+    async fn check_for_priority_yield(&self) -> Option<String> {
+        let self_node = self.cluster.get_self().await;
+        let peers = self.cluster.peers().await;
+        
+        for peer in peers {
+            // Skip synthetic peers
+            if peer.id.starts_with("peer-") {
+                continue;
+            }
+            // Skip dropped/offline nodes
+            if peer.status == crate::state::NodeStatus::Dropped 
+                || peer.status == crate::state::NodeStatus::Offline {
+                continue;
+            }
+            
+            // Check if this peer has a lower ID (higher priority)
+            if peer.id < self.node_id {
+                // Check if they're caught up
+                if peer.last_applied_lsn >= self_node.last_applied_lsn {
+                    tracing::info!(
+                        "Higher-priority node {} is caught up (LSN {}), should yield leadership",
+                        peer.id, peer.last_applied_lsn
+                    );
+                    return Some(peer.id.clone());
+                } else {
+                    tracing::debug!(
+                        "Higher-priority node {} exists but is behind (our: {}, their: {})",
+                        peer.id, self_node.last_applied_lsn, peer.last_applied_lsn
+                    );
+                }
+            }
+        }
+        
+        None
     }
     
     /// Check if the local database is healthy (can receive writes)

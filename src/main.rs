@@ -542,8 +542,41 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
         config.data_dir().clone(),
     );
 
-    // Determine role BEFORE starting proxy - leader if bootstrap CLI flag, config bootstrap, or no peers
-    let is_leader = bootstrap || config.cluster.bootstrap || config.cluster.peers.is_empty();
+    // Determine role BEFORE starting proxy
+    // Priority-based election: lowest node ID is leader
+    // Bootstrap flag forces this node to be leader (for initial cluster setup)
+    let is_leader = if bootstrap {
+        tracing::info!("Bootstrap mode - starting as leader");
+        true
+    } else if config.cluster.peers.is_empty() {
+        tracing::info!("No peers configured - starting as leader (standalone)");
+        true
+    } else {
+        // Check if this node has the lowest ID among all known nodes
+        let my_id = &config.node.id;
+        let mut is_lowest = true;
+        
+        for peer in &config.cluster.peers {
+            // Extract peer ID from the peer string (format: "id@host:port" or just "host:port")
+            let peer_id = if peer.contains('@') {
+                peer.split('@').next().unwrap_or(peer)
+            } else {
+                // If no ID specified, use the address as ID
+                peer
+            };
+            
+            if peer_id < my_id.as_str() {
+                is_lowest = false;
+                tracing::info!("Peer {} has lower ID than us ({}), we are follower", peer_id, my_id);
+                break;
+            }
+        }
+        
+        if is_lowest {
+            tracing::info!("Node {} has lowest ID - starting as leader", my_id);
+        }
+        is_lowest
+    };
     
     if is_leader {
         tracing::info!("This node will start as LEADER");
@@ -605,8 +638,17 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
         // Start all components
         tokio::select! {
             result = leader.start() => {
-                if let Err(e) = result {
-                    tracing::error!("Leader error: {}", e);
+                match result {
+                    Ok(()) => {
+                        // Leader returned normally - yielding leadership to higher-priority node
+                        tracing::info!("Leader yielding to higher-priority node. Process will restart as follower.");
+                        // Exit the process - systemd will restart it and it will come up as follower
+                        // since it's no longer bootstrapping and a leader exists
+                        std::process::exit(0);
+                    }
+                    Err(e) => {
+                        tracing::error!("Leader error: {}", e);
+                    }
                 }
             }
             result = http_server.start() => {

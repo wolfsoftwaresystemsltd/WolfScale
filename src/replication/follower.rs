@@ -449,10 +449,20 @@ impl FollowerNode {
                     return Ok(());
                 }
 
+                // Check if we should reclaim leadership (returning higher-priority node)
+                // This bypasses the was_leader check - if we have the lowest ID and are caught up,
+                // we SHOULD become leader again
+                if self.election.should_reclaim_leadership().await {
+                    tracing::info!("Reclaiming leadership as the highest-priority node");
+                    self.election.start_election().await?;
+                    return Ok(());
+                }
+
                 // Don't auto-elect if we were previously a leader (prevent flip-flopping)
+                // But this is bypassed above if we're the rightful leader
                 if *self.was_leader.read().await {
-                    tracing::info!(
-                        "Was previously leader, not auto-electing (use manual promotion)"
+                    tracing::debug!(
+                        "Was previously leader, waiting to catch up before reclaiming"
                     );
                     return Ok(());
                 }
