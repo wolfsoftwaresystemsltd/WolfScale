@@ -506,14 +506,24 @@ fn split_sql_statements(sql: &str) -> Vec<&str> {
     let mut start = 0;
     let mut in_string = false;
     let mut string_char = '"';
+    let mut escape_next = false;  // Track backslash escaping
     let mut chars = sql.char_indices().peekable();
     
     while let Some((i, c)) = chars.next() {
+        if escape_next {
+            // This character is escaped, skip it
+            escape_next = false;
+            continue;
+        }
+        
         if in_string {
-            if c == string_char {
-                // Check for escaped quote
+            if c == '\\' {
+                // Backslash escapes the next character
+                escape_next = true;
+            } else if c == string_char {
+                // Check for doubled quote escape (MySQL also supports this)
                 if chars.peek().map(|(_, nc)| *nc == string_char).unwrap_or(false) {
-                    chars.next(); // Skip escaped quote
+                    chars.next(); // Skip the escaped quote
                 } else {
                     in_string = false;
                 }
