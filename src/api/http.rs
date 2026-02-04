@@ -121,6 +121,8 @@ impl HttpServer {
             .route("/write/delete", post(handle_delete))
             .route("/write/upsert", post(handle_upsert))
             .route("/write/ddl", post(handle_ddl))
+            // Raw SQL forwarding (for proxy write forwarding)
+            .route("/sql", post(handle_sql))
             // Status and info
             .route("/status", get(handle_status))
             .route("/stats", get(handle_stats))
@@ -292,6 +294,87 @@ async fn handle_write(
         lsn: Some(0),
         message: Some("Write accepted".to_string()),
     }).into_response()
+}
+
+/// Request for raw SQL forwarding
+#[derive(Debug, Deserialize)]
+struct SqlRequest {
+    sql: String,
+    #[serde(default)]
+    database: Option<String>,
+}
+
+/// Response for SQL execution
+#[derive(Debug, Serialize)]
+struct SqlResponse {
+    success: bool,
+    affected_rows: u64,
+    last_insert_id: u64,
+    message: Option<String>,
+}
+
+/// Handle raw SQL forwarding (from proxy write forwarding)
+async fn handle_sql(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<SqlRequest>,
+) -> impl IntoResponse {
+    // Only leader should handle this
+    if !*state.is_leader.read().await {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(SqlResponse {
+                success: false,
+                affected_rows: 0,
+                last_insert_id: 0,
+                message: Some("Not the leader".to_string()),
+            }),
+        ).into_response();
+    }
+
+    // Get the write handler
+    let handler = state.write_handler.read().await;
+    if let Some(ref handler) = *handler {
+        // Create a RawSql log entry
+        let entry = LogEntry::RawSql {
+            sql: req.sql.clone(),
+            database: req.database.clone(),
+            affects_table: None,
+        };
+        
+        match handler(entry).await {
+            Ok(lsn) => {
+                tracing::debug!("SQL forwarded and written to WAL, LSN: {}", lsn);
+                Json(SqlResponse {
+                    success: true,
+                    affected_rows: 1, // We don't know exact count from WAL write
+                    last_insert_id: 0,
+                    message: Some(format!("LSN: {}", lsn)),
+                }).into_response()
+            }
+            Err(e) => {
+                tracing::error!("Failed to write SQL to WAL: {}", e);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(SqlResponse {
+                        success: false,
+                        affected_rows: 0,
+                        last_insert_id: 0,
+                        message: Some(format!("WAL write failed: {}", e)),
+                    }),
+                ).into_response()
+            }
+        }
+    } else {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(SqlResponse {
+                success: false,
+                affected_rows: 0,
+                last_insert_id: 0,
+                message: Some("Write handler not configured".to_string()),
+            }),
+        ).into_response()
+    }
 }
 
 async fn handle_insert(
