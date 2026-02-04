@@ -653,7 +653,7 @@ async fn handle_connection(
         // If this is a write query, handle based on role
         if is_write {
             if let Some(ref query) = query_opt {
-                tracing::info!("WRITE detected: {}", query.chars().take(80).collect::<String>());
+                tracing::debug!("WRITE detected: {}", query.chars().take(80).collect::<String>());
                 
                 let self_node = cluster.get_self().await;
                 

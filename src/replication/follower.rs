@@ -171,7 +171,7 @@ impl FollowerNode {
 
             // Process entries inline (no spawning - simpler and prevents memory issues)
             if let Some(batch) = maybe_batch {
-                tracing::info!("Processing batch of {} entries (LSN {} to {})", 
+                tracing::debug!("Processing batch of {} entries (LSN {} to {})", 
                     batch.entries.len(),
                     batch.entries.first().map(|e| e.header.lsn).unwrap_or(0),
                     batch.entries.last().map(|e| e.header.lsn).unwrap_or(0));
@@ -569,7 +569,7 @@ async fn process_batch_background(
         return;
     }
     
-    tracing::info!("Background processing {} entries (LSN {} to {}), current position: {}", 
+    tracing::debug!("Background processing {} entries (LSN {} to {}), current position: {}", 
         batch.entries.len(),
         batch.entries.first().map(|e| e.header.lsn).unwrap_or(0),
         batch_max_lsn,
@@ -594,7 +594,7 @@ async fn process_batch_background(
             }
             let current = ack_progress.load(std::sync::atomic::Ordering::Relaxed);
             if current > last_acked {
-                tracing::info!("Periodic ACK: LSN {} (progress since last: {})", current, current - last_acked);
+                tracing::debug!("Periodic ACK: LSN {} (progress since last: {})", current, current - last_acked);
                 send_ack_background(&ack_tx, &ack_batch, current, &ack_node_id).await;
                 last_acked = current;
             }
@@ -653,7 +653,7 @@ async fn process_batch_background(
         // Batch state updates: save every 100 entries for performance
         if processed % 100 == 0 {
             *last_applied_lsn.write().await = highest_applied;
-            tracing::info!("Progress: {} entries processed, at LSN {}", processed, highest_applied);
+            tracing::debug!("Progress: {} entries processed, at LSN {}", processed, highest_applied);
         }
     }
     
@@ -668,7 +668,7 @@ async fn process_batch_background(
         tracing::warn!("Failed to persist last_applied_lsn: {}", e);
     }
     
-    tracing::info!("Batch complete: processed={}, skipped={}, lsn={}", processed, skipped, highest_applied);
+    tracing::debug!("Batch complete: processed={}, skipped={}, lsn={}", processed, skipped, highest_applied);
     
     // Update cluster membership
     let _ = cluster.record_heartbeat(&node_id, highest_applied).await;
@@ -695,7 +695,7 @@ async fn send_ack_background(
     if let Err(e) = message_tx.send((batch.leader_address.clone(), ack)).await {
         tracing::error!("Failed to send ACK: {}", e);
     } else {
-        tracing::info!("ACK sent to {} with lsn={}", batch.leader_address, match_lsn);
+        tracing::debug!("ACK sent to {} with lsn={}", batch.leader_address, match_lsn);
     }
 }
 

@@ -329,7 +329,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
 
     // Start INCOMING message processing loop - handles messages from peers
     let incoming_cluster = Arc::clone(&cluster);
-    tracing::info!("Message loop cluster Arc ptr: {:p}", Arc::as_ptr(&incoming_cluster));
+    tracing::debug!("Message loop cluster Arc ptr: {:p}", Arc::as_ptr(&incoming_cluster));
     let response_tx = outgoing_tx.clone();  
     let our_node_id = config.node.id.clone();
     let incoming_heartbeat_time = Arc::clone(&shared_heartbeat_time);
@@ -395,7 +395,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                     let _ = response_tx.send((leader_addr, response)).await;
                 }
                 wolfscale::replication::Message::AppendEntries { term, leader_id, prev_lsn: _, prev_term: _, entries, leader_commit_lsn: _ } => {
-                    tracing::info!("RECEIVED {} entries from leader {}", entries.len(), leader_id);
+                    tracing::debug!("RECEIVED {} entries from leader {}", entries.len(), leader_id);
                     let _ = incoming_cluster.record_heartbeat(&leader_id, 0).await;
                     
                     // Update heartbeat time
@@ -436,7 +436,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                         // Leader will resend if ACK times out, so dropping here is safe.
                         match incoming_entry_tx.try_send(batch) {
                             Ok(()) => {
-                                tracing::info!("FORWARDED batch LSN {}-{} to follower channel", first_lsn, last_lsn);
+                                tracing::debug!("FORWARDED batch LSN {}-{} to follower channel", first_lsn, last_lsn);
                             }
                             Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => {
                                 // Queue full - likely processing previous batch. Leader will resend.
@@ -490,7 +490,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                         
                         // Verify the update was recorded
                         if let Some(updated_node) = incoming_cluster.get_node(&node_id).await {
-                            tracing::info!("Follower {} acknowledged up to LSN {}, cluster now shows lsn={}", 
+                            tracing::debug!("Follower {} acknowledged up to LSN {}, cluster now shows lsn={}", 
                                 node_id, match_lsn, updated_node.last_applied_lsn);
                         } else {
                             tracing::warn!("Follower {} ACK received but node not found in cluster!", node_id);
@@ -635,7 +635,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     
     if is_leader {
         tracing::info!("Starting LEADER components");
-        tracing::info!("LeaderNode cluster Arc ptr: {:p}", Arc::as_ptr(&cluster));
+        tracing::debug!("LeaderNode cluster Arc ptr: {:p}", Arc::as_ptr(&cluster));
 
         let leader = Arc::new(LeaderNode::new(
             config.node.id.clone(),
