@@ -1033,6 +1033,86 @@ cargo test
 
 ---
 
+## Backup and Restore
+
+### Creating Backups
+
+When creating backups with `mysqldump`, use these options for reliable replication with WolfScale:
+
+```bash
+#!/bin/bash
+# backup.sh - WolfScale-compatible backup script
+
+DATABASE="mydb"
+BACKUP_FILE="backup_$(date +%Y%m%d_%H%M%S).sql"
+
+mysqldump \
+  --hex-blob \
+  --routines \
+  --triggers \
+  --single-transaction \
+  --skip-lock-tables \
+  --set-gtid-purged=OFF \
+  "$DATABASE" > "$BACKUP_FILE"
+
+echo "Backup saved to: $BACKUP_FILE"
+```
+
+**Option Reference:**
+
+| Option | Purpose |
+|--------|---------|
+| `--hex-blob` | **Essential** - Encodes binary/BLOB data as hex to prevent corruption |
+| `--routines` | Include stored procedures and functions |
+| `--triggers` | Include triggers |
+| `--single-transaction` | Consistent snapshot without locking (InnoDB) |
+| `--skip-lock-tables` | Avoid LOCK TABLES statements (good for replication) |
+| `--set-gtid-purged=OFF` | Avoid GTID conflicts when restoring |
+
+> **Warning:** Without `--hex-blob`, binary data (images, vectors, serialized objects) may be corrupted in the backup.
+
+### Restoring Backups
+
+Restore backups directly through WolfScale's MySQL proxy (port 3307) to replicate to all nodes:
+
+```bash
+# Restore through WolfScale (recommended - replicates to all nodes)
+mysql -h leader-ip -P 3307 -u root -p mydb < backup.sql
+
+# Or restore directly to MariaDB on the leader only
+mysql -h localhost -P 3306 -u root -p mydb < backup.sql
+```
+
+### Full Cluster Backup
+
+To backup all databases:
+
+```bash
+#!/bin/bash
+# full_backup.sh - Complete cluster backup
+
+BACKUP_DIR="/var/backups/wolfscale"
+DATE=$(date +%Y%m%d_%H%M%S)
+mkdir -p "$BACKUP_DIR"
+
+mysqldump \
+  --all-databases \
+  --hex-blob \
+  --routines \
+  --triggers \
+  --single-transaction \
+  --skip-lock-tables \
+  --set-gtid-purged=OFF \
+  > "$BACKUP_DIR/full_backup_$DATE.sql"
+
+# Compress for storage
+gzip "$BACKUP_DIR/full_backup_$DATE.sql"
+
+echo "Full backup saved to: $BACKUP_DIR/full_backup_$DATE.sql.gz"
+```
+
+---
+
 ## Support
 
 - **Discord:** [Join our community](https://discord.gg/q9qMjHjUQY)
