@@ -191,9 +191,9 @@ This command connects to your database, detects the current binlog position, and
 
 0. **Enable Binary Logging** (if not already enabled):
    
-   Add to `/etc/mysql/mariadb.conf.d/50-server.cnf` (or your MariaDB config):
+   Add to `/etc/mysql/mariadb.conf.d/50-server.cnf` under the `[mariadb]` section:
    ```ini
-   [mysqld]
+   [mariadb]
    log_bin = mysql-bin
    binlog_format = MIXED
    server_id = 1
@@ -202,6 +202,8 @@ This command connects to your database, detects the current binlog position, and
    ```bash
    systemctl restart mariadb
    ```
+   
+   > **Note:** For Galera clusters, you only need to enable binlog on ONE node - the one WolfScale will connect to.
 
 1. **Initial Data Sync** (for new clusters without existing data):
    ```bash
