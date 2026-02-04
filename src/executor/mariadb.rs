@@ -2,9 +2,11 @@
 //!
 //! Executes log entries against a MariaDB database.
 
+use std::sync::Arc;
 use std::time::Duration;
 use sqlx::{MySqlPool, Row};
 use sqlx::mysql::MySqlPoolOptions;
+use tokio::sync::RwLock;
 
 use crate::config::DatabaseConfig;
 use crate::wal::LogEntry;
@@ -12,8 +14,12 @@ use crate::error::{Error, Result};
 
 /// MariaDB executor for applying log entries
 pub struct MariaDbExecutor {
-    /// Connection pool
-    pool: Option<MySqlPool>,
+    /// Database-specific connection pool (may become invalid if DB is dropped)
+    pool: Arc<RwLock<Option<MySqlPool>>>,
+    /// Server-level connection pool (for DDL operations like DROP/CREATE DATABASE)
+    server_pool: Option<MySqlPool>,
+    /// Config for reconnection
+    config: Option<DatabaseConfig>,
     /// Whether this is a mock executor (for testing)
     is_mock: bool,
 }
@@ -21,7 +27,17 @@ pub struct MariaDbExecutor {
 impl MariaDbExecutor {
     /// Create a new executor with a connection pool
     pub async fn new(config: &DatabaseConfig) -> Result<Self> {
-        let url = match &config.database {
+        // Server-level URL (no specific database)
+        let server_url = format!(
+            "mysql://{}:{}@{}:{}",
+            config.user,
+            config.password,
+            config.host,
+            config.port
+        );
+
+        // Database-specific URL
+        let db_url = match &config.database {
             Some(db) => format!(
                 "mysql://{}:{}@{}:{}/{}",
                 config.user,
@@ -30,23 +46,27 @@ impl MariaDbExecutor {
                 config.port,
                 db
             ),
-            None => format!(
-                "mysql://{}:{}@{}:{}",
-                config.user,
-                config.password,
-                config.host,
-                config.port
-            ),
+            None => server_url.clone(),
         };
 
-        let pool = MySqlPoolOptions::new()
+        // Create server-level pool for DDL operations
+        let server_pool = MySqlPoolOptions::new()
+            .max_connections(2)
+            .acquire_timeout(Duration::from_secs(config.connect_timeout_secs))
+            .connect(&server_url)
+            .await?;
+
+        // Create database-level pool for normal operations
+        let db_pool = MySqlPoolOptions::new()
             .max_connections(config.pool_size)
             .acquire_timeout(Duration::from_secs(config.connect_timeout_secs))
-            .connect(&url)
+            .connect(&db_url)
             .await?;
 
         Ok(Self {
-            pool: Some(pool),
+            pool: Arc::new(RwLock::new(Some(db_pool))),
+            server_pool: Some(server_pool),
+            config: Some(config.clone()),
             is_mock: false,
         })
     }
@@ -54,9 +74,20 @@ impl MariaDbExecutor {
     /// Create a mock executor for testing
     pub fn new_mock() -> Self {
         Self {
-            pool: None,
+            pool: Arc::new(RwLock::new(None)),
+            server_pool: None,
+            config: None,
             is_mock: true,
         }
+    }
+
+    /// Check if a SQL statement is a DDL operation that affects databases
+    fn is_database_ddl(stmt: &str) -> bool {
+        let upper = stmt.to_uppercase();
+        upper.starts_with("CREATE DATABASE") ||
+        upper.starts_with("DROP DATABASE") ||
+        upper.starts_with("CREATE SCHEMA") ||
+        upper.starts_with("DROP SCHEMA")
     }
 
     /// Execute a log entry
@@ -64,15 +95,6 @@ impl MariaDbExecutor {
         if self.is_mock {
             return Ok(());
         }
-
-        let pool = self.pool.as_ref().ok_or_else(|| {
-            Error::Database(sqlx::Error::Configuration("No pool".into()))
-        })?;
-
-        // Acquire a dedicated connection for this batch to ensure session context (like USE) persists
-        let mut conn = pool.acquire().await.map_err(|e| {
-            Error::QueryExecution(format!("Failed to acquire connection from pool: {}", e))
-        })?;
 
         let statements = entry.to_sql();
         
@@ -92,14 +114,76 @@ impl MariaDbExecutor {
 
                 tracing::debug!("Executing: {}", &stmt[..stmt.len().min(100)]);
                 
-                sqlx::query(stmt)
-                    .execute(&mut *conn) // Use the same connection for all statements
-                    .await
-                    .map_err(|e| {
-                        Error::QueryExecution(format!("Failed to execute '{}...': {}", 
-                            &stmt[..stmt.len().min(50)], e))
+                // Use server pool for database-level DDL operations
+                if Self::is_database_ddl(stmt) {
+                    tracing::info!("Using server pool for DDL: {}", &stmt[..stmt.len().min(50)]);
+                    let server_pool = self.server_pool.as_ref().ok_or_else(|| {
+                        Error::Database(sqlx::Error::Configuration("No server pool".into()))
                     })?;
+                    
+                    sqlx::query(stmt)
+                        .execute(server_pool)
+                        .await
+                        .map_err(|e| {
+                            Error::QueryExecution(format!("Failed to execute DDL '{}...': {}", 
+                                &stmt[..stmt.len().min(50)], e))
+                        })?;
+                    
+                    // If we just created a database that matches our config, try to reconnect db pool
+                    if stmt.to_uppercase().starts_with("CREATE DATABASE") {
+                        if let Err(e) = self.try_reconnect_db_pool().await {
+                            tracing::warn!("Could not reconnect to database pool: {}", e);
+                        }
+                    }
+                } else {
+                    // Normal statements use the database pool
+                    let pool_guard = self.pool.read().await;
+                    let pool = pool_guard.as_ref().ok_or_else(|| {
+                        Error::Database(sqlx::Error::Configuration("No database pool".into()))
+                    })?;
+
+                    sqlx::query(stmt)
+                        .execute(pool)
+                        .await
+                        .map_err(|e| {
+                            Error::QueryExecution(format!("Failed to execute '{}...': {}", 
+                                &stmt[..stmt.len().min(50)], e))
+                        })?;
+                }
             }
+        }
+
+        Ok(())
+    }
+
+    /// Try to reconnect the database pool after CREATE DATABASE
+    async fn try_reconnect_db_pool(&self) -> Result<()> {
+        let config = self.config.as_ref().ok_or_else(|| {
+            Error::Database(sqlx::Error::Configuration("No config for reconnection".into()))
+        })?;
+
+        if let Some(db) = &config.database {
+            let db_url = format!(
+                "mysql://{}:{}@{}:{}/{}",
+                config.user,
+                config.password,
+                config.host,
+                config.port,
+                db
+            );
+
+            tracing::info!("Attempting to reconnect database pool to {}", db);
+            
+            let new_pool = MySqlPoolOptions::new()
+                .max_connections(config.pool_size)
+                .acquire_timeout(Duration::from_secs(config.connect_timeout_secs))
+                .connect(&db_url)
+                .await?;
+
+            let mut pool_guard = self.pool.write().await;
+            *pool_guard = Some(new_pool);
+            
+            tracing::info!("Successfully reconnected database pool");
         }
 
         Ok(())
@@ -111,7 +195,19 @@ impl MariaDbExecutor {
             return Ok(0);
         }
 
-        let pool = self.pool.as_ref().ok_or_else(|| {
+        // Use server pool for database DDL
+        if Self::is_database_ddl(sql) {
+            let server_pool = self.server_pool.as_ref().ok_or_else(|| {
+                Error::Database(sqlx::Error::Configuration("No server pool".into()))
+            })?;
+            let result = sqlx::query(sql)
+                .execute(server_pool)
+                .await?;
+            return Ok(result.rows_affected());
+        }
+
+        let pool_guard = self.pool.read().await;
+        let pool = pool_guard.as_ref().ok_or_else(|| {
             Error::Database(sqlx::Error::Configuration("No pool".into()))
         })?;
 
@@ -128,7 +224,8 @@ impl MariaDbExecutor {
             return Ok(());
         }
 
-        let pool = self.pool.as_ref().ok_or_else(|| {
+        let pool_guard = self.pool.read().await;
+        let pool = pool_guard.as_ref().ok_or_else(|| {
             Error::Database(sqlx::Error::Configuration("No pool".into()))
         })?;
 
@@ -158,12 +255,13 @@ impl MariaDbExecutor {
             return Ok(true);
         }
 
-        let pool = self.pool.as_ref().ok_or_else(|| {
-            Error::Database(sqlx::Error::Configuration("No pool".into()))
+        // Use server pool for health check - more reliable
+        let server_pool = self.server_pool.as_ref().ok_or_else(|| {
+            Error::Database(sqlx::Error::Configuration("No server pool".into()))
         })?;
 
         let result: (i32,) = sqlx::query_as("SELECT 1")
-            .fetch_one(pool)
+            .fetch_one(server_pool)
             .await?;
 
         Ok(result.0 == 1)
@@ -175,7 +273,8 @@ impl MariaDbExecutor {
             return Ok(vec![]);
         }
 
-        let pool = self.pool.as_ref().ok_or_else(|| {
+        let pool_guard = self.pool.read().await;
+        let pool = pool_guard.as_ref().ok_or_else(|| {
             Error::Database(sqlx::Error::Configuration("No pool".into()))
         })?;
 
@@ -197,7 +296,8 @@ impl MariaDbExecutor {
             return Ok(vec![]);
         }
 
-        let pool = self.pool.as_ref().ok_or_else(|| {
+        let pool_guard = self.pool.read().await;
+        let pool = pool_guard.as_ref().ok_or_else(|| {
             Error::Database(sqlx::Error::Configuration("No pool".into()))
         })?;
 
@@ -244,7 +344,8 @@ impl MariaDbExecutor {
             return Ok(0);
         }
 
-        let pool = self.pool.as_ref().ok_or_else(|| {
+        let pool_guard = self.pool.read().await;
+        let pool = pool_guard.as_ref().ok_or_else(|| {
             Error::Database(sqlx::Error::Configuration("No pool".into()))
         })?;
 
@@ -257,8 +358,12 @@ impl MariaDbExecutor {
 
     /// Close the connection pool
     pub async fn close(&self) {
-        if let Some(pool) = &self.pool {
+        let pool_guard = self.pool.read().await;
+        if let Some(pool) = pool_guard.as_ref() {
             pool.close().await;
+        }
+        if let Some(server_pool) = &self.server_pool {
+            server_pool.close().await;
         }
     }
 }
