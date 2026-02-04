@@ -76,6 +76,10 @@ wolfctl list servers
 
 # Live throughput monitoring (updates every second, Ctrl+C to exit)
 wolfctl stats
+
+# Reset WAL and state on ALL nodes (DESTRUCTIVE - requires restart)
+wolfctl reset          # Interactive confirmation
+wolfctl reset --force  # Skip confirmation
 ```
 
 ### Adding New Nodes
