@@ -542,7 +542,16 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
         });
     }
 
-
+    // Start periodic LSN tracker update for stats (100ms interval)
+    let stats_lsn_tracker = http_server.get_lsn_tracker();
+    let stats_wal_writer = wal_writer.clone();
+    tokio::spawn(async move {
+        loop {
+            let current = stats_wal_writer.current_lsn().await;
+            stats_lsn_tracker.store(current, std::sync::atomic::Ordering::Relaxed);
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+    });
     if is_leader {
         tracing::info!("Starting LEADER components");
         tracing::info!("LeaderNode cluster Arc ptr: {:p}", Arc::as_ptr(&cluster));

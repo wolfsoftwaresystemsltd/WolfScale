@@ -38,6 +38,8 @@ pub struct AppState {
     pub write_handler: RwLock<Option<WriteHandler>>,
     /// Data directory for WAL and state
     pub data_dir: std::path::PathBuf,
+    /// Current LSN (tracked for accurate stats - updated by leader/proxy writes)
+    pub current_lsn: Arc<std::sync::atomic::AtomicU64>,
 }
 
 /// Write handler callback
@@ -63,6 +65,7 @@ impl HttpServer {
             cluster,
             write_handler: RwLock::new(None),
             data_dir,
+            current_lsn: Arc::new(std::sync::atomic::AtomicU64::new(0)),
         });
 
         Self { config, state }
@@ -82,6 +85,7 @@ impl HttpServer {
             cluster,
             write_handler: RwLock::new(Some(write_handler)),
             data_dir,
+            current_lsn: Arc::new(std::sync::atomic::AtomicU64::new(0)),
         });
 
         Self { config, state }
@@ -100,6 +104,11 @@ impl HttpServer {
     /// Get the state for sharing with other components
     pub fn state(&self) -> Arc<AppState> {
         Arc::clone(&self.state)
+    }
+
+    /// Get the LSN tracker for updating from leader/proxy writes
+    pub fn get_lsn_tracker(&self) -> Arc<std::sync::atomic::AtomicU64> {
+        Arc::clone(&self.state.current_lsn)
     }
 
     /// Create the router
@@ -514,7 +523,15 @@ async fn handle_stats(
         .count();
     
     // Build follower stats (only meaningful for leader)
-    let current_lsn = self_node.last_applied_lsn;
+    // For leader: use AppState.current_lsn (updated by proxy writes)
+    // For follower: use self_node.last_applied_lsn (replication progress)
+    let current_lsn = if is_leader {
+        let atomic_lsn = state.current_lsn.load(std::sync::atomic::Ordering::Relaxed);
+        // If atomic is 0 (not yet updated), fall back to cluster tracking
+        if atomic_lsn > 0 { atomic_lsn } else { self_node.last_applied_lsn }
+    } else {
+        self_node.last_applied_lsn
+    };
     let followers: Vec<FollowerStats> = all_nodes.iter()
         .filter(|n| n.id != state.node_id)
         .map(|n| {
