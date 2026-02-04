@@ -242,6 +242,13 @@ impl MariaDbExecutor {
                     tracing::debug!("Skipping USE statement (using database-specific pool instead): {}", stmt);
                     continue;
                 }
+                
+                // Skip LOCK TABLES and UNLOCK TABLES - they cause metadata lock issues
+                // during replication since entries execute across different connections
+                if upper.starts_with("LOCK TABLES") || upper.starts_with("UNLOCK TABLES") {
+                    tracing::debug!("Skipping LOCK/UNLOCK TABLES (not needed for replication): {}", &stmt[..stmt.len().min(50)]);
+                    continue;
+                }
 
                 tracing::debug!("Executing on db={:?}: {}", target_database, &stmt[..stmt.len().min(80)]);
                 
