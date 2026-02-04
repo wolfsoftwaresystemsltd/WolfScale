@@ -613,6 +613,31 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
     });
+    
+    // Start binlog client if configured (captures from MariaDB binlog to WAL)
+    if config.replication.mode == "binlog" {
+        use wolfscale::binlog::BinlogClient;
+        
+        let binlog_wal = Arc::new(wal_writer.clone());
+        let binlog_db_config = config.database.clone();
+        let binlog_config = config.binlog.clone();
+        
+        tracing::info!(
+            "Starting binlog replication client (server_id: {})",
+            binlog_config.server_id
+        );
+        
+        tokio::spawn(async move {
+            let client = BinlogClient::new(binlog_db_config, binlog_config, binlog_wal);
+            loop {
+                if let Err(e) = client.start().await {
+                    tracing::error!("Binlog client error: {}, retrying in 5s...", e);
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                }
+            }
+        });
+    }
+    
     if is_leader {
         tracing::info!("Starting LEADER components");
         tracing::info!("LeaderNode cluster Arc ptr: {:p}", Arc::as_ptr(&cluster));
