@@ -395,7 +395,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                     let _ = response_tx.send((leader_addr, response)).await;
                 }
                 wolfscale::replication::Message::AppendEntries { term, leader_id, prev_lsn: _, prev_term: _, entries, leader_commit_lsn: _ } => {
-                    tracing::debug!("RECEIVED {} entries from leader {}", entries.len(), leader_id);
+                    tracing::info!("RECEIVED {} entries from leader {}", entries.len(), leader_id);
                     let _ = incoming_cluster.record_heartbeat(&leader_id, 0).await;
                     
                     // Update heartbeat time
@@ -490,7 +490,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                         
                         // Verify the update was recorded
                         if let Some(updated_node) = incoming_cluster.get_node(&node_id).await {
-                            tracing::debug!("Follower {} acknowledged up to LSN {}, cluster now shows lsn={}", 
+                            tracing::info!("Follower {} acknowledged up to LSN {}, cluster now shows lsn={}", 
                                 node_id, match_lsn, updated_node.last_applied_lsn);
                         } else {
                             tracing::warn!("Follower {} ACK received but node not found in cluster!", node_id);
