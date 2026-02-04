@@ -236,11 +236,11 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
         state_tracker.last_applied_lsn().await?);
 
     // Initialize cluster membership
-    // heartbeat_timeout = 3x heartbeat_interval to allow for some network jitter
+    // heartbeat_timeout = 15x heartbeat_interval to allow for slow DDL operations
     let cluster = Arc::new(ClusterMembership::new(
         config.node.id.clone(),
         config.advertise_address().to_string(),
-        config.heartbeat_interval() * 3,  // Timeout is 3x heartbeat interval
+        config.heartbeat_interval() * 15,  // Timeout is 15x heartbeat interval (3s at 200ms interval)
         config.election_timeout(),
     ));
 

@@ -39,8 +39,8 @@ pub struct FollowerNode {
     term: RwLock<u64>,
     /// Current leader ID
     leader_id: RwLock<Option<String>>,
-    /// Last applied LSN
-    last_applied_lsn: RwLock<Lsn>,
+    /// Last applied LSN (Arc for sharing with spawned tasks)
+    last_applied_lsn: Arc<RwLock<Lsn>>,
     /// Last heartbeat time
     last_heartbeat: RwLock<Instant>,
     /// Message sender for outbound messages
@@ -86,7 +86,7 @@ impl FollowerNode {
             config,
             term: RwLock::new(1),
             leader_id: RwLock::new(None),
-            last_applied_lsn: RwLock::new(0),
+            last_applied_lsn: Arc::new(RwLock::new(0)),
             last_heartbeat: RwLock::new(Instant::now()),
             message_tx,
             shutdown: RwLock::new(false),
@@ -156,9 +156,26 @@ impl FollowerNode {
                 }
             };
 
-            // Process any received entries
+            // Process entries in background to avoid blocking heartbeat processing
             if let Some(batch) = maybe_batch {
-                self.process_batch(batch).await;
+                // Clone Arc refs for the spawned task (state_tracker excluded - not Send due to rusqlite)
+                let executor = Arc::clone(&self.executor);
+                let cluster = Arc::clone(&self.cluster);
+                let message_tx = self.message_tx.clone();
+                let node_id = self.node_id.clone();
+                let last_applied_lsn = Arc::clone(&self.last_applied_lsn);
+                
+                // Spawn batch processing in background so heartbeats continue uninterrupted
+                tokio::spawn(async move {
+                    process_batch_background(
+                        batch,
+                        executor,
+                        cluster,
+                        message_tx,
+                        node_id,
+                        last_applied_lsn,
+                    ).await;
+                });
                 // Immediately check for more entries without sleeping
                 continue;
             }
@@ -178,80 +195,6 @@ impl FollowerNode {
         }
 
         Ok(())
-    }
-
-    /// Process a batch of entries
-    async fn process_batch(&self, batch: ReplicationBatch) {
-        let current_lsn = *self.last_applied_lsn.read().await;
-        let batch_max_lsn = batch.entries.last().map(|e| e.header.lsn).unwrap_or(0);
-        
-        // Skip if entirely stale
-        if batch_max_lsn <= current_lsn {
-            tracing::debug!("Skipping stale batch (max_lsn={} <= current={})", batch_max_lsn, current_lsn);
-            self.send_ack(&batch, current_lsn).await;
-            return;
-        }
-        
-        tracing::info!("Processing {} entries (LSN {} to {}), current position: {}", 
-            batch.entries.len(),
-            batch.entries.first().map(|e| e.header.lsn).unwrap_or(0),
-            batch_max_lsn,
-            current_lsn);
-        
-        let mut highest_applied = current_lsn;
-        let mut processed = 0usize;
-        let mut skipped = 0usize;
-        
-        for entry in &batch.entries {
-            // Skip already-applied entries
-            if entry.header.lsn <= highest_applied {
-                skipped += 1;
-                continue;
-            }
-            
-            // Execute the SQL
-            if let Err(e) = self.apply_entry(entry).await {
-                tracing::warn!("Entry LSN {} failed: {} - continuing", entry.header.lsn, e);
-            }
-            
-            // Mark as processed regardless of success/failure
-            highest_applied = entry.header.lsn;
-            processed += 1;
-            
-            // Batch state updates: save every 100 entries for performance
-            // This trades some crash-recovery granularity for much better throughput
-            if processed % 100 == 0 {
-                *self.last_applied_lsn.write().await = highest_applied;
-                tracing::info!("Progress: {} entries processed, at LSN {}", processed, highest_applied);
-            }
-        }
-        
-        // Final state update to ensure we don't lose progress
-        *self.last_applied_lsn.write().await = highest_applied;
-        
-        tracing::info!("Batch complete: processed={}, skipped={}, lsn={}", processed, skipped, highest_applied);
-        
-        // Update cluster membership
-        let _ = self.cluster.record_heartbeat(&self.node_id, highest_applied).await;
-        
-        // Send ACK to leader
-        self.send_ack(&batch, highest_applied).await;
-    }
-
-    /// Send ACK to leader
-    async fn send_ack(&self, batch: &ReplicationBatch, match_lsn: Lsn) {
-        let ack = Message::AppendEntriesResponse {
-            node_id: self.node_id.clone(),
-            term: batch.term,
-            success: true,
-            match_lsn,
-        };
-        
-        if let Err(e) = self.message_tx.send((batch.leader_address.clone(), ack)).await {
-            tracing::error!("Failed to send ACK: {}", e);
-        } else {
-            tracing::info!("ACK sent to {} with lsn={}", batch.leader_address, match_lsn);
-        }
     }
 
     /// Stop the follower
@@ -581,6 +524,92 @@ impl FollowerNode {
         let last_heartbeat = *self.last_heartbeat.read().await;
         let timeout = Duration::from_millis(self.config.heartbeat_interval_ms * 2);
         last_heartbeat.elapsed() < timeout
+    }
+}
+
+/// Standalone batch processing function for background execution.
+/// This runs in a spawned task to avoid blocking the follower's main loop.
+async fn process_batch_background(
+    batch: ReplicationBatch,
+    executor: Arc<MariaDbExecutor>,
+    cluster: Arc<ClusterMembership>,
+    message_tx: mpsc::Sender<(String, Message)>,
+    node_id: String,
+    last_applied_lsn: Arc<RwLock<Lsn>>,
+) {
+    let current_lsn = *last_applied_lsn.read().await;
+    let batch_max_lsn = batch.entries.last().map(|e| e.header.lsn).unwrap_or(0);
+    
+    // Skip if entirely stale
+    if batch_max_lsn <= current_lsn {
+        tracing::debug!("Skipping stale batch (max_lsn={} <= current={})", batch_max_lsn, current_lsn);
+        send_ack_background(&message_tx, &batch, current_lsn, &node_id).await;
+        return;
+    }
+    
+    tracing::info!("Background processing {} entries (LSN {} to {}), current position: {}", 
+        batch.entries.len(),
+        batch.entries.first().map(|e| e.header.lsn).unwrap_or(0),
+        batch_max_lsn,
+        current_lsn);
+    
+    let mut highest_applied = current_lsn;
+    let mut processed = 0usize;
+    let mut skipped = 0usize;
+    
+    for entry in &batch.entries {
+        // Skip already-applied entries
+        if entry.header.lsn <= highest_applied {
+            skipped += 1;
+            continue;
+        }
+        
+        // Execute the SQL
+        if let Err(e) = executor.execute_entry(&entry.entry).await {
+            tracing::warn!("Entry LSN {} failed: {} - continuing", entry.header.lsn, e);
+        }
+        
+        // Mark as processed regardless of success/failure
+        highest_applied = entry.header.lsn;
+        processed += 1;
+        
+        // Batch state updates: save every 100 entries for performance
+        if processed % 100 == 0 {
+            *last_applied_lsn.write().await = highest_applied;
+            tracing::info!("Progress: {} entries processed, at LSN {}", processed, highest_applied);
+        }
+    }
+    
+    // Final state update to ensure we don't lose progress
+    *last_applied_lsn.write().await = highest_applied;
+    
+    tracing::info!("Batch complete: processed={}, skipped={}, lsn={}", processed, skipped, highest_applied);
+    
+    // Update cluster membership
+    let _ = cluster.record_heartbeat(&node_id, highest_applied).await;
+    
+    // Send ACK to leader
+    send_ack_background(&message_tx, &batch, highest_applied, &node_id).await;
+}
+
+/// Send ACK in background processing
+async fn send_ack_background(
+    message_tx: &mpsc::Sender<(String, Message)>,
+    batch: &ReplicationBatch,
+    match_lsn: Lsn,
+    node_id: &str,
+) {
+    let ack = Message::AppendEntriesResponse {
+        node_id: node_id.to_string(),
+        term: batch.term,
+        success: true,
+        match_lsn,
+    };
+    
+    if let Err(e) = message_tx.send((batch.leader_address.clone(), ack)).await {
+        tracing::error!("Failed to send ACK: {}", e);
+    } else {
+        tracing::info!("ACK sent to {} with lsn={}", batch.leader_address, match_lsn);
     }
 }
 
