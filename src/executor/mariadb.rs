@@ -161,10 +161,18 @@ impl MariaDbExecutor {
                         Error::Database(sqlx::Error::Configuration("No server pool".into()))
                     })?;
                     
-                    // For DROP DATABASE, close the db_pool first to release metadata locks
-                    if stmt.to_uppercase().starts_with("DROP DATABASE") {
-                        // Drop our held connection first
+                    // CRITICAL: Before any DDL, drop the db_pool connection to ensure
+                    // all previous statements have completed. DDL on server_pool would
+                    // otherwise race with pending statements on db_pool.
+                    if conn_opt.is_some() {
+                        tracing::info!("Releasing db_pool connection before DDL to ensure ordering");
                         conn_opt = None;
+                        // Give MariaDB a moment to finish any pending operations
+                        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                    }
+                    
+                    // For DROP DATABASE, also close the entire pool to release metadata locks
+                    if stmt.to_uppercase().starts_with("DROP DATABASE") {
                         let mut pool_write = self.pool.write().await;
                         if let Some(p) = pool_write.take() {
                             tracing::info!("Closing db_pool before DROP DATABASE");
