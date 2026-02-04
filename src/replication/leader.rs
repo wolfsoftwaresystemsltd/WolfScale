@@ -371,7 +371,7 @@ impl LeaderNode {
 
             // Use the FRESH peer LSN for replication (current_peer_lsn was fetched at start of loop)
             let next = current_peer_lsn + 1;
-            tracing::debug!("Peer {} has last_applied_lsn={}, will replicate from next={}", peer.id, current_peer_lsn, next);
+            tracing::trace!("Peer {} has last_applied_lsn={}, will replicate from next={}", peer.id, current_peer_lsn, next);
 
             let reader = self.wal_reader.read().await;
             let entries = match reader.read_batch(next, self.config.max_batch_entries) {
