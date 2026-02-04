@@ -427,8 +427,16 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                             leader_id,
                             leader_address: leader_addr,
                         };
-                        if let Err(e) = incoming_entry_tx.send(batch).await {
-                            tracing::error!("Failed to forward entries to follower: {}", e);
+                        // Use try_send to avoid blocking message loop (which handles heartbeats)
+                        // If channel is full, entries will be retried by leader on next replication cycle
+                        match incoming_entry_tx.try_send(batch) {
+                            Ok(()) => {}
+                            Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => {
+                                tracing::warn!("Entry processing queue full - applying backpressure");
+                            }
+                            Err(e) => {
+                                tracing::error!("Failed to forward entries to follower: {}", e);
+                            }
                         }
                     }
                     // NOTE: No ACK here - FollowerNode sends ACK after processing
