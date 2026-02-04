@@ -645,8 +645,8 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
             loop {
                 interval.tick().await;
                 
-                // Get all known peers
-                let peers = peer_cluster.peers().await;
+                // Get all known real peers (exclude synthetic peers from membership lists)
+                let peers = peer_cluster.real_peers().await;
                 let self_node = peer_cluster.get_self().await;
                 
                 // Build membership list

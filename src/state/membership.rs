@@ -280,6 +280,10 @@ impl ClusterMembership {
                     if let Some(since) = node.time_since_heartbeat() {
                         if since > self.election_timeout * 3 {
                             node.status = NodeStatus::Dropped;
+                            // Clear leader role when dropped - forces re-election
+                            if node.role == NodeRole::Leader {
+                                node.role = NodeRole::Follower;
+                            }
                             timed_out.push(id.clone());
                         }
                     }
@@ -308,6 +312,17 @@ impl ClusterMembership {
             .filter(|n| n.id != self.node_id)
             // Note: we include synthetic peers (peer-*) because they're needed for 
             // initial replication before followers identify themselves with their real IDs
+            .cloned()
+            .collect()
+    }
+
+    /// Get all real peer nodes (excluding self and synthetic peers)
+    /// Use this for building membership lists in PeerHeartbeat messages
+    pub async fn real_peers(&self) -> Vec<NodeState> {
+        let nodes = self.nodes.read().await;
+        nodes
+            .values()
+            .filter(|n| n.id != self.node_id && !n.id.starts_with("peer-"))
             .cloned()
             .collect()
     }
@@ -405,8 +420,13 @@ impl ClusterMembership {
     /// Get cluster summary
     pub async fn summary(&self) -> ClusterSummary {
         let nodes = self.nodes.read().await;
+        // Filter out synthetic peers for accurate count
+        let real_nodes: Vec<_> = nodes.values()
+            .filter(|n| !n.id.starts_with("peer-"))
+            .collect();
+        
         let mut summary = ClusterSummary {
-            total_nodes: nodes.len(),
+            total_nodes: real_nodes.len(),
             active_nodes: 0,
             syncing_nodes: 0,
             lagging_nodes: 0,
@@ -414,7 +434,7 @@ impl ClusterMembership {
             leader_id: None,
         };
 
-        for node in nodes.values() {
+        for node in real_nodes {
             match node.status {
                 NodeStatus::Active => summary.active_nodes += 1,
                 NodeStatus::Syncing => summary.syncing_nodes += 1,
