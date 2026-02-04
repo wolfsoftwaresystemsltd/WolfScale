@@ -223,10 +223,10 @@ impl ClusterMembership {
         if let Some(node) = nodes.get_mut(id) {
             let old_lsn = node.last_applied_lsn;
             node.touch();
-            // Update LSN to match what the node reports
-            // Allow going backwards - this handles follower restarts where they need
-            // to catch up from an earlier position (e.g., after state reset)
-            if lsn != node.last_applied_lsn {
+            // Only update LSN if the incoming value is non-zero
+            // LSN=0 is used for "touch only" operations like PeerHeartbeat
+            // This prevents accidentally resetting a node's progress
+            if lsn > 0 && lsn != node.last_applied_lsn {
                 node.last_applied_lsn = lsn;
                 if lsn < old_lsn {
                     tracing::warn!("record_heartbeat: node '{}' LSN went BACKWARDS {} -> {} (follower likely restarted)", 
