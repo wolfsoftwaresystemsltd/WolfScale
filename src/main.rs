@@ -166,7 +166,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
             return Err(e);
         }
     };
-    tracing::info!("Loaded configuration for node: {}", config.node.id);
+    tracing::info!("WolfScale v{} - Node: {}", env!("CARGO_PKG_VERSION"), config.node.id);
 
     // Ensure directories exist
     if let Err(e) = std::fs::create_dir_all(config.data_dir()) {
