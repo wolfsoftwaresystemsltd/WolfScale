@@ -573,6 +573,32 @@ async fn process_batch_background(
         batch_max_lsn,
         current_lsn);
     
+    // Use atomic counter for lock-free progress tracking
+    let progress_lsn = Arc::new(std::sync::atomic::AtomicU64::new(current_lsn));
+    let ack_done = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    
+    // Spawn periodic ACK sender (every 10 seconds)
+    let ack_tx = message_tx.clone();
+    let ack_batch = batch.clone();
+    let ack_node_id = node_id.clone();
+    let ack_progress = Arc::clone(&progress_lsn);
+    let ack_done_flag = Arc::clone(&ack_done);
+    tokio::spawn(async move {
+        let mut last_acked: u64 = 0;
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+            if ack_done_flag.load(std::sync::atomic::Ordering::Relaxed) {
+                break;
+            }
+            let current = ack_progress.load(std::sync::atomic::Ordering::Relaxed);
+            if current > last_acked {
+                tracing::info!("Periodic ACK: LSN {} (progress since last: {})", current, current - last_acked);
+                send_ack_background(&ack_tx, &ack_batch, current, &ack_node_id).await;
+                last_acked = current;
+            }
+        }
+    });
+    
     let mut highest_applied = current_lsn;
     let mut processed = 0usize;
     let mut skipped = 0usize;
@@ -619,12 +645,18 @@ async fn process_batch_background(
         highest_applied = entry.header.lsn;
         processed += 1;
         
+        // Update atomic counter so periodic ACK sender knows our progress
+        progress_lsn.store(highest_applied, std::sync::atomic::Ordering::Relaxed);
+        
         // Batch state updates: save every 100 entries for performance
         if processed % 100 == 0 {
             *last_applied_lsn.write().await = highest_applied;
             tracing::info!("Progress: {} entries processed, at LSN {}", processed, highest_applied);
         }
     }
+    
+    // Signal periodic ACK sender to stop
+    ack_done.store(true, std::sync::atomic::Ordering::Relaxed);
     
     // Final state update to ensure we don't lose progress
     *last_applied_lsn.write().await = highest_applied;
