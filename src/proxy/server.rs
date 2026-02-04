@@ -106,6 +106,134 @@ async fn read_mysql_packet(stream: &mut TcpStream, buf: &mut [u8]) -> std::io::R
     Ok(total_len)
 }
 
+/// Result from forwarding a write to the leader
+struct ForwardWriteResult {
+    affected_rows: u64,
+    last_insert_id: u64,
+}
+
+/// Forward a write query to the leader's HTTP API
+async fn forward_write_to_leader(
+    leader_url: &str,
+    query: &str,
+    database: &Option<String>,
+) -> std::result::Result<ForwardWriteResult, String> {
+    let client = reqwest::Client::new();
+    
+    let body = serde_json::json!({
+        "sql": query,
+        "database": database,
+    });
+    
+    let response = client.post(leader_url)
+        .json(&body)
+        .timeout(std::time::Duration::from_secs(30))
+        .send()
+        .await
+        .map_err(|e| format!("HTTP request failed: {}", e))?;
+    
+    if !response.status().is_success() {
+        let status = response.status();
+        let text = response.text().await.unwrap_or_default();
+        return Err(format!("Leader returned error {}: {}", status, text));
+    }
+    
+    // Parse response - leader returns JSON with affected_rows and last_insert_id
+    let json: serde_json::Value = response.json().await
+        .map_err(|e| format!("Failed to parse leader response: {}", e))?;
+    
+    Ok(ForwardWriteResult {
+        affected_rows: json.get("affected_rows").and_then(|v| v.as_u64()).unwrap_or(0),
+        last_insert_id: json.get("last_insert_id").and_then(|v| v.as_u64()).unwrap_or(0),
+    })
+}
+
+/// Create a MySQL OK packet
+fn create_mysql_ok_packet(affected_rows: u64, last_insert_id: u64) -> Vec<u8> {
+    let mut payload = Vec::new();
+    
+    // OK packet header
+    payload.push(0x00); // OK marker
+    
+    // Affected rows (length-encoded int)
+    write_lenenc_int(&mut payload, affected_rows);
+    
+    // Last insert ID (length-encoded int)
+    write_lenenc_int(&mut payload, last_insert_id);
+    
+    // Status flags (2 bytes) - autocommit
+    payload.push(0x02);
+    payload.push(0x00);
+    
+    // Warnings (2 bytes)
+    payload.push(0x00);
+    payload.push(0x00);
+    
+    // Build packet with header
+    let payload_len = payload.len();
+    let mut packet = Vec::new();
+    packet.push((payload_len & 0xFF) as u8);
+    packet.push(((payload_len >> 8) & 0xFF) as u8);
+    packet.push(((payload_len >> 16) & 0xFF) as u8);
+    packet.push(0x01); // Sequence ID = 1
+    packet.extend(payload);
+    
+    packet
+}
+
+/// Create a MySQL error packet
+fn create_mysql_error_packet(message: &str) -> Vec<u8> {
+    let mut payload = Vec::new();
+    
+    // Error packet header
+    payload.push(0xFF); // Error marker
+    
+    // Error code (2 bytes) - generic error
+    payload.push(0x00);
+    payload.push(0x04);  // Error 1024
+    
+    // SQL state marker
+    payload.push(b'#');
+    
+    // SQL state (5 bytes)
+    payload.extend_from_slice(b"HY000");
+    
+    // Error message
+    payload.extend_from_slice(message.as_bytes());
+    
+    // Build packet with header
+    let payload_len = payload.len();
+    let mut packet = Vec::new();
+    packet.push((payload_len & 0xFF) as u8);
+    packet.push(((payload_len >> 8) & 0xFF) as u8);
+    packet.push(((payload_len >> 16) & 0xFF) as u8);
+    packet.push(0x01); // Sequence ID = 1
+    packet.extend(payload);
+    
+    packet
+}
+
+/// Write a length-encoded integer
+fn write_lenenc_int(buf: &mut Vec<u8>, val: u64) {
+    if val < 251 {
+        buf.push(val as u8);
+    } else if val < 65536 {
+        buf.push(0xFC);
+        buf.push((val & 0xFF) as u8);
+        buf.push(((val >> 8) & 0xFF) as u8);
+    } else if val < 16777216 {
+        buf.push(0xFD);
+        buf.push((val & 0xFF) as u8);
+        buf.push(((val >> 8) & 0xFF) as u8);
+        buf.push(((val >> 16) & 0xFF) as u8);
+    } else {
+        buf.push(0xFE);
+        for i in 0..8 {
+            buf.push(((val >> (i * 8)) & 0xFF) as u8);
+        }
+    }
+}
+
 /// Check if a query is a write operation
 fn is_write_query(query: &str) -> bool {
     // Strip leading comments (mysqldump adds /* ... */ style comments)
@@ -522,20 +650,18 @@ async fn handle_connection(
             }
         }
 
-        // If this is a write query and we have a WAL writer, log it for replication
-        // Only log if we are the leader - followers route to leader's proxy
+        // If this is a write query, handle based on role
         if is_write {
             if let Some(ref query) = query_opt {
                 tracing::info!("WRITE detected: {}", query.chars().take(80).collect::<String>());
                 
-                // Check if we are the leader - only leader writes to WAL
                 let self_node = cluster.get_self().await;
+                
                 if self_node.role == NodeRole::Leader {
+                    // Leader: write to WAL for replication
                     if let Some(ref wal) = wal_writer {
                         let table_name = extract_table_name(query);
                         
-                        // Store the query with database context for replication
-                        // Followers will use the database field to create appropriate connections
                         let entry = LogEntry::RawSql {
                             sql: query.clone(),
                             affects_table: table_name,
@@ -550,7 +676,43 @@ async fn handle_connection(
                                 tracing::error!("Failed to log write query to WAL: {}", e);
                             }
                         }
-
+                    }
+                } else {
+                    // Follower: forward write to leader's HTTP API
+                    if let Some(leader) = cluster.current_leader().await {
+                        let leader_host = leader.address.split(':').next().unwrap_or("localhost");
+                        let leader_api_url = format!("http://{}:8080/sql", leader_host);
+                        
+                        tracing::info!("Forwarding write to leader at {}", leader_api_url);
+                        
+                        // Create HTTP client and forward the query
+                        match forward_write_to_leader(&leader_api_url, query, &current_database).await {
+                            Ok(result) => {
+                                // Send success response to client
+                                // This is an OK packet for MySQL protocol
+                                let ok_packet = create_mysql_ok_packet(result.affected_rows, result.last_insert_id);
+                                if let Err(e) = client.write_all(&ok_packet).await {
+                                    tracing::error!("Failed to send OK packet to client: {}", e);
+                                }
+                                continue; // Skip local execution, continue with next command
+                            }
+                            Err(e) => {
+                                tracing::error!("Failed to forward write to leader: {}", e);
+                                // Send error to client
+                                let err_packet = create_mysql_error_packet(&format!("Leader forwarding failed: {}", e));
+                                if let Err(e) = client.write_all(&err_packet).await {
+                                    tracing::error!("Failed to send error packet to client: {}", e);
+                                }
+                                continue;
+                            }
+                        }
+                    } else {
+                        tracing::warn!("No leader available for write forwarding, rejecting write");
+                        let err_packet = create_mysql_error_packet("No leader available for write operation");
+                        if let Err(e) = client.write_all(&err_packet).await {
+                            tracing::error!("Failed to send error packet to client: {}", e);
+                        }
+                        continue;
                     }
                 }
             }
