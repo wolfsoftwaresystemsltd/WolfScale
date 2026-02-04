@@ -162,6 +162,18 @@ impl MariaDbExecutor {
                     }
                 } else {
                     // Normal statements use the database pool
+                    // If pool is None but database is configured, try to reconnect
+                    {
+                        let pool_guard = self.pool.read().await;
+                        if pool_guard.is_none() {
+                            drop(pool_guard);  // Release read lock before trying reconnect
+                            tracing::info!("Database pool not available, attempting to reconnect...");
+                            if let Err(e) = self.try_reconnect_db_pool_sync().await {
+                                tracing::warn!("Could not reconnect database pool: {}", e);
+                            }
+                        }
+                    }
+                    
                     let pool_guard = self.pool.read().await;
                     let pool = pool_guard.as_ref().ok_or_else(|| {
                         Error::Database(sqlx::Error::Configuration("No database pool".into()))
@@ -223,6 +235,47 @@ impl MariaDbExecutor {
                 }
             }
         });
+
+        Ok(())
+    }
+
+    /// Try to reconnect the database pool synchronously (waits for result)
+    /// Used when we need the pool immediately for normal writes
+    async fn try_reconnect_db_pool_sync(&self) -> Result<()> {
+        let config = match self.config.as_ref() {
+            Some(c) => c.clone(),
+            None => return Ok(()),  // No config, nothing to do
+        };
+
+        if let Some(db) = &config.database {
+            let db_url = format!(
+                "mysql://{}:{}@{}:{}/{}",
+                config.user,
+                config.password,
+                config.host,
+                config.port,
+                db
+            );
+
+            tracing::info!("Reconnecting database pool to {}", db);
+            
+            match MySqlPoolOptions::new()
+                .max_connections(config.pool_size)
+                .acquire_timeout(Duration::from_secs(5))
+                .connect(&db_url)
+                .await
+            {
+                Ok(new_pool) => {
+                    let mut pool_guard = self.pool.write().await;
+                    *pool_guard = Some(new_pool);
+                    tracing::info!("Successfully reconnected database pool");
+                }
+                Err(e) => {
+                    tracing::warn!("Pool reconnection failed: {}", e);
+                    return Err(Error::Database(e));
+                }
+            }
+        }
 
         Ok(())
     }
