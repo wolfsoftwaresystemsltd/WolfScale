@@ -426,8 +426,14 @@ async fn handle_sql(
     State(state): State<Arc<AppState>>,
     Json(req): Json<SqlRequest>,
 ) -> impl IntoResponse {
+    // Check if we're the leader - use both the flag AND cluster membership
+    // This fixes 503 errors when the leader doesn't have is_leader flag set
+    let leader = state.cluster.current_leader().await;
+    let is_leader = leader.as_ref().map(|l| l.id == state.node_id).unwrap_or(false)
+        || *state.is_leader.read().await;
+    
     // Only leader should handle this
-    if !*state.is_leader.read().await {
+    if !is_leader {
         return (
             StatusCode::SERVICE_UNAVAILABLE,
             Json(SqlResponse {
