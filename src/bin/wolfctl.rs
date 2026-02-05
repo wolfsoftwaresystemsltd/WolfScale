@@ -168,6 +168,8 @@ struct StatsApiResponse {
     followers: Vec<FollowerStatsApi>,
     #[serde(default)]
     recent_errors: Vec<ErrorLogApi>,
+    #[serde(default)]
+    processlist: Vec<ProcessInfoApi>,
 }
 
 #[allow(dead_code)]
@@ -179,6 +181,25 @@ struct ErrorLogApi {
     level: String,
     #[serde(default)]
     message: String,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+struct ProcessInfoApi {
+    #[serde(default)]
+    id: u64,
+    #[serde(default)]
+    user: String,
+    #[serde(default)]
+    db: String,
+    #[serde(default)]
+    command: String,
+    #[serde(default)]
+    time: u64,
+    #[serde(default)]
+    state: String,
+    #[serde(default)]
+    info: String,
 }
 
 #[allow(dead_code)]
@@ -1027,7 +1048,7 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
                             }
                         }
                         
-                        // Build right panel lines (Error Log)
+                        // Build right panel lines (Error Log + Processlist)
                         let mut right_lines: Vec<String> = vec![];
                         right_lines.push(format!("\x1b[1;31mError Log\x1b[0m"));
                         right_lines.push(format!("{}", "-".repeat(40)));
@@ -1035,9 +1056,9 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
                         if stats.recent_errors.is_empty() {
                             right_lines.push(format!("\x1b[2mNo errors\x1b[0m"));
                         } else {
-                            // Show last 10 errors
-                            let errors_to_show = if stats.recent_errors.len() > 10 {
-                                &stats.recent_errors[stats.recent_errors.len() - 10..]
+                            // Show last 5 errors
+                            let errors_to_show = if stats.recent_errors.len() > 5 {
+                                &stats.recent_errors[stats.recent_errors.len() - 5..]
                             } else {
                                 &stats.recent_errors[..]
                             };
@@ -1056,6 +1077,42 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
                                 };
                                 right_lines.push(format!("\x1b[2m{}\x1b[0m {}●\x1b[0m {}", 
                                     err.timestamp, level_color, msg));
+                            }
+                        }
+                        
+                        // Add Processlist section
+                        right_lines.push(String::new());
+                        right_lines.push(format!("\x1b[1;36mProcesslist\x1b[0m"));
+                        right_lines.push(format!("{}", "-".repeat(40)));
+                        
+                        if stats.processlist.is_empty() {
+                            right_lines.push(format!("\x1b[2mNo active queries\x1b[0m"));
+                        } else {
+                            // Show first 5 processes
+                            let procs_to_show = if stats.processlist.len() > 5 {
+                                &stats.processlist[..5]
+                            } else {
+                                &stats.processlist[..]
+                            };
+                            
+                            for proc in procs_to_show {
+                                let time_color = if proc.time > 10 {
+                                    "\x1b[31m"
+                                } else if proc.time > 2 {
+                                    "\x1b[33m"
+                                } else {
+                                    "\x1b[32m"
+                                };
+                                // Truncate query to fit
+                                let query = if proc.info.len() > 25 {
+                                    format!("{}...", &proc.info[..22])
+                                } else if proc.info.is_empty() {
+                                    proc.command.clone()
+                                } else {
+                                    proc.info.clone()
+                                };
+                                right_lines.push(format!("{}{}s\x1b[0m {} {}", 
+                                    time_color, proc.time, proc.user, query));
                             }
                         }
                         

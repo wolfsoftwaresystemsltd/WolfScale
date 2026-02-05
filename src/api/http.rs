@@ -287,6 +287,19 @@ pub struct StatsResponse {
     pub active_nodes: usize,
     pub followers: Vec<FollowerStats>,
     pub recent_errors: Vec<ErrorLogEntry>,
+    pub processlist: Vec<ProcessInfo>,
+}
+
+/// MySQL process info for stats display
+#[derive(Debug, Clone, Serialize)]
+pub struct ProcessInfo {
+    pub id: u64,
+    pub user: String,
+    pub db: String,
+    pub command: String,
+    pub time: u64,
+    pub state: String,
+    pub info: String,
 }
 
 /// Follower stats for replication lag tracking
@@ -686,6 +699,7 @@ async fn handle_stats(
         active_nodes: active_count,
         followers,
         recent_errors,
+        processlist: vec![], // TODO: Query from database when connection available
     })
 }
 
