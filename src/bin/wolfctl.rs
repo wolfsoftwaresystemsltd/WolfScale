@@ -276,8 +276,8 @@ async fn list_servers(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> 
 
     // Print header
     println!();
-    println!("WolfScale Cluster Status");
-    println!("========================");
+    println!("WolfScale Cluster Status (wolfctl v{})", env!("CARGO_PKG_VERSION"));
+    println!("========================================");
     println!();
     println!("Total: {} nodes  |  Active: {}", 
         info.summary.total_nodes,

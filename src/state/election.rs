@@ -161,7 +161,7 @@ impl ElectionCoordinator {
         // A node that just rejoined must catch up before taking leadership
         let self_node = self.cluster.get_self().await;
         if self_node.status != crate::state::NodeStatus::Active {
-            tracing::debug!(
+            tracing::info!(
                 "Not starting election - node {} is not fully synced (status: {:?})",
                 self.node_id,
                 self_node.status
@@ -172,7 +172,7 @@ impl ElectionCoordinator {
         // Deterministic tiebreaker: only the node with the lowest ID can become leader
         // This prevents split-brain when multiple nodes try to become leader simultaneously
         if !self.has_lowest_id().await {
-            tracing::debug!(
+            tracing::info!(
                 "Not starting election - node {} doesn't have lowest ID",
                 self.node_id
             );
