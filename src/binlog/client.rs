@@ -224,30 +224,202 @@ impl BinlogClient {
     }
     
     async fn get_binlog_position(&self, stream: &mut TcpStream) -> Result<(String, u64)> {
-        // Check config first
+        // Check config first - if user specified position, use it
         if let (Some(file), Some(pos)) = (&self.binlog_config.start_file, self.binlog_config.start_position) {
+            tracing::info!("Using configured binlog position: {}:{}", file, pos);
             return Ok((file.clone(), pos));
         }
         
-        // Query SHOW MASTER STATUS
-        let query = "SHOW MASTER STATUS";
-        self.send_query(stream, query).await?;
+        // Query SHOW MASTER STATUS to get current binlog position
+        tracing::debug!("Querying SHOW MASTER STATUS to detect binlog position");
+        self.send_query(stream, "SHOW MASTER STATUS").await?;
         
-        // Read result
-        // For simplicity, we'll parse a basic text result
+        // Read the complete response (may come in multiple packets)
+        let mut response_data = Vec::new();
         let mut buf = vec![0u8; 65536];
-        let n = stream.read(&mut buf).await?;
         
-        // Parse the response (simplified)
-        // In a full implementation, we'd properly parse the result set
+        // Read packets until we get EOF or error
+        loop {
+            let n = stream.read(&mut buf).await?;
+            if n == 0 {
+                break;
+            }
+            response_data.extend_from_slice(&buf[..n]);
+            
+            // Check if we've received the EOF packet (less data than buffer = done)
+            if n < buf.len() {
+                break;
+            }
+        }
         
-        // Default position
-        let file = self.binlog_config.start_file.clone().unwrap_or_else(|| "mysql-bin.000001".to_string());
+        tracing::debug!("Received {} bytes from SHOW MASTER STATUS", response_data.len());
+        
+        // Parse the MySQL result set to extract file and position
+        // Result format: column_count packet, column definitions, EOF, row data, EOF
+        if let Some((file, pos)) = self.parse_master_status_result(&response_data) {
+            tracing::info!("Detected binlog position from SHOW MASTER STATUS: {}:{}", file, pos);
+            return Ok((file, pos));
+        }
+        
+        // Fallback if parsing fails - use config values or defaults
+        let file = self.binlog_config.start_file.clone()
+            .unwrap_or_else(|| "mysql-bin.000001".to_string());
         let pos = self.binlog_config.start_position.unwrap_or(4);
         
-        tracing::debug!("Read {} bytes from SHOW MASTER STATUS", n);
-        
+        tracing::warn!("Could not parse SHOW MASTER STATUS, using defaults: {}:{}", file, pos);
         Ok((file, pos))
+    }
+    
+    /// Parse SHOW MASTER STATUS result set to extract file and position
+    fn parse_master_status_result(&self, data: &[u8]) -> Option<(String, u64)> {
+        // MySQL protocol result set format:
+        // 1. Column count packet (4-byte header + length-encoded column count)
+        // 2. Column definition packets (one per column)
+        // 3. EOF packet
+        // 4. Row data packet(s) (length-encoded strings for each column)
+        // 5. EOF packet
+        //
+        // SHOW MASTER STATUS returns: File, Position, Binlog_Do_DB, Binlog_Ignore_DB, ...
+        // We need first two columns: File (string) and Position (number as string)
+        
+        if data.len() < 10 {
+            return None;
+        }
+        
+        let mut offset = 0;
+        
+        // Skip packets until we find the row data
+        // We're looking for the pattern: column_count, N column defs, EOF, ROW DATA, EOF
+        // The row data packet starts with 0x00 (OK) but column packets don't
+        
+        // Find text data that looks like a binlog filename
+        // Search for "mysql-bin" or similar patterns followed by position
+        let data_str = String::from_utf8_lossy(data);
+        
+        // Try to find binlog file pattern (usually mysql-bin.XXXXXX or similar)
+        // Look for .000 pattern which is common in binlog filenames
+        for i in 0..data.len().saturating_sub(20) {
+            // Look for a length byte followed by text that contains "bin" and ".0"
+            if data[i] > 5 && data[i] < 100 {
+                let len = data[i] as usize;
+                if i + 1 + len <= data.len() {
+                    let potential_file = &data[i + 1..i + 1 + len];
+                    if let Ok(file_str) = std::str::from_utf8(potential_file) {
+                        // Check if this looks like a binlog filename
+                        if (file_str.contains("-bin") || file_str.contains("binlog")) 
+                            && file_str.contains(".0") {
+                            // Next field should be the position
+                            let pos_start = i + 1 + len;
+                            if pos_start < data.len() {
+                                let pos_len = data[pos_start] as usize;
+                                if pos_start + 1 + pos_len <= data.len() {
+                                    let pos_bytes = &data[pos_start + 1..pos_start + 1 + pos_len];
+                                    if let Ok(pos_str) = std::str::from_utf8(pos_bytes) {
+                                        if let Ok(position) = pos_str.parse::<u64>() {
+                                            return Some((file_str.to_string(), position));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Alternative: parse more carefully by skipping packets
+        offset = 0;
+        while offset + 4 < data.len() {
+            // Read packet header
+            let pkt_len = u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], 0]) as usize;
+            let _seq = data[offset + 3];
+            offset += 4;
+            
+            if pkt_len == 0 || offset + pkt_len > data.len() {
+                break;
+            }
+            
+            let pkt_data = &data[offset..offset + pkt_len];
+            
+            // Check for row data (not column definition, not EOF)
+            // Row data starts with length-encoded strings
+            if pkt_data.len() > 2 && pkt_data[0] != 0xFE && pkt_data[0] != 0xFF && pkt_data[0] != 0x00 {
+                // This might be a column definition or row - check for binlog pattern
+                if let Some((file, pos)) = self.try_parse_row(pkt_data) {
+                    return Some((file, pos));
+                }
+            }
+            
+            offset += pkt_len;
+        }
+        
+        None
+    }
+    
+    /// Try to parse a row packet from SHOW MASTER STATUS
+    fn try_parse_row(&self, data: &[u8]) -> Option<(String, u64)> {
+        if data.is_empty() {
+            return None;
+        }
+        
+        // First column: File (length-encoded string)
+        let (file_str, consumed) = self.read_length_encoded_string(data)?;
+        
+        // Check if it looks like a binlog file
+        if !file_str.contains("-bin") && !file_str.contains("binlog") {
+            return None;
+        }
+        
+        // Second column: Position (length-encoded string containing a number)
+        let remaining = &data[consumed..];
+        let (pos_str, _) = self.read_length_encoded_string(remaining)?;
+        
+        let position = pos_str.parse::<u64>().ok()?;
+        
+        Some((file_str, position))
+    }
+    
+    /// Read a length-encoded string from MySQL protocol data
+    fn read_length_encoded_string(&self, data: &[u8]) -> Option<(String, usize)> {
+        if data.is_empty() {
+            return None;
+        }
+        
+        let first_byte = data[0];
+        
+        // Length encoding:
+        // 0-250: 1-byte length
+        // 251: NULL
+        // 252: 2-byte length follows
+        // 253: 3-byte length follows
+        // 254: 8-byte length follows
+        
+        let (len, header_size) = if first_byte <= 250 {
+            (first_byte as usize, 1)
+        } else if first_byte == 252 && data.len() >= 3 {
+            let len = u16::from_le_bytes([data[1], data[2]]) as usize;
+            (len, 3)
+        } else if first_byte == 253 && data.len() >= 4 {
+            let len = u32::from_le_bytes([data[1], data[2], data[3], 0]) as usize;
+            (len, 4)
+        } else if first_byte == 254 && data.len() >= 9 {
+            let len = u64::from_le_bytes([
+                data[1], data[2], data[3], data[4],
+                data[5], data[6], data[7], data[8]
+            ]) as usize;
+            (len, 9)
+        } else {
+            return None;
+        };
+        
+        if data.len() < header_size + len {
+            return None;
+        }
+        
+        let string_data = &data[header_size..header_size + len];
+        let string = String::from_utf8_lossy(string_data).to_string();
+        
+        Some((string, header_size + len))
     }
     
     async fn send_query(&self, stream: &mut TcpStream, query: &str) -> Result<()> {
