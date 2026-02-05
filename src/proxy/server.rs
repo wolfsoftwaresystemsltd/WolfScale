@@ -791,16 +791,34 @@ async fn handle_connection(
         }
 
         // Read and relay response(s) from backend
+        // For large queries, use timeout-based read to show progress
+        let mut last_progress_log = std::time::Instant::now();
         loop {
-            let rn = match read_with_dynamic_buffer(&mut backend, &mut result_buf).await {
-                Ok(0) => {
+            // Use a timeout to periodically log progress for long-running queries
+            let read_result = tokio::time::timeout(
+                std::time::Duration::from_secs(5),
+                read_with_dynamic_buffer(&mut backend, &mut result_buf)
+            ).await;
+            
+            let rn = match read_result {
+                Ok(Ok(0)) => {
                     tracing::debug!("Backend disconnected");
                     return Ok(());
                 }
-                Ok(n) => n,
-                Err(e) => {
+                Ok(Ok(n)) => n,
+                Ok(Err(e)) => {
                     tracing::debug!("Backend read error: {}", e);
                     return Ok(());
+                }
+                Err(_timeout) => {
+                    // Log progress for long-running queries
+                    let elapsed = query_start.elapsed();
+                    if last_progress_log.elapsed().as_secs() >= 5 {
+                        tracing::info!("Still processing query ({} KB)... {}s elapsed", 
+                            query_size / 1024, elapsed.as_secs());
+                        last_progress_log = std::time::Instant::now();
+                    }
+                    continue; // Retry read
                 }
             };
             

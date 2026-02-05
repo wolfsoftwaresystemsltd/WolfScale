@@ -261,7 +261,7 @@ fn default_compression() -> bool {
 }
 
 fn default_segment_size_mb() -> u64 {
-    64
+    256  // Large enough for massive INSERT statements from dump imports
 }
 
 fn default_fsync() -> bool {
