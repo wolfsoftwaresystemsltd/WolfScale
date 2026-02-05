@@ -69,11 +69,22 @@ impl ProxyServer {
     }
 }
 
-/// Read a complete MySQL packet from a stream using proper framing.
+/// Initial buffer size (16MB - MySQL default max_allowed_packet)
+const INITIAL_BUFFER_SIZE: usize = 16 * 1024 * 1024;
+/// Maximum buffer size (1GB - MySQL maximum max_allowed_packet)
+const MAX_BUFFER_SIZE: usize = 1024 * 1024 * 1024;
+/// Buffer growth factor
+const BUFFER_GROWTH_FACTOR: usize = 2;
+
+/// Read a complete MySQL packet from a stream with dynamic buffer sizing.
 /// MySQL packets have a 4-byte header: 3 bytes length + 1 byte sequence ID.
-/// This function reads the header first, then reads exactly the payload bytes.
+/// This function reads the header first, determines required size, resizes buffer if needed,
+/// then reads exactly the payload bytes.
 #[allow(dead_code)]
-async fn read_mysql_packet(stream: &mut TcpStream, buf: &mut [u8]) -> std::io::Result<usize> {
+async fn read_mysql_packet_dynamic(
+    stream: &mut TcpStream, 
+    buf: &mut Vec<u8>
+) -> std::io::Result<usize> {
     use tokio::io::AsyncReadExt;
     
     // Read the 4-byte header first
@@ -87,12 +98,20 @@ async fn read_mysql_packet(stream: &mut TcpStream, buf: &mut [u8]) -> std::io::R
     
     let total_len = 4 + payload_len;
     
-    // Ensure buffer is large enough
-    if total_len > buf.len() {
+    // Check against absolute maximum
+    if total_len > MAX_BUFFER_SIZE {
         return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidData,
-            format!("Packet too large: {} bytes", total_len)
+            format!("Packet too large: {} bytes (max: {} bytes)", total_len, MAX_BUFFER_SIZE)
         ));
+    }
+    
+    // Dynamically resize buffer if needed
+    if total_len > buf.len() {
+        let new_size = (total_len * BUFFER_GROWTH_FACTOR).min(MAX_BUFFER_SIZE);
+        tracing::debug!("Resizing buffer from {} to {} bytes for {} byte packet", 
+            buf.len(), new_size, total_len);
+        buf.resize(new_size, 0);
     }
     
     // Copy header to buffer
@@ -103,7 +122,33 @@ async fn read_mysql_packet(stream: &mut TcpStream, buf: &mut [u8]) -> std::io::R
         stream.read_exact(&mut buf[4..total_len]).await?;
     }
     
+    // Log large packets for monitoring
+    if total_len > 1024 * 1024 {
+        tracing::info!("Processing large packet: {} MB", total_len / (1024 * 1024));
+    }
+    
     Ok(total_len)
+}
+
+/// Read data from stream into a dynamically-sized buffer.
+/// Used for general reads where we don't know packet boundaries.
+async fn read_with_dynamic_buffer(
+    stream: &mut TcpStream,
+    buf: &mut Vec<u8>,
+) -> std::io::Result<usize> {
+    use tokio::io::AsyncReadExt;
+    
+    // Try to read with current buffer
+    let n = stream.read(buf).await?;
+    
+    // If buffer was completely filled, we might need more space
+    if n == buf.len() && buf.len() < MAX_BUFFER_SIZE {
+        let new_size = (buf.len() * BUFFER_GROWTH_FACTOR).min(MAX_BUFFER_SIZE);
+        tracing::debug!("Buffer full, resizing from {} to {} bytes", buf.len(), new_size);
+        buf.resize(new_size, 0);
+    }
+    
+    Ok(n)
 }
 
 /// Result from forwarding a write to the leader
@@ -598,8 +643,9 @@ async fn handle_connection(
     }
 
     // Phase 4: Main command loop with smart routing
-    let mut cmd_buf = vec![0u8; 1024 * 1024 * 1024]; // 1GB max packet - handle any WordPress data
-    let mut result_buf = vec![0u8; 1024 * 1024 * 1024];
+    // Use dynamic buffer sizing - start small, grow as needed
+    let mut cmd_buf = vec![0u8; INITIAL_BUFFER_SIZE]; // Start with 16MB, grows dynamically
+    let mut result_buf = vec![0u8; INITIAL_BUFFER_SIZE];
     let current_backend_addr = initial_backend_addr;
     
     // Track current database context for replication
@@ -619,10 +665,14 @@ async fn handle_connection(
             cmd_buf[..n].copy_from_slice(&data);
             n
         } else {
-            match client.read(&mut cmd_buf).await {
+            // Use dynamic buffer reading for potentially large packets
+            match read_with_dynamic_buffer(&mut client, &mut cmd_buf).await {
                 Ok(0) => break,
                 Ok(n) => n,
-                Err(_) => break,
+                Err(e) => {
+                    tracing::debug!("Client read error: {}", e);
+                    break;
+                }
             }
         };
 
@@ -727,6 +777,14 @@ async fn handle_connection(
         }
 
         // Forward command to backend
+        let query_start = std::time::Instant::now();
+        let query_size = n;
+        
+        // Log large queries before sending
+        if n > 1024 * 1024 {
+            tracing::info!("Sending large query to backend: {} MB", n / (1024 * 1024));
+        }
+        
         if let Err(e) = backend.write_all(&cmd_buf[..n]).await {
             tracing::error!("Backend write error: {}", e);
             break;
@@ -734,7 +792,7 @@ async fn handle_connection(
 
         // Read and relay response(s) from backend
         loop {
-            let rn = match backend.read(&mut result_buf).await {
+            let rn = match read_with_dynamic_buffer(&mut backend, &mut result_buf).await {
                 Ok(0) => {
                     tracing::debug!("Backend disconnected");
                     return Ok(());
@@ -745,6 +803,14 @@ async fn handle_connection(
                     return Ok(());
                 }
             };
+            
+            // Log query completion time for slow queries
+            let elapsed = query_start.elapsed();
+            if elapsed.as_secs() > 5 {
+                tracing::warn!("Slow query completed: {} bytes in {:.1}s", query_size, elapsed.as_secs_f64());
+            } else if elapsed.as_secs() > 1 && query_size > 100_000 {
+                tracing::info!("Query completed: {} KB in {:.1}s", query_size / 1024, elapsed.as_secs_f64());
+            }
 
             // Forward to client
             if let Err(e) = client.write_all(&result_buf[..rn]).await {

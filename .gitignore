@@ -30,3 +30,6 @@ logs/
 .env
 .env.local
 web/
+
+# SQL dump files
+*.sql
