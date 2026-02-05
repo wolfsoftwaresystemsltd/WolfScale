@@ -113,9 +113,13 @@ impl LeaderNode {
         // Initialize follower state
         self.initialize_follower_state().await?;
 
-        // Start heartbeat loop
+        // DECOUPLED: Heartbeat runs at configured interval (for health monitoring)
+        // Replication runs much faster (10ms) to maximize throughput
         let heartbeat_interval = Duration::from_millis(self.config.heartbeat_interval_ms);
+        let replication_interval = Duration::from_millis(10); // 100 replication cycles/sec max
+        
         let mut heartbeat_ticker = interval(heartbeat_interval);
+        let mut replication_ticker = interval(replication_interval);
         let mut db_check_counter = 0u64;
 
         loop {
@@ -123,34 +127,36 @@ impl LeaderNode {
                 break;
             }
 
-            heartbeat_ticker.tick().await;
-            
-            // Check database health every 5 heartbeats (to avoid too frequent checks)
-            db_check_counter += 1;
-            if db_check_counter % 5 == 0 {
-                if !self.is_database_healthy().await {
-                    tracing::error!("Local database is unhealthy - leader stepping down");
-                    return Err(Error::DatabaseUnavailable);
+            tokio::select! {
+                // Heartbeat path: health checks and cluster membership
+                _ = heartbeat_ticker.tick() => {
+                    // Check database health every 5 heartbeats
+                    db_check_counter += 1;
+                    if db_check_counter % 5 == 0 {
+                        if !self.is_database_healthy().await {
+                            tracing::error!("Local database is unhealthy - leader stepping down");
+                            return Err(Error::DatabaseUnavailable);
+                        }
+                    }
+                    
+                    self.send_heartbeats().await?;
+                    self.check_commit_progress().await?;
+                    
+                    // Check if we should yield to a higher-priority node
+                    if let Some(higher_priority_node) = self.check_for_priority_yield().await {
+                        tracing::info!(
+                            "Yielding leadership to higher-priority node: {}",
+                            higher_priority_node
+                        );
+                        return Ok(());
+                    }
                 }
-            }
-            
-            // Replicate any new WAL entries to followers
-            // This is critical for proxy-written entries that bypass LeaderNode.write()
-            if let Err(e) = self.replicate_to_followers().await {
-                tracing::warn!("Replication error: {}", e);
-            }
-            
-            self.send_heartbeats().await?;
-            self.check_commit_progress().await?;
-            // Check if we should yield to a higher-priority node that has caught up
-            if let Some(higher_priority_node) = self.check_for_priority_yield().await {
-                tracing::info!(
-                    "Yielding leadership to higher-priority node: {}",
-                    higher_priority_node
-                );
-                // Return success - main.rs will restart as follower
-                // The higher-priority node will become leader
-                return Ok(());
+                // Replication path: fast loop for maximum throughput
+                _ = replication_ticker.tick() => {
+                    if let Err(e) = self.replicate_to_followers().await {
+                        tracing::warn!("Replication error: {}", e);
+                    }
+                }
             }
         }
 
