@@ -253,7 +253,7 @@ fn default_batch_size() -> usize {
 }
 
 fn default_flush_interval_ms() -> u64 {
-    100
+    10  // 10ms = up to 100 flushes/sec for high throughput
 }
 
 fn default_compression() -> bool {
