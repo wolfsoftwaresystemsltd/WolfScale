@@ -182,11 +182,22 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
         return Err(e.into());
     }
 
-    // Initialize WAL
-    let wal_writer = match WalWriter::new(
+    // Auto-tune performance settings based on hardware
+    let tuned = if config.performance.auto_tune {
+        let t = wolfscale::tuning::auto_tune();
+        tracing::info!("Auto-tuning enabled:\n{}", wolfscale::tuning::tuning_summary(&t));
+        Some(t)
+    } else {
+        tracing::info!("Auto-tuning disabled, using default settings");
+        None
+    };
+
+    // Initialize WAL with optional tuning
+    let wal_writer = match WalWriter::with_tuning(
         config.data_dir().clone(),
         config.wal.clone(),
         config.node.id.clone(),
+        tuned.as_ref(),
     ).await {
         Ok(w) => w,
         Err(e) => {

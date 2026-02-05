@@ -41,6 +41,10 @@ pub struct WolfScaleConfig {
     /// Binlog configuration (when replication.mode = "binlog")
     #[serde(default)]
     pub binlog: BinlogConfig,
+    
+    /// Performance auto-tuning configuration
+    #[serde(default)]
+    pub performance: PerformanceConfig,
 }
 
 /// Node-specific configuration
@@ -235,7 +239,34 @@ pub struct BinlogConfig {
     pub start_position: Option<u64>,
 }
 
-// Default value functions
+/// Performance auto-tuning configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceConfig {
+    /// Enable automatic hardware detection and tuning
+    /// When true, WolfScale will detect CPU cores and RAM to optimize settings
+    /// while reserving resources for MariaDB (default: true)
+    #[serde(default = "default_true")]
+    pub auto_tune: bool,
+    
+    /// Override: manually set worker threads (0 = auto-detect)
+    #[serde(default)]
+    pub worker_threads: usize,
+    
+    /// Override: manually set channel buffer size (0 = auto-detect)
+    #[serde(default)]
+    pub channel_buffer: usize,
+}
+
+impl Default for PerformanceConfig {
+    fn default() -> Self {
+        Self {
+            auto_tune: true,
+            worker_threads: 0,
+            channel_buffer: 0,
+        }
+    }
+}
+
 fn default_db_port() -> u16 {
     3306
 }

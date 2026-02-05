@@ -64,6 +64,16 @@ impl WalWriter {
         config: WalConfig,
         node_id: String,
     ) -> Result<Self> {
+        Self::with_tuning(data_dir, config, node_id, None).await
+    }
+    
+    /// Create a new WAL writer with optional auto-tuning
+    pub async fn with_tuning(
+        data_dir: PathBuf,
+        config: WalConfig,
+        node_id: String,
+        tuned: Option<&crate::tuning::TunedConfig>,
+    ) -> Result<Self> {
         let paths = WalPaths::new(data_dir.join("wal"));
         paths.ensure_dirs()?;
 
@@ -76,7 +86,12 @@ impl WalWriter {
             node_id,
         }));
 
-        let (sender, receiver) = mpsc::channel(10000);
+        // Use tuned channel buffer if available, otherwise default to 10000
+        let channel_buffer = tuned
+            .map(|t| t.channel_buffer)
+            .unwrap_or(10000);
+        
+        let (sender, receiver) = mpsc::channel(channel_buffer);
 
         let inner = WriterInner {
             paths,
