@@ -74,7 +74,21 @@ Leader continuously monitors database health. If MariaDB goes down, WolfScale st
 
 ## Quick Start
 
+### Choose Your Setup Path
+
+> **All cluster nodes MUST have identical data before starting WolfScale.** WolfScale replicates new changes only — it does NOT sync existing data between nodes.
+
+| Option 1: Brand New | Option 2: Backup & Restore | Option 3: Binlog Mode |
+|---------------------|---------------------------|----------------------|
+| **Empty databases** | **Can take source offline** | **Live database, no downtime** |
+| Create the cluster | mysqldump your existing database | Use Binlog Mode |
+| Point your software to the MySQL proxy | Set up empty WolfScale cluster | Replicate live from your existing database |
+| Start using WolfScale immediately | Restore to leader via proxy | Works with Galera clusters too |
+| | Data replicates to all nodes | Switch to WolfScale when ready |
+
 ### One-Line Install
+
+Run this on each server:
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/setup.sh | bash
@@ -88,18 +102,11 @@ This automatically installs dependencies, builds WolfScale, and runs the interac
 # Check cluster status
 wolfctl list servers
 
-# Sample output:
-# ID          | STATUS | ROLE     | ADDRESS         | LAG
-# wolftest1   | ACTIVE | LEADER   | 10.0.10.111:7654 | 0
-# wolftest2   | ACTIVE | FOLLOWER | 10.0.10.112:7654 | 0
-# wolftest3   | ACTIVE | FOLLOWER | 10.0.10.113:7654 | 0
-
-# Live throughput monitoring (updates every second, Ctrl+C to exit)
+# Live throughput monitoring
 wolfctl stats
 
-# Reset WAL and state on ALL nodes (DESTRUCTIVE - requires restart)
-wolfctl reset          # Interactive confirmation
-wolfctl reset --force  # Skip confirmation
+# Reset WAL and state on ALL nodes (DESTRUCTIVE)
+wolfctl reset --force
 ```
 
 ### Adding New Nodes
@@ -113,8 +120,6 @@ wolfctl migrate --from 10.0.10.111:8080
 # Then start WolfScale normally
 systemctl start wolfscale
 ```
-
-The new node will be in `NEEDS_MIGRATION` status until you run the migrate command.
 
 ## Architecture
 

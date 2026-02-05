@@ -753,6 +753,18 @@ bind_address = "0.0.0.0:3307"      # MySQL proxy port
 
 ## Installation & Service Management
 
+### Choose Your Setup Path
+
+> **All cluster nodes MUST have identical data before starting WolfScale.** WolfScale replicates new changes only — it does NOT sync existing data between nodes.
+
+| Option 1: Brand New | Option 2: Backup & Restore | Option 3: Binlog Mode |
+|---------------------|---------------------------|----------------------|
+| **Empty databases** | **Can take source offline** | **Live database, no downtime** |
+| Create the cluster | mysqldump your existing database | Use Binlog Mode |
+| Point your software to the MySQL proxy | Set up empty WolfScale cluster | Replicate live from your existing database |
+| Start using WolfScale immediately | Restore to leader via proxy | Works with Galera clusters too |
+| | Data replicates to all nodes | Switch to WolfScale when ready |
+
 ### Quick Start with `run.sh`
 
 Use the included `run.sh` script for development and testing:
