@@ -261,6 +261,46 @@ impl MariaDbExecutor {
 
                 tracing::debug!("Executing on db={:?}: {}", target_database, safe_truncate(stmt, 80));
                 
+                // Check for large multi-row INSERT and split into chunks
+                if let Some(chunks) = split_large_insert(stmt) {
+                    // Execute each chunk separately
+                    for (i, chunk) in chunks.iter().enumerate() {
+                        tracing::debug!("Executing INSERT chunk {}/{}", i + 1, chunks.len());
+                        // Use our held connection for chunked INSERTs
+                        if let Some(ref mut conn) = conn_opt {
+                            sqlx::query(chunk)
+                                .execute(&mut **conn)
+                                .await
+                                .map_err(|e| {
+                                    Error::QueryExecution(format!("Failed to execute INSERT chunk {}/{}: {}", 
+                                        i + 1, chunks.len(), e))
+                                })?;
+                        } else if let Some(server_pool) = &self.server_pool {
+                            match server_pool.acquire().await {
+                                Ok(mut server_conn) => {
+                                    sqlx::query(chunk)
+                                        .execute(&mut *server_conn)
+                                        .await
+                                        .map_err(|e| {
+                                            Error::QueryExecution(format!("Failed to execute INSERT chunk {}/{} (fallback): {}", 
+                                                i + 1, chunks.len(), e))
+                                        })?;
+                                    conn_opt = Some(server_conn.into());
+                                }
+                                Err(e) => {
+                                    return Err(Error::QueryExecution(format!(
+                                        "No database connection available for INSERT chunk: {}",
+                                        e
+                                    )));
+                                }
+                            }
+                        } else {
+                            return Err(Error::Database(sqlx::Error::Configuration("No connection available".into())));
+                        }
+                    }
+                    continue; // Skip normal execution - chunks already executed
+                }
+                
                 // Use server pool for database-level DDL operations (CREATE/DROP DATABASE)
                 if Self::is_database_ddl(stmt) {
                     tracing::info!("Executing DDL: {}", safe_truncate(stmt, 50));
@@ -1231,4 +1271,105 @@ fn parse_single_value(s: &str) -> Option<crate::wal::entry::Value> {
     
     // Unable to parse - skip batching this statement
     None
+}
+
+/// Maximum rows per INSERT chunk when splitting large multi-row INSERTs
+const MAX_INSERT_CHUNK_ROWS: usize = 500;
+
+/// Split a large multi-row INSERT statement into smaller chunks.
+/// 
+/// Input:  `INSERT INTO table (cols) VALUES (...), (...), ... (10000 rows)`
+/// Output: Vec of `INSERT INTO table (cols) VALUES (...), ... (500 rows each)`
+/// 
+/// Returns None if the statement is not a multi-row INSERT or parsing fails.
+pub fn split_large_insert(sql: &str) -> Option<Vec<String>> {
+    let trimmed = sql.trim();
+    let upper = trimmed.to_uppercase();
+    
+    // Only process INSERT statements
+    if !upper.starts_with("INSERT INTO ") && !upper.starts_with("INSERT IGNORE INTO ") {
+        return None;
+    }
+    
+    // Find VALUES keyword
+    let values_pos = upper.find(" VALUES ")?;
+    let prefix = &trimmed[..values_pos + 8]; // "INSERT INTO ... VALUES "
+    let values_part = trimmed[values_pos + 8..].trim();
+    
+    // Must start with ( - the first value tuple
+    if !values_part.starts_with('(') {
+        return None;
+    }
+    
+    // Parse out individual value tuples: (...), (...), (...)
+    let mut tuples: Vec<&str> = Vec::new();
+    let mut depth = 0;
+    let mut in_string = false;
+    let mut string_char = '\'';
+    let mut escape_next = false;
+    let mut tuple_start = 0;
+    
+    for (i, c) in values_part.char_indices() {
+        if escape_next {
+            escape_next = false;
+            continue;
+        }
+        
+        if in_string {
+            if c == '\\' {
+                escape_next = true;
+            } else if c == string_char {
+                in_string = false;
+            }
+            continue;
+        }
+        
+        match c {
+            '\'' | '"' => {
+                in_string = true;
+                string_char = c;
+            }
+            '(' => {
+                if depth == 0 {
+                    tuple_start = i;
+                }
+                depth += 1;
+            }
+            ')' => {
+                depth -= 1;
+                if depth == 0 {
+                    // End of a tuple - include the closing paren
+                    let tuple = &values_part[tuple_start..=i];
+                    tuples.push(tuple);
+                }
+            }
+            _ => {}
+        }
+    }
+    
+    // Only split if there are multiple rows
+    if tuples.len() <= 1 {
+        return None;
+    }
+    
+    // If small enough, don't split
+    if tuples.len() <= MAX_INSERT_CHUNK_ROWS {
+        return None;
+    }
+    
+    tracing::info!(
+        "Splitting large INSERT ({} rows) into {} chunks of {} rows each",
+        tuples.len(),
+        (tuples.len() + MAX_INSERT_CHUNK_ROWS - 1) / MAX_INSERT_CHUNK_ROWS,
+        MAX_INSERT_CHUNK_ROWS
+    );
+    
+    // Build chunked INSERT statements
+    let mut chunks: Vec<String> = Vec::new();
+    for chunk in tuples.chunks(MAX_INSERT_CHUNK_ROWS) {
+        let values_str = chunk.join(", ");
+        chunks.push(format!("{}{}", prefix, values_str));
+    }
+    
+    Some(chunks)
 }
