@@ -609,22 +609,9 @@ async fn process_batch_background(
             continue;
         }
         
-        // Execute the SQL - log what we're doing
+        // Execute the SQL - PERFORMANCE: Skip preview generation unless needed
         let sql_stmts = entry.entry.to_sql();
-        let sql_preview = if sql_stmts.is_empty() {
-            "noop".to_string()
-        } else {
-            let first = &sql_stmts[0];
-            // Use chars().take() for UTF-8 safe truncation
-            if first.chars().count() > 100 { 
-                format!("{}...", first.chars().take(100).collect::<String>()) 
-            } else { 
-                first.clone() 
-            }
-        };
-        tracing::debug!("Executing LSN {}: {}", entry.header.lsn, sql_preview);
         
-        let start = std::time::Instant::now();
         // Use timeout to prevent indefinite hangs - DDL can sometimes block
         let execute_result = tokio::time::timeout(
             std::time::Duration::from_secs(30),
@@ -634,15 +621,16 @@ async fn process_batch_background(
         match execute_result {
             Ok(Ok(())) => {}
             Ok(Err(e)) => {
-                tracing::warn!("Entry LSN {} failed: {} - continuing", entry.header.lsn, e);
+                // Only generate preview for error logging
+                let sql_preview = if sql_stmts.is_empty() { "noop".to_string() } 
+                    else { sql_stmts[0].chars().take(100).collect::<String>() };
+                tracing::warn!("Entry LSN {} failed: {} - SQL: {}", entry.header.lsn, e, sql_preview);
             }
             Err(_) => {
-                tracing::error!("Entry LSN {} TIMED OUT after 30s - skipping: {}", entry.header.lsn, sql_preview);
+                let sql_preview = if sql_stmts.is_empty() { "noop".to_string() } 
+                    else { sql_stmts[0].chars().take(100).collect::<String>() };
+                tracing::error!("Entry LSN {} TIMED OUT after 30s: {}", entry.header.lsn, sql_preview);
             }
-        }
-        let elapsed = start.elapsed();
-        if elapsed > std::time::Duration::from_secs(1) {
-            tracing::warn!("Entry LSN {} took {:.1}s to execute: {}", entry.header.lsn, elapsed.as_secs_f64(), sql_preview);
         }
         
         // Mark as processed regardless of success/failure
@@ -652,10 +640,10 @@ async fn process_batch_background(
         // Update atomic counter so periodic ACK sender knows our progress
         progress_lsn.store(highest_applied, std::sync::atomic::Ordering::Relaxed);
         
-        // Batch state updates: save every 100 entries for performance
-        if processed % 100 == 0 {
+        // Batch state updates: save every 1000 entries for performance (was 100)
+        if processed % 1000 == 0 {
             *last_applied_lsn.write().await = highest_applied;
-            tracing::debug!("Progress: {} entries processed, at LSN {}", processed, highest_applied);
+            tracing::info!("Progress: {} entries processed, at LSN {}", processed, highest_applied);
         }
     }
     
