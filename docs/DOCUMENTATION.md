@@ -1131,9 +1131,25 @@ echo "Full backup saved to: $BACKUP_DIR/full_backup_$DATE.sql.gz"
 
 ## Performance Tuning
 
+### Quick Auto-Tune
+
+The easiest way to optimize MariaDB is to run the auto-tuner:
+
+```bash
+sudo wolfctl tune-mariadb
+```
+
+This command will:
+- Detect your system's RAM and calculate optimal buffer pool size (70%)
+- Detect CPU cores for thread pool configuration  
+- Create `/etc/mysql/mariadb.conf.d/99-wolfscale.cnf`
+- Restart MariaDB automatically
+
+Use `--dry-run` to preview changes without applying them.
+
 ### MariaDB Tuning for WolfScale
 
-Optimize your MariaDB instances for best performance with WolfScale:
+If you prefer manual configuration, optimize your MariaDB instances with these settings:
 
 #### InnoDB Buffer Pool (Most Impactful)
 
