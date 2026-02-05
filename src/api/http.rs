@@ -745,7 +745,8 @@ async fn handle_stats(
     
     // Query processlist from database
     let processlist = if let Some(pool) = &state.db_pool {
-        match sqlx::query_as::<_, (u64, String, Option<String>, String, u64, Option<String>, Option<String>)>(
+        // Note: ID and TIME are BIGINT (signed) in MySQL, not BIGINT UNSIGNED
+        match sqlx::query_as::<_, (i64, String, Option<String>, String, i64, Option<String>, Option<String>)>(
             "SELECT ID, USER, DB, COMMAND, TIME, STATE, INFO FROM INFORMATION_SCHEMA.PROCESSLIST WHERE COMMAND != 'Sleep' LIMIT 10"
         )
         .fetch_all(pool)
@@ -754,11 +755,11 @@ async fn handle_stats(
             Ok(rows) => {
                 rows.into_iter().map(|(id, user, db, command, time, state, info)| {
                     ProcessInfo {
-                        id,
+                        id: id as u64,
                         user,
                         db: db.unwrap_or_default(),
                         command,
-                        time,
+                        time: time as u64,
                         state: state.unwrap_or_default(),
                         info: info.unwrap_or_default(),
                     }

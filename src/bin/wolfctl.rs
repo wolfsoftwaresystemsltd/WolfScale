@@ -994,45 +994,46 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
                         println!("  LSN:      {}", stats.current_lsn);
                         println!();
                         
-                        // === SIDE BY SIDE LAYOUT ===
-                        // Left panel: Stats (columns 1-50)
-                        // Right panel: Error Log (columns 55-100)
+                        // === THREE COLUMN LAYOUT ===
+                        // Left: Stats/Throughput/Followers
+                        // Middle: Processlist
+                        // Right: Error Log
                         
-                        let left_width = 50;
-                        let right_start = 55;
+                        let col1_width = 35;
+                        let col2_width = 40;
+                        let col3_width = 35;
                         
-                        // Helper to print side-by-side
-                        fn print_two_cols(left: &str, right: &str, left_w: usize, _right_s: usize) {
-                            // Print left, pad to left_w, move to right_s, print right
+                        // Helper to print three columns
+                        fn print_three_cols(left: &str, mid: &str, right: &str, col1_w: usize, col2_w: usize) {
                             let left_plain = strip_ansi(left);
-                            let padding = if left_plain.len() < left_w { left_w - left_plain.len() } else { 0 };
-                            println!("{}{:width$}│ {}", left, "", right, width = padding);
+                            let mid_plain = strip_ansi(mid);
+                            let pad1 = if left_plain.len() < col1_w { col1_w - left_plain.len() } else { 0 };
+                            let pad2 = if mid_plain.len() < col2_w { col2_w - mid_plain.len() } else { 0 };
+                            println!("{}{:w1$}│ {}{:w2$}│ {}", left, "", mid, "", right, w1 = pad1, w2 = pad2);
                         }
                         
-                        // Build left panel lines
+                        // Build left panel lines (Stats)
                         let mut left_lines: Vec<String> = vec![];
-                        
-                        // Throughput section
-                        left_lines.push(format!("  \x1b[1mThroughput\x1b[0m"));
-                        left_lines.push(format!("  {}", "-".repeat(45)));
-                        left_lines.push(format!("  Current:  \x1b[1;32m{:>10.1}/s\x1b[0m", writes_per_sec));
-                        left_lines.push(format!("  Average:  \x1b[1;33m{:>10.1}/s\x1b[0m", avg_throughput));
-                        left_lines.push(format!("  Peak:     \x1b[1;35m{:>10.1}/s\x1b[0m", peak_throughput));
-                        left_lines.push(format!("  Total:    {:>10}", total_writes));
+                        left_lines.push(format!("\x1b[1mThroughput\x1b[0m"));
+                        left_lines.push(format!("{}", "-".repeat(col1_width - 2)));
+                        left_lines.push(format!("Current: \x1b[1;32m{:>8.1}/s\x1b[0m", writes_per_sec));
+                        left_lines.push(format!("Average: \x1b[1;33m{:>8.1}/s\x1b[0m", avg_throughput));
+                        left_lines.push(format!("Peak:    \x1b[1;35m{:>8.1}/s\x1b[0m", peak_throughput));
+                        left_lines.push(format!("Total:   {:>8}", total_writes));
                         left_lines.push(String::new());
                         
                         // Follower section
                         if !stats.followers.is_empty() && stats.role == "Leader" {
-                            left_lines.push(format!("  \x1b[1mFollowers\x1b[0m"));
-                            left_lines.push(format!("  {}", "-".repeat(45)));
+                            left_lines.push(format!("\x1b[1mFollowers\x1b[0m"));
+                            left_lines.push(format!("{}", "-".repeat(col1_width - 2)));
                             
                             for f in &stats.followers {
                                 let status_char = match f.status.as_str() {
-                                    "Active" => "\x1b[32m[OK]\x1b[0m",
-                                    "Syncing" => "\x1b[33m[..]\x1b[0m",
-                                    "Lagging" => "\x1b[33m[!!]\x1b[0m",
-                                    "Dropped" => "\x1b[31m[XX]\x1b[0m",
-                                    _ => "[??]",
+                                    "Active" => "\x1b[32m●\x1b[0m",
+                                    "Syncing" => "\x1b[33m◐\x1b[0m",
+                                    "Lagging" => "\x1b[33m!\x1b[0m",
+                                    "Dropped" => "\x1b[31m✗\x1b[0m",
+                                    _ => "?",
                                 };
                                 
                                 let lag_display = if f.lag == 0 {
@@ -1043,54 +1044,24 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
                                     format!("\x1b[31m{}\x1b[0m", f.lag)
                                 };
                                 
-                                left_lines.push(format!("  {} {:12} LSN:{:>8} Lag:{}", 
-                                    status_char, f.node_id, f.last_applied_lsn, lag_display));
+                                left_lines.push(format!("{} {:10} lag:{}", 
+                                    status_char, 
+                                    if f.node_id.len() > 10 { &f.node_id[..10] } else { &f.node_id },
+                                    lag_display));
                             }
                         }
                         
-                        // Build right panel lines (Error Log + Processlist)
-                        let mut right_lines: Vec<String> = vec![];
-                        right_lines.push(format!("\x1b[1;31mError Log\x1b[0m"));
-                        right_lines.push(format!("{}", "-".repeat(40)));
-                        
-                        if stats.recent_errors.is_empty() {
-                            right_lines.push(format!("\x1b[2mNo errors\x1b[0m"));
-                        } else {
-                            // Show last 5 errors
-                            let errors_to_show = if stats.recent_errors.len() > 5 {
-                                &stats.recent_errors[stats.recent_errors.len() - 5..]
-                            } else {
-                                &stats.recent_errors[..]
-                            };
-                            
-                            for err in errors_to_show {
-                                let level_color = match err.level.as_str() {
-                                    "ERROR" => "\x1b[31m",
-                                    "WARN" => "\x1b[33m",
-                                    _ => "\x1b[37m",
-                                };
-                                // Truncate message to fit (UTF-8 safe)
-                                let msg = if err.message.chars().count() > 30 {
-                                    format!("{}...", err.message.chars().take(27).collect::<String>())
-                                } else {
-                                    err.message.clone()
-                                };
-                                right_lines.push(format!("\x1b[2m{}\x1b[0m {}●\x1b[0m {}", 
-                                    err.timestamp, level_color, msg));
-                            }
-                        }
-                        
-                        // Add Processlist section
-                        right_lines.push(String::new());
-                        right_lines.push(format!("\x1b[1;36mProcesslist\x1b[0m"));
-                        right_lines.push(format!("{}", "-".repeat(40)));
+                        // Build middle panel (Processlist)
+                        let mut mid_lines: Vec<String> = vec![];
+                        mid_lines.push(format!("\x1b[1;36mProcesslist\x1b[0m"));
+                        mid_lines.push(format!("{}", "-".repeat(col2_width - 2)));
                         
                         if stats.processlist.is_empty() {
-                            right_lines.push(format!("\x1b[2mNo active queries\x1b[0m"));
+                            mid_lines.push(format!("\x1b[2mNo active queries\x1b[0m"));
                         } else {
-                            // Show first 5 processes
-                            let procs_to_show = if stats.processlist.len() > 5 {
-                                &stats.processlist[..5]
+                            // Show first 8 processes
+                            let procs_to_show = if stats.processlist.len() > 8 {
+                                &stats.processlist[..8]
                             } else {
                                 &stats.processlist[..]
                             };
@@ -1103,7 +1074,7 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
                                 } else {
                                     "\x1b[32m"
                                 };
-                                // Truncate query to fit (UTF-8 safe)
+                                // Truncate query for display (UTF-8 safe)
                                 let query = if proc.info.chars().count() > 25 {
                                     format!("{}...", proc.info.chars().take(22).collect::<String>())
                                 } else if proc.info.is_empty() {
@@ -1111,17 +1082,52 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
                                 } else {
                                     proc.info.clone()
                                 };
-                                right_lines.push(format!("{}{}s\x1b[0m {} {}", 
+                                mid_lines.push(format!("{}{}s\x1b[0m {} {}", 
                                     time_color, proc.time, proc.user, query));
+                            }
+                            if stats.processlist.len() > 8 {
+                                mid_lines.push(format!("\x1b[2m+{} more...\x1b[0m", stats.processlist.len() - 8));
                             }
                         }
                         
-                        // Print side-by-side
-                        let max_lines = left_lines.len().max(right_lines.len());
+                        // Build right panel (Error Log)
+                        let mut right_lines: Vec<String> = vec![];
+                        right_lines.push(format!("\x1b[1;31mError Log\x1b[0m"));
+                        right_lines.push(format!("{}", "-".repeat(col3_width - 2)));
+                        
+                        if stats.recent_errors.is_empty() {
+                            right_lines.push(format!("\x1b[2mNo errors\x1b[0m"));
+                        } else {
+                            // Show last 8 errors
+                            let errors_to_show = if stats.recent_errors.len() > 8 {
+                                &stats.recent_errors[stats.recent_errors.len() - 8..]
+                            } else {
+                                &stats.recent_errors[..]
+                            };
+                            
+                            for err in errors_to_show {
+                                let level_color = match err.level.as_str() {
+                                    "ERROR" => "\x1b[31m●\x1b[0m",
+                                    "WARN" => "\x1b[33m●\x1b[0m",
+                                    _ => "\x1b[37m●\x1b[0m",
+                                };
+                                // Truncate message (UTF-8 safe)
+                                let msg = if err.message.chars().count() > 28 {
+                                    format!("{}...", err.message.chars().take(25).collect::<String>())
+                                } else {
+                                    err.message.clone()
+                                };
+                                right_lines.push(format!("{} {}", level_color, msg));
+                            }
+                        }
+                        
+                        // Print three columns side-by-side
+                        let max_lines = left_lines.len().max(mid_lines.len()).max(right_lines.len());
                         for i in 0..max_lines {
                             let left = left_lines.get(i).map(|s| s.as_str()).unwrap_or("");
+                            let mid = mid_lines.get(i).map(|s| s.as_str()).unwrap_or("");
                             let right = right_lines.get(i).map(|s| s.as_str()).unwrap_or("");
-                            print_two_cols(left, right, left_width, right_start);
+                            print_three_cols(left, mid, right, col1_width, col2_width);
                         }
                         
                         println!();
