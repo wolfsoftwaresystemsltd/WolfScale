@@ -615,7 +615,12 @@ async fn process_batch_background(
             "noop".to_string()
         } else {
             let first = &sql_stmts[0];
-            if first.len() > 100 { format!("{}...", &first[..100]) } else { first.clone() }
+            // Use chars().take() for UTF-8 safe truncation
+            if first.chars().count() > 100 { 
+                format!("{}...", first.chars().take(100).collect::<String>()) 
+            } else { 
+                first.clone() 
+            }
         };
         tracing::debug!("Executing LSN {}: {}", entry.header.lsn, sql_preview);
         

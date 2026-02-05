@@ -1069,9 +1069,9 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
                                     "WARN" => "\x1b[33m",
                                     _ => "\x1b[37m",
                                 };
-                                // Truncate message to fit
-                                let msg = if err.message.len() > 30 {
-                                    format!("{}...", &err.message[..27])
+                                // Truncate message to fit (UTF-8 safe)
+                                let msg = if err.message.chars().count() > 30 {
+                                    format!("{}...", err.message.chars().take(27).collect::<String>())
                                 } else {
                                     err.message.clone()
                                 };
@@ -1103,9 +1103,9 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
                                 } else {
                                     "\x1b[32m"
                                 };
-                                // Truncate query to fit
-                                let query = if proc.info.len() > 25 {
-                                    format!("{}...", &proc.info[..22])
+                                // Truncate query to fit (UTF-8 safe)
+                                let query = if proc.info.chars().count() > 25 {
+                                    format!("{}...", proc.info.chars().take(22).collect::<String>())
                                 } else if proc.info.is_empty() {
                                     proc.command.clone()
                                 } else {

@@ -13,6 +13,15 @@ use crate::config::DatabaseConfig;
 use crate::wal::LogEntry;
 use crate::error::{Error, Result};
 
+/// Safely truncate a string at char boundary (UTF-8 safe)
+fn safe_truncate(s: &str, max_chars: usize) -> String {
+    if s.chars().count() <= max_chars {
+        s.to_string()
+    } else {
+        format!("{}...", s.chars().take(max_chars).collect::<String>())
+    }
+}
+
 /// MariaDB executor for applying log entries
 pub struct MariaDbExecutor {
     /// Database-specific connection pool (may become invalid if DB is dropped)
@@ -246,15 +255,15 @@ impl MariaDbExecutor {
                 // Skip LOCK TABLES and UNLOCK TABLES - they cause metadata lock issues
                 // during replication since entries execute across different connections
                 if upper.starts_with("LOCK TABLES") || upper.starts_with("UNLOCK TABLES") {
-                    tracing::debug!("Skipping LOCK/UNLOCK TABLES (not needed for replication): {}", &stmt[..stmt.len().min(50)]);
+                    tracing::debug!("Skipping LOCK/UNLOCK TABLES (not needed for replication): {}", safe_truncate(stmt, 50));
                     continue;
                 }
 
-                tracing::debug!("Executing on db={:?}: {}", target_database, &stmt[..stmt.len().min(80)]);
+                tracing::debug!("Executing on db={:?}: {}", target_database, safe_truncate(stmt, 80));
                 
                 // Use server pool for database-level DDL operations (CREATE/DROP DATABASE)
                 if Self::is_database_ddl(stmt) {
-                    tracing::info!("Executing DDL: {}", &stmt[..stmt.len().min(50)]);
+                    tracing::info!("Executing DDL: {}", safe_truncate(stmt, 50));
                     let server_pool = self.server_pool.as_ref().ok_or_else(|| {
                         Error::Database(sqlx::Error::Configuration("No server pool".into()))
                     })?;
@@ -286,12 +295,12 @@ impl MariaDbExecutor {
                         .execute(server_pool)
                         .await
                         .map_err(|e| {
-                            Error::QueryExecution(format!("Failed to execute DDL '{}...': {}", 
-                                &stmt[..stmt.len().min(50)], e))
+                            Error::QueryExecution(format!("Failed to execute DDL '{}': {}", 
+                                safe_truncate(stmt, 50), e))
                         })?;
                     let elapsed = start.elapsed();
                     if elapsed > Duration::from_secs(5) {
-                        tracing::warn!("DDL took {:.1}s: {}", elapsed.as_secs_f64(), &stmt[..stmt.len().min(50)]);
+                        tracing::warn!("DDL took {:.1}s: {}", elapsed.as_secs_f64(), safe_truncate(stmt, 50));
                     }
                     
                     // After CREATE DATABASE, try to reconnect main db pool
@@ -308,8 +317,8 @@ impl MariaDbExecutor {
                             .execute(&mut **conn)
                             .await
                             .map_err(|e| {
-                                Error::QueryExecution(format!("Failed to execute '{}...': {}", 
-                                    &stmt[..stmt.len().min(50)], e))
+                                Error::QueryExecution(format!("Failed to execute '{}': {}", 
+                                    safe_truncate(stmt, 50), e))
                             })?;
                     } else {
                         // No database-specific pool - try server_pool as fallback
@@ -321,16 +330,16 @@ impl MariaDbExecutor {
                                         .execute(&mut *server_conn)
                                         .await
                                         .map_err(|e| {
-                                            Error::QueryExecution(format!("Failed to execute (fallback) '{}...': {}", 
-                                                &stmt[..stmt.len().min(50)], e))
+                                            Error::QueryExecution(format!("Failed to execute (fallback) '{}': {}", 
+                                                safe_truncate(stmt, 50), e))
                                         })?;
                                     // Keep this connection for subsequent statements
                                     conn_opt = Some(server_conn.into());
                                 }
                                 Err(e) => {
                                     return Err(Error::QueryExecution(format!(
-                                        "No database connection available for '{}...': {}",
-                                        &stmt[..stmt.len().min(50)], e
+                                        "No database connection available for '{}': {}",
+                                        safe_truncate(stmt, 50), e
                                     )));
                                 }
                             }
@@ -437,8 +446,8 @@ impl MariaDbExecutor {
                 .execute(&mut *tx)
                 .await
                 .map_err(|e| {
-                    Error::QueryExecution(format!("Transaction failed on '{}...': {}", 
-                        &sql[..sql.len().min(50)], e))
+                    Error::QueryExecution(format!("Transaction failed on '{}': {}", 
+                        safe_truncate(&sql, 50), e))
                 })?;
         }
 

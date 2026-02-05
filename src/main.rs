@@ -532,7 +532,8 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
         config.node.id.clone(),
         Arc::clone(&cluster),
         config.data_dir().clone(),
-    );
+        &config.database,
+    ).await;
 
     // Determine role BEFORE starting proxy
     // Priority-based election: lowest node ID is leader
