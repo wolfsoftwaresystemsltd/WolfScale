@@ -612,24 +612,24 @@ async fn process_batch_background(
         // Execute the SQL - PERFORMANCE: Skip preview generation unless needed
         let sql_stmts = entry.entry.to_sql();
         
-        // Use timeout to prevent indefinite hangs - DDL can sometimes block
+        // Use 30 minute timeout for writes - large WordPress inserts can take a long time
         let execute_result = tokio::time::timeout(
-            std::time::Duration::from_secs(30),
+            std::time::Duration::from_secs(1800), // 30 minutes for large data
             executor.execute_entry(&entry.entry)
         ).await;
         
         match execute_result {
             Ok(Ok(())) => {}
             Ok(Err(e)) => {
-                // Only generate preview for error logging
+                // Log FULL query for failed entries (truncated to 500 chars for sanity)
                 let sql_preview = if sql_stmts.is_empty() { "noop".to_string() } 
-                    else { sql_stmts[0].chars().take(100).collect::<String>() };
-                tracing::warn!("Entry LSN {} failed: {} - SQL: {}", entry.header.lsn, e, sql_preview);
+                    else { sql_stmts[0].chars().take(500).collect::<String>() };
+                tracing::error!("QUERY FAILED - LSN {}: {} - SQL: {}", entry.header.lsn, e, sql_preview);
             }
             Err(_) => {
                 let sql_preview = if sql_stmts.is_empty() { "noop".to_string() } 
-                    else { sql_stmts[0].chars().take(100).collect::<String>() };
-                tracing::error!("Entry LSN {} TIMED OUT after 30s: {}", entry.header.lsn, sql_preview);
+                    else { sql_stmts[0].chars().take(500).collect::<String>() };
+                tracing::error!("QUERY TIMEOUT - LSN {} after 30min: {}", entry.header.lsn, sql_preview);
             }
         }
         

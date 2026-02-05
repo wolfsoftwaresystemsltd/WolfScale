@@ -102,7 +102,9 @@ impl HttpServer {
         
         let db_pool = match MySqlPoolOptions::new()
             .max_connections(2)
+            .min_connections(1)  // Keep at least 1 connection alive
             .acquire_timeout(std::time::Duration::from_secs(5))
+            .idle_timeout(std::time::Duration::from_secs(300)) // 5 min idle before close
             .connect(&url)
             .await
         {
