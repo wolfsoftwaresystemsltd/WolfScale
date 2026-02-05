@@ -166,6 +166,12 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
+## ⚠️ Disclaimer
+
+**USE AT YOUR OWN RISK.** This software is provided "as is" without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement. In no event shall Wolf Software Systems Ltd be liable for any claim, damages, or other liability arising from the use of this software.
+
+By using WolfScale, you acknowledge that you are solely responsible for your data and any consequences of using this software.
+
 ## Support
 
 - **Discord:** [Join our community](https://discord.gg/q9qMjHjUQY)
