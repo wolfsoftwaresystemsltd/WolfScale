@@ -141,7 +141,6 @@ impl FollowerNode {
         tracing::info!("Follower starting with last_applied_lsn={}", last_lsn);
 
         // Monitoring loop - process entries AND check for leader timeouts
-        let heartbeat_check = Duration::from_millis(self.config.heartbeat_interval_ms * 2);
         let mut loop_count: u64 = 0;
         
         loop {
@@ -192,15 +191,13 @@ impl FollowerNode {
             }
 
             // No entries available, wait a bit before checking again
-            tokio::select! {
-                _ = tokio::time::sleep(Duration::from_millis(10)) => {
-                    // Short sleep between polls
-                }
-                _ = tokio::time::sleep(heartbeat_check) => {
-                    // Check for leader timeout periodically
-                    if let Err(e) = self.check_leader_timeout().await {
-                        tracing::warn!("Leader timeout check failed: {}", e);
-                    }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            
+            // Check for leader timeout periodically (every ~1 second based on loop iterations)
+            // With 50ms sleep, this fires roughly every 1 second (20 iterations)
+            if loop_count % 20 == 0 {
+                if let Err(e) = self.check_leader_timeout().await {
+                    tracing::warn!("Leader timeout check failed: {}", e);
                 }
             }
         }
