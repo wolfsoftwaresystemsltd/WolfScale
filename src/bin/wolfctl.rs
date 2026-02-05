@@ -166,6 +166,19 @@ struct StatsApiResponse {
     active_nodes: usize,
     #[serde(default)]
     followers: Vec<FollowerStatsApi>,
+    #[serde(default)]
+    recent_errors: Vec<ErrorLogApi>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+struct ErrorLogApi {
+    #[serde(default)]
+    timestamp: String,
+    #[serde(default)]
+    level: String,
+    #[serde(default)]
+    message: String,
 }
 
 #[allow(dead_code)]
@@ -998,6 +1011,36 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
                                 
                                 println!("  {} {:15} LSN: {:>10}  Lag: {:>6}", 
                                     status_char, f.node_id, f.last_applied_lsn, lag_display);
+                            }
+                        }
+                        
+                        // Error log panel (show last 5 errors)
+                        if !stats.recent_errors.is_empty() {
+                            println!();
+                            println!("  \x1b[1;31mRecent Errors\x1b[0m");
+                            println!("  {}", "-".repeat(50));
+                            
+                            // Show last 5 errors
+                            let errors_to_show = if stats.recent_errors.len() > 5 {
+                                &stats.recent_errors[stats.recent_errors.len() - 5..]
+                            } else {
+                                &stats.recent_errors[..]
+                            };
+                            
+                            for err in errors_to_show {
+                                let level_color = match err.level.as_str() {
+                                    "ERROR" => "\x1b[31m",
+                                    "WARN" => "\x1b[33m",
+                                    _ => "\x1b[37m",
+                                };
+                                // Truncate message to fit on one line
+                                let msg = if err.message.len() > 40 {
+                                    format!("{}...", &err.message[..37])
+                                } else {
+                                    err.message.clone()
+                                };
+                                println!("  \x1b[2m{}\x1b[0m {}[{}]\x1b[0m {}", 
+                                    err.timestamp, level_color, err.level, msg);
                             }
                         }
                         

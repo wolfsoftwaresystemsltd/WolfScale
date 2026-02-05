@@ -286,15 +286,13 @@ impl BinlogClient {
             return None;
         }
         
-        let mut offset = 0;
-        
         // Skip packets until we find the row data
         // We're looking for the pattern: column_count, N column defs, EOF, ROW DATA, EOF
         // The row data packet starts with 0x00 (OK) but column packets don't
         
         // Find text data that looks like a binlog filename
         // Search for "mysql-bin" or similar patterns followed by position
-        let data_str = String::from_utf8_lossy(data);
+        let _data_str = String::from_utf8_lossy(data);
         
         // Try to find binlog file pattern (usually mysql-bin.XXXXXX or similar)
         // Look for .000 pattern which is common in binlog filenames
@@ -328,7 +326,7 @@ impl BinlogClient {
         }
         
         // Alternative: parse more carefully by skipping packets
-        offset = 0;
+        let mut offset = 0;
         while offset + 4 < data.len() {
             // Read packet header
             let pkt_len = u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], 0]) as usize;

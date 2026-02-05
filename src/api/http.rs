@@ -12,6 +12,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
+use std::collections::VecDeque;
 
 use crate::config::ApiConfig;
 use crate::wal::{LogEntry, Value, PrimaryKey};
@@ -25,6 +26,17 @@ static HTTP_CLIENT: std::sync::LazyLock<reqwest::Client> = std::sync::LazyLock::
         .build()
         .expect("Failed to create HTTP client")
 });
+
+/// Error log entry for stats display
+#[derive(Debug, Clone, Serialize)]
+pub struct ErrorLogEntry {
+    pub timestamp: String,
+    pub level: String,
+    pub message: String,
+}
+
+/// Maximum number of error log entries to keep
+const MAX_ERROR_LOG_SIZE: usize = 20;
 
 /// Shared application state
 pub struct AppState {
@@ -40,6 +52,25 @@ pub struct AppState {
     pub data_dir: std::path::PathBuf,
     /// Current LSN (tracked for accurate stats - updated by leader/proxy writes)
     pub current_lsn: Arc<std::sync::atomic::AtomicU64>,
+    /// Recent error log entries
+    pub recent_errors: RwLock<VecDeque<ErrorLogEntry>>,
+}
+
+impl AppState {
+    /// Log an error to the recent errors buffer
+    pub async fn log_error(&self, level: &str, message: String) {
+        let entry = ErrorLogEntry {
+            timestamp: chrono::Utc::now().format("%H:%M:%S").to_string(),
+            level: level.to_string(),
+            message,
+        };
+        
+        let mut errors = self.recent_errors.write().await;
+        if errors.len() >= MAX_ERROR_LOG_SIZE {
+            errors.pop_front();
+        }
+        errors.push_back(entry);
+    }
 }
 
 /// Write handler callback
@@ -66,6 +97,7 @@ impl HttpServer {
             write_handler: RwLock::new(None),
             data_dir,
             current_lsn: Arc::new(std::sync::atomic::AtomicU64::new(0)),
+            recent_errors: RwLock::new(VecDeque::with_capacity(MAX_ERROR_LOG_SIZE)),
         });
 
         Self { config, state }
@@ -86,6 +118,7 @@ impl HttpServer {
             write_handler: RwLock::new(Some(write_handler)),
             data_dir,
             current_lsn: Arc::new(std::sync::atomic::AtomicU64::new(0)),
+            recent_errors: RwLock::new(VecDeque::with_capacity(MAX_ERROR_LOG_SIZE)),
         });
 
         Self { config, state }
@@ -109,6 +142,11 @@ impl HttpServer {
     /// Get the LSN tracker for updating from leader/proxy writes
     pub fn get_lsn_tracker(&self) -> Arc<std::sync::atomic::AtomicU64> {
         Arc::clone(&self.state.current_lsn)
+    }
+
+    /// Get the error log for external components to add errors
+    pub fn get_error_log(&self) -> Arc<AppState> {
+        Arc::clone(&self.state)
     }
 
     /// Create the router
@@ -248,6 +286,7 @@ pub struct StatsResponse {
     pub cluster_size: usize,
     pub active_nodes: usize,
     pub followers: Vec<FollowerStats>,
+    pub recent_errors: Vec<ErrorLogEntry>,
 }
 
 /// Follower stats for replication lag tracking
@@ -633,6 +672,10 @@ async fn handle_stats(
         })
         .collect();
     
+    // Get recent errors
+    let errors = state.recent_errors.read().await;
+    let recent_errors: Vec<ErrorLogEntry> = errors.iter().cloned().collect();
+    
     Json(StatsResponse {
         node_id: state.node_id.clone(),
         role: role.to_string(),
@@ -642,6 +685,7 @@ async fn handle_stats(
         cluster_size: all_nodes.len(),
         active_nodes: active_count,
         followers,
+        recent_errors,
     })
 }
 
