@@ -86,6 +86,8 @@ Leader continuously monitors database health. If MariaDB goes down, WolfScale st
 | Start using WolfScale immediately | Restore to leader via proxy | Works with Galera clusters too |
 | | Data replicates to all nodes | Switch to WolfScale when ready |
 
+> **Restoring Large Databases:** When restoring databases with large content (WordPress, BLOBs, vector embeddings), use `mysqldump --skip-extended-insert` to create single-row INSERT statements. This prevents proxy buffer issues with very large rows.
+
 ### One-Line Install
 
 Run this on each server:
