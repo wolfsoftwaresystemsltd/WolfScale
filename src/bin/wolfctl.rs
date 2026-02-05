@@ -973,24 +973,37 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
                         println!("  LSN:      {}", stats.current_lsn);
                         println!();
                         
+                        // === SIDE BY SIDE LAYOUT ===
+                        // Left panel: Stats (columns 1-50)
+                        // Right panel: Error Log (columns 55-100)
+                        
+                        let left_width = 50;
+                        let right_start = 55;
+                        
+                        // Helper to print side-by-side
+                        fn print_two_cols(left: &str, right: &str, left_w: usize, _right_s: usize) {
+                            // Print left, pad to left_w, move to right_s, print right
+                            let left_plain = strip_ansi(left);
+                            let padding = if left_plain.len() < left_w { left_w - left_plain.len() } else { 0 };
+                            println!("{}{:width$}│ {}", left, "", right, width = padding);
+                        }
+                        
+                        // Build left panel lines
+                        let mut left_lines: Vec<String> = vec![];
+                        
                         // Throughput section
-                        println!("  \x1b[1mThroughput\x1b[0m");
-                        println!("  {}", "-".repeat(50));
-                        println!("  Current:  \x1b[1;32m{:>10.1}/s\x1b[0m", writes_per_sec);
-                        println!("  Average:  \x1b[1;33m{:>10.1}/s\x1b[0m", avg_throughput);
-                        println!("  Peak:     \x1b[1;35m{:>10.1}/s\x1b[0m", peak_throughput);
-                        println!("  Total:    {:>10}", total_writes);
-                        println!();
+                        left_lines.push(format!("  \x1b[1mThroughput\x1b[0m"));
+                        left_lines.push(format!("  {}", "-".repeat(45)));
+                        left_lines.push(format!("  Current:  \x1b[1;32m{:>10.1}/s\x1b[0m", writes_per_sec));
+                        left_lines.push(format!("  Average:  \x1b[1;33m{:>10.1}/s\x1b[0m", avg_throughput));
+                        left_lines.push(format!("  Peak:     \x1b[1;35m{:>10.1}/s\x1b[0m", peak_throughput));
+                        left_lines.push(format!("  Total:    {:>10}", total_writes));
+                        left_lines.push(String::new());
                         
-                        // ASCII Graph
-                        println!("  \x1b[1mHistory (last 40s)\x1b[0m");
-                        draw_ascii_graph(&throughput_history, peak_throughput);
-                        
-                        // Follower replication status
+                        // Follower section
                         if !stats.followers.is_empty() && stats.role == "Leader" {
-                            println!();
-                            println!("  \x1b[1mFollowers\x1b[0m");
-                            println!("  {}", "-".repeat(50));
+                            left_lines.push(format!("  \x1b[1mFollowers\x1b[0m"));
+                            left_lines.push(format!("  {}", "-".repeat(45)));
                             
                             for f in &stats.followers {
                                 let status_char = match f.status.as_str() {
@@ -1009,20 +1022,22 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
                                     format!("\x1b[31m{}\x1b[0m", f.lag)
                                 };
                                 
-                                println!("  {} {:15} LSN: {:>10}  Lag: {:>6}", 
-                                    status_char, f.node_id, f.last_applied_lsn, lag_display);
+                                left_lines.push(format!("  {} {:12} LSN:{:>8} Lag:{}", 
+                                    status_char, f.node_id, f.last_applied_lsn, lag_display));
                             }
                         }
                         
-                        // Error log panel (show last 5 errors)
-                        if !stats.recent_errors.is_empty() {
-                            println!();
-                            println!("  \x1b[1;31mRecent Errors\x1b[0m");
-                            println!("  {}", "-".repeat(50));
-                            
-                            // Show last 5 errors
-                            let errors_to_show = if stats.recent_errors.len() > 5 {
-                                &stats.recent_errors[stats.recent_errors.len() - 5..]
+                        // Build right panel lines (Error Log)
+                        let mut right_lines: Vec<String> = vec![];
+                        right_lines.push(format!("\x1b[1;31mError Log\x1b[0m"));
+                        right_lines.push(format!("{}", "-".repeat(40)));
+                        
+                        if stats.recent_errors.is_empty() {
+                            right_lines.push(format!("\x1b[2mNo errors\x1b[0m"));
+                        } else {
+                            // Show last 10 errors
+                            let errors_to_show = if stats.recent_errors.len() > 10 {
+                                &stats.recent_errors[stats.recent_errors.len() - 10..]
                             } else {
                                 &stats.recent_errors[..]
                             };
@@ -1033,16 +1048,30 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
                                     "WARN" => "\x1b[33m",
                                     _ => "\x1b[37m",
                                 };
-                                // Truncate message to fit on one line
-                                let msg = if err.message.len() > 40 {
-                                    format!("{}...", &err.message[..37])
+                                // Truncate message to fit
+                                let msg = if err.message.len() > 30 {
+                                    format!("{}...", &err.message[..27])
                                 } else {
                                     err.message.clone()
                                 };
-                                println!("  \x1b[2m{}\x1b[0m {}[{}]\x1b[0m {}", 
-                                    err.timestamp, level_color, err.level, msg);
+                                right_lines.push(format!("\x1b[2m{}\x1b[0m {}●\x1b[0m {}", 
+                                    err.timestamp, level_color, msg));
                             }
                         }
+                        
+                        // Print side-by-side
+                        let max_lines = left_lines.len().max(right_lines.len());
+                        for i in 0..max_lines {
+                            let left = left_lines.get(i).map(|s| s.as_str()).unwrap_or("");
+                            let right = right_lines.get(i).map(|s| s.as_str()).unwrap_or("");
+                            print_two_cols(left, right, left_width, right_start);
+                        }
+                        
+                        println!();
+                        
+                        // ASCII Graph (full width at bottom)
+                        println!("  \x1b[1mHistory (last 40s)\x1b[0m");
+                        draw_ascii_graph(&throughput_history, peak_throughput);
                         
                         // Footer
                         println!();
@@ -1195,4 +1224,24 @@ fn format_duration(d: std::time::Duration) -> String {
     } else {
         format!("{}s", secs)
     }
+}
+
+/// Strip ANSI escape codes from a string for length calculation
+fn strip_ansi(s: &str) -> String {
+    let mut result = String::new();
+    let mut in_escape = false;
+    
+    for c in s.chars() {
+        if c == '\x1b' {
+            in_escape = true;
+        } else if in_escape {
+            if c == 'm' {
+                in_escape = false;
+            }
+        } else {
+            result.push(c);
+        }
+    }
+    
+    result
 }
