@@ -364,7 +364,7 @@ impl ClusterMembership {
         if let Some(node) = nodes.get_mut(leader_id) {
             node.role = NodeRole::Leader;
             node.status = NodeStatus::Active; // Leader must be active!
-            node.last_heartbeat = std::time::Instant::now(); // Reset heartbeat
+            node.last_heartbeat = Some(std::time::Instant::now()); // Reset heartbeat
         }
 
         Ok(())
