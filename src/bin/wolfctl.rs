@@ -822,13 +822,13 @@ async fn binlog_setup(
     println!("\x1b[1;33mAdd this to your WolfScale config.toml:\x1b[0m");
     println!();
     println!("┌────────────────────────────────────────────────────────┐");
-    println!("│ [replication]                                          │");
-    println!("│ mode = \"binlog\"                                        │");
-    println!("│                                                        │");
-    println!("│ [binlog]                                               │");
-    println!("│ server_id = {}                                       │", server_id);
-    println!("│ start_file = \"{}\"                           │", binlog_file);
-    println!("│ start_position = {}                                   │", binlog_pos);
+    println!("  [replication]                                          │");
+    println!("  mode = \"binlog\"                                        │");
+    println!("                                                         │");
+    println!("  [binlog]                                               │");
+    println!("  server_id = {}                                       │", server_id);
+    println!("  start_file = \"{}\"                           │", binlog_file);
+    println!("  start_position = {}                                   │", binlog_pos);
     println!("└────────────────────────────────────────────────────────┘");
     println!();
     println!("\x1b[1;36mNote:\x1b[0m server_id must be unique across all MySQL replicas.");
@@ -1009,7 +1009,7 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
                             let mid_plain = strip_ansi(mid);
                             let pad1 = if left_plain.len() < col1_w { col1_w - left_plain.len() } else { 0 };
                             let pad2 = if mid_plain.len() < col2_w { col2_w - mid_plain.len() } else { 0 };
-                            println!("{}{:w1$}│ {}{:w2$}│ {}", left, "", mid, "", right, w1 = pad1, w2 = pad2);
+                            println!("{}{:w1$}  {}{:w2$}  {}", left, "", mid, "", right, w1 = pad1, w2 = pad2);
                         }
                         
                         // Build left panel lines (Stats)
