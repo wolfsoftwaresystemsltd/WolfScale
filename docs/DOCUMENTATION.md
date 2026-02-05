@@ -1129,6 +1129,159 @@ echo "Full backup saved to: $BACKUP_DIR/full_backup_$DATE.sql.gz"
 
 ---
 
+## Performance Tuning
+
+### MariaDB Tuning for WolfScale
+
+Optimize your MariaDB instances for best performance with WolfScale:
+
+#### InnoDB Buffer Pool (Most Impactful)
+
+```ini
+# Set to 70-80% of available RAM
+innodb_buffer_pool_size = 4G
+
+# 1 instance per GB of buffer pool
+innodb_buffer_pool_instances = 4
+```
+
+#### Write Performance
+
+```ini
+# Transaction durability vs speed tradeoff
+# 0 = fastest (risk of 1s data loss on crash)
+# 1 = safest (sync on every commit)
+# 2 = balanced (sync once per second) - RECOMMENDED
+innodb_flush_log_at_trx_commit = 2
+
+# Avoid double buffering
+innodb_flush_method = O_DIRECT
+
+# Disable if using WolfScale replication instead of binlog
+sync_binlog = 0
+```
+
+#### Connections & Threading
+
+```ini
+# Enough for connection pool + WolfScale connections
+max_connections = 500
+
+# Match CPU cores
+thread_pool_size = 16
+
+# Better for many connections
+thread_handling = pool-of-threads
+```
+
+#### Query Cache (Disable)
+
+WolfScale handles consistency, so query cache can cause stale reads:
+
+```ini
+query_cache_type = 0
+query_cache_size = 0
+```
+
+#### Logging (Reduce if Not Needed)
+
+```ini
+general_log = 0
+slow_query_log = 0                    # Or set slow_query_time = 5
+```
+
+#### Bulk Insert Optimizations
+
+```ini
+# Fastest for bulk inserts with WolfScale
+innodb_autoinc_lock_mode = 2
+bulk_insert_buffer_size = 256M
+```
+
+### Recommended my.cnf Settings
+
+Add to `/etc/mysql/mariadb.conf.d/99-wolfscale.cnf`:
+
+```ini
+[mariadb]
+# Buffer pool - adjust based on available RAM
+innodb_buffer_pool_size = 4G
+innodb_buffer_pool_instances = 4
+
+# Write performance
+innodb_flush_log_at_trx_commit = 2
+innodb_flush_method = O_DIRECT
+sync_binlog = 0
+
+# Connections
+max_connections = 500
+thread_pool_size = 16
+thread_handling = pool-of-threads
+
+# Disable query cache
+query_cache_type = 0
+query_cache_size = 0
+
+# Bulk operations
+innodb_autoinc_lock_mode = 2
+bulk_insert_buffer_size = 256M
+```
+
+Then restart MariaDB: `sudo systemctl restart mariadb`
+
+### WolfScale Tuning
+
+#### WAL Settings
+
+In `wolfscale.toml`:
+
+```toml
+[wal]
+# Increase for bulk operations (more entries per batch)
+batch_size = 5000            # Default: 1000
+
+# Increase for more batching (tradeoff: latency)
+flush_interval_ms = 500      # Default: 100
+
+# Disable for speed (tradeoff: durability on crash)
+fsync = false                # Default: true
+
+# Enable compression for less disk I/O
+compression = true           # Default: true
+```
+
+#### Connection Pool
+
+```toml
+[database]
+# Increase for high-concurrency workloads
+pool_size = 50               # Default: 10
+```
+
+#### Replication Settings
+
+```toml
+[cluster]
+# Larger batches to followers
+max_batch_entries = 5000     # Default: 1000
+
+# Faster heartbeats for quicker failover (tradeoff: network overhead)
+heartbeat_interval_ms = 250  # Default: 500
+```
+
+### Performance Tips Summary
+
+| Optimization | Impact | Tradeoff |
+|--------------|--------|----------|
+| `innodb_buffer_pool_size` | **High** | RAM usage |
+| `innodb_flush_log_at_trx_commit = 2` | **High** | ~1s data on crash |
+| `fsync = false` | **High** | Durability on crash |
+| `batch_size` increase | **Medium** | Write latency |
+| `pool_size` increase | **Medium** | Connection overhead |
+| `compression = true` | **Low** | CPU usage |
+
+---
+
 ## Support
 
 - **Discord:** [Join our community](https://discord.gg/q9qMjHjUQY)
