@@ -137,13 +137,20 @@ pub struct ClusterConfig {
     #[serde(default = "default_election_timeout_ms")]
     pub election_timeout_ms: u64,
 
-    /// Minimum election timeout in milliseconds (randomized)
+    /// Minimum election timeout in milliseconds
+    /// Default: 1000ms (1 second). For WAN/unreliable networks, increase to 3000-5000ms
     #[serde(default = "default_election_timeout_min_ms")]
     pub election_timeout_min_ms: u64,
 
-    /// Maximum election timeout in milliseconds (randomized)
+    /// Maximum election timeout in milliseconds  
+    /// Default: 1500ms (1.5 seconds). For WAN/unreliable networks, increase to 5000-10000ms
     #[serde(default = "default_election_timeout_max_ms")]
     pub election_timeout_max_ms: u64,
+    
+    /// If true, this node will never become leader (read-only replica)
+    /// Use for disaster recovery, reporting, or geo-distributed read replicas
+    #[serde(default)]
+    pub never_leader: bool,
 
     /// Minimum number of nodes for quorum (0 = auto-calculate)
     #[serde(default)]

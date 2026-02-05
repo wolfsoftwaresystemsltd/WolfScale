@@ -705,7 +705,7 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                 timeout_min_ms: config.cluster.election_timeout_min_ms,
                 timeout_max_ms: config.cluster.election_timeout_max_ms,
             },
-            config.cluster.disable_auto_election,
+            config.cluster.disable_auto_election || config.cluster.never_leader,
         ));
 
         // Connect the entry channel to the follower

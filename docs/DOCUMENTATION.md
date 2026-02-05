@@ -568,9 +568,13 @@ WolfScale uses Raft-style leader election to automatically promote a follower to
 **Configuration:**
 
 [cluster]
-election_timeout_min_ms = 1500    # Minimum timeout before election
-election_timeout_max_ms = 3000    # Maximum timeout (randomized for split-brain prevention)
-disable_auto_election = false     # Set to true for manual promotion only
+election_timeout_min_ms = 1000    # Fast failover (1 second)
+election_timeout_max_ms = 1500    # Max timeout (1.5 seconds)
+never_leader = false              # Set to true for read-only replica
+
+# For WAN or unreliable networks, increase timeouts:
+# election_timeout_min_ms = 3000  # 3 seconds
+# election_timeout_max_ms = 5000  # 5 seconds
 
 **Monitoring failover:**
 
