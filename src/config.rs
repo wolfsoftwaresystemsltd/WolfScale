@@ -270,11 +270,11 @@ fn default_election_timeout_ms() -> u64 {
 }
 
 fn default_election_timeout_min_ms() -> u64 {
-    1500
+    1000 // 1 second for fast failover
 }
 
 fn default_election_timeout_max_ms() -> u64 {
-    3000
+    1500 // 1.5 seconds max
 }
 
 fn default_max_batch_entries() -> usize {

@@ -193,9 +193,9 @@ impl FollowerNode {
             // No entries available, wait a bit before checking again
             tokio::time::sleep(Duration::from_millis(50)).await;
             
-            // Check for leader timeout periodically (every ~1 second based on loop iterations)
-            // With 50ms sleep, this fires roughly every 1 second (20 iterations)
-            if loop_count % 20 == 0 {
+            // Check for leader timeout frequently (every ~250ms = 5 iterations of 50ms)
+            // This allows failover to start within 1-2 seconds of leader failure
+            if loop_count % 5 == 0 {
                 if let Err(e) = self.check_leader_timeout().await {
                     tracing::warn!("Leader timeout check failed: {}", e);
                 }
