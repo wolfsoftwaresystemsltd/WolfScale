@@ -300,11 +300,8 @@ fn is_write_query(query: &str) -> bool {
     // Permissions
     upper.starts_with("GRANT") ||
     upper.starts_with("REVOKE") ||
-    // Lock statements
-    upper.starts_with("LOCK") ||
-    upper.starts_with("UNLOCK") ||
-    // Session/context
-    upper.starts_with("SET") ||
+    // Note: LOCK/UNLOCK are NOT writes - they're session-local and shouldn't be replicated
+    // Session/context - USE is handled specially, SET can be local
     upper.starts_with("USE") ||
     // Transactions (needed for consistent replication)
     upper.starts_with("START") ||  // START TRANSACTION
@@ -645,7 +642,7 @@ async fn handle_connection(
     // Use dynamic buffer sizing - start small, grow as needed
     let mut cmd_buf = vec![0u8; INITIAL_BUFFER_SIZE]; // Start with 16MB, grows dynamically
     let mut result_buf = vec![0u8; INITIAL_BUFFER_SIZE];
-    let current_backend_addr = initial_backend_addr;
+    let _current_backend_addr = initial_backend_addr;
     
     // Track current database context for replication
     let mut current_database: Option<String> = initial_database;
@@ -767,13 +764,9 @@ async fn handle_connection(
             }
         }
 
-        // Log routing decision (but don't switch backends mid-session)
-        // Switching backends would break MySQL protocol - new connection gets handshake, not query results
-        // Replication happens via WAL, not by forwarding queries
-        let target_addr = get_backend_address(&config, &cluster, is_write).await;
-        if target_addr != current_backend_addr {
-            tracing::debug!("Would route to {} (keeping session on {})", target_addr, current_backend_addr);
-        }
+        // Note: We keep connections on their original backend for session consistency
+        // Routing decisions are informational only - replication handles data sync
+        let _target_addr = get_backend_address(&config, &cluster, is_write).await;
 
         // Forward command to backend
         let query_start = std::time::Instant::now();

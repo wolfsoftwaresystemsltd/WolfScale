@@ -638,6 +638,20 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
         tracing::info!("Starting LEADER components");
         tracing::debug!("LeaderNode cluster Arc ptr: {:p}", Arc::as_ptr(&cluster));
 
+        // Configure HTTP server as leader with write handler
+        http_server.set_leader(true).await;
+        
+        // Create a write handler that appends to WAL
+        let write_wal = wal_writer.clone();
+        let write_handler: wolfscale::api::WriteHandler = Arc::new(move |entry| {
+            let wal = write_wal.clone();
+            Box::pin(async move {
+                wal.append(entry).await
+            })
+        });
+        http_server.set_write_handler(write_handler).await;
+        tracing::info!("HTTP API configured as leader with write handler");
+
         let leader = Arc::new(LeaderNode::new(
             config.node.id.clone(),
             wal_writer,

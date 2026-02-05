@@ -4,4 +4,4 @@
 
 mod http;
 
-pub use http::HttpServer;
+pub use http::{HttpServer, WriteHandler};
