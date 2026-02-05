@@ -1,6 +1,6 @@
 [package]
 name = "wolfscale"
-version = "4.0.2"
+version = "3.2.13"
 edition = "2021"
 authors = ["WolfScale Team"]
 description = "Distributed MariaDB synchronization manager"

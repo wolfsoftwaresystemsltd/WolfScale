@@ -202,15 +202,8 @@ impl WalWriter {
                         let _ = request.response.send(Ok(0));
                     }
 
-                    // Flush strategy:
-                    // 1. If batch is full - flush immediately for throughput
-                    // 2. If there's only 1 entry and nothing pending - flush immediately for low latency
-                    //    This is critical for sequential operations like mysqldump imports
-                    // 3. Otherwise - wait for batch to fill or timeout (batching for throughput)
-                    let should_flush = inner.buffer.len() >= batch_size 
-                        || (inner.buffer.len() == 1 && receiver.is_empty());
-                    
-                    if should_flush {
+                    // Flush if batch is full
+                    if inner.buffer.len() >= batch_size {
                         if let Err(e) = inner.flush_buffer().await {
                             tracing::error!("WAL flush failed: {}", e);
                         }

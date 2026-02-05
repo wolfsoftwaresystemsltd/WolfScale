@@ -547,7 +547,6 @@ impl FollowerNode {
 
 /// Standalone batch processing function for background execution.
 /// This runs inline to avoid blocking the follower's main loop.
-/// Uses INSERT batching for improved throughput.
 async fn process_batch_background(
     batch: ReplicationBatch,
     executor: Arc<MariaDbExecutor>,
@@ -601,87 +600,51 @@ async fn process_batch_background(
     
     let mut highest_applied = current_lsn;
     let mut processed = 0usize;
-    let mut _skipped = 0usize;
+    let mut skipped = 0usize;
     
-    // Collect entries that need to be applied (not already applied)
-    let entries_to_apply: Vec<&crate::wal::entry::LogEntry> = batch.entries
-        .iter()
-        .filter(|e| e.header.lsn > highest_applied)
-        .map(|e| &e.entry)
-        .collect();
-    
-    let entries_to_process: Vec<&WalEntry> = batch.entries
-        .iter()
-        .filter(|e| e.header.lsn > current_lsn)
-        .collect();
-    
-    _skipped = batch.entries.len() - entries_to_process.len();
-    
-    if !entries_to_apply.is_empty() {
-        // Use batched execution for better throughput
-        // This will combine consecutive INSERTs to the same table into multi-row statements
+    for entry in &batch.entries {
+        // Skip already-applied entries
+        if entry.header.lsn <= highest_applied {
+            skipped += 1;
+            continue;
+        }
+        
+        // Execute the SQL - PERFORMANCE: Skip preview generation unless needed
+        let sql_stmts = entry.entry.to_sql();
+        
+        // Use 30 minute timeout for writes - large WordPress inserts can take a long time
         let execute_result = tokio::time::timeout(
-            std::time::Duration::from_secs(1800), // 30 minutes for large batches
-            executor.execute_entries_batched(&entries_to_apply)
+            std::time::Duration::from_secs(1800), // 30 minutes for large data
+            executor.execute_entry(&entry.entry)
         ).await;
         
         match execute_result {
-            Ok(Ok(())) => {
-                // All entries processed successfully
-                processed = entries_to_process.len();
-                if let Some(last_entry) = entries_to_process.last() {
-                    highest_applied = last_entry.header.lsn;
-                }
-            }
+            Ok(Ok(())) => {}
             Ok(Err(e)) => {
-                // Batch failed - fall back to one-by-one execution for better error handling
-                tracing::warn!("Batched execution failed, falling back to individual: {}", e);
-                
-                for entry in &entries_to_process {
-                    let sql_stmts = entry.entry.to_sql();
-                    
-                    let single_result = tokio::time::timeout(
-                        std::time::Duration::from_secs(1800),
-                        executor.execute_entry(&entry.entry)
-                    ).await;
-                    
-                    match single_result {
-                        Ok(Ok(())) => {}
-                        Ok(Err(e)) => {
-                            let sql_preview = if sql_stmts.is_empty() { "noop".to_string() } 
-                                else { sql_stmts[0].chars().take(500).collect::<String>() };
-                            tracing::error!("QUERY FAILED - LSN {}: {} - SQL: {}", entry.header.lsn, e, sql_preview);
-                        }
-                        Err(_) => {
-                            let sql_preview = if sql_stmts.is_empty() { "noop".to_string() } 
-                                else { sql_stmts[0].chars().take(500).collect::<String>() };
-                            tracing::error!("QUERY TIMEOUT - LSN {} after 30min: {}", entry.header.lsn, sql_preview);
-                        }
-                    }
-                    
-                    highest_applied = entry.header.lsn;
-                    processed += 1;
-                    
-                    progress_lsn.store(highest_applied, std::sync::atomic::Ordering::Relaxed);
-                    
-                    if processed % 1000 == 0 {
-                        *last_applied_lsn.write().await = highest_applied;
-                        tracing::info!("Progress: {} entries processed, at LSN {}", processed, highest_applied);
-                    }
-                }
+                // Log FULL query for failed entries (truncated to 500 chars for sanity)
+                let sql_preview = if sql_stmts.is_empty() { "noop".to_string() } 
+                    else { sql_stmts[0].chars().take(500).collect::<String>() };
+                tracing::error!("QUERY FAILED - LSN {}: {} - SQL: {}", entry.header.lsn, e, sql_preview);
             }
             Err(_) => {
-                tracing::error!("BATCH TIMEOUT after 30min for {} entries", entries_to_apply.len());
-                // Mark all as processed anyway to avoid infinite retry
-                processed = entries_to_process.len();
-                if let Some(last_entry) = entries_to_process.last() {
-                    highest_applied = last_entry.header.lsn;
-                }
+                let sql_preview = if sql_stmts.is_empty() { "noop".to_string() } 
+                    else { sql_stmts[0].chars().take(500).collect::<String>() };
+                tracing::error!("QUERY TIMEOUT - LSN {} after 30min: {}", entry.header.lsn, sql_preview);
             }
         }
         
+        // Mark as processed regardless of success/failure
+        highest_applied = entry.header.lsn;
+        processed += 1;
+        
         // Update atomic counter so periodic ACK sender knows our progress
         progress_lsn.store(highest_applied, std::sync::atomic::Ordering::Relaxed);
+        
+        // Batch state updates: save every 1000 entries for performance (was 100)
+        if processed % 1000 == 0 {
+            *last_applied_lsn.write().await = highest_applied;
+            tracing::info!("Progress: {} entries processed, at LSN {}", processed, highest_applied);
+        }
     }
     
     // Signal periodic ACK sender to stop
@@ -695,7 +658,7 @@ async fn process_batch_background(
         tracing::warn!("Failed to persist last_applied_lsn: {}", e);
     }
     
-    tracing::debug!("Batch complete: processed={}, skipped={}, lsn={}", processed, _skipped, highest_applied);
+    tracing::debug!("Batch complete: processed={}, skipped={}, lsn={}", processed, skipped, highest_applied);
     
     // Update cluster membership
     let _ = cluster.record_heartbeat(&node_id, highest_applied).await;
