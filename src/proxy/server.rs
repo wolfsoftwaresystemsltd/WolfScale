@@ -598,8 +598,8 @@ async fn handle_connection(
     }
 
     // Phase 4: Main command loop with smart routing
-    let mut cmd_buf = vec![0u8; 16 * 1024 * 1024]; // 16MB max packet
-    let mut result_buf = vec![0u8; 16 * 1024 * 1024];
+    let mut cmd_buf = vec![0u8; 1024 * 1024 * 1024]; // 1GB max packet - handle any WordPress data
+    let mut result_buf = vec![0u8; 1024 * 1024 * 1024];
     let current_backend_addr = initial_backend_addr;
     
     // Track current database context for replication
