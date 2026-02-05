@@ -1015,7 +1015,7 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
                         // Build left panel lines (Stats)
                         let mut left_lines: Vec<String> = vec![];
                         left_lines.push(format!("\x1b[1mThroughput\x1b[0m"));
-                        left_lines.push(format!("{}", "-".repeat(col1_width - 2)));
+                        left_lines.push("-".repeat(col1_width).to_string());
                         left_lines.push(format!("Current: \x1b[1;32m{:>8.1}/s\x1b[0m", writes_per_sec));
                         left_lines.push(format!("Average: \x1b[1;33m{:>8.1}/s\x1b[0m", avg_throughput));
                         left_lines.push(format!("Peak:    \x1b[1;35m{:>8.1}/s\x1b[0m", peak_throughput));
@@ -1025,7 +1025,7 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
                         // Follower section
                         if !stats.followers.is_empty() && stats.role == "Leader" {
                             left_lines.push(format!("\x1b[1mFollowers\x1b[0m"));
-                            left_lines.push(format!("{}", "-".repeat(col1_width - 2)));
+                            left_lines.push("-".repeat(col1_width).to_string());
                             
                             for f in &stats.followers {
                                 let status_char = match f.status.as_str() {
@@ -1054,7 +1054,7 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
                         // Build middle panel (Processlist)
                         let mut mid_lines: Vec<String> = vec![];
                         mid_lines.push(format!("\x1b[1;36mProcesslist\x1b[0m"));
-                        mid_lines.push(format!("{}", "-".repeat(col2_width - 2)));
+                        mid_lines.push("-".repeat(col2_width).to_string());
                         
                         if stats.processlist.is_empty() {
                             mid_lines.push(format!("\x1b[2mNo active queries\x1b[0m"));
@@ -1093,7 +1093,7 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
                         // Build right panel (Error Log)
                         let mut right_lines: Vec<String> = vec![];
                         right_lines.push(format!("\x1b[1;31mError Log\x1b[0m"));
-                        right_lines.push(format!("{}", "-".repeat(col3_width - 2)));
+                        right_lines.push("-".repeat(col3_width).to_string());
                         
                         if stats.recent_errors.is_empty() {
                             right_lines.push(format!("\x1b[2mNo errors\x1b[0m"));
