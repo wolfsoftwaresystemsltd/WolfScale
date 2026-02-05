@@ -80,7 +80,6 @@ const BUFFER_GROWTH_FACTOR: usize = 2;
 /// MySQL packets have a 4-byte header: 3 bytes length + 1 byte sequence ID.
 /// This function reads the header first, determines required size, resizes buffer if needed,
 /// then reads exactly the payload bytes.
-#[allow(dead_code)]
 async fn read_mysql_packet_dynamic(
     stream: &mut TcpStream, 
     buf: &mut Vec<u8>
@@ -665,8 +664,8 @@ async fn handle_connection(
             cmd_buf[..n].copy_from_slice(&data);
             n
         } else {
-            // Use dynamic buffer reading for potentially large packets
-            match read_with_dynamic_buffer(&mut client, &mut cmd_buf).await {
+            // Read complete MySQL packet (header tells us exact size)
+            match read_mysql_packet_dynamic(&mut client, &mut cmd_buf).await {
                 Ok(0) => break,
                 Ok(n) => n,
                 Err(e) => {
