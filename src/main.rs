@@ -395,6 +395,12 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                     let _ = response_tx.send((leader_addr, response)).await;
                 }
                 wolfscale::replication::Message::AppendEntries { term, leader_id, prev_lsn: _, prev_term: _, entries, leader_commit_lsn: _ } => {
+                    // Skip if we're the leader (we shouldn't process our own entries)
+                    if leader_id == our_node_id {
+                        tracing::warn!("Ignoring AppendEntries from ourselves (leader_id={})", leader_id);
+                        continue;
+                    }
+                    
                     tracing::debug!("RECEIVED {} entries from leader {}", entries.len(), leader_id);
                     let _ = incoming_cluster.record_heartbeat(&leader_id, 0).await;
                     
