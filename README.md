@@ -14,7 +14,7 @@
 
 ---
 
-WolfScale is a lightweight, high-availability replication layer for MariaDB clusters. It provides **automatic leader election** with deterministic failover, **WAL-based replication** for strong consistency, and a **MySQL-compatible proxy** for transparent routing—all in a single Rust binary.
+WolfScale is a lightweight, high-availability replication layer for MariaDB stand alone servers. It provides **automatic leader election** with deterministic failover, **WAL-based replication** for strong consistency, and a **MySQL-compatible proxy** for transparent routing—all in a single Rust binary.
 
 ## Why WolfScale?
 
@@ -25,6 +25,7 @@ WolfScale is a lightweight, high-availability replication layer for MariaDB clus
 | **Predictable Failover** | Lowest node ID always wins—you know exactly who becomes leader |
 | **Safe Node Rejoin** | Returning nodes sync via WAL before taking leadership |
 | **Transparent Proxy** | Connect via MySQL protocol—no application changes needed |
+| **Built-in Load Balancer** | Distribute connections across cluster nodes with automatic failover |
 | **Single Binary** | No patched databases, no complex dependencies |
 
 ## Key Features
