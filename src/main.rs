@@ -90,6 +90,21 @@ enum Commands {
         #[arg(short, long, default_value = "0.0.0.0:8007")]
         listen: String,
     },
+    
+    /// Start as a load balancer (no local database)
+    LoadBalancer {
+        /// Cluster peers to connect to (at least one node address)
+        #[arg(long, required = true, value_delimiter = ',')]
+        peers: Vec<String>,
+        
+        /// Address to listen on for MySQL connections
+        #[arg(short, long, default_value = "0.0.0.0:3306")]
+        listen: String,
+        
+        /// Maximum acceptable replication lag (entries) before skipping a node
+        #[arg(long, default_value = "100")]
+        max_lag: u64,
+    },
 }
 
 #[tokio::main]
@@ -123,6 +138,9 @@ async fn main() -> Result<()> {
         }
         Commands::Proxy { listen } => {
             run_proxy(cli.config, listen).await
+        }
+        Commands::LoadBalancer { peers, listen, max_lag } => {
+            run_load_balancer(peers, listen, max_lag).await
         }
     }
 }
@@ -1180,3 +1198,216 @@ async fn run_proxy(config_path: PathBuf, listen_address: String) -> Result<()> {
     Ok(())
 }
 
+
+/// Run as a load balancer (no local database)
+async fn run_load_balancer(peers: Vec<String>, listen_address: String, _max_lag: u64) -> Result<()> {
+    use wolfscale::state::{ClusterMembership, NodeRole, NodeStatus};
+    
+    init_logging("info");
+    
+    // Generate a unique LB node ID
+    let lb_id = format!("lb-{}", &uuid::Uuid::new_v4().to_string()[..8]);
+    
+    println!();
+    println!("╔═══════════════════════════════════════════════════════════════╗");
+    println!("║             WolfScale Load Balancer Mode                      ║");
+    println!("╚═══════════════════════════════════════════════════════════════╝");
+    println!();
+    println!("  Node ID:     {}", lb_id);
+    println!("  Listen:      {}", listen_address);
+    println!("  Peers:       {:?}", peers);
+    println!();
+    
+    // Create cluster membership for the load balancer
+    let cluster = Arc::new(ClusterMembership::new(
+        lb_id.clone(),
+        listen_address.clone(),
+        Duration::from_secs(5),
+        Duration::from_secs(10),
+    ));
+    
+    // Mark ourselves as a load balancer
+    cluster.update_node(&lb_id, |node| {
+        node.role = NodeRole::LoadBalancer;
+    }).await?;
+    
+    // Discover cluster by querying HTTP status endpoints
+    println!("Discovering cluster...");
+    let http_client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build()
+        .map_err(|e| wolfscale::error::Error::Network(e.to_string()))?;
+    
+    let mut leader_address: Option<String> = None;
+    let mut discovered_nodes = Vec::new();
+    
+    for peer in &peers {
+        // Convert peer address (host:7654) to HTTP URL (http://host:8080/status)
+        let parts: Vec<&str> = peer.split(':').collect();
+        let host = parts.first().unwrap_or(&"localhost");
+        let http_url = format!("http://{}:8080/status", host);
+        
+        match http_client.get(&http_url).send().await {
+            Ok(response) => {
+                if let Ok(json) = response.json::<serde_json::Value>().await {
+                    println!("  Connected to {}", http_url);
+                    
+                    // Extract node info
+                    if let Some(nodes) = json["nodes"].as_array() {
+                        for node in nodes {
+                            let node_id = node["id"].as_str().unwrap_or("").to_string();
+                            let address = node["address"].as_str().unwrap_or("").to_string();
+                            let role = node["role"].as_str().unwrap_or("");
+                            let status = node["status"].as_str().unwrap_or("");
+                            
+                            if !node_id.is_empty() && !node_id.starts_with("peer-") && !node_id.starts_with("lb-") {
+                                discovered_nodes.push((node_id.clone(), address.clone()));
+                                
+                                // Track leader
+                                if role == "LEADER" {
+                                    leader_address = Some(address.clone());
+                                    println!("  Leader: {} ({})", node_id, address);
+                                }
+                                
+                                // Add to cluster membership
+                                cluster.add_peer(node_id.clone(), address).await?;
+                                
+                                // Update node state
+                                let node_role = if role == "LEADER" { NodeRole::Leader } else { NodeRole::Follower };
+                                let node_status = if status == "ACTIVE" { NodeStatus::Active } else { NodeStatus::Syncing };
+                                cluster.update_node(&node_id, |n| {
+                                    n.role = node_role;
+                                    n.status = node_status;
+                                }).await?;
+                            }
+                        }
+                    }
+                    
+                    // Got cluster info
+                    if !discovered_nodes.is_empty() {
+                        break;
+                    }
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Failed to connect to {}: {}", http_url, e);
+            }
+        }
+    }
+    
+    println!();
+    println!("Cluster discovered: {} nodes", discovered_nodes.len());
+    for (id, addr) in &discovered_nodes {
+        println!("  - {} ({})", id, addr);
+    }
+    println!();
+    
+    if leader_address.is_none() {
+        println!("WARNING: No leader found! Writes will fail until leader is discovered.");
+        println!();
+    }
+    
+    // Parse leader address for proxy config
+    let (backend_host, backend_port) = if let Some(ref addr) = leader_address {
+        let parts: Vec<&str> = addr.split(':').collect();
+        if parts.len() >= 1 {
+            // Use the leader's host, but connect to MariaDB port 3306
+            (parts[0].to_string(), 3306u16)
+        } else {
+            ("localhost".to_string(), 3306)
+        }
+    } else {
+        ("localhost".to_string(), 3306)
+    };
+    
+    // Start proxy in load balancer mode
+    println!("Starting MySQL proxy on {} ...", listen_address);
+    println!("  Backend: {}:{}", backend_host, backend_port);
+    println!();
+    println!("Press Ctrl+C to stop.");
+    println!();
+    
+    // Create proxy config
+    let proxy_config = wolfscale::proxy::ProxyConfig {
+        listen_address: listen_address.clone(),
+        backend_host,
+        backend_port,
+        backend_user: "wolfscale".to_string(),
+        backend_password: "wolfscale".to_string(),
+        ssl_enabled: false,
+        ssl_cert: None,
+        ssl_key: None,
+        ssl_required: false,
+    };
+    
+    let proxy = wolfscale::proxy::ProxyServer::new(
+        proxy_config,
+        Arc::clone(&cluster),
+    );
+    
+    // Spawn cluster refresh task (every 5 seconds)
+    let refresh_cluster = Arc::clone(&cluster);
+    let refresh_peers = peers.clone();
+    tokio::spawn(async move {
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(5))
+            .build()
+            .unwrap();
+        
+        let mut interval = tokio::time::interval(Duration::from_secs(5));
+        loop {
+            interval.tick().await;
+            
+            // Refresh cluster membership via HTTP
+            for peer in &refresh_peers {
+                let parts: Vec<&str> = peer.split(':').collect();
+                let host = parts.first().unwrap_or(&"localhost");
+                let http_url = format!("http://{}:8080/status", host);
+                
+                if let Ok(response) = client.get(&http_url).send().await {
+                    if let Ok(json) = response.json::<serde_json::Value>().await {
+                        if let Some(nodes) = json["nodes"].as_array() {
+                            for node in nodes {
+                                let node_id = node["id"].as_str().unwrap_or("").to_string();
+                                let address = node["address"].as_str().unwrap_or("").to_string();
+                                let role = node["role"].as_str().unwrap_or("");
+                                
+                                if !node_id.is_empty() && !node_id.starts_with("peer-") && !node_id.starts_with("lb-") {
+                                    let _ = refresh_cluster.add_peer(node_id.clone(), address).await;
+                                    
+                                    let node_role = if role == "LEADER" { 
+                                        wolfscale::state::NodeRole::Leader 
+                                    } else { 
+                                        wolfscale::state::NodeRole::Follower 
+                                    };
+                                    
+                                    let _ = refresh_cluster.update_node(&node_id, |n| {
+                                        n.role = node_role;
+                                    }).await;
+                                    
+                                    if role == "LEADER" {
+                                        let _ = refresh_cluster.set_leader(&node_id).await;
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    });
+    
+    tokio::select! {
+        result = proxy.start() => {
+            if let Err(e) = result {
+                tracing::error!("Proxy error: {}", e);
+            }
+        }
+        _ = tokio::signal::ctrl_c() => {
+            tracing::info!("Received shutdown signal");
+        }
+    }
+    
+    Ok(())
+}

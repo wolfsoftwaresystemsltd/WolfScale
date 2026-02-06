@@ -38,6 +38,7 @@ WolfScale is a lightweight, high-availability replication layer for MariaDB clus
 | **High Availability** | Deterministic Leader Election | Lowest node ID wins—predictable, instant failover |
 | | Automatic Catch-Up | Returning nodes sync via WAL before leadership |
 | | Health Monitoring | Leader monitors database, auto-demotes on failure |
+| | Load Balancer Mode | Built-in LB for distributing connections (v5.3.6+) |
 | **Connectivity** | MySQL Proxy | Native MySQL protocol on port 8007 |
 | | HTTP API | RESTful API for writes and cluster management |
 | | wolfctl CLI | `list servers`, `stats`, `migrate`, `binlog-setup` |

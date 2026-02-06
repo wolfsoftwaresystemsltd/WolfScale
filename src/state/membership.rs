@@ -52,6 +52,8 @@ pub enum NodeRole {
     Follower,
     /// Node is a candidate (during election)
     Candidate,
+    /// Node is a load balancer (no local database)
+    LoadBalancer,
 }
 
 impl std::fmt::Display for NodeRole {
@@ -60,6 +62,7 @@ impl std::fmt::Display for NodeRole {
             NodeRole::Leader => write!(f, "LEADER"),
             NodeRole::Follower => write!(f, "FOLLOWER"),
             NodeRole::Candidate => write!(f, "CANDIDATE"),
+            NodeRole::LoadBalancer => write!(f, "LOAD_BALANCER"),
         }
     }
 }

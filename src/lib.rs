@@ -32,6 +32,7 @@ pub mod id;
 pub mod proxy;
 pub mod binlog;
 pub mod tuning;
+pub mod lb;
 
 pub use config::WolfScaleConfig;
 pub use error::{Error, Result};
