@@ -345,6 +345,10 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     let our_node_id = config.node.id.clone();
     let incoming_heartbeat_time = Arc::clone(&shared_heartbeat_time);
     let incoming_entry_tx = entry_tx;
+    
+    // Build set of configured peer addresses for validation
+    // Only accept nodes that are in our configured peers list (prevents cross-cluster pollution)
+    let configured_peers: std::collections::HashSet<String> = config.cluster.peers.iter().cloned().collect();
 
     tokio::spawn(async move {
         while let Some((peer_addr, message)) = incoming_rx.recv().await {
@@ -356,6 +360,12 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                     for (member_id, member_addr) in members {
                         if member_id == our_node_id {
                             continue;  // Skip self
+                        }
+                        
+                        // Only accept members whose address is in our configured peers list
+                        if !configured_peers.contains(&member_addr) {
+                            tracing::trace!("Ignoring member {} at {} - not in configured peers", member_id, member_addr);
+                            continue;
                         }
                         
                         if incoming_cluster.get_node(&member_id).await.is_none() {
@@ -470,6 +480,12 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                             peer_addr.clone()
                         };
                         
+                        // Only accept followers whose address is in our configured peers list
+                        if !configured_peers.contains(&follower_addr) {
+                            tracing::trace!("Ignoring follower {} at {} - not in configured peers", node_id, follower_addr);
+                            continue;
+                        }
+                        
                         if incoming_cluster.get_node(&node_id).await.is_none() {
                             // Remove any existing synthetic peer with this address
                             let synthetic_id = format!("peer-{}", follower_addr.replace(':', "-"));
@@ -491,6 +507,13 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                             } else {
                                 peer_addr.clone()
                             };
+                            
+                            // Only accept followers whose address is in our configured peers list
+                            if !configured_peers.contains(&follower_addr) {
+                                tracing::trace!("Ignoring follower {} at {} - not in configured peers", node_id, follower_addr);
+                                continue;
+                            }
+                            
                             tracing::debug!("Registering new follower {} at {}", node_id, follower_addr);
                             let _ = incoming_cluster.add_peer(node_id.clone(), follower_addr).await;
                         }
@@ -515,16 +538,24 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                     // Peer heartbeat - record that this peer is alive
                     tracing::trace!("Peer heartbeat from {}", node_id);
                     
-                    // Register peer if not known
+                    // Register peer if not known - but only if their address is in our configured peers
                     if incoming_cluster.get_node(&node_id).await.is_none() {
                         // Find this node's address from the members list
                         if let Some((_, addr)) = members.iter().find(|(id, _)| id == &node_id) {
-                            let _ = incoming_cluster.add_peer(node_id.clone(), addr.clone()).await;
+                            // Only accept peers whose address is in our configured peers list
+                            if configured_peers.contains(addr) {
+                                let _ = incoming_cluster.add_peer(node_id.clone(), addr.clone()).await;
+                            } else {
+                                tracing::trace!("Ignoring peer {} at {} - not in configured peers", node_id, addr);
+                                continue;
+                            }
                         }
                     }
                     
-                    // Record heartbeat from this peer
-                    let _ = incoming_cluster.record_heartbeat(&node_id, 0).await;
+                    // Record heartbeat from this peer (only if we know them)
+                    if incoming_cluster.get_node(&node_id).await.is_some() {
+                        let _ = incoming_cluster.record_heartbeat(&node_id, 0).await;
+                    }
                 }
                 _ => {
                     tracing::trace!("Ignoring message type {} from {}", message.type_name(), peer_addr);

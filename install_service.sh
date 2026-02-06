@@ -69,8 +69,14 @@ else
     NODE_ID="${NODE_ID:-$HOSTNAME}"
     
     # Bind address
-    read -p "Bind address [0.0.0.0:7400]: " BIND_ADDR
-    BIND_ADDR="${BIND_ADDR:-0.0.0.0:7400}"
+    read -p "Bind address [0.0.0.0:7654]: " BIND_ADDR
+    BIND_ADDR="${BIND_ADDR:-0.0.0.0:7654}"
+    
+    # Advertise address (external IP:port for cluster communication)
+    echo ""
+    echo "The advertise address is the IP:port other nodes use to reach this node."
+    echo "Use this node's external/internal IP, e.g., 10.0.10.115:7654"
+    read -p "Advertise address: " ADVERTISE_ADDR
     
     # Is this the bootstrap (first) node?
     read -p "Is this the FIRST node in the cluster? (y/n) [n]: " IS_BOOTSTRAP
@@ -83,24 +89,23 @@ else
         IS_BOOTSTRAP_BOOL="false"
     fi
     
-    # Peer addresses (if not bootstrap)
+    # Peer addresses (for all nodes - needed for cluster membership)
     PEERS=""
-    if [[ "$IS_BOOTSTRAP" != "y" && "$IS_BOOTSTRAP" != "Y" ]]; then
-        echo ""
-        echo "Enter peer addresses to join the cluster."
-        echo "Format: host:port (one per line, press Enter after each)"
-        echo "Press Enter on an empty line when done."
-        echo ""
-        while true; do
-            read -p "Peer address: " PEER
-            [ -z "$PEER" ] && break
-            if [ -z "$PEERS" ]; then
-                PEERS="\"$PEER\""
-            else
-                PEERS="$PEERS, \"$PEER\""
-            fi
-        done
-    fi
+    echo ""
+    echo "Enter ALL cluster peer addresses (including this node)."
+    echo "Format: ip:port (one per line, press Enter after each)"
+    echo "Example: 10.0.10.115:7654"
+    echo "Press Enter on an empty line when done."
+    echo ""
+    while true; do
+        read -p "Peer address: " PEER
+        [ -z "$PEER" ] && break
+        if [ -z "$PEERS" ]; then
+            PEERS="\"$PEER\""
+        else
+            PEERS="$PEERS, \"$PEER\""
+        fi
+    done
     
     echo ""
     echo "Database Configuration"
@@ -143,6 +148,7 @@ else
 id = "$NODE_ID"
 bind_address = "$BIND_ADDR"
 data_dir = "/var/lib/wolfscale/$NODE_ID"
+advertise_address = "$ADVERTISE_ADDR"
 
 [database]
 host = "$DB_HOST"
