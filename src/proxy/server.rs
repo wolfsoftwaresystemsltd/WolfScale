@@ -590,48 +590,6 @@ fn extract_table_name(query: &str) -> Option<String> {
     }
 }
 
-/// Determine the backend address to use based on query type and replication status
-async fn get_backend_address(
-    config: &ProxyConfig,
-    cluster: &ClusterMembership,
-    is_write: bool,
-) -> String {
-    // For writes, always try to route to leader
-    if is_write {
-        if let Some(leader) = cluster.current_leader().await {
-            // Extract host from leader address (format: host:raft_port)
-            // We need to use the MariaDB port, not the raft port
-            let leader_host = leader.address.split(':').next().unwrap_or(&config.backend_host);
-            return format!("{}:{}", leader_host, config.backend_port);
-        }
-    }
-
-    // For reads, check if local node is caught up
-    let self_node = cluster.get_self().await;
-    
-    // Read locally if:
-    // 1. We are the leader, OR
-    // 2. We are Active with no replication lag
-    let can_read_locally = self_node.role == NodeRole::Leader 
-        || (self_node.status == NodeStatus::Active && self_node.replication_lag == 0);
-
-    if can_read_locally {
-        tracing::debug!("Reading from local backend (caught up)");
-        format!("{}:{}", config.backend_host, config.backend_port)
-    } else {
-        // Not caught up - route to leader
-        if let Some(leader) = cluster.current_leader().await {
-            let leader_host = leader.address.split(':').next().unwrap_or(&config.backend_host);
-            tracing::debug!("Reading from leader {} (local is lagging by {} entries)", 
-                leader_host, self_node.replication_lag);
-            format!("{}:{}", leader_host, config.backend_port)
-        } else {
-            // No leader known - fall back to local
-            tracing::warn!("No leader known, falling back to local backend");
-            format!("{}:{}", config.backend_host, config.backend_port)
-        }
-    }
-}
 
 /// Handle a client connection by proxying to backend MariaDB
 async fn handle_connection(
@@ -859,12 +817,11 @@ async fn handle_connection(
                         continue;
                     }
                 }
-            }
+        }
         }
 
-        // Note: We keep connections on their original backend for session consistency
-        // Routing decisions are informational only - replication handles data sync
-        let _target_addr = get_backend_address(&config, &cluster, is_write).await;
+        // Note: Backend routing removed for performance - we keep connections on their
+        // original backend for session consistency. Replication handles data sync.
 
         // Forward command to backend
         let query_start = std::time::Instant::now();
