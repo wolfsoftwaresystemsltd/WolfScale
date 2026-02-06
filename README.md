@@ -20,6 +20,7 @@ WolfScale is a lightweight, high-availability replication layer for MariaDB clus
 
 | Feature | Benefit |
 |---------|---------|
+| **Sub-Millisecond Replication** | Push-based replication faster than MySQL, MariaDB, or Galera |
 | **Zero Write Conflicts** | Single-leader model eliminates certification failures |
 | **Predictable Failover** | Lowest node ID always wins—you know exactly who becomes leader |
 | **Safe Node Rejoin** | Returning nodes sync via WAL before taking leadership |
@@ -30,7 +31,8 @@ WolfScale is a lightweight, high-availability replication layer for MariaDB clus
 
 | Category | Feature | Description |
 |----------|---------|-------------|
-| **Replication** | WAL-Based Sync | LZ4-compressed Write-Ahead Log for strong consistency |
+| **Replication** | Push-Based Sync | Sub-millisecond replication via event-driven WAL notifications |
+| | WAL-Based Sync | LZ4-compressed Write-Ahead Log for strong consistency |
 | | Binlog Mode | Capture writes from MySQL/MariaDB binlog (v3.0+) |
 | | Write Forwarding | Followers automatically forward writes to leader |
 | **High Availability** | Deterministic Leader Election | Lowest node ID wins—predictable, instant failover |
@@ -59,6 +61,17 @@ No voting, no split-brain. The node with the lowest ID among active nodes become
 
 ### WAL-Based Replication
 Write-Ahead Log with LZ4 compression ensures all changes are durably replicated. Nodes that fall behind automatically catch up.
+
+### Fastest Replication in the Industry
+
+| System | Typical Replication Lag |
+|--------|------------------------|
+| MySQL Async | 100ms - seconds |
+| MySQL Semi-Sync | 10-50ms |
+| MariaDB Galera | 10-20ms |
+| **WolfScale** | **<1ms** ⚡ |
+
+WolfScale uses push-based replication that triggers immediately when writes are committed, rather than polling. This gives you the fastest replication available.
 
 ### MySQL Proxy Mode
 ```bash

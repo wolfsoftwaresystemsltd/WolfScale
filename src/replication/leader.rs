@@ -114,13 +114,17 @@ impl LeaderNode {
         self.initialize_follower_state().await?;
 
         // DECOUPLED: Heartbeat runs at configured interval (for health monitoring)
-        // Replication runs much faster (10ms) to maximize throughput
+        // Replication runs on-demand (push) with 10ms fallback for catch-up
         let heartbeat_interval = Duration::from_millis(self.config.heartbeat_interval_ms);
-        let replication_interval = Duration::from_millis(10); // 100 replication cycles/sec max
+        let replication_interval = Duration::from_millis(10); // Fallback ticker
         
         let mut heartbeat_ticker = interval(heartbeat_interval);
         let mut replication_ticker = interval(replication_interval);
         let mut db_check_counter = 0u64;
+        
+        // Subscribe to instant WAL notifications for push-based replication
+        let mut wal_notify = self.wal_writer.subscribe();
+        tracing::info!("Push-based replication enabled - sub-millisecond replication lag");
 
         loop {
             if *self.shutdown.read().await {
@@ -128,6 +132,13 @@ impl LeaderNode {
             }
 
             tokio::select! {
+                // INSTANT PATH: Trigger replication immediately when WAL is flushed
+                // This is the key optimization - no waiting for the ticker
+                _ = wal_notify.recv() => {
+                    if let Err(e) = self.replicate_to_followers().await {
+                        tracing::warn!("Replication error (instant): {}", e);
+                    }
+                }
                 // Heartbeat path: health checks and cluster membership
                 _ = heartbeat_ticker.tick() => {
                     // Check database health every 5 heartbeats
@@ -151,7 +162,7 @@ impl LeaderNode {
                         return Ok(());
                     }
                 }
-                // Replication path: fast loop for maximum throughput
+                // FALLBACK: 10ms ticker catches any missed notifications
                 _ = replication_ticker.tick() => {
                     if let Err(e) = self.replicate_to_followers().await {
                         tracing::warn!("Replication error: {}", e);

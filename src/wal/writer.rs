@@ -6,7 +6,7 @@ use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::sync::{mpsc, oneshot, RwLock};
+use tokio::sync::{mpsc, oneshot, RwLock, broadcast};
 
 use super::entry::{LogEntry, Lsn, WalEntry};
 use super::segment::Segment;
@@ -29,6 +29,8 @@ pub struct WalWriter {
     sender: mpsc::Sender<WriteRequest>,
     /// Shared state for reading current LSN
     state: Arc<RwLock<WriterState>>,
+    /// Notification channel for instant replication - fires after each flush
+    notify_tx: broadcast::Sender<()>,
 }
 
 /// Shared writer state
@@ -51,6 +53,8 @@ struct WriterInner {
     current_segment: Option<Segment>,
     /// Write buffer for batching
     buffer: VecDeque<(WalEntry, oneshot::Sender<Result<Lsn>>)>,
+    /// Notification sender for instant replication
+    notify_tx: broadcast::Sender<()>,
     /// Last flush time
     last_flush: Instant,
     /// Shared state
@@ -92,6 +96,11 @@ impl WalWriter {
             .unwrap_or(10000);
         
         let (sender, receiver) = mpsc::channel(channel_buffer);
+        
+        // Create broadcast channel for instant replication notifications
+        // Buffer of 16 is plenty - we just need to signal "something changed"
+        let (notify_tx, _) = broadcast::channel(16);
+        let notify_tx_clone = notify_tx.clone();
 
         let inner = WriterInner {
             paths,
@@ -100,12 +109,13 @@ impl WalWriter {
             buffer: VecDeque::new(),
             last_flush: Instant::now(),
             state: Arc::clone(&state),
+            notify_tx: notify_tx_clone,
         };
 
         // Spawn writer task
         tokio::spawn(Self::writer_task(inner, receiver));
 
-        Ok(Self { sender, state })
+        Ok(Self { sender, state, notify_tx })
     }
 
     /// Find the last LSN from existing segments
@@ -162,6 +172,12 @@ impl WalWriter {
     /// Set the current term (for leader election)
     pub async fn set_term(&self, term: u64) {
         self.state.write().await.current_term = term;
+    }
+
+    /// Subscribe to instant replication notifications
+    /// Returns a receiver that fires after each successful WAL flush
+    pub fn subscribe(&self) -> broadcast::Receiver<()> {
+        self.notify_tx.subscribe()
     }
 
     /// Force flush the buffer
@@ -292,6 +308,10 @@ impl WriterInner {
         for (response, result) in responses {
             let _ = response.send(result);
         }
+
+        // Notify subscribers that new entries are available for replication
+        // Ignore error if no receivers (leader not started yet)
+        let _ = self.notify_tx.send(());
 
         self.last_flush = Instant::now();
         Ok(())
