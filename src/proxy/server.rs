@@ -248,6 +248,21 @@ async fn read_with_dynamic_buffer(
     Ok(n)
 }
 
+/// Check if a MySQL response appears complete (for fast path reads).
+/// Looks for OK packet (0x00), EOF packet (0xFE), or Error packet (0xFF) markers.
+/// This is a heuristic - works for simple result sets.
+#[inline]
+fn is_response_complete(data: &[u8]) -> bool {
+    if data.len() < 5 {
+        return false;
+    }
+    // Check if the last packet in the buffer is a terminating packet
+    // For simple queries, we look at the packet type byte (position 4)
+    // OK = 0x00, EOF = 0xFE, ERR = 0xFF
+    let packet_type = data[4];
+    matches!(packet_type, 0x00 | 0xFE | 0xFF)
+}
+
 /// Result from forwarding a write to the leader
 struct ForwardWriteResult {
     affected_rows: u64,
@@ -742,7 +757,60 @@ async fn handle_connection(
             }
         };
 
-        // Parse the complete packet to check query type
+        // FAST PATH: Check for SELECT/SHOW queries early - skip all write processing
+        // Most WordPress queries are SELECTs, so this optimization matters a lot.
+        // Check first byte after header for COM_QUERY (0x03), then check query prefix
+        let is_fast_read = if n > 5 && cmd_buf[4] == 0x03 {
+            // COM_QUERY command - check if it starts with SELECT or SHOW
+            let query_start = &cmd_buf[5..n.min(20)]; // Check first ~15 chars
+            let first_char = query_start.first().map(|c| c.to_ascii_uppercase());
+            match first_char {
+                Some(b'S') => {
+                    // Could be SELECT or SHOW or SET
+                    query_start.len() >= 6 && (
+                        query_start[..6].eq_ignore_ascii_case(b"SELECT") ||
+                        (query_start.len() >= 4 && query_start[..4].eq_ignore_ascii_case(b"SHOW"))
+                    )
+                }
+                _ => false
+            }
+        } else {
+            false
+        };
+
+        // For fast reads, skip all write processing and go straight to forwarding
+        if is_fast_read {
+            // Direct forward to backend - no parsing needed
+            if let Err(e) = backend.write_all(&cmd_buf[..n]).await {
+                tracing::error!("Backend write error: {}", e);
+                break;
+            }
+
+            // Read and relay response
+            loop {
+                let rn = match read_with_dynamic_buffer(&mut backend, &mut result_buf).await {
+                    Ok(0) => return Ok(()),
+                    Ok(n) => n,
+                    Err(e) => {
+                        tracing::debug!("Backend read error: {}", e);
+                        return Ok(());
+                    }
+                };
+
+                if let Err(e) = client.write_all(&result_buf[..rn]).await {
+                    tracing::debug!("Client write error: {}", e);
+                    return Ok(());
+                }
+
+                // Check if this is a complete response (look for EOF/OK packet)
+                if is_response_complete(&result_buf[..rn]) {
+                    break;
+                }
+            }
+            continue; // Next query
+        }
+
+        // SLOW PATH: Parse packet for writes and special commands
         let (is_write, query_opt) = if let Ok((packet, _)) = MySqlPacket::read(&cmd_buf[..n]) {
             if let Some(query) = packet.query_string() {
                 let write = is_write_query(&query);
@@ -754,14 +822,19 @@ async fn handle_connection(
             (false, None)
         };
 
-        // Track database context changes (USE statements or COM_INIT_DB)
-        if let Some(ref query) = query_opt {
-            let upper = query.trim().to_uppercase();
-            if upper.starts_with("USE ") || upper.starts_with("USE`") {
-                // Extract database name from USE statement
-                let db_name = query.trim()[3..].trim().trim_matches('`').trim_matches(';').to_string();
-                if !db_name.is_empty() {
-                    current_database = Some(db_name);
+        // Track database context changes (USE statements) - only for potential writes
+        if is_write {
+            if let Some(ref query) = query_opt {
+                // Check for USE statement using our fast case-insensitive check
+                let trimmed = query.trim();
+                if trimmed.len() >= 4 {
+                    let prefix = &trimmed.as_bytes()[..4.min(trimmed.len())];
+                    if prefix.eq_ignore_ascii_case(b"USE ") || prefix.eq_ignore_ascii_case(b"USE`") {
+                        let db_name = trimmed[3..].trim().trim_matches('`').trim_matches(';').to_string();
+                        if !db_name.is_empty() {
+                            current_database = Some(db_name);
+                        }
+                    }
                 }
             }
         }
