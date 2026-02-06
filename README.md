@@ -112,6 +112,26 @@ curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/mai
 
 This automatically installs dependencies, builds WolfScale, and runs the interactive configuration wizard.
 
+### Load Balancer Mode (v5.3.6+)
+
+Run a standalone load balancer that routes MySQL connections to your WolfScale cluster:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/setup_lb.sh | bash
+```
+
+**Zero-config:** Copy `wolfscale.toml` from any cluster node first, and the installer auto-detects peers:
+
+```bash
+# Copy config from a cluster node
+scp user@cluster-node:/opt/wolfscale/wolfscale.toml /opt/wolfscale/
+
+# Run load balancer installer
+curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/setup_lb.sh | bash
+```
+
+The load balancer listens on port **3306** and routes traffic to healthy cluster nodes.
+
 ### Cluster Commands
 
 ```bash
