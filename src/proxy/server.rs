@@ -414,8 +414,7 @@ fn is_write_query(query: &str) -> bool {
     // Permissions
     starts_with_ci(stripped, "GRANT") ||
     starts_with_ci(stripped, "REVOKE") ||
-    // Session/context
-    starts_with_ci(stripped, "USE") ||
+    // Note: USE is NOT a write - it's a session command that needs to execute on the backend connection
     // Transactions
     starts_with_ci(stripped, "START") ||
     starts_with_ci(stripped, "BEGIN") ||

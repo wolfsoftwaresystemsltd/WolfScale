@@ -1321,24 +1321,6 @@ async fn run_load_balancer(peers: Vec<String>, listen_address: String) -> Result
     println!("Press Ctrl+C to stop.");
     println!();
     
-    // Create proxy config
-    let proxy_config = wolfscale::proxy::ProxyConfig {
-        listen_address: listen_address.clone(),
-        backend_host,
-        backend_port,
-        backend_user: "wolfscale".to_string(),
-        backend_password: "wolfscale".to_string(),
-        ssl_enabled: false,
-        ssl_cert: None,
-        ssl_key: None,
-        ssl_required: false,
-    };
-    
-    let proxy = wolfscale::proxy::ProxyServer::new(
-        proxy_config,
-        Arc::clone(&cluster),
-    );
-    
     // Spawn cluster refresh task (every 5 seconds)
     let refresh_cluster = Arc::clone(&cluster);
     let refresh_peers = peers.clone();
@@ -1474,10 +1456,84 @@ async fn run_load_balancer(peers: Vec<String>, listen_address: String) -> Result
     println!("Stats available at http://localhost:8080/stats");
     println!();
     
+    // Simple TCP proxy - forward all traffic to leader's MySQL port
+    // This preserves session state and lets the WolfScale node handle replication
+    let listener = tokio::net::TcpListener::bind(&listen_address).await?;
+    tracing::info!("Load balancer listening on {}", listen_address);
+    
+    let lb_cluster = Arc::clone(&cluster);
+    let lb_backend_host = backend_host.clone();
+    let lb_backend_port = backend_port;
+    
+    // Connection counter for stats
+    let total_connections = Arc::new(std::sync::atomic::AtomicU64::new(0));
+    let active_connections = Arc::new(std::sync::atomic::AtomicU64::new(0));
+    
     tokio::select! {
-        result = proxy.start() => {
+        result = async {
+            loop {
+                let (client_socket, client_addr) = listener.accept().await?;
+                tracing::debug!("New connection from {}", client_addr);
+                
+                total_connections.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                active_connections.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                
+                let cluster = Arc::clone(&lb_cluster);
+                let backend_host = lb_backend_host.clone();
+                let backend_port = lb_backend_port;
+                let active = Arc::clone(&active_connections);
+                
+                // Spawn handler for this connection
+                tokio::spawn(async move {
+                    // Get current leader for this connection
+                    let target_host = if let Some(leader) = cluster.current_leader().await {
+                        // Use leader's address (but connect to MySQL port 3306)
+                        leader.address.split(':').next().unwrap_or(&backend_host).to_string()
+                    } else {
+                        backend_host.clone()
+                    };
+                    
+                    let target_addr = format!("{}:{}", target_host, backend_port);
+                    
+                    match tokio::net::TcpStream::connect(&target_addr).await {
+                        Ok(backend_socket) => {
+                            tracing::debug!("Connected to backend {}", target_addr);
+                            
+                            // Split both sockets for bidirectional copy
+                            let (mut client_read, mut client_write) = client_socket.into_split();
+                            let (mut backend_read, mut backend_write) = backend_socket.into_split();
+                            
+                            // Copy data in both directions
+                            let client_to_backend = tokio::io::copy(&mut client_read, &mut backend_write);
+                            let backend_to_client = tokio::io::copy(&mut backend_read, &mut client_write);
+                            
+                            // Wait for either direction to finish
+                            tokio::select! {
+                                result = client_to_backend => {
+                                    if let Err(e) = result {
+                                        tracing::debug!("Client->Backend copy ended: {}", e);
+                                    }
+                                }
+                                result = backend_to_client => {
+                                    if let Err(e) = result {
+                                        tracing::debug!("Backend->Client copy ended: {}", e);
+                                    }
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to connect to backend {}: {}", target_addr, e);
+                        }
+                    }
+                    
+                    active.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
+                });
+            }
+            #[allow(unreachable_code)]
+            Ok::<(), anyhow::Error>(())
+        } => {
             if let Err(e) = result {
-                tracing::error!("Proxy error: {}", e);
+                tracing::error!("Load balancer error: {}", e);
             }
         }
         _ = tokio::signal::ctrl_c() => {
