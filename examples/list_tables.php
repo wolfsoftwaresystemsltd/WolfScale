@@ -4,9 +4,9 @@
  * Lists all tables in the crm_1 database
  */
 
-$host = '10.0.10.115';
+$host = 'yourserver';
 $port = 8007;  // WolfScale MySQL proxy port
-$database = 'crm_1';
+$database = 'your_database';
 $user = 'your_username';  // <-- Update this
 $password = 'your_password';  // <-- Update this
 

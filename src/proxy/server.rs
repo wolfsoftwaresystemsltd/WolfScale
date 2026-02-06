@@ -376,42 +376,56 @@ fn write_lenenc_int(buf: &mut Vec<u8>, val: u64) {
     }
 }
 
-/// Check if a query is a write operation
+/// Check if a query is a write operation (optimized - no string allocation)
 fn is_write_query(query: &str) -> bool {
     // Strip leading comments (mysqldump adds /* ... */ style comments)
-    let stripped = strip_leading_comments(query);
-    let upper = stripped.trim().to_uppercase();
+    let stripped = strip_leading_comments(query).trim();
     
-    // DDL statements (CREATE covers TABLE, VIEW, TRIGGER, PROCEDURE, FUNCTION, INDEX, DATABASE, etc.)
-    upper.starts_with("CREATE") ||
-    upper.starts_with("ALTER") ||
-    upper.starts_with("DROP") ||
-    upper.starts_with("RENAME") ||
-    upper.starts_with("TRUNCATE") ||
+    // Helper to check case-insensitive prefix without allocating
+    fn starts_with_ci(s: &str, prefix: &str) -> bool {
+        if s.len() < prefix.len() {
+            return false;
+        }
+        s.as_bytes()[..prefix.len()]
+            .iter()
+            .zip(prefix.as_bytes())
+            .all(|(a, b)| a.to_ascii_uppercase() == *b)
+    }
+    
+    // Fast path: SELECT and SHOW are the most common queries - definitely not writes
+    if starts_with_ci(stripped, "SELECT") || starts_with_ci(stripped, "SHOW") {
+        return false;
+    }
+    
+    // DDL statements
+    starts_with_ci(stripped, "CREATE") ||
+    starts_with_ci(stripped, "ALTER") ||
+    starts_with_ci(stripped, "DROP") ||
+    starts_with_ci(stripped, "RENAME") ||
+    starts_with_ci(stripped, "TRUNCATE") ||
     // DML statements
-    upper.starts_with("INSERT") ||
-    upper.starts_with("UPDATE") ||
-    upper.starts_with("DELETE") ||
-    upper.starts_with("REPLACE") ||
-    upper.starts_with("LOAD") ||  // LOAD DATA INFILE
-    upper.starts_with("CALL") ||  // Stored procedure calls
+    starts_with_ci(stripped, "INSERT") ||
+    starts_with_ci(stripped, "UPDATE") ||
+    starts_with_ci(stripped, "DELETE") ||
+    starts_with_ci(stripped, "REPLACE") ||
+    starts_with_ci(stripped, "LOAD") ||
+    starts_with_ci(stripped, "CALL") ||
     // Permissions
-    upper.starts_with("GRANT") ||
-    upper.starts_with("REVOKE") ||
-    // Note: LOCK/UNLOCK are NOT writes - they're session-local and shouldn't be replicated
-    // Session/context - USE is handled specially, SET can be local
-    upper.starts_with("USE") ||
-    // Transactions (needed for consistent replication)
-    upper.starts_with("START") ||  // START TRANSACTION
-    upper.starts_with("BEGIN") ||
-    upper.starts_with("COMMIT") ||
-    upper.starts_with("ROLLBACK") ||
-    upper.starts_with("SAVEPOINT") ||
+    starts_with_ci(stripped, "GRANT") ||
+    starts_with_ci(stripped, "REVOKE") ||
+    // Session/context
+    starts_with_ci(stripped, "USE") ||
+    // Transactions
+    starts_with_ci(stripped, "START") ||
+    starts_with_ci(stripped, "BEGIN") ||
+    starts_with_ci(stripped, "COMMIT") ||
+    starts_with_ci(stripped, "ROLLBACK") ||
+    starts_with_ci(stripped, "SAVEPOINT") ||
     // Maintenance
-    upper.starts_with("ANALYZE") ||
-    upper.starts_with("OPTIMIZE") ||
-    upper.starts_with("REPAIR") ||
-    upper.starts_with("FLUSH")
+    starts_with_ci(stripped, "ANALYZE") ||
+    starts_with_ci(stripped, "OPTIMIZE") ||
+    starts_with_ci(stripped, "REPAIR") ||
+    starts_with_ci(stripped, "FLUSH")
 }
 
 /// Strip leading SQL comments from a query
