@@ -1203,8 +1203,6 @@ async fn run_proxy(config_path: PathBuf, listen_address: String) -> Result<()> {
 async fn run_load_balancer(peers: Vec<String>, listen_address: String, _max_lag: u64) -> Result<()> {
     use wolfscale::state::{ClusterMembership, NodeRole, NodeStatus};
     
-    init_logging("info");
-    
     // Generate a unique LB node ID
     let lb_id = format!("lb-{}", &uuid::Uuid::new_v4().to_string()[..8]);
     
