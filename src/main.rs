@@ -629,6 +629,10 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
             backend_port: config.database.port,
             backend_user: config.database.user.clone(),
             backend_password: config.database.password.clone(),
+            ssl_enabled: config.proxy.ssl_enabled,
+            ssl_cert: config.proxy.ssl_cert.clone(),
+            ssl_key: config.proxy.ssl_key.clone(),
+            ssl_required: config.proxy.ssl_required,
         };
         let proxy_cluster = Arc::clone(&cluster);
         let proxy_wal = wal_writer.clone();
@@ -1147,6 +1151,10 @@ async fn run_proxy(config_path: PathBuf, listen_address: String) -> Result<()> {
         backend_port: config.database.port,
         backend_user: config.database.user.clone(),
         backend_password: config.database.password.clone(),
+        ssl_enabled: false,
+        ssl_cert: None,
+        ssl_key: None,
+        ssl_required: false,
     };
     
     let proxy = ProxyServer::new(proxy_config, cluster);

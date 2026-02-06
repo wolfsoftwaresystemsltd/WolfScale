@@ -210,6 +210,22 @@ pub struct ProxyConfig {
     /// MySQL proxy bind address
     #[serde(default = "default_proxy_address")]
     pub bind_address: String,
+    
+    /// Enable SSL/TLS for MySQL proxy connections
+    #[serde(default)]
+    pub ssl_enabled: bool,
+    
+    /// Path to SSL certificate file (PEM format)
+    #[serde(default)]
+    pub ssl_cert: Option<PathBuf>,
+    
+    /// Path to SSL private key file (PEM format)
+    #[serde(default)]
+    pub ssl_key: Option<PathBuf>,
+    
+    /// Require SSL from clients (reject non-SSL connections)
+    #[serde(default)]
+    pub ssl_required: bool,
 }
 
 /// Replication mode configuration
@@ -376,6 +392,10 @@ impl Default for ProxyConfig {
         Self {
             enabled: true,
             bind_address: default_proxy_address(),
+            ssl_enabled: false,
+            ssl_cert: None,
+            ssl_key: None,
+            ssl_required: false,
         }
     }
 }

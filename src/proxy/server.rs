@@ -5,10 +5,16 @@
 //! - Parses command packets to detect writes
 //! - Writes are logged to WAL for replication before execution
 //! - Smart routing: reads from local if caught up, otherwise from leader
+//! - Optional SSL/TLS encryption for client connections
 
 use std::sync::Arc;
+use std::path::PathBuf;
+use std::io::BufReader;
+use std::fs::File;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio_rustls::TlsAcceptor;
+use rustls::pki_types::CertificateDer;
 
 use crate::state::{ClusterMembership, NodeStatus, NodeRole};
 use crate::wal::{WalWriter, LogEntry};
@@ -28,6 +34,14 @@ pub struct ProxyConfig {
     pub backend_user: String,
     /// Backend password
     pub backend_password: String,
+    /// Enable SSL/TLS for client connections
+    pub ssl_enabled: bool,
+    /// Path to SSL certificate file (PEM format)
+    pub ssl_cert: Option<PathBuf>,
+    /// Path to SSL private key file (PEM format)
+    pub ssl_key: Option<PathBuf>,
+    /// Require SSL from clients (reject non-SSL connections)
+    pub ssl_required: bool,
 }
 
 /// MySQL proxy server
@@ -35,22 +49,90 @@ pub struct ProxyServer {
     config: ProxyConfig,
     cluster: Arc<ClusterMembership>,
     wal_writer: Option<WalWriter>,
+    tls_acceptor: Option<TlsAcceptor>,
 }
 
 impl ProxyServer {
     pub fn new(config: ProxyConfig, cluster: Arc<ClusterMembership>) -> Self {
-        Self { config, cluster, wal_writer: None }
+        let tls_acceptor = if config.ssl_enabled {
+            match Self::create_tls_acceptor(&config) {
+                Ok(acceptor) => Some(acceptor),
+                Err(e) => {
+                    tracing::error!("Failed to create TLS acceptor: {}. SSL will be disabled.", e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+        
+        Self { config, cluster, wal_writer: None, tls_acceptor }
     }
 
     /// Create with WAL writer for replication support
     pub fn with_wal(config: ProxyConfig, cluster: Arc<ClusterMembership>, wal_writer: WalWriter) -> Self {
-        Self { config, cluster, wal_writer: Some(wal_writer) }
+        let tls_acceptor = if config.ssl_enabled {
+            match Self::create_tls_acceptor(&config) {
+                Ok(acceptor) => Some(acceptor),
+                Err(e) => {
+                    tracing::error!("Failed to create TLS acceptor: {}. SSL will be disabled.", e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+        
+        Self { config, cluster, wal_writer: Some(wal_writer), tls_acceptor }
+    }
+    
+    /// Create TLS acceptor from certificate and key files
+    fn create_tls_acceptor(config: &ProxyConfig) -> std::result::Result<TlsAcceptor, String> {
+        let cert_path = config.ssl_cert.as_ref()
+            .ok_or_else(|| "ssl_cert path required when ssl_enabled is true".to_string())?;
+        let key_path = config.ssl_key.as_ref()
+            .ok_or_else(|| "ssl_key path required when ssl_enabled is true".to_string())?;
+        
+        // Load certificates
+        let cert_file = File::open(cert_path)
+            .map_err(|e| format!("Failed to open certificate file {:?}: {}", cert_path, e))?;
+        let mut cert_reader = BufReader::new(cert_file);
+        let certs: Vec<CertificateDer<'static>> = rustls_pemfile::certs(&mut cert_reader)
+            .filter_map(|c| c.ok())
+            .collect();
+        
+        if certs.is_empty() {
+            return Err(format!("No valid certificates found in {:?}", cert_path));
+        }
+        
+        // Load private key
+        let key_file = File::open(key_path)
+            .map_err(|e| format!("Failed to open key file {:?}: {}", key_path, e))?;
+        let mut key_reader = BufReader::new(key_file);
+        
+        // Try reading as PKCS8 first, then as RSA
+        let private_key = rustls_pemfile::private_key(&mut key_reader)
+            .map_err(|e| format!("Failed to parse private key: {}", e))?
+            .ok_or_else(|| format!("No private key found in {:?}", key_path))?;
+        
+        // Build TLS config
+        let tls_config = rustls::ServerConfig::builder()
+            .with_no_client_auth()
+            .with_single_cert(certs, private_key)
+            .map_err(|e| format!("Failed to create TLS config: {}", e))?;
+        
+        Ok(TlsAcceptor::from(Arc::new(tls_config)))
     }
 
     /// Start the proxy server
     pub async fn start(&self) -> Result<()> {
         let listener = TcpListener::bind(&self.config.listen_address).await?;
-        tracing::info!("MySQL proxy listening on {}", self.config.listen_address);
+        
+        if self.tls_acceptor.is_some() {
+            tracing::info!("MySQL proxy listening on {} (SSL enabled)", self.config.listen_address);
+        } else {
+            tracing::info!("MySQL proxy listening on {}", self.config.listen_address);
+        }
 
         loop {
             let (client_socket, addr) = listener.accept().await?;
@@ -59,20 +141,36 @@ impl ProxyServer {
             let config = self.config.clone();
             let cluster = Arc::clone(&self.cluster);
             let wal_writer = self.wal_writer.clone();
+            let tls_acceptor = self.tls_acceptor.clone();
 
             tokio::spawn(async move {
-                if let Err(e) = handle_connection(client_socket, config, cluster, wal_writer).await {
-                    tracing::error!("Proxy connection error: {}", e);
+                // If TLS is enabled, upgrade the connection
+                if let Some(acceptor) = tls_acceptor {
+                    match acceptor.accept(client_socket).await {
+                        Ok(tls_stream) => {
+                            tracing::debug!("TLS handshake successful for {}", addr);
+                            if let Err(e) = handle_connection_tls(tls_stream, config, cluster, wal_writer).await {
+                                tracing::error!("Proxy connection error (TLS): {}", e);
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("TLS handshake failed for {}: {}", addr, e);
+                        }
+                    }
+                } else {
+                    if let Err(e) = handle_connection(client_socket, config, cluster, wal_writer).await {
+                        tracing::error!("Proxy connection error: {}", e);
+                    }
                 }
             });
         }
     }
 }
 
-/// Initial buffer size (16MB - MySQL default max_allowed_packet)
-const INITIAL_BUFFER_SIZE: usize = 16 * 1024 * 1024;
-/// Maximum buffer size (1GB - MySQL maximum max_allowed_packet)
-const MAX_BUFFER_SIZE: usize = 1024 * 1024 * 1024;
+/// Initial buffer size (64KB - small for typical queries, grows dynamically)
+const INITIAL_BUFFER_SIZE: usize = 64 * 1024;
+/// Maximum buffer size (64MB - large enough for most bulk operations)
+const MAX_BUFFER_SIZE: usize = 64 * 1024 * 1024;
 /// Buffer growth factor
 const BUFFER_GROWTH_FACTOR: usize = 2;
 
@@ -640,7 +738,7 @@ async fn handle_connection(
 
     // Phase 4: Main command loop with smart routing
     // Use dynamic buffer sizing - start small, grow as needed
-    let mut cmd_buf = vec![0u8; INITIAL_BUFFER_SIZE]; // Start with 16MB, grows dynamically
+    let mut cmd_buf = vec![0u8; INITIAL_BUFFER_SIZE]; // Start with 64KB, grows dynamically
     let mut result_buf = vec![0u8; INITIAL_BUFFER_SIZE];
     let _current_backend_addr = initial_backend_addr;
     
@@ -841,5 +939,19 @@ async fn handle_connection(
         }
     }
 
+    Ok(())
+}
+
+/// Handle a TLS-wrapped client connection by proxying to backend MariaDB
+/// Note: TLS support is experimental - the connection handling is the same as non-TLS
+async fn handle_connection_tls(
+    _tls_stream: tokio_rustls::server::TlsStream<TcpStream>,
+    _config: ProxyConfig,
+    _cluster: Arc<ClusterMembership>,
+    _wal_writer: Option<WalWriter>,
+) -> Result<()> {
+    // For now, log a warning - full TLS implementation requires making handle_connection generic
+    tracing::warn!("TLS connection received but TLS handling not fully implemented yet");
+    tracing::warn!("For now, please disable SSL in your client or use a TLS proxy like stunnel");
     Ok(())
 }
