@@ -1258,7 +1258,7 @@ async fn run_load_balancer(peers: Vec<String>, listen_address: String) -> Result
                                 discovered_nodes.push((node_id.clone(), address.clone()));
                                 
                                 // Track leader
-                                if role == "LEADER" {
+                                if role == "Leader" {
                                     leader_address = Some(address.clone());
                                     println!("  Leader: {} ({})", node_id, address);
                                 }
@@ -1267,8 +1267,8 @@ async fn run_load_balancer(peers: Vec<String>, listen_address: String) -> Result
                                 cluster.add_peer(node_id.clone(), address).await?;
                                 
                                 // Update node state
-                                let node_role = if role == "LEADER" { NodeRole::Leader } else { NodeRole::Follower };
-                                let node_status = if status == "ACTIVE" { NodeStatus::Active } else { NodeStatus::Syncing };
+                                let node_role = if role == "Leader" { NodeRole::Leader } else { NodeRole::Follower };
+                                let node_status = if status == "Active" { NodeStatus::Active } else { NodeStatus::Syncing };
                                 cluster.update_node(&node_id, |n| {
                                     n.role = node_role;
                                     n.status = node_status;
@@ -1369,7 +1369,7 @@ async fn run_load_balancer(peers: Vec<String>, listen_address: String) -> Result
                                 if !node_id.is_empty() && !node_id.starts_with("peer-") && !node_id.starts_with("lb-") {
                                     let _ = refresh_cluster.add_peer(node_id.clone(), address).await;
                                     
-                                    let node_role = if role == "LEADER" { 
+                                    let node_role = if role == "Leader" { 
                                         wolfscale::state::NodeRole::Leader 
                                     } else { 
                                         wolfscale::state::NodeRole::Follower 
@@ -1379,7 +1379,7 @@ async fn run_load_balancer(peers: Vec<String>, listen_address: String) -> Result
                                         n.role = node_role;
                                     }).await;
                                     
-                                    if role == "LEADER" {
+                                    if role == "Leader" {
                                         let _ = refresh_cluster.set_leader(&node_id).await;
                                     }
                                 }
