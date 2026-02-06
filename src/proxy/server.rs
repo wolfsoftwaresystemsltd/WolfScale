@@ -927,10 +927,10 @@ async fn handle_connection(
                 return Ok(());
             }
 
-            // Check if there's more data pending
+            // Check if there's more data pending (use very short timeout)
             let mut peek_buf = [0u8; 1];
             match tokio::time::timeout(
-                std::time::Duration::from_millis(10),
+                std::time::Duration::from_micros(100), // 0.1ms - just enough to check
                 backend.peek(&mut peek_buf)
             ).await {
                 Ok(Ok(0)) | Err(_) => break,
