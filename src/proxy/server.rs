@@ -797,6 +797,9 @@ async fn handle_connection(
         }
 
         // If this is a write query, handle based on role
+        // For leader: we'll write to WAL AFTER sending response to client (async replication)
+        let mut pending_wal_write: Option<(String, Option<String>, Option<String>)> = None; // (sql, table, database)
+        
         if is_write {
             if let Some(ref query) = query_opt {
                 tracing::debug!("WRITE detected: {}", query.chars().take(80).collect::<String>());
@@ -804,25 +807,9 @@ async fn handle_connection(
                 let self_node = cluster.get_self().await;
                 
                 if self_node.role == NodeRole::Leader {
-                    // Leader: write to WAL for replication
-                    if let Some(ref wal) = wal_writer {
-                        let table_name = extract_table_name(query);
-                        
-                        let entry = LogEntry::RawSql {
-                            sql: query.clone(),
-                            affects_table: table_name,
-                            database: current_database.clone(),
-                        };
-                        
-                        match wal.append(entry).await {
-                            Ok(lsn) => {
-                                tracing::debug!("Write query logged to WAL with LSN {}", lsn);
-                            }
-                            Err(e) => {
-                                tracing::error!("Failed to log write query to WAL: {}", e);
-                            }
-                        }
-                    }
+                    // Leader: capture query for ASYNC WAL write after we send response
+                    let table_name = extract_table_name(query);
+                    pending_wal_write = Some((query.clone(), table_name, current_database.clone()));
                 } else {
                     // Follower: forward write to leader's HTTP API
                     if let Some(leader) = cluster.current_leader().await {
@@ -936,6 +923,30 @@ async fn handle_connection(
                 Ok(Ok(0)) | Err(_) => break,
                 Ok(Ok(_)) => continue,
                 Ok(Err(_)) => break,
+            }
+        }
+        
+        // ASYNC REPLICATION: After client gets response, spawn background WAL write
+        // This is the key optimization: client doesn't wait for replication
+        if let Some((sql, table, database)) = pending_wal_write {
+            if let Some(ref wal) = wal_writer {
+                let wal = wal.clone();
+                tokio::spawn(async move {
+                    let entry = LogEntry::RawSql {
+                        sql,
+                        affects_table: table,
+                        database,
+                    };
+                    
+                    match wal.append(entry).await {
+                        Ok(lsn) => {
+                            tracing::debug!("Async WAL write completed: LSN {}", lsn);
+                        }
+                        Err(e) => {
+                            tracing::error!("Async WAL write failed: {}", e);
+                        }
+                    }
+                });
             }
         }
     }
