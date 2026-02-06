@@ -64,6 +64,11 @@ echo "Cloning WolfScale repository..."
 
 if [ -d "$INSTALL_DIR" ]; then
     echo "  Updating existing installation..."
+    # Stop service before upgrade to prevent issues
+    if systemctl is-active --quiet wolfscale-lb 2>/dev/null; then
+        echo "  Stopping wolfscale-lb service for upgrade..."
+        sudo systemctl stop wolfscale-lb
+    fi
     cd "$INSTALL_DIR"
     sudo git fetch origin
     sudo git reset --hard origin/main

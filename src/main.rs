@@ -1392,6 +1392,88 @@ async fn run_load_balancer(peers: Vec<String>, listen_address: String) -> Result
         }
     });
     
+    // Start HTTP stats server for load balancer
+    let stats_cluster = Arc::clone(&cluster);
+    let stats_lb_id = lb_id.clone();
+    let stats_start_time = std::time::Instant::now();
+    let stats_connections = Arc::new(std::sync::atomic::AtomicU64::new(0));
+    let stats_reads = Arc::new(std::sync::atomic::AtomicU64::new(0));
+    let stats_writes = Arc::new(std::sync::atomic::AtomicU64::new(0));
+    
+    tokio::spawn(async move {
+        use axum::{Router, routing::get, Json};
+        use serde::Serialize;
+        
+        #[derive(Serialize)]
+        struct LbStatsResponse {
+            lb_mode: bool,
+            node_id: String,
+            uptime_secs: u64,
+            leader_id: Option<String>,
+            leader_address: Option<String>,
+            cluster_size: usize,
+            active_nodes: usize,
+            total_connections: u64,
+            total_reads: u64,
+            total_writes: u64,
+            read_nodes: Vec<String>,
+        }
+        
+        let cluster = stats_cluster;
+        let lb_id = stats_lb_id;
+        let start_time = stats_start_time;
+        let connections = stats_connections;
+        let reads = stats_reads;
+        let writes = stats_writes;
+        
+        let app = Router::new()
+            .route("/stats", get({
+                let cluster = Arc::clone(&cluster);
+                let lb_id = lb_id.clone();
+                move || {
+                    let cluster = Arc::clone(&cluster);
+                    let lb_id = lb_id.clone();
+                    let start_time = start_time;
+                    let connections = Arc::clone(&connections);
+                    let reads = Arc::clone(&reads);
+                    let writes = Arc::clone(&writes);
+                    async move {
+                        let leader = cluster.current_leader().await;
+                        let all_nodes = cluster.all_nodes().await;
+                        let active_nodes: Vec<_> = all_nodes.iter()
+                            .filter(|n| n.status == wolfscale::state::NodeStatus::Active && !n.id.starts_with("lb-"))
+                            .collect();
+                        let read_nodes: Vec<String> = active_nodes.iter()
+                            .map(|n| format!("{} ({})", n.id, n.address))
+                            .collect();
+                        
+                        Json(LbStatsResponse {
+                            lb_mode: true,
+                            node_id: lb_id,
+                            uptime_secs: start_time.elapsed().as_secs(),
+                            leader_id: leader.as_ref().map(|l| l.id.clone()),
+                            leader_address: leader.map(|l| l.address),
+                            cluster_size: all_nodes.len().saturating_sub(1), // Exclude self (LB)
+                            active_nodes: active_nodes.len(),
+                            total_connections: connections.load(std::sync::atomic::Ordering::Relaxed),
+                            total_reads: reads.load(std::sync::atomic::Ordering::Relaxed),
+                            total_writes: writes.load(std::sync::atomic::Ordering::Relaxed),
+                            read_nodes,
+                        })
+                    }
+                }
+            }));
+        
+        let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
+        tracing::info!("Load balancer stats server listening on 0.0.0.0:8080");
+        if let Err(e) = axum::serve(listener, app).await {
+            tracing::error!("Stats server error: {}", e);
+        }
+    });
+    
+    println!("Stats available at http://localhost:8080/stats");
+    println!();
+    
     tokio::select! {
         result = proxy.start() => {
             if let Err(e) = result {

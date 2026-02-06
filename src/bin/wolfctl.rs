@@ -186,6 +186,33 @@ struct StatsApiResponse {
 
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
+struct LbStatsApiResponse {
+    #[serde(default)]
+    lb_mode: bool,
+    #[serde(default)]
+    node_id: String,
+    #[serde(default)]
+    uptime_secs: u64,
+    #[serde(default)]
+    leader_id: Option<String>,
+    #[serde(default)]
+    leader_address: Option<String>,
+    #[serde(default)]
+    cluster_size: usize,
+    #[serde(default)]
+    active_nodes: usize,
+    #[serde(default)]
+    total_connections: u64,
+    #[serde(default)]
+    total_reads: u64,
+    #[serde(default)]
+    total_writes: u64,
+    #[serde(default)]
+    read_nodes: Vec<String>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
 struct ErrorLogApi {
     #[serde(default)]
     timestamp: String,
@@ -930,6 +957,17 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
     let url = format!("{}/stats", endpoint);
     let client = reqwest::Client::new();
     
+    // First, check if this is a load balancer by fetching once and checking lb_mode
+    let initial_response = client.get(&url).send().await?;
+    if initial_response.status().is_success() {
+        let raw_json: serde_json::Value = initial_response.json().await?;
+        if raw_json.get("lb_mode").and_then(|v| v.as_bool()).unwrap_or(false) {
+            // This is a load balancer - show LB-specific stats
+            return show_lb_stats(endpoint).await;
+        }
+    }
+    
+    // Regular node stats
     // Track for throughput calculation  
     let mut last_lsn: Option<u64> = None;
     let mut last_time = std::time::Instant::now();
@@ -1180,6 +1218,119 @@ async fn show_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
     print!("\x1b[?25h");
     println!();
     println!("Stats monitoring stopped.");
+    
+    Ok(())
+}
+
+/// Show load balancer specific stats
+async fn show_lb_stats(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let url = format!("{}/stats", endpoint);
+    let client = reqwest::Client::new();
+    let start_time = std::time::Instant::now();
+    
+    // Hide cursor
+    print!("\x1b[?25l");
+    
+    // Set up Ctrl+C handler
+    let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+    let r = running.clone();
+    ctrlc::set_handler(move || {
+        r.store(false, std::sync::atomic::Ordering::SeqCst);
+    })?;
+    
+    // Main loop
+    while running.load(std::sync::atomic::Ordering::SeqCst) {
+        // Clear screen and move cursor to top
+        print!("\x1b[H\x1b[J");
+        
+        // Header
+        println!();
+        println!("  \x1b[1;35mWolfScale Load Balancer Statistics\x1b[0m");
+        println!("  {}", "=".repeat(50));
+        println!();
+        
+        // Fetch stats
+        match client.get(&url).send().await {
+            Ok(response) if response.status().is_success() => {
+                match response.json::<LbStatsApiResponse>().await {
+                    Ok(stats) => {
+                        // Format uptime
+                        let uptime = stats.uptime_secs;
+                        let uptime_str = if uptime >= 3600 {
+                            format!("{}h {}m {}s", uptime / 3600, (uptime % 3600) / 60, uptime % 60)
+                        } else if uptime >= 60 {
+                            format!("{}m {}s", uptime / 60, uptime % 60)
+                        } else {
+                            format!("{}s", uptime)
+                        };
+                        
+                        // Node info
+                        println!("  Mode:     \x1b[1;35mLOAD BALANCER\x1b[0m");
+                        println!("  Node ID:  {}", stats.node_id);
+                        println!("  Uptime:   {}", uptime_str);
+                        println!();
+                        
+                        // Leader info
+                        println!("  \x1b[1mCluster Status\x1b[0m");
+                        println!("  ─────────────────────────────────────");
+                        if let Some(ref leader_id) = stats.leader_id {
+                            let leader_addr = stats.leader_address.as_deref().unwrap_or("unknown");
+                            println!("  Leader:       \x1b[1;34m{}\x1b[0m ({})", leader_id, leader_addr);
+                        } else {
+                            println!("  Leader:       \x1b[1;31mNONE - WRITES WILL FAIL\x1b[0m");
+                        }
+                        println!("  Cluster Size: {} nodes", stats.cluster_size);
+                        println!("  Active Nodes: \x1b[32m{}\x1b[0m", stats.active_nodes);
+                        println!();
+                        
+                        // Read nodes
+                        println!("  \x1b[1mRead Targets\x1b[0m (round-robin)");
+                        println!("  ─────────────────────────────────────");
+                        if stats.read_nodes.is_empty() {
+                            println!("  \x1b[33mNo read nodes available\x1b[0m");
+                        } else {
+                            for node in &stats.read_nodes {
+                                println!("    • {}", node);
+                            }
+                        }
+                        println!();
+                        
+                        // Connection stats (if available)
+                        if stats.total_connections > 0 || stats.total_reads > 0 || stats.total_writes > 0 {
+                            println!("  \x1b[1mConnection Stats\x1b[0m");
+                            println!("  ─────────────────────────────────────");
+                            println!("  Total Connections: {}", stats.total_connections);
+                            println!("  Total Reads:       {}", stats.total_reads);
+                            println!("  Total Writes:      {}", stats.total_writes);
+                            println!();
+                        }
+                        
+                        // Runtime stats
+                        let runtime = start_time.elapsed().as_secs();
+                        println!("  \x1b[2mMonitoring for {}s | Ctrl+C to exit\x1b[0m", runtime);
+                    }
+                    Err(e) => {
+                        println!("  \x1b[31mError parsing stats: {}\x1b[0m", e);
+                    }
+                }
+            }
+            Ok(response) => {
+                println!("  \x1b[31mAPI Error: {}\x1b[0m", response.status());
+            }
+            Err(e) => {
+                println!("  \x1b[31mConnection Error: {}\x1b[0m", e);
+                println!("  Is the load balancer running?");
+            }
+        }
+        
+        // Wait 1 second before next update
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    }
+    
+    // Show cursor again
+    print!("\x1b[?25h");
+    println!();
+    println!("Load balancer stats monitoring stopped.");
     
     Ok(())
 }
