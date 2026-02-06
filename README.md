@@ -131,7 +131,9 @@ systemctl start wolfscale
 | WolfScale    | Leader + Followers replicate via WAL           |
 | Database     | Each node has local MariaDB (localhost:3306)   |
 
-**Data Flow:** App → Any Node → Leader (for writes) → WAL → All Followers → Local MariaDB
+**Write Flow:** Client → Any Node → Forwarded to Leader → Replicated to All Nodes
+
+**Read Flow:** Client → Any Node → Local Data (or forwarded to Leader if node is behind)
 
 ## Cluster Sizing
 

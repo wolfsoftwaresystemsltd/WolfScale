@@ -318,7 +318,7 @@ impl LeaderNode {
         Ok(())
     }
 
-    /// Replicate entries to followers
+    /// Replicate entries to followers (PARALLEL - all peers simultaneously)
     async fn replicate_to_followers(&self) -> Result<()> {
         let peers = self.cluster.peers().await;
         if peers.is_empty() {
@@ -334,6 +334,9 @@ impl LeaderNode {
             let _ = reader.refresh_index();
         }
 
+        // Collect peers that need replication and their data
+        let mut replication_tasks = Vec::new();
+        
         for peer in peers {
             if peer.status == NodeStatus::Dropped || peer.status == NodeStatus::Offline {
                 continue;
@@ -423,7 +426,17 @@ impl LeaderNode {
                 pending.insert(peer.id.clone(), (batch_max_lsn, std::time::Instant::now()));
             }
 
-            let _ = self.message_tx.send((peer.address.clone(), msg)).await;
+            // Collect for parallel sending
+            replication_tasks.push((peer.address.clone(), msg));
+        }
+
+        // PARALLEL: Send to all peers simultaneously using spawned tasks
+        // This is the key optimization - no waiting between peers
+        for (peer_address, msg) in replication_tasks {
+            let tx = self.message_tx.clone();
+            tokio::spawn(async move {
+                let _ = tx.send((peer_address, msg)).await;
+            });
         }
 
         Ok(())
