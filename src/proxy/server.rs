@@ -16,7 +16,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio_rustls::TlsAcceptor;
 use rustls::pki_types::CertificateDer;
 
-use crate::state::{ClusterMembership, NodeStatus, NodeRole};
+use crate::state::{ClusterMembership, NodeRole};
 use crate::wal::{WalWriter, LogEntry};
 use crate::error::Result;
 use super::protocol::MySqlPacket;
