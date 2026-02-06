@@ -166,15 +166,10 @@ echo ""
 read -p "MySQL proxy listen address [0.0.0.0:3306]: " LISTEN_ADDR < /dev/tty
 LISTEN_ADDR=${LISTEN_ADDR:-0.0.0.0:3306}
 
-# Get max lag
-read -p "Maximum replication lag (entries) [100]: " MAX_LAG < /dev/tty
-MAX_LAG=${MAX_LAG:-100}
-
 echo ""
 echo "Load balancer configuration:"
 echo "  Listen:  $LISTEN_ADDR (MySQL clients connect here)"
 echo "  Peers:   $PEERS"
-echo "  Max Lag: $MAX_LAG"
 echo ""
 
 # Create systemd service
@@ -187,7 +182,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/opt/wolfscale/wolfscale load-balancer --peers $PEERS --listen $LISTEN_ADDR --max-lag $MAX_LAG
+ExecStart=/opt/wolfscale/wolfscale load-balancer --peers $PEERS --listen $LISTEN_ADDR
 Restart=always
 RestartSec=5
 User=root

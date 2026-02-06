@@ -100,10 +100,6 @@ enum Commands {
         /// Address to listen on for MySQL connections
         #[arg(short, long, default_value = "0.0.0.0:3306")]
         listen: String,
-        
-        /// Maximum acceptable replication lag (entries) before skipping a node
-        #[arg(long, default_value = "100")]
-        max_lag: u64,
     },
 }
 
@@ -139,8 +135,8 @@ async fn main() -> Result<()> {
         Commands::Proxy { listen } => {
             run_proxy(cli.config, listen).await
         }
-        Commands::LoadBalancer { peers, listen, max_lag } => {
-            run_load_balancer(peers, listen, max_lag).await
+        Commands::LoadBalancer { peers, listen } => {
+            run_load_balancer(peers, listen).await
         }
     }
 }
@@ -1200,7 +1196,7 @@ async fn run_proxy(config_path: PathBuf, listen_address: String) -> Result<()> {
 
 
 /// Run as a load balancer (no local database)
-async fn run_load_balancer(peers: Vec<String>, listen_address: String, _max_lag: u64) -> Result<()> {
+async fn run_load_balancer(peers: Vec<String>, listen_address: String) -> Result<()> {
     use wolfscale::state::{ClusterMembership, NodeRole, NodeStatus};
     
     // Generate a unique LB node ID
@@ -1243,7 +1239,7 @@ async fn run_load_balancer(peers: Vec<String>, listen_address: String, _max_lag:
         // Convert peer address (host:7654) to HTTP URL (http://host:8080/status)
         let parts: Vec<&str> = peer.split(':').collect();
         let host = parts.first().unwrap_or(&"localhost");
-        let http_url = format!("http://{}:8080/status", host);
+        let http_url = format!("http://{}:8080/cluster", host);
         
         match http_client.get(&http_url).send().await {
             Ok(response) => {
@@ -1360,7 +1356,7 @@ async fn run_load_balancer(peers: Vec<String>, listen_address: String, _max_lag:
             for peer in &refresh_peers {
                 let parts: Vec<&str> = peer.split(':').collect();
                 let host = parts.first().unwrap_or(&"localhost");
-                let http_url = format!("http://{}:8080/status", host);
+                let http_url = format!("http://{}:8080/cluster", host);
                 
                 if let Ok(response) = client.get(&http_url).send().await {
                     if let Ok(json) = response.json::<serde_json::Value>().await {
