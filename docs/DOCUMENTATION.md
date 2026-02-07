@@ -266,7 +266,7 @@ WolfScale uses a heartbeat-based protocol for cluster communication. All nodes p
 |--------|---------|
 | **Active** | Node is healthy, receiving and responding to heartbeats |
 | **Lagging** | Node missed recent heartbeats (timeout exceeded) |
-| **Dropped** | Node has been unresponsive for extended period |
+| **Dropped** | Node has been unresponsive for extended period (removed after 30s) |
 | **Joining** | Node is connecting to the cluster |
 | **Syncing** | Follower is catching up on missed log entries |
 | **Offline** | Node is explicitly marked as unavailable |
@@ -278,6 +278,46 @@ When a node joins the cluster:
 - Upon receiving heartbeats from the leader, it learns about all cluster members
 - It starts sending peer heartbeats to all known nodes
 - All nodes eventually have a consistent view of cluster membership
+
+### Auto-Discovery (v5.4.0+)
+
+WolfScale nodes can automatically find each other via UDP broadcast, eliminating the need to manually configure peer addresses:
+
+| Feature | Description |
+|---------|-------------|
+| **UDP Broadcast** | Nodes broadcast their presence on port 7654 every 2 seconds |
+| **Automatic Join** | New nodes discover and join the cluster automatically |
+| **Cluster Isolation** | Optional `cluster_name` prevents cross-cluster joins |
+| **Auto-Removal** | Dead nodes are removed from membership after 30 seconds |
+
+**Configuration:**
+
+```toml
+[cluster]
+auto_discovery = true           # Enable UDP broadcast discovery (default: true)
+cluster_name = "production"     # Optional: isolate clusters on same network
+peers = []                      # Optional: seed nodes for faster initial discovery
+```
+
+**How it works:**
+1. Node starts and broadcasts its ID and address via UDP
+2. Other nodes receive the broadcast and add the new node to their membership
+3. Standard TCP heartbeats take over once nodes are aware of each other
+4. If a node goes down, it's marked DROPPED after heartbeat timeout
+5. After 30 seconds of no heartbeat, the node is automatically removed from membership
+
+**When to use `cluster_name`:**
+- Multiple WolfScale clusters on the same network
+- Separate dev/staging/production environments
+- Preventing accidental cross-cluster joins
+
+**Load Balancer Auto-Discovery:**
+The load balancer can also discover cluster nodes automatically:
+```bash
+wolfscale load-balancer --listen 0.0.0.0:3306
+# Optionally filter by cluster name:
+wolfscale load-balancer --listen 0.0.0.0:3306 --cluster-name production
+```
 
 ---
 

@@ -266,9 +266,14 @@ impl ClusterMembership {
     /// Check for timed-out nodes and update their status
     /// Only times out nodes we've actually received heartbeats from (i.e., the leader)
     /// Nodes learned from membership lists without direct heartbeats are not timed out
+    /// Removes nodes completely after 30 seconds of no heartbeat
     pub async fn check_timeouts(&self) -> Vec<String> {
         let mut nodes = self.nodes.write().await;
         let mut timed_out = Vec::new();
+        let mut to_remove = Vec::new();
+        
+        // Threshold for complete removal (30 seconds)
+        let removal_threshold = Duration::from_secs(30);
 
         for (id, node) in nodes.iter_mut() {
             if id == &self.node_id {
@@ -297,8 +302,21 @@ impl ClusterMembership {
                             timed_out.push(id.clone());
                         }
                     }
+                } else if node.status == NodeStatus::Dropped {
+                    // Check if should be completely removed (30 seconds)
+                    if let Some(since) = node.time_since_heartbeat() {
+                        if since > removal_threshold {
+                            to_remove.push(id.clone());
+                        }
+                    }
                 }
             }
+        }
+        
+        // Remove nodes that have been dead for too long
+        for id in &to_remove {
+            tracing::info!("Removing stale node {} from cluster (no heartbeat for 30s)", id);
+            nodes.remove(id);
         }
 
         timed_out
