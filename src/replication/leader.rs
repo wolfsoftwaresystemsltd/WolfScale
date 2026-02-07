@@ -184,9 +184,8 @@ impl LeaderNode {
             if peer.id.starts_with("peer-") {
                 continue;
             }
-            // Skip dropped/offline nodes
-            if peer.status == crate::state::NodeStatus::Dropped 
-                || peer.status == crate::state::NodeStatus::Offline {
+            // Only yield to ACTIVE nodes (not Joining, Syncing, etc.)
+            if peer.status != crate::state::NodeStatus::Active {
                 continue;
             }
             
