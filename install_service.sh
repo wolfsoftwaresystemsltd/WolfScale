@@ -164,27 +164,23 @@ else
         echo "Use this node's external/internal IP, e.g., 10.0.10.115:7654"
         read -p "Advertise address: " ADVERTISE_ADDR
         
-        # Is this the bootstrap (first) node?
-        read -p "Is this the FIRST node in the cluster? (y/n) [n]: " IS_BOOTSTRAP
-        IS_BOOTSTRAP="${IS_BOOTSTRAP:-n}"
+        # Cluster name (optional, for multi-cluster networks)
+        echo ""
+        echo "Cluster name is used to isolate multiple WolfScale clusters on the same network."
+        echo "Leave empty if you only have one WolfScale cluster."
+        read -p "Cluster name (optional): " CLUSTER_NAME
         
-        # Convert to boolean for config file
-        if [[ "$IS_BOOTSTRAP" == "y" || "$IS_BOOTSTRAP" == "Y" ]]; then
-            IS_BOOTSTRAP_BOOL="true"
-        else
-            IS_BOOTSTRAP_BOOL="false"
-        fi
-        
-        # Peer addresses (for all nodes - needed for cluster membership)
+        # Peer addresses (optional - auto-discovery handles this now)
         PEERS=""
         echo ""
-        echo "Enter ALL cluster peer addresses (including this node)."
+        echo "Peer addresses (optional). With auto-discovery enabled, nodes find each other"
+        echo "automatically on the same network. You can still enter seed peers for faster"
+        echo "initial discovery or for cross-subnet deployments."
         echo "Format: ip:port (one per line, press Enter after each)"
-        echo "Example: 10.0.10.115:7654"
-        echo "Press Enter on an empty line when done."
+        echo "Press Enter on an empty line to skip/finish."
         echo ""
         while true; do
-            read -p "Peer address: " PEER
+            read -p "Peer address (optional): " PEER
             [ -z "$PEER" ] && break
             if [ -z "$PEERS" ]; then
                 PEERS="\"$PEER\""
@@ -250,8 +246,9 @@ segment_size_mb = 64
 fsync = true
 
 [cluster]
-bootstrap = $IS_BOOTSTRAP_BOOL
 peers = [$PEERS]
+$([ -n "$CLUSTER_NAME" ] && echo "cluster_name = \"$CLUSTER_NAME\"")
+auto_discovery = true
 heartbeat_interval_ms = 500
 election_timeout_ms = 2000
 disable_auto_election = false

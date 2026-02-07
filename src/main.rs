@@ -16,7 +16,7 @@ use wolfscale::wal::{WalWriter, WalReader};
 use wolfscale::state::{StateTracker, ClusterMembership, ElectionConfig};
 use wolfscale::executor::MariaDbExecutor;
 use wolfscale::api::HttpServer;
-use wolfscale::network::{NetworkServer, NetworkClient};
+use wolfscale::network::{NetworkServer, NetworkClient, Discovery};
 use wolfscale::replication::{LeaderNode, FollowerNode, ReplicationConfig};
 use wolfscale::proxy::{ProxyServer, ProxyConfig};
 use wolfscale::error::Result;
@@ -93,13 +93,17 @@ enum Commands {
     
     /// Start as a load balancer (no local database)
     LoadBalancer {
-        /// Cluster peers to connect to (at least one node address)
-        #[arg(long, required = true, value_delimiter = ',')]
+        /// Cluster peers to connect to (optional - will auto-discover if not specified)
+        #[arg(long, value_delimiter = ',')]
         peers: Vec<String>,
         
         /// Address to listen on for MySQL connections
         #[arg(short, long, default_value = "0.0.0.0:3306")]
         listen: String,
+        
+        /// Cluster name for filtering auto-discovery (optional)
+        #[arg(long)]
+        cluster_name: Option<String>,
     },
 }
 
@@ -135,8 +139,8 @@ async fn main() -> Result<()> {
         Commands::Proxy { listen } => {
             run_proxy(cli.config, listen).await
         }
-        Commands::LoadBalancer { peers, listen } => {
-            run_load_balancer(peers, listen).await
+        Commands::LoadBalancer { peers, listen, cluster_name } => {
+            run_load_balancer(peers, listen, cluster_name).await
         }
     }
 }
@@ -281,6 +285,30 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
         cluster.add_peer(peer_id, peer.clone()).await?;
     }
     tracing::info!("Cluster initialized with {} nodes", cluster.size().await);
+
+    // Start UDP auto-discovery if enabled
+    let _discovery_handles = if config.cluster.auto_discovery {
+        tracing::info!("Starting UDP auto-discovery (cluster_name: {:?})", config.cluster.cluster_name);
+        let discovery = Discovery::new(
+            config.node.id.clone(),
+            config.advertise_address().to_string(),
+            config.cluster.cluster_name.clone(),
+            Arc::clone(&cluster),
+        );
+        match discovery.start().await {
+            Ok(handles) => {
+                tracing::info!("Auto-discovery started - nodes will be discovered automatically");
+                Some((discovery, handles))
+            }
+            Err(e) => {
+                tracing::warn!("Auto-discovery failed to start: {} (will use configured peers only)", e);
+                None
+            }
+        }
+    } else {
+        tracing::info!("Auto-discovery disabled, using configured peers only");
+        None
+    };
 
     // Initialize database executor
     tracing::info!("Connecting to MariaDB at {}:{}...", config.database.host, config.database.port);
@@ -1196,8 +1224,9 @@ async fn run_proxy(config_path: PathBuf, listen_address: String) -> Result<()> {
 
 
 /// Run as a load balancer (no local database)
-async fn run_load_balancer(peers: Vec<String>, listen_address: String) -> Result<()> {
+async fn run_load_balancer(mut peers: Vec<String>, listen_address: String, cluster_name: Option<String>) -> Result<()> {
     use wolfscale::state::{ClusterMembership, NodeRole, NodeStatus};
+    use wolfscale::network::discovery;
     
     // Generate a unique LB node ID
     let lb_id = format!("lb-{}", &uuid::Uuid::new_v4().to_string()[..8]);
@@ -1209,8 +1238,46 @@ async fn run_load_balancer(peers: Vec<String>, listen_address: String) -> Result
     println!();
     println!("  Node ID:     {}", lb_id);
     println!("  Listen:      {}", listen_address);
-    println!("  Peers:       {:?}", peers);
-    println!();
+    
+    // If no peers specified, try UDP auto-discovery
+    if peers.is_empty() {
+        println!("  Peers:       (auto-discovering...)");
+        println!();
+        
+        match discovery::discover_cluster(cluster_name.clone(), Duration::from_secs(10)).await {
+            Ok(discovered) if !discovered.is_empty() => {
+                println!();
+                println!("Auto-discovered {} node(s):", discovered.len());
+                for (id, addr) in &discovered {
+                    println!("  - {} at {}", id, addr);
+                    peers.push(addr.clone());
+                }
+                println!();
+            }
+            Ok(_) => {
+                println!();
+                println!("WARNING: No nodes discovered via UDP broadcast.");
+                println!("         Make sure WolfScale nodes are running on the same network.");
+                println!("         You can also specify peers manually with --peers");
+                println!();
+                return Err(wolfscale::error::Error::Config(
+                    "No cluster nodes found. Use --peers to specify manually.".into()
+                ));
+            }
+            Err(e) => {
+                println!();
+                println!("WARNING: Auto-discovery failed: {}", e);
+                println!("         Specify peers manually with --peers");
+                println!();
+                return Err(wolfscale::error::Error::Config(
+                    format!("Auto-discovery failed: {}. Use --peers to specify manually.", e)
+                ));
+            }
+        }
+    } else {
+        println!("  Peers:       {:?}", peers);
+        println!();
+    }
     
     // Create cluster membership for the load balancer
     let cluster = Arc::new(ClusterMembership::new(
@@ -1226,7 +1293,7 @@ async fn run_load_balancer(peers: Vec<String>, listen_address: String) -> Result
     }).await?;
     
     // Discover cluster by querying HTTP status endpoints
-    println!("Discovering cluster...");
+    println!("Connecting to cluster nodes...");
     let http_client = reqwest::Client::builder()
         .timeout(Duration::from_secs(5))
         .build()

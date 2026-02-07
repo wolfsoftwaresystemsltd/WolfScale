@@ -144,26 +144,42 @@ else
     echo ""
 fi
 
-# If no peers detected, ask for them
+# If no peers detected, offer auto-discovery first
 if [ -z "$PEERS" ]; then
-    echo "Enter WolfScale cluster node addresses."
-    echo "(These are the WolfScale nodes, NOT MariaDB addresses)"
     echo ""
+    echo "Auto-discovery mode is available!"
+    echo "The load balancer can automatically find WolfScale nodes on your network."
+    echo ""
+    read -p "Use auto-discovery? (y/n) [y]: " USE_AUTODISCOVER < /dev/tty
+    USE_AUTODISCOVER=${USE_AUTODISCOVER:-y}
     
-    PEER_LIST=()
-    while true; do
-        read -p "Cluster node address (e.g., 10.0.10.115:7654) [done]: " PEER < /dev/tty
-        [ -z "$PEER" ] && break
-        PEER_LIST+=("$PEER")
-        echo "  Added: $PEER"
-    done
-    
-    if [ ${#PEER_LIST[@]} -eq 0 ]; then
-        echo "✗ Error: At least one peer address is required"
-        exit 1
+    if [[ "$USE_AUTODISCOVER" =~ ^[Yy] ]]; then
+        # Optional cluster name for filtering
+        echo ""
+        read -p "Cluster name for filtering (optional, press Enter to skip): " CLUSTER_NAME < /dev/tty
+        PEERS="__AUTO_DISCOVERY__"
+        echo "✓ Will use auto-discovery when starting"
+    else
+        echo ""
+        echo "Enter WolfScale cluster node addresses."
+        echo "(These are the WolfScale nodes, NOT MariaDB addresses)"
+        echo ""
+        
+        PEER_LIST=()
+        while true; do
+            read -p "Cluster node address (e.g., 10.0.10.115:7654) [done]: " PEER < /dev/tty
+            [ -z "$PEER" ] && break
+            PEER_LIST+=("$PEER")
+            echo "  Added: $PEER"
+        done
+        
+        if [ ${#PEER_LIST[@]} -eq 0 ]; then
+            echo "✗ Error: At least one peer address is required when not using auto-discovery"
+            exit 1
+        fi
+        
+        PEERS=$(IFS=,; echo "${PEER_LIST[*]}")
     fi
-    
-    PEERS=$(IFS=,; echo "${PEER_LIST[*]}")
 fi
 
 # Get listen address
@@ -174,8 +190,22 @@ LISTEN_ADDR=${LISTEN_ADDR:-0.0.0.0:3306}
 echo ""
 echo "Load balancer configuration:"
 echo "  Listen:  $LISTEN_ADDR (MySQL clients connect here)"
-echo "  Peers:   $PEERS"
+if [ "$PEERS" = "__AUTO_DISCOVERY__" ]; then
+    echo "  Mode:    Auto-discovery (nodes will be found automatically)"
+    [ -n "$CLUSTER_NAME" ] && echo "  Cluster: $CLUSTER_NAME"
+else
+    echo "  Peers:   $PEERS"
+fi
 echo ""
+
+# Build ExecStart command
+if [ "$PEERS" = "__AUTO_DISCOVERY__" ]; then
+    # Auto-discovery mode - no --peers flag
+    EXEC_CMD="/opt/wolfscale/wolfscale load-balancer --listen $LISTEN_ADDR"
+    [ -n "$CLUSTER_NAME" ] && EXEC_CMD="$EXEC_CMD --cluster-name $CLUSTER_NAME"
+else
+    EXEC_CMD="/opt/wolfscale/wolfscale load-balancer --peers $PEERS --listen $LISTEN_ADDR"
+fi
 
 # Create systemd service
 echo "Creating systemd service..."
@@ -187,7 +217,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/opt/wolfscale/wolfscale load-balancer --peers $PEERS --listen $LISTEN_ADDR
+ExecStart=$EXEC_CMD
 Restart=always
 RestartSec=5
 User=root

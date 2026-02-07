@@ -129,9 +129,20 @@ pub struct ClusterConfig {
     #[serde(default)]
     pub bootstrap: bool,
 
-    /// List of peer node addresses
+    /// List of peer node addresses (optional with auto-discovery enabled)
     #[serde(default)]
     pub peers: Vec<String>,
+
+    /// Optional cluster name for auto-discovery filtering
+    /// Nodes with different cluster names will not join each other
+    /// Leave empty to allow any WolfScale node on the network to join
+    #[serde(default)]
+    pub cluster_name: Option<String>,
+
+    /// Enable UDP broadcast auto-discovery (default: true)
+    /// When enabled, nodes automatically find each other on the same network
+    #[serde(default = "default_true")]
+    pub auto_discovery: bool,
 
     /// Heartbeat interval in milliseconds
     #[serde(default = "default_heartbeat_interval_ms")]

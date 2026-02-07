@@ -24,6 +24,7 @@ WolfScale is a lightweight, high-availability replication layer for MariaDB stan
 | **Zero Write Conflicts** | Single-leader model eliminates certification failures |
 | **Predictable Failover** | Lowest node ID always wins—you know exactly who becomes leader |
 | **Safe Node Rejoin** | Returning nodes sync via WAL before taking leadership |
+| **Zero-Config Discovery** | Nodes find each other automatically via UDP broadcast |
 | **Transparent Proxy** | Connect via MySQL protocol—no application changes needed |
 | **Built-in Load Balancer** | Distribute connections across cluster nodes with automatic failover |
 | **Single Binary** | No patched databases, no complex dependencies |
@@ -113,7 +114,7 @@ curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/mai
 
 This automatically installs dependencies, builds WolfScale, and runs the interactive configuration wizard.
 
-### Load Balancer Mode (v5.3.6+)
+### Load Balancer Mode (v5.4.0+)
 
 Run a standalone load balancer that routes MySQL connections to your WolfScale cluster:
 
@@ -121,10 +122,12 @@ Run a standalone load balancer that routes MySQL connections to your WolfScale c
 curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/setup_lb.sh | bash
 ```
 
-**Zero-config:** Copy `wolfscale.toml` from any cluster node first, and the installer auto-detects peers:
+**Auto-Discovery (v5.4.0):** The load balancer automatically finds WolfScale nodes on your network—no configuration needed. Just run the installer and choose auto-discovery when prompted.
+
+**Manual Mode:** You can also specify peers manually or copy `wolfscale.toml` from any cluster node:
 
 ```bash
-# Copy config from a cluster node
+# Copy config from a cluster node (optional)
 scp user@cluster-node:/opt/wolfscale/wolfscale.toml /opt/wolfscale/
 
 # Run load balancer installer

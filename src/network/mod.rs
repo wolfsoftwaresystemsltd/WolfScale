@@ -1,12 +1,14 @@
 //! Network Module
 //!
-//! Handles TCP communication between nodes.
+//! Handles TCP communication between nodes and UDP discovery.
 
 mod server;
 mod client;
+pub mod discovery;
 
 pub use server::NetworkServer;
 pub use client::NetworkClient;
+pub use discovery::Discovery;
 
 use crate::replication::{Message, FrameHeader};
 use crate::error::{Error, Result};
