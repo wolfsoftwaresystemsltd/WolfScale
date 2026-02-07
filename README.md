@@ -2,6 +2,8 @@
 
 <div align="center">
 
+🐺 **Database clustering without the pain** 🐺
+
 **High-Availability MariaDB Replication with Automatic Failover**
 
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)

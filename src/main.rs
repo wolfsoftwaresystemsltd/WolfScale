@@ -1541,6 +1541,42 @@ async fn run_load_balancer(mut peers: Vec<String>, listen_address: String, clust
                         })
                     }
                 }
+            }))
+            .route("/cluster", get({
+                let cluster = Arc::clone(&cluster);
+                move || {
+                    let cluster = Arc::clone(&cluster);
+                    async move {
+                        let all_nodes = cluster.all_nodes().await;
+                        let leader = cluster.current_leader().await;
+                        
+                        // Filter out the LB node itself and build node list
+                        let nodes: Vec<_> = all_nodes.iter()
+                            .filter(|n| !n.id.starts_with("lb-"))
+                            .cloned()
+                            .collect();
+                        
+                        let active_count = nodes.iter()
+                            .filter(|n| n.status == wolfscale::state::NodeStatus::Active)
+                            .count();
+                        
+                        // Build summary
+                        let summary = wolfscale::state::ClusterSummary {
+                            total_nodes: nodes.len(),
+                            active_nodes: active_count,
+                            syncing_nodes: nodes.iter().filter(|n| n.status == wolfscale::state::NodeStatus::Syncing).count(),
+                            lagging_nodes: nodes.iter().filter(|n| n.status == wolfscale::state::NodeStatus::Lagging).count(),
+                            dropped_nodes: nodes.iter().filter(|n| n.status == wolfscale::state::NodeStatus::Dropped).count(),
+                            leader_id: leader.map(|l| l.id),
+                        };
+                        
+                        // Return same structure as regular /cluster endpoint
+                        Json(serde_json::json!({
+                            "summary": summary,
+                            "nodes": nodes,
+                        }))
+                    }
+                }
             }));
         
         let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
