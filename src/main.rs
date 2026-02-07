@@ -629,8 +629,38 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
         tracing::info!("Bootstrap mode - starting as leader");
         true
     } else if config.cluster.peers.is_empty() {
-        tracing::info!("No peers configured - starting as leader (standalone)");
-        true
+        // No peers configured - check if auto_discovery is enabled
+        if config.cluster.auto_discovery {
+            // Wait for auto-discovery to find peers before deciding role
+            tracing::info!("No peers configured but auto_discovery enabled - waiting for discovery...");
+            let discovery_wait = Duration::from_secs(3);
+            tokio::time::sleep(discovery_wait).await;
+            
+            // Check if we discovered any peers
+            let peers = cluster.peers().await;
+            if peers.is_empty() {
+                tracing::info!("No peers discovered after {:?} - starting as leader (standalone)", discovery_wait);
+                true
+            } else {
+                // Found peers - check if any have lower ID
+                let my_id = &config.node.id;
+                let mut is_lowest = true;
+                for peer in &peers {
+                    if peer.id < *my_id {
+                        is_lowest = false;
+                        tracing::info!("Discovered peer {} has lower ID than us ({}), we are follower", peer.id, my_id);
+                        break;
+                    }
+                }
+                if is_lowest {
+                    tracing::info!("Node {} has lowest ID among discovered peers - starting as leader", my_id);
+                }
+                is_lowest
+            }
+        } else {
+            tracing::info!("No peers configured - starting as leader (standalone)");
+            true
+        }
     } else {
         // Check if this node has the lowest ID among all known nodes
         let my_id = &config.node.id;
