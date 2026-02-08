@@ -1,0 +1,52 @@
+[package]
+name = "wolfdisk"
+version = "0.1.0"
+edition = "2021"
+authors = ["Wolf Software Systems Ltd"]
+description = "Distributed file system with replicated and shared storage modes"
+license = "MIT"
+repository = "https://github.com/wolfsoftwaresystemsltd/wolfdisk"
+
+[dependencies]
+# FUSE filesystem
+fuser = "0.14"
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bincode = "1.3"
+toml = "0.8"
+
+# Hashing for content-addressed storage
+sha2 = "0.10"
+hex = "0.4"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Networking (will add WolfScale as dependency later when extracted)
+# For now, implement locally
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+rand = "0.8"
+libc = "0.2"
+hostname = "0.4"
+
+[dev-dependencies]
+tempfile = "3"
+
+[[bin]]
+name = "wolfdisk"
+path = "src/main.rs"
