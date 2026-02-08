@@ -1255,4 +1255,150 @@ impl Filesystem for WolfDiskFS {
         
         reply.ok();
     }
+
+    fn symlink(
+        &mut self,
+        req: &Request,
+        parent: u64,
+        link_name: &OsStr,
+        target: &std::path::Path,
+        reply: ReplyEntry,
+    ) {
+        let link_name_str = link_name.to_string_lossy();
+        let target_str = target.to_string_lossy();
+        debug!("symlink: parent={}, name={}, target={}", parent, link_name_str, target_str);
+
+        // Get parent path
+        let parent_path = {
+            let inode_table = self.inode_table.read().unwrap();
+            if parent == ROOT_INODE {
+                std::path::PathBuf::new()
+            } else {
+                match inode_table.get_path(parent) {
+                    Some(p) => p.clone(),
+                    None => {
+                        reply.error(libc::ENOENT);
+                        return;
+                    }
+                }
+            }
+        };
+
+        let link_path = parent_path.join(link_name);
+
+        // If not leader, forward to leader
+        if !self.is_leader() {
+            info!("Forwarding symlink to leader: {:?} -> {}", link_path, target_str);
+            match self.forward_symlink_to_leader(&link_path.to_string_lossy(), &target_str) {
+                Ok(()) => {
+                    // Create local entry
+                    let now = SystemTime::now();
+                    let entry = FileEntry {
+                        size: target_str.len() as u64,
+                        is_dir: false,
+                        permissions: 0o777,
+                        uid: req.uid(),
+                        gid: req.gid(),
+                        created: now,
+                        modified: now,
+                        accessed: now,
+                        chunks: Vec::new(),
+                        symlink_target: Some(target_str.to_string()),
+                    };
+                    let inode = self.allocate_inode();
+                    self.inode_table.write().unwrap().insert(inode, link_path.clone());
+                    self.file_index.write().unwrap().insert(link_path, entry.clone());
+                    
+                    // Return symlink attributes with FileType::Symlink
+                    let attr = FileAttr {
+                        ino: inode,
+                        size: entry.size,
+                        blocks: 0,
+                        atime: entry.accessed,
+                        mtime: entry.modified,
+                        ctime: entry.modified,
+                        crtime: entry.created,
+                        kind: FileType::Symlink,
+                        perm: entry.permissions as u16,
+                        nlink: 1,
+                        uid: entry.uid,
+                        gid: entry.gid,
+                        rdev: 0,
+                        blksize: 4096,
+                        flags: 0,
+                    };
+                    reply.entry(&TTL, &attr, 0);
+                }
+                Err(errno) => reply.error(errno),
+            }
+            return;
+        }
+
+        // Leader: create symlink locally
+        let now = SystemTime::now();
+        let entry = FileEntry {
+            size: target_str.len() as u64,
+            is_dir: false,
+            permissions: 0o777,
+            uid: req.uid(),
+            gid: req.gid(),
+            created: now,
+            modified: now,
+            accessed: now,
+            chunks: Vec::new(),
+            symlink_target: Some(target_str.to_string()),
+        };
+
+        let inode = self.allocate_inode();
+        self.inode_table.write().unwrap().insert(inode, link_path.clone());
+        self.file_index.write().unwrap().insert(link_path.clone(), entry.clone());
+
+        info!("Created symlink: {:?} -> {}", link_path, target_str);
+
+        let attr = FileAttr {
+            ino: inode,
+            size: entry.size,
+            blocks: 0,
+            atime: entry.accessed,
+            mtime: entry.modified,
+            ctime: entry.modified,
+            crtime: entry.created,
+            kind: FileType::Symlink,
+            perm: entry.permissions as u16,
+            nlink: 1,
+            uid: entry.uid,
+            gid: entry.gid,
+            rdev: 0,
+            blksize: 4096,
+            flags: 0,
+        };
+        reply.entry(&TTL, &attr, 0);
+    }
+
+    fn readlink(&mut self, _req: &Request, ino: u64, reply: fuser::ReplyData) {
+        debug!("readlink: ino={}", ino);
+
+        let path = {
+            let inode_table = self.inode_table.read().unwrap();
+            match inode_table.get_path(ino) {
+                Some(p) => p.clone(),
+                None => {
+                    reply.error(libc::ENOENT);
+                    return;
+                }
+            }
+        };
+
+        let file_index = self.file_index.read().unwrap();
+        match file_index.get(&path) {
+            Some(entry) => {
+                if let Some(ref target) = entry.symlink_target {
+                    reply.data(target.as_bytes());
+                } else {
+                    reply.error(libc::EINVAL); // Not a symlink
+                }
+            }
+            None => reply.error(libc::ENOENT),
+        }
+    }
 }

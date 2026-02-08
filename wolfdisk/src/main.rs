@@ -619,6 +619,56 @@ fn main() {
                                     error: None,
                                 }))
                             }
+                            Message::CreateSymlink(symlink_req) => {
+                                // Handle incoming symlink request (if we're leader)
+                                info!("Received CreateSymlink: {} -> {}", symlink_req.link_path, symlink_req.target);
+                                
+                                let link_path = std::path::PathBuf::from(&symlink_req.link_path);
+                                let mut index = file_index_for_handler.write().unwrap();
+                                
+                                // Check link doesn't exist
+                                if index.contains(&link_path) {
+                                    return Some(Message::FileOpResponse(FileOpResponseMsg {
+                                        success: false,
+                                        error: Some("Path already exists".to_string()),
+                                    }));
+                                }
+                                
+                                // Create symlink entry
+                                let entry = wolfdisk::storage::FileEntry {
+                                    size: symlink_req.target.len() as u64,
+                                    is_dir: false,
+                                    permissions: 0o777,
+                                    uid: 0,
+                                    gid: 0,
+                                    modified: std::time::SystemTime::now(),
+                                    created: std::time::SystemTime::now(),
+                                    accessed: std::time::SystemTime::now(),
+                                    chunks: Vec::new(),
+                                    symlink_target: Some(symlink_req.target.clone()),
+                                };
+                                
+                                // Insert into index
+                                index.insert(link_path.clone(), entry.clone());
+                                
+                                // Add to inode table
+                                let mut inode_tbl = inode_table_for_handler.write().unwrap();
+                                let inode = *next_inode_for_handler.read().unwrap();
+                                *next_inode_for_handler.write().unwrap() += 1;
+                                inode_tbl.insert(inode, link_path.clone());
+                                
+                                info!("Leader created symlink: {} -> {}", symlink_req.link_path, symlink_req.target);
+                                
+                                // Queue broadcast
+                                drop(index);
+                                drop(inode_tbl);
+                                broadcast_queue_for_handler.lock().unwrap().push((link_path, entry));
+                                
+                                Some(Message::FileOpResponse(FileOpResponseMsg {
+                                    success: true,
+                                    error: None,
+                                }))
+                            }
                             _ => {
                                 debug!("Unhandled message from {}: {:?}", peer_id, msg);
                                 None
