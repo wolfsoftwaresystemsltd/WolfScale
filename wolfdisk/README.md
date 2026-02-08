@@ -47,6 +47,8 @@ The installer will prompt you for:
 - Linux with FUSE3 support
 - Rust toolchain
 
+> ⚠️ **Proxmox Users**: If running in an LXC container, you must enable FUSE in the container options: `Options → Features → FUSE`
+
 ```bash
 # Ubuntu/Debian
 sudo apt install libfuse3-dev fuse3
