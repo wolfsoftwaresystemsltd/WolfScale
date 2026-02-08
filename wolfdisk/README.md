@@ -26,6 +26,7 @@ curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/mai
 The installer will prompt you for:
 - **Node ID** — Unique identifier (defaults to hostname)
 - **Role** — auto, leader, follower, or client
+- **Bind IP address** — IP to listen on (auto-detected)
 - **Discovery** — Auto-discovery, manual peers, or standalone
 - **Mount path** — Where to mount the filesystem
 
