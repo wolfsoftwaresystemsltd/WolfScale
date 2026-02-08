@@ -90,34 +90,73 @@ cd "$INSTALL_DIR"
 cargo build --release
 echo "✓ Build complete"
 
-# Run installer
-echo ""
-echo "═══════════════════════════════════════════════════════════════"
-echo "Build complete! Starting service installer..."
-echo "═══════════════════════════════════════════════════════════════"
-echo ""
-
-# Run installer with TTY for interactive input
-# (Needed because stdin is consumed when script is piped via curl)
-sudo ./install_service.sh < /dev/tty
-
-# Install wolfctl CLI tool to /usr/local/bin
-echo ""
-echo "Installing wolfctl CLI tool..."
-if [ -f "$INSTALL_DIR/target/release/wolfctl" ]; then
-    sudo cp "$INSTALL_DIR/target/release/wolfctl" /usr/local/bin/wolfctl
-    sudo chmod +x /usr/local/bin/wolfctl
-    echo "✓ wolfctl installed to /usr/local/bin/wolfctl"
-else
-    echo "⚠ wolfctl binary not found (may not have been built)"
+# Check if this is an upgrade (service already exists)
+IS_UPGRADE=false
+if systemctl list-unit-files | grep -q wolfscale.service; then
+    IS_UPGRADE=true
+    echo ""
+    echo "✓ Detected existing WolfScale installation - performing upgrade"
 fi
 
-echo ""
-echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║                Installation Complete!                        ║"
-echo "╠══════════════════════════════════════════════════════════════╣"
-echo "║  Connect:  mariadb -h 127.0.0.1 -P 8007 -u USER -p          ║"
-echo "║  Status:   sudo systemctl status wolfscale                   ║"
-echo "║  Logs:     sudo journalctl -u wolfscale -f                   ║"
-echo "║  Cluster:  wolfctl list servers                              ║"
-echo "╚══════════════════════════════════════════════════════════════╝"
+if [ "$IS_UPGRADE" = true ]; then
+    # Upgrade mode: just copy binary and restart service
+    echo ""
+    echo "Upgrading WolfScale..."
+    
+    # Copy new binary
+    sudo cp "$INSTALL_DIR/target/release/wolfscale" /usr/local/bin/wolfscale
+    sudo chmod +x /usr/local/bin/wolfscale
+    echo "✓ Binary updated"
+    
+    # Restart service
+    sudo systemctl daemon-reload
+    sudo systemctl restart wolfscale
+    echo "✓ Service restarted"
+    
+    # Update wolfctl if present
+    if [ -f "$INSTALL_DIR/target/release/wolfctl" ]; then
+        sudo cp "$INSTALL_DIR/target/release/wolfctl" /usr/local/bin/wolfctl
+        sudo chmod +x /usr/local/bin/wolfctl
+        echo "✓ wolfctl updated"
+    fi
+    
+    echo ""
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║                   Upgrade Complete!                          ║"
+    echo "╠══════════════════════════════════════════════════════════════╣"
+    echo "║  Status:   sudo systemctl status wolfscale                   ║"
+    echo "║  Logs:     sudo journalctl -u wolfscale -f                   ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
+else
+    # New install: run interactive installer
+    echo ""
+    echo "═══════════════════════════════════════════════════════════════"
+    echo "Build complete! Starting service installer..."
+    echo "═══════════════════════════════════════════════════════════════"
+    echo ""
+    
+    # Run installer with TTY for interactive input
+    # (Needed because stdin is consumed when script is piped via curl)
+    sudo ./install_service.sh < /dev/tty
+    
+    # Install wolfctl CLI tool to /usr/local/bin
+    echo ""
+    echo "Installing wolfctl CLI tool..."
+    if [ -f "$INSTALL_DIR/target/release/wolfctl" ]; then
+        sudo cp "$INSTALL_DIR/target/release/wolfctl" /usr/local/bin/wolfctl
+        sudo chmod +x /usr/local/bin/wolfctl
+        echo "✓ wolfctl installed to /usr/local/bin/wolfctl"
+    else
+        echo "⚠ wolfctl binary not found (may not have been built)"
+    fi
+    
+    echo ""
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║                Installation Complete!                        ║"
+    echo "╠══════════════════════════════════════════════════════════════╣"
+    echo "║  Connect:  mariadb -h 127.0.0.1 -P 8007 -u USER -p          ║"
+    echo "║  Status:   sudo systemctl status wolfscale                   ║"
+    echo "║  Logs:     sudo journalctl -u wolfscale -f                   ║"
+    echo "║  Cluster:  wolfctl list servers                              ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
+fi
