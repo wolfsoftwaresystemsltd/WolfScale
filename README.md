@@ -118,29 +118,13 @@ This automatically installs dependencies, builds WolfScale, and runs the interac
 
 ### Load Balancer Mode (v5.4.0+)
 
-Run a standalone load balancer that routes MySQL connections to your WolfScale cluster:
+**Install the load balancer directly on any server that needs database access.** It auto-discovers your WolfScale cluster — no configuration needed.
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/setup_lb.sh | bash
 ```
 
-**Auto-Discovery (v5.4.0):** The load balancer automatically finds WolfScale nodes on your network—no configuration needed. Just run the installer and choose auto-discovery when prompted.
-
-**Manual Mode:** You can also specify peers manually or copy `wolfscale.toml` from any cluster node:
-
-```bash
-# Copy config from a cluster node (optional)
-scp user@cluster-node:/opt/wolfscale/wolfscale.toml /opt/wolfscale/
-
-# Run load balancer installer
-curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/setup_lb.sh | bash
-```
-
-The load balancer listens on port **3306** and routes traffic to healthy cluster nodes.
-
-#### Recommended: LB Per Web Server
-
-For **maximum availability**, install WolfScale load balancer directly on each web server:
+**Key point:** You can run as many load balancers as you like. Each one is completely independent and stateless — they don't know about each other and won't conflict.
 
 ```
 Web Server 1 ─── WolfScale LB ───┐
@@ -153,11 +137,7 @@ Web Server 3 ─── WolfScale LB ───┘
              (auto-discovers)
 ```
 
-**Benefits:**
-- **No single point of failure** — if one web server dies, others still have database access
-- **Zero latency** — each web app connects to `localhost:3306`
-- **Scales naturally** — add a web server, add a load balancer
-- **Trivial setup** — auto-discovery finds cluster nodes automatically
+**Benefits:** No single point of failure • Zero latency (localhost) • Scales naturally • Auto-discovery
 
 ### Cluster Commands
 
