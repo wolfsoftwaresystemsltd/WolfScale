@@ -50,6 +50,14 @@ pub enum Message {
     DeleteDir(DeleteDirMsg),
     /// Response to file operation
     FileOpResponse(FileOpResponseMsg),
+    /// Get file/directory attributes (thin client)
+    GetAttr(GetAttrMsg),
+    /// Get file/directory attributes response
+    GetAttrResponse(GetAttrResponseMsg),
+    /// Read directory contents (thin client)
+    ReadDir(ReadDirMsg),
+    /// Read directory response
+    ReadDirResponse(ReadDirResponseMsg),
 }
 
 /// Node announcement for discovery
@@ -230,6 +238,47 @@ pub struct DeleteDirMsg {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileOpResponseMsg {
     pub success: bool,
+    pub error: Option<String>,
+}
+
+/// Get file attributes request (thin-client)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetAttrMsg {
+    pub path: String,
+}
+
+/// Get file attributes response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetAttrResponseMsg {
+    pub exists: bool,
+    pub is_dir: bool,
+    pub size: u64,
+    pub permissions: u32,
+    pub uid: u32,
+    pub gid: u32,
+    pub modified_ms: u64,
+    pub created_ms: u64,
+    pub accessed_ms: u64,
+}
+
+/// Read directory request (thin-client)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReadDirMsg {
+    pub path: String,
+}
+
+/// Directory entry in ReadDirResponse
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DirEntryMsg {
+    pub name: String,
+    pub is_dir: bool,
+}
+
+/// Read directory response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReadDirResponseMsg {
+    pub success: bool,
+    pub entries: Vec<DirEntryMsg>,
     pub error: Option<String>,
 }
 

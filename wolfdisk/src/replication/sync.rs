@@ -4,14 +4,17 @@
 
 use std::sync::{Arc, RwLock};
 use std::collections::HashSet;
+use std::path::PathBuf;
+use std::time::SystemTime;
 
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 use crate::config::{Config, ReplicationMode, NodeRole};
 use crate::cluster::{ClusterManager, ClusterState};
+use crate::network::peer::PeerManager;
 use crate::network::protocol::*;
 use crate::storage::chunks::ChunkStore;
-use crate::storage::index::FileIndex;
+use crate::storage::index::{FileIndex, FileEntry, ChunkRef};
 
 /// Sync state for tracking replication progress
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -32,8 +35,8 @@ pub enum SyncState {
 pub struct ReplicationManager {
     config: Config,
     cluster: Arc<ClusterManager>,
+    peer_manager: Option<Arc<PeerManager>>,
     chunk_store: Arc<ChunkStore>,
-    #[allow(dead_code)]
     file_index: Arc<RwLock<FileIndex>>,
     sync_state: Arc<RwLock<SyncState>>,
     index_version: Arc<RwLock<u64>>,
@@ -49,6 +52,17 @@ impl ReplicationManager {
         chunk_store: Arc<ChunkStore>,
         file_index: Arc<RwLock<FileIndex>>,
     ) -> Self {
+        Self::with_peer_manager(config, cluster, None, chunk_store, file_index)
+    }
+
+    /// Create a new replication manager with peer manager
+    pub fn with_peer_manager(
+        config: Config,
+        cluster: Arc<ClusterManager>,
+        peer_manager: Option<Arc<PeerManager>>,
+        chunk_store: Arc<ChunkStore>,
+        file_index: Arc<RwLock<FileIndex>>,
+    ) -> Self {
         let initial_state = match config.node.role {
             NodeRole::Client => SyncState::Synced, // Clients don't replicate
             _ => SyncState::WaitingForLeader,
@@ -57,6 +71,7 @@ impl ReplicationManager {
         Self {
             config,
             cluster,
+            peer_manager,
             chunk_store,
             file_index,
             sync_state: Arc::new(RwLock::new(initial_state)),
@@ -74,6 +89,100 @@ impl ReplicationManager {
     /// Get current index version
     pub fn index_version(&self) -> u64 {
         *self.index_version.read().unwrap()
+    }
+
+    /// Perform initial sync from leader (called on startup for followers)
+    pub fn sync_from_leader(&self) -> Result<(), String> {
+        if self.cluster.is_leader() {
+            info!("This node is leader, no sync needed");
+            *self.sync_state.write().unwrap() = SyncState::Synced;
+            return Ok(());
+        }
+
+        let peer_manager = match &self.peer_manager {
+            Some(pm) => pm,
+            None => {
+                warn!("No peer manager available for sync");
+                return Err("No peer manager".to_string());
+            }
+        };
+
+        let leader_id = self.cluster.leader_id().ok_or("No leader found")?;
+        let leader_addr = self.cluster.leader_address().ok_or("No leader address")?;
+
+        info!("Syncing from leader {} at {}", leader_id, leader_addr);
+        *self.sync_state.write().unwrap() = SyncState::SyncingIndex;
+
+        // Connect to leader and request sync
+        let conn = peer_manager.get_or_connect_leader(&leader_id, &leader_addr)
+            .map_err(|e| format!("Failed to connect: {}", e))?;
+
+        let my_version = self.cluster.index_version();
+        let msg = Message::SyncRequest(SyncRequestMsg { from_version: my_version });
+
+        let response = conn.request(&msg)
+            .map_err(|e| format!("Sync request failed: {}", e))?;
+
+        match response {
+            Message::SyncResponse(sync_resp) => {
+                self.apply_sync_response(sync_resp)?;
+                *self.sync_state.write().unwrap() = SyncState::Synced;
+                info!("Sync complete - in sync with leader");
+                Ok(())
+            }
+            _ => Err("Unexpected response from leader".to_string()),
+        }
+    }
+
+    /// Apply sync response from leader
+    fn apply_sync_response(&self, response: SyncResponseMsg) -> Result<(), String> {
+        info!("Applying sync response: {} entries, version {}",
+              response.entries.len(), response.current_version);
+
+        let mut file_index = self.file_index.write().unwrap();
+        let mut pending = self.pending_chunks.write().unwrap();
+
+        for entry in response.entries {
+            let path = PathBuf::from(&entry.path);
+            let now = SystemTime::now();
+            
+            let chunks: Vec<ChunkRef> = entry.chunks.iter().map(|c| {
+                // Track chunks we need to fetch
+                if !self.chunk_store.exists(&c.hash) {
+                    pending.insert(c.hash);
+                }
+                ChunkRef {
+                    hash: c.hash,
+                    offset: c.offset,
+                    size: c.size,
+                }
+            }).collect();
+
+            let file_entry = FileEntry {
+                size: entry.size,
+                is_dir: entry.is_dir,
+                permissions: entry.permissions,
+                uid: 0,
+                gid: 0,
+                created: now,
+                modified: now,
+                accessed: now,
+                chunks,
+            };
+
+            file_index.insert(path, file_entry);
+        }
+
+        // Update our index version  
+        self.cluster.set_index_version(response.current_version);
+        *self.index_version.write().unwrap() = response.current_version;
+
+        if !pending.is_empty() {
+            info!("Need to fetch {} chunks from leader", pending.len());
+            *self.sync_state.write().unwrap() = SyncState::SyncingChunks;
+        }
+
+        Ok(())
     }
 
     /// Start the replication manager
