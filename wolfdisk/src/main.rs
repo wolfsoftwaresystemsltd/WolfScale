@@ -4,10 +4,10 @@
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
-use tracing::{info, error};
+use tracing::{info, error, debug};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use wolfdisk::{Config, fuse::WolfDiskFS};
+use wolfdisk::{Config, fuse::WolfDiskFS, storage::{FileIndex, FileEntry, ChunkRef}};
 
 #[derive(Parser)]
 #[command(name = "wolfdisk")]
@@ -106,18 +106,106 @@ fn main() {
             // Wrap cluster in Arc for sharing with filesystem
             let cluster = std::sync::Arc::new(cluster);
             
+            // Create shared state for filesystem that can be accessed by message handler
+            std::fs::create_dir_all(config.chunks_dir()).ok();
+            std::fs::create_dir_all(config.index_dir()).ok();
+            
+            let file_index = std::sync::Arc::new(std::sync::RwLock::new(
+                FileIndex::load_or_create(&config.index_dir())
+                    .expect("Failed to load file index")
+            ));
+            let file_index_for_handler = file_index.clone();
+            
             // Create peer manager for network communication
             let peer_manager = std::sync::Arc::new(
                 wolfdisk::network::peer::PeerManager::new(
                     config.node.id.clone(),
                     config.node.bind.clone(),
-                    |_peer_id, _msg| None, // TODO: Handle incoming messages from leader
+                    move |peer_id, msg| {
+                        use wolfdisk::network::protocol::*;
+                        
+                        match msg {
+                            Message::IndexUpdate(update) => {
+                                info!("Received IndexUpdate from {}: {:?}", peer_id, update.operation);
+                                
+                                // Apply the update to our local index
+                                let mut index = file_index_for_handler.write().unwrap();
+                                match update.operation {
+                                    IndexOperation::Delete { path } => {
+                                        info!("Replicating delete: {}", path);
+                                        index.remove(&std::path::PathBuf::from(&path));
+                                    }
+                                    IndexOperation::Upsert { path, size, modified_ms, permissions, chunks } => {
+                                        info!("Replicating upsert: {} ({} bytes)", path, size);
+                                        let chunk_refs: Vec<ChunkRef> = chunks.iter()
+                                            .map(|c| ChunkRef {
+                                                hash: c.hash,
+                                                offset: c.offset,
+                                                size: c.size,
+                                            })
+                                            .collect();
+                                        let now = std::time::SystemTime::now();
+                                        index.insert(std::path::PathBuf::from(&path), FileEntry {
+                                            size,
+                                            modified: std::time::UNIX_EPOCH + std::time::Duration::from_millis(modified_ms),
+                                            permissions,
+                                            is_dir: false,
+                                            chunks: chunk_refs,
+                                            uid: 0,
+                                            gid: 0,
+                                            created: now,
+                                            accessed: now,
+                                        });
+                                    }
+                                    IndexOperation::Mkdir { path, permissions } => {
+                                        info!("Replicating mkdir: {}", path);
+                                        let now = std::time::SystemTime::now();
+                                        index.insert(std::path::PathBuf::from(&path), FileEntry {
+                                            size: 0,
+                                            modified: now,
+                                            permissions,
+                                            is_dir: true,
+                                            chunks: vec![],
+                                            uid: 0,
+                                            gid: 0,
+                                            created: now,
+                                            accessed: now,
+                                        });
+                                    }
+                                }
+                                
+                                // Note: Index will be saved periodically by status file writer
+                                // Cannot call save() here as we don't have index_dir in closure
+                                
+                                None // No response needed for replication
+                            }
+                            Message::DeleteFile(del) => {
+                                // Handle incoming delete request (if we're leader)
+                                info!("Received DeleteFile: {}", del.path);
+                                Some(Message::FileOpResponse(FileOpResponseMsg {
+                                    success: true,
+                                    error: None,
+                                }))
+                            }
+                            _ => {
+                                debug!("Unhandled message from {}: {:?}", peer_id, msg);
+                                None
+                            }
+                        }
+                    },
                 )
             );
             
+            // Start peer manager to listen for connections
+            if let Err(e) = peer_manager.start() {
+                error!("Failed to start peer manager: {}", e);
+                std::process::exit(1);
+            }
+            info!("Peer manager started on {}", config.node.bind);
+            
             // Create filesystem instance with cluster support
             let fs = match WolfDiskFS::with_cluster(
-                config,
+                config.clone(),
                 Some(cluster.clone()),
                 Some(peer_manager.clone()),
             ) {

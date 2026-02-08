@@ -18,7 +18,7 @@ use crate::cluster::ClusterManager;
 use crate::config::Config;
 use crate::error::Result;
 use crate::network::peer::PeerManager;
-use crate::network::protocol::{Message, CreateFileMsg, CreateDirMsg, DeleteFileMsg, DeleteDirMsg};
+use crate::network::protocol::{Message, CreateFileMsg, CreateDirMsg, DeleteFileMsg, DeleteDirMsg, IndexUpdateMsg, IndexOperation};
 use crate::storage::{ChunkStore, FileIndex, FileEntry, InodeTable};
 
 /// TTL for attribute caching
@@ -193,6 +193,24 @@ impl WolfDiskFS {
         match response {
             Message::FileOpResponse(resp) if resp.success => Ok(()),
             _ => Err(libc::EIO),
+        }
+    }
+
+    /// Broadcast an index update to all followers (leader only)
+    fn broadcast_index_update(&self, operation: IndexOperation) {
+        if !self.is_leader() {
+            return;
+        }
+        
+        if let (Some(cluster), Some(peer_manager)) = (&self.cluster, &self.peer_manager) {
+            let version = cluster.increment_index_version();
+            let msg = Message::IndexUpdate(IndexUpdateMsg {
+                version,
+                operation,
+            });
+            
+            info!("Broadcasting IndexUpdate (version {}) to followers", version);
+            peer_manager.broadcast(&msg);
         }
     }
 
@@ -757,6 +775,15 @@ impl Filesystem for WolfDiskFS {
             }
         }
         inode_table.remove_path(&file_path);
+        
+        // Drop locks before broadcast
+        drop(file_index);
+        drop(inode_table);
+
+        // Broadcast delete to followers
+        self.broadcast_index_update(IndexOperation::Delete {
+            path: file_path.to_string_lossy().to_string(),
+        });
 
         reply.ok();
     }
@@ -830,6 +857,15 @@ impl Filesystem for WolfDiskFS {
         // Remove from index and inode table
         file_index.remove(&dir_path);
         inode_table.remove_path(&dir_path);
+        
+        // Drop locks before broadcast
+        drop(file_index);
+        drop(inode_table);
+
+        // Broadcast delete to followers
+        self.broadcast_index_update(IndexOperation::Delete {
+            path: dir_path.to_string_lossy().to_string(),
+        });
 
         reply.ok();
     }
