@@ -421,6 +421,124 @@ fn main() {
                                     }))
                                 }
                             }
+                            Message::CreateDir(dir_req) => {
+                                // Handle incoming mkdir request (if we're leader)
+                                info!("Received CreateDir: {}", dir_req.path);
+                                
+                                let path = std::path::PathBuf::from(&dir_req.path);
+                                let mut index = file_index_for_handler.write().unwrap();
+                                
+                                if index.get(&path).is_some() {
+                                    // Dir already exists
+                                    Some(Message::FileOpResponse(FileOpResponseMsg {
+                                        success: false,
+                                        error: Some("Directory already exists".to_string()),
+                                    }))
+                                } else {
+                                    // Create new directory entry
+                                    let entry = FileEntry {
+                                        size: 0,
+                                        is_dir: true,
+                                        permissions: dir_req.mode,
+                                        uid: dir_req.uid,
+                                        gid: dir_req.gid,
+                                        modified: std::time::SystemTime::now(),
+                                        created: std::time::SystemTime::now(),
+                                        accessed: std::time::SystemTime::now(),
+                                        chunks: Vec::new(),
+                                    };
+                                    
+                                    index.insert(path.clone(), entry.clone());
+                                    
+                                    // Also update inode table
+                                    let mut inode_tbl = inode_table_for_handler.write().unwrap();
+                                    let mut next_ino = next_inode_for_handler.write().unwrap();
+                                    let ino = *next_ino;
+                                    *next_ino += 1;
+                                    inode_tbl.insert(ino, path.clone());
+                                    
+                                    info!("Leader created directory: {} with inode {}", dir_req.path, ino);
+                                    
+                                    // Queue broadcast to followers
+                                    drop(index);
+                                    drop(inode_tbl);
+                                    drop(next_ino);
+                                    broadcast_queue_for_handler.lock().unwrap().push((path, entry));
+                                    
+                                    Some(Message::FileOpResponse(FileOpResponseMsg {
+                                        success: true,
+                                        error: None,
+                                    }))
+                                }
+                            }
+                            Message::DeleteDir(del) => {
+                                // Handle incoming rmdir request (if we're leader)
+                                info!("Received DeleteDir: {}", del.path);
+                                
+                                let path = std::path::PathBuf::from(&del.path);
+                                let mut index = file_index_for_handler.write().unwrap();
+                                
+                                match index.get(&path) {
+                                    Some(entry) if !entry.is_dir => {
+                                        Some(Message::FileOpResponse(FileOpResponseMsg {
+                                            success: false,
+                                            error: Some("Not a directory".to_string()),
+                                        }))
+                                    }
+                                    None => {
+                                        Some(Message::FileOpResponse(FileOpResponseMsg {
+                                            success: false,
+                                            error: Some("Directory not found".to_string()),
+                                        }))
+                                    }
+                                    _ => {
+                                        // Check directory is empty
+                                        let has_children = index.paths().any(|p| {
+                                            if let Some(parent) = p.parent() {
+                                                parent == path
+                                            } else {
+                                                false
+                                            }
+                                        });
+                                        
+                                        if has_children {
+                                            return Some(Message::FileOpResponse(FileOpResponseMsg {
+                                                success: false,
+                                                error: Some("Directory not empty".to_string()),
+                                            }));
+                                        }
+                                        
+                                        index.remove(&path);
+                                        
+                                        // Remove from inode table
+                                        let mut inode_tbl = inode_table_for_handler.write().unwrap();
+                                        inode_tbl.remove_path(&path);
+                                        
+                                        info!("Leader deleted directory: {}", del.path);
+                                        
+                                        // Queue delete broadcast to followers
+                                        let delete_marker = wolfdisk::storage::FileEntry {
+                                            size: u64::MAX, // Signals deletion
+                                            is_dir: true,
+                                            permissions: 0,
+                                            uid: 0,
+                                            gid: 0,
+                                            modified: std::time::SystemTime::now(),
+                                            created: std::time::SystemTime::now(),
+                                            accessed: std::time::SystemTime::now(),
+                                            chunks: Vec::new(),
+                                        };
+                                        drop(index);
+                                        drop(inode_tbl);
+                                        broadcast_queue_for_handler.lock().unwrap().push((path, delete_marker));
+                                        
+                                        Some(Message::FileOpResponse(FileOpResponseMsg {
+                                            success: true,
+                                            error: None,
+                                        }))
+                                    }
+                                }
+                            }
                             _ => {
                                 debug!("Unhandled message from {}: {:?}", peer_id, msg);
                                 None
