@@ -56,6 +56,8 @@ pub enum Message {
     DeleteFile(DeleteFileMsg),
     /// Delete a directory
     DeleteDir(DeleteDirMsg),
+    /// Create a symbolic link
+    CreateSymlink(CreateSymlinkMsg),
     /// Response to file operation
     FileOpResponse(FileOpResponseMsg),
     /// Get file/directory attributes (thin client)
@@ -153,6 +155,11 @@ pub enum IndexOperation {
     Mkdir {
         path: String,
         permissions: u32,
+    },
+    /// File or directory renamed
+    Rename {
+        from_path: String,
+        to_path: String,
     },
 }
 
@@ -336,6 +343,15 @@ pub struct SetAttrMsg {
     pub gid: Option<u32>,
     pub size: Option<u64>,
     pub modified_ms: Option<u64>,
+}
+
+/// Create symbolic link message
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateSymlinkMsg {
+    /// Path where the symlink will be created
+    pub link_path: String,
+    /// Target path the symlink points to
+    pub target: String,
 }
 
 /// Serialize a message for transmission

@@ -1,10 +1,8 @@
-# WolfScale
+# Wolf Software
 
 <div align="center">
 
-**WolfScale** — Database replication, clustering, and load balancing — **the easy way**
-
-**WolfDisk** — Disk replication and sharing — **the easy way**
+🐺 **Two powerful open-source tools for high availability** 🐺
 
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -16,9 +14,15 @@
 
 ---
 
+## WolfScale — Database Replication
+
+**Database replication, clustering, and load balancing — the easy way**
+
 WolfScale is a lightweight, high-availability replication layer for MariaDB/MySQL. It provides **automatic leader election** with deterministic failover, **WAL-based replication** for strong consistency, and a **MySQL-compatible proxy** for transparent routing—all in a single Rust binary.
 
-## Why WolfScale?
+Works with MySQL, Percona, and Amazon RDS • **MariaDB recommended**
+
+### Why WolfScale?
 
 | Feature | Benefit |
 |---------|---------|
@@ -31,24 +35,29 @@ WolfScale is a lightweight, high-availability replication layer for MariaDB/MySQ
 | **Built-in Load Balancer** | Distribute connections across cluster nodes with automatic failover |
 | **Single Binary** | No patched databases, no complex dependencies |
 
-## Key Features
+---
 
-| Category | Feature | Description |
-|----------|---------|-------------|
-| **Replication** | Push-Based Sync | Sub-millisecond replication via event-driven WAL notifications |
-| | WAL-Based Sync | LZ4-compressed Write-Ahead Log for strong consistency |
-| | Binlog Mode | Capture writes from MySQL/MariaDB binlog (v3.0+) |
-| | Write Forwarding | Followers automatically forward writes to leader |
-| **High Availability** | Deterministic Leader Election | Lowest node ID wins—predictable, instant failover |
-| | Automatic Catch-Up | Returning nodes sync via WAL before leadership |
-| | Health Monitoring | Leader monitors database, auto-demotes on failure |
-| | Load Balancer Mode | Built-in LB for distributing connections (v5.3.6+) |
-| **Connectivity** | MySQL Proxy | Native MySQL protocol on port 8007 |
-| | HTTP API | RESTful API for writes and cluster management |
-| | wolfctl CLI | `list servers`, `stats`, `migrate`, `binlog-setup` |
-| **Deployment** | Single Binary | No patched databases, minimal dependencies |
-| | Any MySQL/MariaDB | Works with standalone, Galera, Percona, RDS |
-| | Geo-Distribution | Deploy nodes across regions and data centers |
+## WolfDisk — Disk Replication & Sharing
+
+**Disk replication and sharing — the easy way**
+
+WolfDisk is a FUSE-based distributed filesystem that provides automatic file replication across nodes. Create a shared storage cluster where files written on any node are automatically replicated to all others.
+
+POSIX compatible • Automatic chunking • Leader-follower architecture
+
+### Why WolfDisk?
+
+| Feature | Benefit |
+|---------|---------|
+| **FUSE-Based** | Mount as a regular filesystem—works with any application |
+| **Automatic Replication** | Files sync to all nodes automatically |
+| **Content-Addressed Storage** | Efficient deduplication via SHA256 chunking |
+| **Leader-Follower Model** | Strong consistency with automatic failover |
+| **Client Mode** | Workstations can connect read/write without becoming leader |
+
+---
+
+## Key Features (WolfScale)
 
 ### Binlog Replication Mode (v3.0+)
 

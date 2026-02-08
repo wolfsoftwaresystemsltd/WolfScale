@@ -53,6 +53,10 @@ pub struct FileEntry {
 
     /// Chunk references for file content
     pub chunks: Vec<ChunkRef>,
+
+    /// Symlink target path (if this is a symlink)
+    #[serde(default)]
+    pub symlink_target: Option<String>,
 }
 
 /// File metadata index

@@ -18,7 +18,7 @@ use crate::cluster::ClusterManager;
 use crate::config::Config;
 use crate::error::Result;
 use crate::network::peer::PeerManager;
-use crate::network::protocol::{Message, CreateFileMsg, CreateDirMsg, DeleteFileMsg, DeleteDirMsg, IndexUpdateMsg, IndexOperation, ChunkRefMsg, FileSyncMsg, ChunkWithData, WriteRequestMsg};
+use crate::network::protocol::{Message, CreateFileMsg, CreateDirMsg, DeleteFileMsg, DeleteDirMsg, IndexUpdateMsg, IndexOperation, ChunkRefMsg, FileSyncMsg, ChunkWithData, WriteRequestMsg, RenameFileMsg, CreateSymlinkMsg};
 use crate::storage::{ChunkStore, FileIndex, FileEntry, InodeTable};
 
 /// TTL for attribute caching
@@ -355,6 +355,58 @@ impl WolfDiskFS {
 
         let msg = Message::DeleteDir(DeleteDirMsg {
             path: path.to_string(),
+        });
+
+        let response = conn.request(&msg).map_err(|_| libc::EIO)?;
+
+        match response {
+            Message::FileOpResponse(resp) if resp.success => Ok(()),
+            _ => Err(libc::EIO),
+        }
+    }
+
+    /// Forward a file rename to the leader
+    fn forward_rename_to_leader(&self, from_path: &str, to_path: &str) -> std::result::Result<(), i32> {
+        let (cluster, peer_manager) = match (&self.cluster, &self.peer_manager) {
+            (Some(c), Some(p)) => (c, p),
+            _ => return Err(libc::EIO),
+        };
+
+        let leader_id = cluster.leader_id().ok_or(libc::ENOENT)?;
+        let leader_addr = cluster.leader_address().ok_or(libc::ENOENT)?;
+
+        let conn = peer_manager.get_or_connect_leader(&leader_id, &leader_addr)
+            .map_err(|_| libc::EIO)?;
+
+        let msg = Message::RenameFile(RenameFileMsg {
+            from_path: from_path.to_string(),
+            to_path: to_path.to_string(),
+        });
+
+        let response = conn.request(&msg).map_err(|_| libc::EIO)?;
+
+        match response {
+            Message::FileOpResponse(resp) if resp.success => Ok(()),
+            _ => Err(libc::EIO),
+        }
+    }
+
+    /// Forward a symlink creation to the leader
+    fn forward_symlink_to_leader(&self, link_path: &str, target: &str) -> std::result::Result<(), i32> {
+        let (cluster, peer_manager) = match (&self.cluster, &self.peer_manager) {
+            (Some(c), Some(p)) => (c, p),
+            _ => return Err(libc::EIO),
+        };
+
+        let leader_id = cluster.leader_id().ok_or(libc::ENOENT)?;
+        let leader_addr = cluster.leader_address().ok_or(libc::ENOENT)?;
+
+        let conn = peer_manager.get_or_connect_leader(&leader_id, &leader_addr)
+            .map_err(|_| libc::EIO)?;
+
+        let msg = Message::CreateSymlink(CreateSymlinkMsg {
+            link_path: link_path.to_string(),
+            target: target.to_string(),
         });
 
         let response = conn.request(&msg).map_err(|_| libc::EIO)?;
@@ -717,6 +769,7 @@ impl Filesystem for WolfDiskFS {
                         modified: now,
                         accessed: now,
                         chunks: Vec::new(),
+                        symlink_target: None,
                     };
                     let inode = self.allocate_inode();
                     self.inode_table.write().unwrap().insert(inode, dir_path.clone());
@@ -751,6 +804,7 @@ impl Filesystem for WolfDiskFS {
             modified: now,
             accessed: now,
             chunks: Vec::new(),
+            symlink_target: None,
         };
 
         // Allocate inode and add to tables
@@ -822,6 +876,7 @@ impl Filesystem for WolfDiskFS {
                         modified: now,
                         accessed: now,
                         chunks: Vec::new(),
+                        symlink_target: None,
                     };
                     let inode = self.allocate_inode();
                     self.inode_table.write().unwrap().insert(inode, file_path.clone());
@@ -858,6 +913,7 @@ impl Filesystem for WolfDiskFS {
             modified: now,
             accessed: now,
             chunks: Vec::new(),
+            symlink_target: None,
         };
 
         // Allocate inode and add to tables
@@ -1046,6 +1102,119 @@ impl Filesystem for WolfDiskFS {
         // Broadcast delete to followers
         self.broadcast_index_update(IndexOperation::Delete {
             path: dir_path.to_string_lossy().to_string(),
+        });
+
+        reply.ok();
+    }
+
+    fn rename(
+        &mut self,
+        _req: &Request,
+        parent: u64,
+        name: &OsStr,
+        newparent: u64,
+        newname: &OsStr,
+        _flags: u32,
+        reply: fuser::ReplyEmpty,
+    ) {
+        let name_str = name.to_string_lossy();
+        let newname_str = newname.to_string_lossy();
+        debug!("rename: parent={}, name={}, newparent={}, newname={}", parent, name_str, newparent, newname_str);
+
+        // Get source and destination paths
+        let (from_path, to_path) = {
+            let inode_table = self.inode_table.read().unwrap();
+            
+            let parent_path = if parent == ROOT_INODE {
+                std::path::PathBuf::new()
+            } else {
+                match inode_table.get_path(parent) {
+                    Some(p) => p.clone(),
+                    None => {
+                        reply.error(libc::ENOENT);
+                        return;
+                    }
+                }
+            };
+            
+            let newparent_path = if newparent == ROOT_INODE {
+                std::path::PathBuf::new()
+            } else {
+                match inode_table.get_path(newparent) {
+                    Some(p) => p.clone(),
+                    None => {
+                        reply.error(libc::ENOENT);
+                        return;
+                    }
+                }
+            };
+            
+            (parent_path.join(name), newparent_path.join(newname))
+        };
+
+        // If not leader, forward to leader
+        if !self.is_leader() {
+            info!("Forwarding rename to leader: {:?} -> {:?}", from_path, to_path);
+            match self.forward_rename_to_leader(&from_path.to_string_lossy(), &to_path.to_string_lossy()) {
+                Ok(()) => {
+                    // Update local entries
+                    let mut inode_table = self.inode_table.write().unwrap();
+                    let mut file_index = self.file_index.write().unwrap();
+                    
+                    if let Some(entry) = file_index.remove(&from_path) {
+                        file_index.insert(to_path.clone(), entry);
+                    }
+                    
+                    if let Some(ino) = inode_table.get_inode(&from_path) {
+                        let ino = ino;
+                        inode_table.remove_path(&from_path);
+                        inode_table.insert(ino, to_path);
+                    }
+                    
+                    reply.ok();
+                }
+                Err(errno) => reply.error(errno),
+            }
+            return;
+        }
+
+        // Leader: execute locally
+        let mut inode_table = self.inode_table.write().unwrap();
+        let mut file_index = self.file_index.write().unwrap();
+
+        // Check source exists
+        let entry = match file_index.get(&from_path) {
+            Some(e) => e.clone(),
+            None => {
+                reply.error(libc::ENOENT);
+                return;
+            }
+        };
+
+        // Check destination doesn't exist
+        if file_index.contains(&to_path) {
+            reply.error(libc::EEXIST);
+            return;
+        }
+
+        // Move entry
+        file_index.remove(&from_path);
+        file_index.insert(to_path.clone(), entry);
+
+        // Update inode table
+        if let Some(ino) = inode_table.get_inode(&from_path) {
+            let ino = ino;
+            inode_table.remove_path(&from_path);
+            inode_table.insert(ino, to_path.clone());
+        }
+
+        drop(file_index);
+        drop(inode_table);
+
+        // Broadcast rename to followers
+        self.broadcast_index_update(IndexOperation::Rename {
+            from_path: from_path.to_string_lossy().to_string(),
+            to_path: to_path.to_string_lossy().to_string(),
         });
 
         reply.ok();

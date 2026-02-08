@@ -168,6 +168,7 @@ impl ReplicationManager {
                 modified: now,
                 accessed: now,
                 chunks,
+                symlink_target: None,
             };
 
             file_index.insert(path, file_entry);
@@ -462,6 +463,7 @@ impl ReplicationManager {
                     modified: now,
                     accessed: now,
                     chunks: chunk_refs,
+                    symlink_target: None,
                 };
                 file_index.insert(PathBuf::from(&path), entry);
             }
@@ -476,11 +478,18 @@ impl ReplicationManager {
                     modified: now,
                     accessed: now,
                     chunks: vec![],
+                    symlink_target: None,
                 };
                 file_index.insert(PathBuf::from(&path), entry);
             }
             IndexOperation::Delete { path } => {
                 file_index.remove(&PathBuf::from(&path));
+            }
+            IndexOperation::Rename { from_path, to_path } => {
+                // Move entry from old path to new path
+                if let Some(entry) = file_index.remove(&PathBuf::from(&from_path)) {
+                    file_index.insert(PathBuf::from(&to_path), entry);
+                }
             }
         }
 

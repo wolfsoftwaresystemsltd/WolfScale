@@ -178,6 +178,7 @@ fn main() {
                                             gid: 0,
                                             created: now,
                                             accessed: now,
+                                            symlink_target: None,
                                         });
                                     }
                                     IndexOperation::Mkdir { path, permissions } => {
@@ -193,7 +194,14 @@ fn main() {
                                             gid: 0,
                                             created: now,
                                             accessed: now,
+                                            symlink_target: None,
                                         });
+                                    }
+                                    IndexOperation::Rename { from_path, to_path } => {
+                                        info!("Replicating rename: {} -> {}", from_path, to_path);
+                                        if let Some(entry) = index.remove(&std::path::PathBuf::from(&from_path)) {
+                                            index.insert(std::path::PathBuf::from(&to_path), entry);
+                                        }
                                     }
                                 }
                                 
@@ -253,6 +261,7 @@ fn main() {
                                     created: std::time::UNIX_EPOCH + std::time::Duration::from_millis(sync.modified_ms),
                                     accessed: std::time::SystemTime::now(),
                                     chunks: chunk_refs,
+                                    symlink_target: None,
                                 });
                                 
                                 // Also update inode table so the file can be looked up
@@ -348,6 +357,7 @@ fn main() {
                                         created: std::time::SystemTime::now(),
                                         accessed: std::time::SystemTime::now(),
                                         chunks: Vec::new(),
+                                        symlink_target: None,
                                     };
                                     
                                     index.insert(path.clone(), entry);
@@ -405,6 +415,7 @@ fn main() {
                                         created: std::time::SystemTime::now(),
                                         accessed: std::time::SystemTime::now(),
                                         chunks: Vec::new(),
+                                        symlink_target: None,
                                     };
                                     drop(index);
                                     drop(inode_tbl);
@@ -446,6 +457,7 @@ fn main() {
                                         created: std::time::SystemTime::now(),
                                         accessed: std::time::SystemTime::now(),
                                         chunks: Vec::new(),
+                                        symlink_target: None,
                                     };
                                     
                                     index.insert(path.clone(), entry.clone());
@@ -527,6 +539,7 @@ fn main() {
                                             created: std::time::SystemTime::now(),
                                             accessed: std::time::SystemTime::now(),
                                             chunks: Vec::new(),
+                                            symlink_target: None,
                                         };
                                         drop(index);
                                         drop(inode_tbl);
@@ -538,6 +551,73 @@ fn main() {
                                         }))
                                     }
                                 }
+                            }
+                            Message::RenameFile(rename_req) => {
+                                // Handle incoming rename request (if we're leader)
+                                info!("Received RenameFile: {} -> {}", rename_req.from_path, rename_req.to_path);
+                                
+                                let from_path = std::path::PathBuf::from(&rename_req.from_path);
+                                let to_path = std::path::PathBuf::from(&rename_req.to_path);
+                                let mut index = file_index_for_handler.write().unwrap();
+                                
+                                // Check source exists
+                                let entry = match index.get(&from_path) {
+                                    Some(e) => e.clone(),
+                                    None => {
+                                        return Some(Message::FileOpResponse(FileOpResponseMsg {
+                                            success: false,
+                                            error: Some("Source not found".to_string()),
+                                        }));
+                                    }
+                                };
+                                
+                                // Check dest doesn't exist
+                                if index.contains(&to_path) {
+                                    return Some(Message::FileOpResponse(FileOpResponseMsg {
+                                        success: false,
+                                        error: Some("Destination already exists".to_string()),
+                                    }));
+                                }
+                                
+                                // Move entry in index
+                                index.remove(&from_path);
+                                index.insert(to_path.clone(), entry.clone());
+                                
+                                // Update inode table
+                                let mut inode_tbl = inode_table_for_handler.write().unwrap();
+                                if let Some(ino) = inode_tbl.get_inode(&from_path) {
+                                    let ino = ino;
+                                    inode_tbl.remove_path(&from_path);
+                                    inode_tbl.insert(ino, to_path.clone());
+                                }
+                                
+                                info!("Leader renamed: {} -> {}", rename_req.from_path, rename_req.to_path);
+                                
+                                // Queue broadcast: delete old path, sync new path
+                                let delete_marker = wolfdisk::storage::FileEntry {
+                                    size: u64::MAX, // Delete marker
+                                    is_dir: entry.is_dir,
+                                    permissions: 0,
+                                    uid: 0,
+                                    gid: 0,
+                                    modified: std::time::SystemTime::now(),
+                                    created: std::time::SystemTime::now(),
+                                    accessed: std::time::SystemTime::now(),
+                                    chunks: Vec::new(),
+                                    symlink_target: None,
+                                };
+                                drop(index);
+                                drop(inode_tbl);
+                                
+                                let mut queue = broadcast_queue_for_handler.lock().unwrap();
+                                queue.push((from_path, delete_marker));
+                                queue.push((to_path, entry));
+                                drop(queue);
+                                
+                                Some(Message::FileOpResponse(FileOpResponseMsg {
+                                    success: true,
+                                    error: None,
+                                }))
                             }
                             _ => {
                                 debug!("Unhandled message from {}: {:?}", peer_id, msg);
