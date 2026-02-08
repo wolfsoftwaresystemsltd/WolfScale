@@ -154,9 +154,8 @@ impl ReplicationManager {
                 self.sync_state() == SyncState::Synced
             }
             ClusterState::Client => {
-                // Client reads locally if we have the data, otherwise forward
-                // For MVP, allow local reads
-                true
+                // Client mode is a full proxy - all reads go to leader
+                false
             }
             ClusterState::Discovering => {
                 // Allow local read if we have data

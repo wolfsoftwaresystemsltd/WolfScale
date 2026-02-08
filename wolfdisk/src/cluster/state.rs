@@ -44,6 +44,10 @@ pub struct ClusterManager {
     discovery: Option<Discovery>,
     term: Arc<RwLock<u64>>,
     running: Arc<RwLock<bool>>,
+    /// Last time we received a heartbeat from the leader
+    last_leader_heartbeat: Arc<RwLock<Instant>>,
+    /// Current index version (for sync)
+    index_version: Arc<RwLock<u64>>,
 }
 
 impl ClusterManager {
@@ -64,6 +68,8 @@ impl ClusterManager {
             discovery: None,
             term: Arc::new(RwLock::new(0)),
             running: Arc::new(RwLock::new(false)),
+            last_leader_heartbeat: Arc::new(RwLock::new(Instant::now())),
+            index_version: Arc::new(RwLock::new(0)),
         }
     }
 
@@ -97,6 +103,38 @@ impl ClusterManager {
     /// Get list of known peers
     pub fn peers(&self) -> Vec<PeerInfo> {
         self.peers.read().unwrap().values().cloned().collect()
+    }
+
+    /// Get current index version
+    pub fn index_version(&self) -> u64 {
+        *self.index_version.read().unwrap()
+    }
+
+    /// Increment and return the new index version (called on writes)
+    pub fn increment_index_version(&self) -> u64 {
+        let mut v = self.index_version.write().unwrap();
+        *v += 1;
+        *v
+    }
+
+    /// Set the index version (used during sync)
+    pub fn set_index_version(&self, version: u64) {
+        *self.index_version.write().unwrap() = version;
+    }
+
+    /// Record that we received a heartbeat from the leader
+    pub fn receive_leader_heartbeat(&self) {
+        *self.last_leader_heartbeat.write().unwrap() = Instant::now();
+    }
+
+    /// Check if leader heartbeat has timed out (2 seconds for fast failover)
+    pub fn is_leader_timeout(&self) -> bool {
+        self.last_leader_heartbeat.read().unwrap().elapsed() > Duration::from_secs(2)
+    }
+
+    /// Get current term
+    pub fn term(&self) -> u64 {
+        *self.term.read().unwrap()
     }
 
     /// Start the cluster manager
@@ -138,7 +176,10 @@ impl ClusterManager {
         let peers = Arc::clone(&self.peers);
         let running = Arc::clone(&self.running);
         let term = Arc::clone(&self.term);
+        let last_leader_heartbeat = Arc::clone(&self.last_leader_heartbeat);
         let discovery_delay = Duration::from_secs(3); // Wait for discovery
+        let leader_timeout = Duration::from_secs(2); // Fast failover
+        let peer_stale_threshold = Duration::from_secs(4);
 
         thread::spawn(move || {
             info!("Election monitor started for node {}", node_id);
@@ -155,7 +196,7 @@ impl ClusterManager {
                         // Check if we should become leader
                         let peers_snapshot = peers.read().unwrap();
                         let active_peers: Vec<_> = peers_snapshot.values()
-                            .filter(|p| p.last_seen.elapsed() < Duration::from_secs(10))
+                            .filter(|p| p.last_seen.elapsed() < peer_stale_threshold)
                             .collect();
                         
                         // Find current leader
@@ -163,15 +204,20 @@ impl ClusterManager {
                             .find(|p| p.is_leader)
                             .map(|p| p.node_id.clone());
                         
+                        // Check if leader heartbeat has timed out
+                        let heartbeat_timed_out = last_leader_heartbeat.read().unwrap()
+                            .elapsed() > leader_timeout;
+                        
                         if let Some(leader) = current_leader {
-                            // We have a leader
+                            // We have a visible leader - reset heartbeat timer
+                            *last_leader_heartbeat.write().unwrap() = std::time::Instant::now();
                             *leader_id.write().unwrap() = Some(leader.clone());
                             if current_state == ClusterState::Discovering {
                                 info!("Found leader: {}", leader);
                                 *state.write().unwrap() = ClusterState::Following;
                             }
-                        } else {
-                            // No leader - should we become leader?
+                        } else if heartbeat_timed_out || current_leader.is_none() {
+                            // No leader or leader timed out - should we become leader?
                             // Rule: lowest node ID becomes leader (deterministic election)
                             let should_be_leader = if config_role == NodeRole::Leader {
                                 // Explicit leader role
@@ -190,7 +236,7 @@ impl ClusterManager {
                             };
                             
                             if should_be_leader {
-                                info!("Becoming leader (term {})", *term.read().unwrap());
+                                info!("Becoming leader (term {}) - previous leader timed out", *term.read().unwrap());
                                 *term.write().unwrap() += 1;
                                 *leader_id.write().unwrap() = Some(node_id.clone());
                                 *state.write().unwrap() = ClusterState::Leading;
@@ -201,12 +247,14 @@ impl ClusterManager {
                         // Check for higher-priority node that should be leader
                         let peers_snapshot = peers.read().unwrap();
                         let higher_priority = peers_snapshot.values()
-                            .filter(|p| p.last_seen.elapsed() < Duration::from_secs(10))
+                            .filter(|p| p.last_seen.elapsed() < peer_stale_threshold)
                             .any(|p| p.is_leader && p.node_id < node_id);
                         
                         if higher_priority {
                             warn!("Stepping down - higher priority leader found");
                             *state.write().unwrap() = ClusterState::Following;
+                            // Reset heartbeat timer since we're now following
+                            *last_leader_heartbeat.write().unwrap() = std::time::Instant::now();
                         }
                     }
                     ClusterState::Client | ClusterState::Standalone => {
