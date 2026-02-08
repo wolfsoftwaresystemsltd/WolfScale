@@ -3,7 +3,7 @@
 # WolfDisk Quick Install Script
 # Installs WolfDisk on Ubuntu/Debian (apt) or Fedora/RHEL (dnf)
 #
-# Usage: curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfDisk/main/setup.sh | bash
+# Usage: curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/wolfdisk/setup.sh | bash
 #
 
 set -e
@@ -99,20 +99,89 @@ sudo mkdir -p /etc/wolfdisk
 sudo mkdir -p /mnt/wolfdisk
 echo "✓ Directories created"
 
-# Create default config if not exists
+# Create config if not exists - with interactive prompts
 if [ ! -f "/etc/wolfdisk/config.toml" ]; then
     echo ""
-    echo "Creating default configuration..."
-    HOSTNAME=$(hostname)
-    cat << EOF | sudo tee /etc/wolfdisk/config.toml > /dev/null
+    echo "═══════════════════════════════════════════════════════════════"
+    echo "                   WolfDisk Configuration"
+    echo "═══════════════════════════════════════════════════════════════"
+    echo ""
+    
+    # Get hostname as default
+    DEFAULT_HOSTNAME=$(hostname)
+    
+    # Prompt for Node ID
+    read -p "Node ID [$DEFAULT_HOSTNAME]: " NODE_ID
+    NODE_ID=${NODE_ID:-$DEFAULT_HOSTNAME}
+    
+    # Prompt for Role
+    echo ""
+    echo "Node Roles:"
+    echo "  1) auto     - Automatic election (lowest ID becomes leader)"
+    echo "  2) leader   - Force this node to be leader"
+    echo "  3) follower - Force this node to be follower"
+    echo "  4) client   - Mount-only (no local storage, access remote data)"
+    echo ""
+    read -p "Select role [1-4, default: 1]: " ROLE_CHOICE
+    
+    case $ROLE_CHOICE in
+        2) NODE_ROLE="leader" ;;
+        3) NODE_ROLE="follower" ;;
+        4) NODE_ROLE="client" ;;
+        *) NODE_ROLE="auto" ;;
+    esac
+    
+    # Prompt for Discovery
+    echo ""
+    echo "Cluster Discovery:"
+    echo "  1) Auto-discovery (UDP multicast - recommended for LAN)"
+    echo "  2) Manual peers (specify IP addresses)"
+    echo "  3) Standalone (single node, no clustering)"
+    echo ""
+    read -p "Select discovery method [1-3, default: 1]: " DISCOVERY_CHOICE
+    
+    DISCOVERY_CONFIG=""
+    PEERS_CONFIG="peers = []"
+    
+    case $DISCOVERY_CHOICE in
+        2)
+            echo ""
+            read -p "Enter peer addresses (comma-separated, e.g. 192.168.1.10:9500,192.168.1.11:9500): " PEERS_INPUT
+            if [ -n "$PEERS_INPUT" ]; then
+                # Convert comma-separated to TOML array format
+                PEERS_FORMATTED=$(echo "$PEERS_INPUT" | sed 's/,/", "/g')
+                PEERS_CONFIG="peers = [\"$PEERS_FORMATTED\"]"
+            fi
+            ;;
+        3)
+            # Standalone - no discovery, no peers
+            ;;
+        *)
+            DISCOVERY_CONFIG='discovery = "udp://239.255.0.1:9501"'
+            ;;
+    esac
+    
+    # Prompt for mount path
+    echo ""
+    read -p "Mount path [/mnt/wolfdisk]: " MOUNT_PATH
+    MOUNT_PATH=${MOUNT_PATH:-/mnt/wolfdisk}
+    
+    # Create the mount directory
+    sudo mkdir -p "$MOUNT_PATH"
+    
+    # Write config
+    echo ""
+    echo "Creating configuration..."
+    cat <<EOF | sudo tee /etc/wolfdisk/config.toml > /dev/null
 [node]
-id = "$HOSTNAME"
+id = "$NODE_ID"
+role = "$NODE_ROLE"
 bind = "0.0.0.0:9500"
 data_dir = "/var/lib/wolfdisk"
 
 [cluster]
-peers = []
-# discovery = "udp://239.0.0.1:9501"
+$PEERS_CONFIG
+$DISCOVERY_CONFIG
 
 [replication]
 mode = "shared"
@@ -120,10 +189,25 @@ factor = 3
 chunk_size = 4194304  # 4MB
 
 [mount]
-path = "/mnt/wolfdisk"
+path = "$MOUNT_PATH"
 allow_other = true
 EOF
-    echo "✓ Default config created at /etc/wolfdisk/config.toml"
+    echo "✓ Config created at /etc/wolfdisk/config.toml"
+    echo ""
+    echo "Configuration Summary:"
+    echo "  Node ID:    $NODE_ID"
+    echo "  Role:       $NODE_ROLE"
+    echo "  Mount:      $MOUNT_PATH"
+    if [ -n "$DISCOVERY_CONFIG" ]; then
+        echo "  Discovery:  UDP multicast (auto)"
+    elif [ "$DISCOVERY_CHOICE" = "2" ]; then
+        echo "  Peers:      $PEERS_INPUT"
+    else
+        echo "  Mode:       Standalone"
+    fi
+else
+    echo ""
+    echo "✓ Config already exists at /etc/wolfdisk/config.toml"
 fi
 
 # Run service installer
