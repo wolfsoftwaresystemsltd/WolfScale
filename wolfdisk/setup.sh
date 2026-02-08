@@ -134,6 +134,16 @@ if [ ! -f "/etc/wolfdisk/config.toml" ]; then
         *) NODE_ROLE="auto" ;;
     esac
     
+    # Get default IP address
+    DEFAULT_IP=$(hostname -I | awk '{print $1}')
+    DEFAULT_IP=${DEFAULT_IP:-"0.0.0.0"}
+    
+    # Prompt for bind address
+    echo ""
+    echo -n "Bind IP address [$DEFAULT_IP]: "
+    read BIND_IP < /dev/tty
+    BIND_IP=${BIND_IP:-$DEFAULT_IP}
+    
     # Prompt for Discovery
     echo ""
     echo "Cluster Discovery:"
@@ -182,7 +192,7 @@ if [ ! -f "/etc/wolfdisk/config.toml" ]; then
 [node]
 id = "$NODE_ID"
 role = "$NODE_ROLE"
-bind = "0.0.0.0:9500"
+bind = "$BIND_IP:9500"
 data_dir = "/var/lib/wolfdisk"
 
 [cluster]
@@ -203,6 +213,7 @@ EOF
     echo "Configuration Summary:"
     echo "  Node ID:    $NODE_ID"
     echo "  Role:       $NODE_ROLE"
+    echo "  Bind:       $BIND_IP:9500"
     echo "  Mount:      $MOUNT_PATH"
     if [ -n "$DISCOVERY_CONFIG" ]; then
         echo "  Discovery:  UDP multicast (auto)"
