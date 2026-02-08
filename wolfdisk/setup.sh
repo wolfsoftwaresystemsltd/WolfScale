@@ -84,9 +84,26 @@ cd "$INSTALL_DIR/wolfdisk"
 cargo build --release
 echo "✓ Build complete"
 
+# Stop service if running (for upgrades)
+if systemctl is-active --quiet wolfdisk 2>/dev/null; then
+    echo ""
+    echo "Stopping WolfDisk service for upgrade..."
+    sudo systemctl stop wolfdisk
+    sleep 2  # Give time for process to fully terminate
+    echo "✓ Service stopped"
+    RESTART_SERVICE=true
+else
+    RESTART_SERVICE=false
+fi
+
 # Install binary
 echo ""
-echo "Installing WolfDisk..."
+if [ -f "/usr/local/bin/wolfdisk" ]; then
+    echo "Upgrading WolfDisk..."
+    sudo rm -f /usr/local/bin/wolfdisk
+else
+    echo "Installing WolfDisk..."
+fi
 sudo cp "$INSTALL_DIR/wolfdisk/target/release/wolfdisk" /usr/local/bin/wolfdisk
 sudo chmod +x /usr/local/bin/wolfdisk
 echo "✓ wolfdisk installed to /usr/local/bin/wolfdisk"
@@ -172,7 +189,7 @@ if [ ! -f "/etc/wolfdisk/config.toml" ]; then
             # Standalone - no discovery, no peers
             ;;
         *)
-            DISCOVERY_CONFIG='discovery = "udp://239.255.0.1:9501"'
+            DISCOVERY_CONFIG="discovery = \"udp://$BIND_IP:9501\""
             ;;
     esac
     
@@ -235,6 +252,14 @@ echo "════════════════════════�
 echo ""
 
 bash "$INSTALL_DIR/wolfdisk/install_service.sh"
+
+# Restart service if it was running before upgrade
+if [ "$RESTART_SERVICE" = "true" ]; then
+    echo ""
+    echo "Restarting WolfDisk service..."
+    sudo systemctl start wolfdisk
+    echo "✓ Service restarted"
+fi
 
 echo ""
 echo "╔══════════════════════════════════════════════════════════════╗"
