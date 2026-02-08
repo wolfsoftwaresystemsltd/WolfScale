@@ -12,7 +12,7 @@ use wolfdisk::{Config, fuse::WolfDiskFS, storage::{FileIndex, FileEntry, ChunkRe
 #[derive(Parser)]
 #[command(name = "wolfdisk")]
 #[command(author = "Wolf Software Systems Ltd")]
-#[command(version = "2.1.1")]
+#[command(version = "2.2.0")]
 #[command(about = "Distributed file system with replicated and shared storage", long_about = None)]
 struct Cli {
     #[command(subcommand)]
@@ -139,6 +139,12 @@ fn main() {
                 std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
             let broadcast_queue_for_handler = broadcast_queue.clone();
             
+            // Chunk streaming queue for streaming individual chunks to followers
+            // (hash, data) tuples that are sent via StoreChunk messages
+            let chunk_stream_queue: std::sync::Arc<std::sync::Mutex<Vec<([u8; 32], Vec<u8>)>>> =
+                std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+            let chunk_stream_queue_for_handler = chunk_stream_queue.clone();
+            
             // Track if this node is a client (clients don't store chunk data locally)
             let is_client_role = config.node.role == wolfdisk::config::NodeRole::Client;
             
@@ -151,6 +157,16 @@ fn main() {
                         use wolfdisk::network::protocol::*;
                         
                         match msg {
+                            Message::StoreChunk(store_chunk) => {
+                                // Handle streamed chunk from leader (streaming replication)
+                                if !is_client_role {
+                                    debug!("Received streamed chunk {} from leader", hex::encode(&store_chunk.hash));
+                                    if let Err(e) = chunk_store_for_handler.store_with_hash(&store_chunk.hash, &store_chunk.data) {
+                                        tracing::warn!("Failed to store streamed chunk: {}", e);
+                                    }
+                                }
+                                None // No response needed
+                            }
                             Message::IndexUpdate(update) => {
                                 info!("Received IndexUpdate from {}: {:?}", peer_id, update.operation);
                                 
@@ -292,6 +308,9 @@ fn main() {
                                 let mut index = file_index_for_handler.write().unwrap();
                                 
                                 if let Some(entry) = index.get_mut(&path) {
+                                    // Track chunks before write to detect new ones
+                                    let chunks_before = entry.chunks.len();
+                                    
                                     match chunk_store_for_handler.write(&mut entry.chunks, write_req.offset, &write_req.data) {
                                         Ok(written) => {
                                             let new_end = write_req.offset + written as u64;
@@ -299,13 +318,27 @@ fn main() {
                                                 entry.size = new_end;
                                             }
                                             entry.modified = std::time::SystemTime::now();
-                                            info!("Leader wrote {} bytes to {}", written, write_req.path);
                                             
-                                            // Queue broadcast to all followers
+                                            // Stream any new chunks to followers immediately
+                                            let new_chunks: Vec<_> = entry.chunks[chunks_before..].to_vec();
                                             let entry_clone = entry.clone();
                                             let path_clone = path.clone();
-                                            drop(index); // Release lock before queueing
+                                            drop(index); // Release lock before streaming
+                                            
+                                            // Queue new chunks for streaming to followers
+                                            if !new_chunks.is_empty() {
+                                                let mut stream_queue = chunk_stream_queue_for_handler.lock().unwrap();
+                                                for chunk_ref in &new_chunks {
+                                                    if let Ok(chunk_data) = chunk_store_for_handler.get(&chunk_ref.hash) {
+                                                        stream_queue.push((chunk_ref.hash, chunk_data));
+                                                    }
+                                                }
+                                            }
+                                            
+                                            // Queue metadata broadcast (followers need the index update)
                                             broadcast_queue_for_handler.lock().unwrap().push((path_clone, entry_clone));
+                                            
+                                            info!("Leader wrote {} bytes to {} ({} new chunks streamed)", written, write_req.path, new_chunks.len());
                                             
                                             Some(Message::ClientResponse(ClientResponseMsg {
                                                 success: true,
@@ -914,11 +947,26 @@ fn main() {
             let peer_manager_for_broadcast = peer_manager.clone();
             let chunk_store_for_broadcast = chunk_store.clone();
             let broadcast_queue_for_thread = broadcast_queue.clone();
+            let chunk_stream_queue_for_thread = chunk_stream_queue.clone();
             std::thread::spawn(move || {
-                use wolfdisk::network::protocol::{Message, FileSyncMsg, ChunkWithData};
+                use wolfdisk::network::protocol::{Message, FileSyncMsg, ChunkWithData, StoreChunkMsg};
                 loop {
-                    // Check queue every 50ms
+                    // Check queues every 50ms
                     std::thread::sleep(std::time::Duration::from_millis(50));
+                    
+                    // First, drain and broadcast any streamed chunks (high priority)
+                    let pending_chunks: Vec<_> = {
+                        let mut queue = chunk_stream_queue_for_thread.lock().unwrap();
+                        queue.drain(..).collect()
+                    };
+                    
+                    for (hash, data) in pending_chunks {
+                        let msg = Message::StoreChunk(StoreChunkMsg {
+                            hash,
+                            data,
+                        });
+                        peer_manager_for_broadcast.broadcast(&msg);
+                    }
                     
                     // Drain pending broadcasts
                     let pending: Vec<_> = {

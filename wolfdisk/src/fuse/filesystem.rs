@@ -488,6 +488,40 @@ impl WolfDiskFS {
         }
     }
 
+    /// Stream a single chunk to all followers immediately (for streaming replication).
+    /// Called during write() as each chunk is produced, so followers get data in real-time
+    /// rather than waiting for file close.
+    fn stream_chunk_to_followers(&self, path: &std::path::Path, hash: &[u8; 32], data: &[u8], offset: u64, size: u32) {
+        if !self.is_leader() {
+            return;
+        }
+        
+        if let (Some(cluster), Some(peer_manager)) = (&self.cluster, &self.peer_manager) {
+            let peers = cluster.peers();
+            if peers.is_empty() {
+                return;
+            }
+            
+            // Ensure connections
+            for peer in &peers {
+                if peer_manager.get(&peer.node_id).is_none() {
+                    if let Err(e) = peer_manager.connect(&peer.node_id, &peer.address) {
+                        warn!("Failed to connect to {}: {}", peer.node_id, e);
+                    }
+                }
+            }
+
+            let msg = Message::StoreChunk(crate::network::protocol::StoreChunkMsg {
+                hash: *hash,
+                data: data.to_vec(),
+            });
+
+            debug!("Streaming chunk {} ({} bytes at offset {}) for {} to {} followers",
+                hex::encode(hash), size, offset, path.display(), peers.len());
+            peer_manager.broadcast(&msg);
+        }
+    }
+
     /// Forward a directory deletion to the leader
     fn forward_rmdir_to_leader(&self, path: &str) -> std::result::Result<(), i32> {
         let (cluster, peer_manager) = match (&self.cluster, &self.peer_manager) {
@@ -581,7 +615,8 @@ impl WolfDiskFS {
         fh
     }
 
-    /// Flush the write buffer for a given inode, storing accumulated data as chunks
+    /// Flush the write buffer for a given inode, storing accumulated data as chunks.
+    /// Also streams any flushed chunks to followers for streaming replication.
     fn flush_write_buffer(&self, ino: u64) {
         let buffer = {
             let mut buffers = self.write_buffers.write().unwrap();
@@ -602,6 +637,9 @@ impl WolfDiskFS {
                 }
             };
 
+            // Collect chunks for streaming replication
+            let mut flushed_chunks: Vec<([u8; 32], Vec<u8>, u64, u32)> = Vec::new();
+
             // Store the buffered data as chunks
             let mut file_index = self.file_index.write().unwrap();
             if let Some(entry) = file_index.get_mut(&path) {
@@ -615,11 +653,14 @@ impl WolfDiskFS {
 
                     match self.chunk_store.store(chunk_data) {
                         Ok(hash) => {
+                            let chunk_len = chunk_data.len() as u32;
                             entry.chunks.push(crate::storage::ChunkRef {
                                 hash,
                                 offset,
-                                size: chunk_data.len() as u32,
+                                size: chunk_len,
                             });
+                            // Queue for streaming replication
+                            flushed_chunks.push((hash, chunk_data.to_vec(), offset, chunk_len));
                         }
                         Err(e) => {
                             warn!("Failed to flush write buffer chunk: {}", e);
@@ -637,6 +678,12 @@ impl WolfDiskFS {
                 }
                 entry.modified = SystemTime::now();
             }
+            drop(file_index);
+
+            // Stream final chunks to followers (the tail end of the file)
+            for (hash, chunk_data, offset, size) in &flushed_chunks {
+                self.stream_chunk_to_followers(&path, hash, chunk_data, *offset, *size);
+            }
 
             *self.index_dirty.write().unwrap() = true;
         }
@@ -648,7 +695,10 @@ impl WolfDiskFS {
         *self.index_dirty.write().unwrap() = true;
     }
 
-    /// Replicate a dirty inode's data to followers and clear dirty flag
+    /// Replicate a dirty inode's final state to followers and clear dirty flag.
+    /// With streaming replication, most chunks have already been sent during write().
+    /// This only needs to send the final index metadata so followers know the file
+    /// is complete, plus any remaining partial chunk from the write buffer.
     fn replicate_dirty(&self, ino: u64) {
         if !self.is_leader() {
             return;
@@ -672,8 +722,65 @@ impl WolfDiskFS {
             }
         };
 
-        // Broadcast the complete file to followers
-        self.broadcast_file_sync(&path, &entry);
+        // With streaming replication, chunks were already sent during write().
+        // Now send the final FileSync with full metadata + chunk refs so
+        // followers can assemble the complete file index entry.
+        // Only include chunk_data for any chunks that might not have been
+        // streamed yet (e.g. the final partial chunk from flush_write_buffer).
+        self.broadcast_file_sync_final(&path, &entry);
+    }
+
+    /// Broadcast final file metadata to followers after all chunks have been streamed.
+    /// Unlike broadcast_file_sync (which sends all chunk data), this sends only
+    /// the metadata + chunk references. Followers already have the chunk data
+    /// from streaming replication during write().
+    fn broadcast_file_sync_final(&self, path: &std::path::Path, entry: &FileEntry) {
+        if !self.is_leader() {
+            return;
+        }
+
+        if let (Some(cluster), Some(peer_manager)) = (&self.cluster, &self.peer_manager) {
+            let peers = cluster.peers();
+            if peers.is_empty() {
+                return;
+            }
+
+            for peer in &peers {
+                if peer_manager.get(&peer.node_id).is_none() {
+                    if let Err(e) = peer_manager.connect(&peer.node_id, &peer.address) {
+                        warn!("Failed to connect to {}: {}", peer.node_id, e);
+                    }
+                }
+            }
+
+            let modified_ms = entry.modified
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis() as u64;
+
+            let chunk_refs: Vec<_> = entry.chunks.iter().map(|c| ChunkRefMsg {
+                hash: c.hash,
+                offset: c.offset,
+                size: c.size,
+            }).collect();
+
+            // Send only metadata + chunk refs (no chunk data — already streamed)
+            let msg = Message::FileSync(FileSyncMsg {
+                path: path.to_string_lossy().to_string(),
+                is_dir: entry.is_dir,
+                size: entry.size,
+                permissions: entry.permissions,
+                uid: entry.uid,
+                gid: entry.gid,
+                modified_ms,
+                chunks: chunk_refs,
+                chunk_data: Vec::new(), // Chunks already streamed during write()
+            });
+
+            info!("Broadcasting final FileSync metadata for {} ({} bytes, {} chunks) to {} followers",
+                path.display(), entry.size, entry.chunks.len(), peers.len());
+            peer_manager.broadcast(&msg);
+        }
     }
 
     /// Save the index to disk if enough time has passed since last save
@@ -1111,6 +1218,9 @@ impl Filesystem for WolfDiskFS {
         // We're the leader - buffer the write for coalescing
         let chunk_size = self.config.replication.chunk_size;
 
+        // Collect chunks that were flushed during this write for streaming replication
+        let mut flushed_chunks: Vec<([u8; 32], Vec<u8>, u64, u32)> = Vec::new();
+
         {
             let mut buffers = self.write_buffers.write().unwrap();
             let buffer = buffers.entry(ino).or_insert_with(|| WriteBuffer {
@@ -1140,11 +1250,14 @@ impl Filesystem for WolfDiskFS {
                             let chunk_data = &old_data[pos..end];
                             match self.chunk_store.store(chunk_data) {
                                 Ok(hash) => {
+                                    let chunk_len = chunk_data.len() as u32;
                                     entry.chunks.push(crate::storage::ChunkRef {
                                         hash,
                                         offset: off,
-                                        size: chunk_data.len() as u32,
+                                        size: chunk_len,
                                     });
+                                    // Queue for streaming replication
+                                    flushed_chunks.push((hash, chunk_data.to_vec(), off, chunk_len));
                                 }
                                 Err(e) => {
                                     warn!("Failed to flush non-contiguous buffer: {}", e);
@@ -1188,12 +1301,19 @@ impl Filesystem for WolfDiskFS {
                             }
                             entry.modified = SystemTime::now();
                         }
+                        // Queue for streaming replication
+                        flushed_chunks.push((hash, chunk_data, flush_offset, chunk_size as u32));
                     }
                     Err(e) => {
                         warn!("Failed to flush full chunk from buffer: {}", e);
                     }
                 }
             }
+        }
+
+        // Stream flushed chunks to followers immediately (streaming replication)
+        for (hash, chunk_data, offset, size) in &flushed_chunks {
+            self.stream_chunk_to_followers(&path, hash, chunk_data, *offset, *size);
         }
 
         // Update file size to include buffered data
@@ -1211,7 +1331,7 @@ impl Filesystem for WolfDiskFS {
             }
         }
 
-        // Mark as dirty for deferred replication (don't broadcast now)
+        // Mark as dirty for final index sync on release
         self.mark_dirty(ino);
 
         // Periodically save index
