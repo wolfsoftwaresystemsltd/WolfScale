@@ -12,7 +12,7 @@ use wolfdisk::{Config, fuse::WolfDiskFS, storage::{FileIndex, FileEntry, ChunkRe
 #[derive(Parser)]
 #[command(name = "wolfdisk")]
 #[command(author = "Wolf Software Systems Ltd")]
-#[command(version = "0.1.0")]
+#[command(version = "2.1.1")]
 #[command(about = "Distributed file system with replicated and shared storage", long_about = None)]
 struct Cli {
     #[command(subcommand)]

@@ -151,7 +151,7 @@ fn list_servers(path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let active_nodes = active_peers + 1; // Include self
 
     println!();
-    println!("WolfDisk Cluster Status (wolfdiskctl v0.1.0)");
+    println!("WolfDisk Cluster Status (wolfdiskctl v2.1.1)");
     println!("============================================");
     println!();
     println!("Total: {} nodes  |  Active: {}", total_nodes, active_nodes);
