@@ -947,42 +947,72 @@ fn main() {
                             continue;
                         }
                         
-                        // Normal file sync - read chunk data
-                        let mut chunks_with_data = Vec::new();
-                        for chunk_ref in &entry.chunks {
-                            if let Ok(data) = chunk_store_for_broadcast.get(&chunk_ref.hash) {
-                                chunks_with_data.push(ChunkWithData {
-                                    hash: chunk_ref.hash.clone(),
-                                    data,
-                                });
-                            }
-                        }
-                        
-                        // Convert SystemTime to ms since epoch
+                        // Normal file sync - send chunks in batches to avoid loading
+                        // entire large files into memory at once
                         let modified_ms = entry.modified
                             .duration_since(std::time::UNIX_EPOCH)
                             .map(|d| d.as_millis() as u64)
                             .unwrap_or(0);
-                        
-                        let msg = Message::FileSync(FileSyncMsg {
-                            path: path.to_string_lossy().to_string(),
-                            size: entry.size,
-                            is_dir: entry.is_dir,
-                            permissions: entry.permissions,
-                            uid: entry.uid,
-                            gid: entry.gid,
-                            modified_ms,
-                            chunks: entry.chunks.iter().map(|c| wolfdisk::network::protocol::ChunkRefMsg {
-                                hash: c.hash.clone(),
-                                offset: c.offset,
-                                size: c.size,
-                            }).collect(),
-                            chunk_data: chunks_with_data,
-                        });
-                        
-                        info!("Broadcasting FileSync for {} ({} bytes, {} chunks)", 
-                            path.display(), entry.size, entry.chunks.len());
-                        peer_manager_for_broadcast.broadcast(&msg);
+
+                        let chunk_refs: Vec<wolfdisk::network::protocol::ChunkRefMsg> = entry.chunks.iter().map(|c| wolfdisk::network::protocol::ChunkRefMsg {
+                            hash: c.hash.clone(),
+                            offset: c.offset,
+                            size: c.size,
+                        }).collect();
+
+                        let total_chunks = entry.chunks.len();
+                        const BATCH_SIZE: usize = 4; // ~16MB per batch at 4MB chunks
+
+                        if total_chunks == 0 {
+                            // Directory or empty file - send metadata only
+                            let msg = Message::FileSync(FileSyncMsg {
+                                path: path.to_string_lossy().to_string(),
+                                size: entry.size,
+                                is_dir: entry.is_dir,
+                                permissions: entry.permissions,
+                                uid: entry.uid,
+                                gid: entry.gid,
+                                modified_ms,
+                                chunks: chunk_refs,
+                                chunk_data: Vec::new(),
+                            });
+                            info!("Broadcasting FileSync for {} (metadata only)", path.display());
+                            peer_manager_for_broadcast.broadcast(&msg);
+                        } else {
+                            // Send chunks in batches to bound memory usage
+                            for (batch_idx, chunk_batch) in entry.chunks.chunks(BATCH_SIZE).enumerate() {
+                                let mut chunks_with_data = Vec::with_capacity(chunk_batch.len());
+                                for chunk_ref in chunk_batch {
+                                    if let Ok(data) = chunk_store_for_broadcast.get(&chunk_ref.hash) {
+                                        chunks_with_data.push(ChunkWithData {
+                                            hash: chunk_ref.hash.clone(),
+                                            data,
+                                        });
+                                    }
+                                }
+
+                                // First batch includes full metadata + chunk refs;
+                                // subsequent batches just carry chunk data
+                                let msg = Message::FileSync(FileSyncMsg {
+                                    path: path.to_string_lossy().to_string(),
+                                    size: entry.size,
+                                    is_dir: entry.is_dir,
+                                    permissions: entry.permissions,
+                                    uid: entry.uid,
+                                    gid: entry.gid,
+                                    modified_ms,
+                                    chunks: if batch_idx == 0 { chunk_refs.clone() } else { Vec::new() },
+                                    chunk_data: chunks_with_data,
+                                });
+
+                                if batch_idx == 0 {
+                                    info!("Broadcasting FileSync for {} ({} bytes, {} chunks in {} batches)", 
+                                        path.display(), entry.size, total_chunks,
+                                        (total_chunks + BATCH_SIZE - 1) / BATCH_SIZE);
+                                }
+                                peer_manager_for_broadcast.broadcast(&msg);
+                            }
+                        }
                     }
                 }
             });

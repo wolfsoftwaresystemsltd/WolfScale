@@ -416,46 +416,75 @@ impl WolfDiskFS {
                 }
             }
             
-            // Read all chunk data
-            let mut chunk_data = Vec::new();
-            for chunk in &entry.chunks {
-                match self.chunk_store.get(&chunk.hash) {
-                    Ok(data) => {
-                        chunk_data.push(ChunkWithData {
-                            hash: chunk.hash,
-                            data,
-                        });
-                    }
-                    Err(e) => {
-                        warn!("Failed to read chunk for sync: {}", e);
-                    }
-                }
-            }
-            
             let modified_ms = entry.modified
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_millis() as u64;
-            
-            let msg = Message::FileSync(FileSyncMsg {
-                path: path.to_string_lossy().to_string(),
-                is_dir: entry.is_dir,
-                size: entry.size,
-                permissions: entry.permissions,
-                uid: entry.uid,
-                gid: entry.gid,
-                modified_ms,
-                chunks: entry.chunks.iter().map(|c| ChunkRefMsg {
-                    hash: c.hash,
-                    offset: c.offset,
-                    size: c.size,
-                }).collect(),
-                chunk_data,
-            });
-            
-            info!("Broadcasting FileSync for {} ({} bytes, {} chunks) to {} followers", 
-                path.display(), entry.size, entry.chunks.len(), peers.len());
-            peer_manager.broadcast(&msg);
+
+            let chunk_refs: Vec<_> = entry.chunks.iter().map(|c| ChunkRefMsg {
+                hash: c.hash,
+                offset: c.offset,
+                size: c.size,
+            }).collect();
+
+            let total_chunks = entry.chunks.len();
+            const BATCH_SIZE: usize = 4; // ~16MB per batch at 4MB chunks
+
+            if total_chunks == 0 {
+                // Directory or empty file
+                let msg = Message::FileSync(FileSyncMsg {
+                    path: path.to_string_lossy().to_string(),
+                    is_dir: entry.is_dir,
+                    size: entry.size,
+                    permissions: entry.permissions,
+                    uid: entry.uid,
+                    gid: entry.gid,
+                    modified_ms,
+                    chunks: chunk_refs,
+                    chunk_data: Vec::new(),
+                });
+                info!("Broadcasting FileSync for {} (metadata only) to {} followers", 
+                    path.display(), peers.len());
+                peer_manager.broadcast(&msg);
+            } else {
+                // Send chunks in batches to avoid loading entire file into RAM
+                for (batch_idx, chunk_batch) in entry.chunks.chunks(BATCH_SIZE).enumerate() {
+                    let mut chunk_data = Vec::with_capacity(chunk_batch.len());
+                    for chunk in chunk_batch {
+                        match self.chunk_store.get(&chunk.hash) {
+                            Ok(data) => {
+                                chunk_data.push(ChunkWithData {
+                                    hash: chunk.hash,
+                                    data,
+                                });
+                            }
+                            Err(e) => {
+                                warn!("Failed to read chunk for sync: {}", e);
+                            }
+                        }
+                    }
+
+                    let msg = Message::FileSync(FileSyncMsg {
+                        path: path.to_string_lossy().to_string(),
+                        is_dir: entry.is_dir,
+                        size: entry.size,
+                        permissions: entry.permissions,
+                        uid: entry.uid,
+                        gid: entry.gid,
+                        modified_ms,
+                        chunks: if batch_idx == 0 { chunk_refs.clone() } else { Vec::new() },
+                        chunk_data,
+                    });
+
+                    if batch_idx == 0 {
+                        info!("Broadcasting FileSync for {} ({} bytes, {} chunks in {} batches) to {} followers", 
+                            path.display(), entry.size, total_chunks,
+                            (total_chunks + BATCH_SIZE - 1) / BATCH_SIZE,
+                            peers.len());
+                    }
+                    peer_manager.broadcast(&msg);
+                }
+            }
         }
     }
 
