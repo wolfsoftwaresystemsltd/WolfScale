@@ -74,8 +74,9 @@ echo "✓ Created /etc/systemd/system/wolfdisk.service"
 systemctl daemon-reload
 echo "✓ Reloaded systemd"
 
-# Enable service
-read -p "Enable WolfDisk to start on boot? [Y/n] " -n 1 -r
+# Enable service - use /dev/tty for interactive input when piped
+echo -n "Enable WolfDisk to start on boot? [Y/n] "
+read -n 1 -r REPLY < /dev/tty || REPLY="y"
 echo
 if [[ ! $REPLY =~ ^[Nn]$ ]]; then
     systemctl enable wolfdisk
@@ -83,7 +84,8 @@ if [[ ! $REPLY =~ ^[Nn]$ ]]; then
 fi
 
 # Start service
-read -p "Start WolfDisk now? [Y/n] " -n 1 -r
+echo -n "Start WolfDisk now? [Y/n] "
+read -n 1 -r REPLY < /dev/tty || REPLY="y"
 echo
 if [[ ! $REPLY =~ ^[Nn]$ ]]; then
     systemctl start wolfdisk
