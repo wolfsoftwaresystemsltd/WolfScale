@@ -38,6 +38,18 @@ pub enum Message {
     WriteRequest(WriteRequestMsg),
     /// Response to client request
     ClientResponse(ClientResponseMsg),
+
+    // === File Operations (forwarded from followers to leader) ===
+    /// Create a file
+    CreateFile(CreateFileMsg),
+    /// Create a directory
+    CreateDir(CreateDirMsg),
+    /// Delete a file
+    DeleteFile(DeleteFileMsg),
+    /// Delete a directory
+    DeleteDir(DeleteDirMsg),
+    /// Response to file operation
+    FileOpResponse(FileOpResponseMsg),
 }
 
 /// Node announcement for discovery
@@ -184,6 +196,43 @@ pub struct ClientResponseMsg {
     pub error: Option<String>,
 }
 
+/// Create file request (follower -> leader)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateFileMsg {
+    pub path: String,
+    pub mode: u32,
+    pub uid: u32,
+    pub gid: u32,
+}
+
+/// Create directory request (follower -> leader)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateDirMsg {
+    pub path: String,
+    pub mode: u32,
+    pub uid: u32,
+    pub gid: u32,
+}
+
+/// Delete file request (follower -> leader)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeleteFileMsg {
+    pub path: String,
+}
+
+/// Delete directory request (follower -> leader)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeleteDirMsg {
+    pub path: String,
+}
+
+/// Response to file operations
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileOpResponseMsg {
+    pub success: bool,
+    pub error: Option<String>,
+}
+
 /// Serialize a message for transmission
 pub fn encode_message(msg: &Message) -> Result<Vec<u8>, bincode::Error> {
     bincode::serialize(msg)
@@ -193,3 +242,4 @@ pub fn encode_message(msg: &Message) -> Result<Vec<u8>, bincode::Error> {
 pub fn decode_message(data: &[u8]) -> Result<Message, bincode::Error> {
     bincode::deserialize(data)
 }
+

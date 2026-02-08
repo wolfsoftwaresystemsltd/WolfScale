@@ -92,8 +92,24 @@ fn main() {
             
             info!("Cluster state: {:?}", cluster.state());
             
-            // Create filesystem instance
-            let fs = match WolfDiskFS::new(config) {
+            // Wrap cluster in Arc for sharing with filesystem
+            let cluster = std::sync::Arc::new(cluster);
+            
+            // Create peer manager for network communication
+            let peer_manager = std::sync::Arc::new(
+                wolfdisk::network::peer::PeerManager::new(
+                    config.node.id.clone(),
+                    config.node.bind.clone(),
+                    |_peer_id, _msg| None, // TODO: Handle incoming messages from leader
+                )
+            );
+            
+            // Create filesystem instance with cluster support
+            let fs = match WolfDiskFS::with_cluster(
+                config,
+                Some(cluster.clone()),
+                Some(peer_manager.clone()),
+            ) {
                 Ok(fs) => fs,
                 Err(e) => {
                     error!("Failed to create filesystem: {}", e);
@@ -140,18 +156,56 @@ fn main() {
         }
 
         Commands::Status => {
-            info!("WolfDisk Status:");
-            info!("  Node ID: {}", config.node.id);
-            info!("  Role: {:?}", config.node.role);
-            info!("  Data Dir: {:?}", config.node.data_dir);
-            info!("  Replication: {:?}", config.replication.mode);
-            info!("  Chunk Size: {} bytes", config.replication.chunk_size);
+            println!("╔══════════════════════════════════════════════════════════════╗");
+            println!("║                     WolfDisk Status                          ║");
+            println!("╚══════════════════════════════════════════════════════════════╝");
+            println!();
+            println!("Node Configuration:");
+            println!("  Node ID:      {}", config.node.id);
+            println!("  Role:         {:?}", config.node.role);
+            println!("  Bind:         {}", config.node.bind);
+            println!("  Data Dir:     {:?}", config.node.data_dir);
+            println!();
+            println!("Replication:");
+            println!("  Mode:         {:?}", config.replication.mode);
+            println!("  Factor:       {}", config.replication.factor);
+            println!("  Chunk Size:   {} bytes", config.replication.chunk_size);
+            println!();
             
+            // Start cluster manager to discover peers
+            let mut cluster = wolfdisk::ClusterManager::new(config.clone());
+            if let Err(e) = cluster.start() {
+                println!("Cluster: Failed to start ({})", e);
+            } else {
+                // Give discovery a moment to find peers
+                std::thread::sleep(std::time::Duration::from_secs(2));
+                
+                println!("Cluster Status:");
+                println!("  State:        {:?}", cluster.state());
+                
+                if let Some(leader) = cluster.leader_id() {
+                    println!("  Leader:       {}", leader);
+                } else {
+                    println!("  Leader:       (none/unknown)");
+                }
+                
+                let peers = cluster.peers();
+                println!("  Known Peers:  {}", peers.len());
+                for peer in peers {
+                    let status = if peer.last_seen.elapsed().as_secs() < 10 { "active" } else { "stale" };
+                    let role = if peer.is_leader { "(leader)" } else { "" };
+                    println!("    - {} at {} [{}] {}", peer.node_id, peer.address, status, role);
+                }
+                
+                cluster.stop();
+            }
+            
+            println!();
             if let Some(ref discovery) = config.cluster.discovery {
-                info!("  Discovery: {}", discovery);
+                println!("Discovery:      {}", discovery);
             }
             if !config.cluster.peers.is_empty() {
-                info!("  Peers: {:?}", config.cluster.peers);
+                println!("Static Peers:   {:?}", config.cluster.peers);
             }
         }
 

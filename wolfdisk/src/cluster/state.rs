@@ -82,6 +82,13 @@ impl ClusterManager {
         self.leader_id.read().unwrap().clone()
     }
 
+    /// Get the current leader's address (for forwarding operations)
+    pub fn leader_address(&self) -> Option<String> {
+        let leader = self.leader_id.read().unwrap().clone()?;
+        let peers = self.peers.read().unwrap();
+        peers.get(&leader).map(|p| p.address.clone())
+    }
+
     /// Get this node's ID
     pub fn node_id(&self) -> &str {
         &self.node_id

@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 use std::ffi::OsStr;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime};
 
 use fuser::{
@@ -14,8 +14,11 @@ use fuser::{
 };
 use tracing::{debug, info, warn};
 
+use crate::cluster::ClusterManager;
 use crate::config::Config;
 use crate::error::Result;
+use crate::network::peer::PeerManager;
+use crate::network::protocol::{Message, CreateFileMsg, CreateDirMsg, DeleteFileMsg, DeleteDirMsg};
 use crate::storage::{ChunkStore, FileIndex, FileEntry, InodeTable};
 
 /// TTL for attribute caching
@@ -46,11 +49,26 @@ pub struct WolfDiskFS {
 
     /// Next file handle
     next_fh: RwLock<u64>,
+
+    /// Cluster manager for leader/follower state
+    cluster: Option<Arc<ClusterManager>>,
+
+    /// Peer manager for network communication
+    peer_manager: Option<Arc<PeerManager>>,
 }
 
 impl WolfDiskFS {
-    /// Create a new WolfDisk filesystem
+    /// Create a new WolfDisk filesystem (standalone mode)
     pub fn new(config: Config) -> Result<Self> {
+        Self::with_cluster(config, None, None)
+    }
+
+    /// Create a new WolfDisk filesystem with cluster support
+    pub fn with_cluster(
+        config: Config,
+        cluster: Option<Arc<ClusterManager>>,
+        peer_manager: Option<Arc<PeerManager>>,
+    ) -> Result<Self> {
         info!("Initializing WolfDisk filesystem");
 
         // Ensure data directories exist
@@ -74,7 +92,133 @@ impl WolfDiskFS {
             next_inode: RwLock::new(max_inode + 1),
             open_files: RwLock::new(HashMap::new()),
             next_fh: RwLock::new(1),
+            cluster,
+            peer_manager,
         })
+    }
+
+    /// Check if this node is the leader (or standalone)
+    fn is_leader(&self) -> bool {
+        match &self.cluster {
+            Some(cluster) => cluster.is_leader(),
+            None => true, // Standalone mode = always "leader"
+        }
+    }
+
+    /// Forward a file creation to the leader
+    fn forward_create_to_leader(&self, path: &str, mode: u32, uid: u32, gid: u32) -> std::result::Result<(), i32> {
+        let (cluster, peer_manager) = match (&self.cluster, &self.peer_manager) {
+            (Some(c), Some(p)) => (c, p),
+            _ => return Err(libc::EIO),
+        };
+
+        let leader_id = cluster.leader_id().ok_or(libc::ENOENT)?;
+        let leader_addr = cluster.leader_address().ok_or(libc::ENOENT)?;
+
+        let conn = peer_manager.get_or_connect_leader(&leader_id, &leader_addr)
+            .map_err(|e| {
+                warn!("Failed to connect to leader: {}", e);
+                libc::EIO
+            })?;
+
+        let msg = Message::CreateFile(CreateFileMsg {
+            path: path.to_string(),
+            mode,
+            uid,
+            gid,
+        });
+
+        let response = conn.request(&msg).map_err(|e| {
+            warn!("Failed to send create request to leader: {}", e);
+            libc::EIO
+        })?;
+
+        match response {
+            Message::FileOpResponse(resp) if resp.success => Ok(()),
+            Message::FileOpResponse(resp) => {
+                warn!("Leader rejected create: {:?}", resp.error);
+                Err(libc::EIO)
+            }
+            _ => Err(libc::EIO),
+        }
+    }
+
+    /// Forward a directory creation to the leader
+    fn forward_mkdir_to_leader(&self, path: &str, mode: u32, uid: u32, gid: u32) -> std::result::Result<(), i32> {
+        let (cluster, peer_manager) = match (&self.cluster, &self.peer_manager) {
+            (Some(c), Some(p)) => (c, p),
+            _ => return Err(libc::EIO),
+        };
+
+        let leader_id = cluster.leader_id().ok_or(libc::ENOENT)?;
+        let leader_addr = cluster.leader_address().ok_or(libc::ENOENT)?;
+
+        let conn = peer_manager.get_or_connect_leader(&leader_id, &leader_addr)
+            .map_err(|_| libc::EIO)?;
+
+        let msg = Message::CreateDir(CreateDirMsg {
+            path: path.to_string(),
+            mode,
+            uid,
+            gid,
+        });
+
+        let response = conn.request(&msg).map_err(|_| libc::EIO)?;
+
+        match response {
+            Message::FileOpResponse(resp) if resp.success => Ok(()),
+            _ => Err(libc::EIO),
+        }
+    }
+
+    /// Forward a file deletion to the leader
+    fn forward_unlink_to_leader(&self, path: &str) -> std::result::Result<(), i32> {
+        let (cluster, peer_manager) = match (&self.cluster, &self.peer_manager) {
+            (Some(c), Some(p)) => (c, p),
+            _ => return Err(libc::EIO),
+        };
+
+        let leader_id = cluster.leader_id().ok_or(libc::ENOENT)?;
+        let leader_addr = cluster.leader_address().ok_or(libc::ENOENT)?;
+
+        let conn = peer_manager.get_or_connect_leader(&leader_id, &leader_addr)
+            .map_err(|_| libc::EIO)?;
+
+        let msg = Message::DeleteFile(DeleteFileMsg {
+            path: path.to_string(),
+        });
+
+        let response = conn.request(&msg).map_err(|_| libc::EIO)?;
+
+        match response {
+            Message::FileOpResponse(resp) if resp.success => Ok(()),
+            _ => Err(libc::EIO),
+        }
+    }
+
+    /// Forward a directory deletion to the leader
+    fn forward_rmdir_to_leader(&self, path: &str) -> std::result::Result<(), i32> {
+        let (cluster, peer_manager) = match (&self.cluster, &self.peer_manager) {
+            (Some(c), Some(p)) => (c, p),
+            _ => return Err(libc::EIO),
+        };
+
+        let leader_id = cluster.leader_id().ok_or(libc::ENOENT)?;
+        let leader_addr = cluster.leader_address().ok_or(libc::ENOENT)?;
+
+        let conn = peer_manager.get_or_connect_leader(&leader_id, &leader_addr)
+            .map_err(|_| libc::EIO)?;
+
+        let msg = Message::DeleteDir(DeleteDirMsg {
+            path: path.to_string(),
+        });
+
+        let response = conn.request(&msg).map_err(|_| libc::EIO)?;
+
+        match response {
+            Message::FileOpResponse(resp) if resp.success => Ok(()),
+            _ => Err(libc::EIO),
+        }
     }
 
     /// Allocate a new inode
@@ -366,24 +510,56 @@ impl Filesystem for WolfDiskFS {
         let name_str = name.to_string_lossy();
         debug!("mkdir: parent={}, name={}, mode={:o}", parent, name_str, mode);
 
-        let mut inode_table = self.inode_table.write().unwrap();
-        let mut file_index = self.file_index.write().unwrap();
-
-        // Get parent path
-        let parent_path = if parent == ROOT_INODE {
-            std::path::PathBuf::new()
-        } else {
-            match inode_table.get_path(parent) {
-                Some(p) => p.clone(),
-                None => {
-                    reply.error(libc::ENOENT);
-                    return;
+        // Get parent path first (needed for forwarding)
+        let parent_path = {
+            let inode_table = self.inode_table.read().unwrap();
+            if parent == ROOT_INODE {
+                std::path::PathBuf::new()
+            } else {
+                match inode_table.get_path(parent) {
+                    Some(p) => p.clone(),
+                    None => {
+                        reply.error(libc::ENOENT);
+                        return;
+                    }
                 }
             }
         };
 
-        // Build new path
         let dir_path = parent_path.join(name);
+
+        // If not leader, forward to leader
+        if !self.is_leader() {
+            info!("Forwarding mkdir to leader: {:?}", dir_path);
+            match self.forward_mkdir_to_leader(&dir_path.to_string_lossy(), mode, req.uid(), req.gid()) {
+                Ok(()) => {
+                    // Create local entry to reflect the change (will be synced properly later)
+                    let now = SystemTime::now();
+                    let entry = FileEntry {
+                        size: 0,
+                        is_dir: true,
+                        permissions: mode,
+                        uid: req.uid(),
+                        gid: req.gid(),
+                        created: now,
+                        modified: now,
+                        accessed: now,
+                        chunks: Vec::new(),
+                    };
+                    let inode = self.allocate_inode();
+                    self.inode_table.write().unwrap().insert(inode, dir_path.clone());
+                    self.file_index.write().unwrap().insert(dir_path, entry.clone());
+                    let attr = self.entry_to_attr(&entry, inode);
+                    reply.entry(&TTL, &attr, 0);
+                }
+                Err(errno) => reply.error(errno),
+            }
+            return;
+        }
+
+        // Leader: execute locally
+        let mut inode_table = self.inode_table.write().unwrap();
+        let mut file_index = self.file_index.write().unwrap();
 
         // Check if already exists
         if file_index.contains(&dir_path) {
@@ -427,24 +603,58 @@ impl Filesystem for WolfDiskFS {
         let name_str = name.to_string_lossy();
         debug!("create: parent={}, name={}, mode={:o}", parent, name_str, mode);
 
-        let mut inode_table = self.inode_table.write().unwrap();
-        let mut file_index = self.file_index.write().unwrap();
-
-        // Get parent path
-        let parent_path = if parent == ROOT_INODE {
-            std::path::PathBuf::new()
-        } else {
-            match inode_table.get_path(parent) {
-                Some(p) => p.clone(),
-                None => {
-                    reply.error(libc::ENOENT);
-                    return;
+        // Get parent path first (needed for forwarding)
+        let parent_path = {
+            let inode_table = self.inode_table.read().unwrap();
+            if parent == ROOT_INODE {
+                std::path::PathBuf::new()
+            } else {
+                match inode_table.get_path(parent) {
+                    Some(p) => p.clone(),
+                    None => {
+                        reply.error(libc::ENOENT);
+                        return;
+                    }
                 }
             }
         };
 
-        // Build new path
         let file_path = parent_path.join(name);
+
+        // If not leader, forward to leader
+        if !self.is_leader() {
+            info!("Forwarding create to leader: {:?}", file_path);
+            match self.forward_create_to_leader(&file_path.to_string_lossy(), mode, req.uid(), req.gid()) {
+                Ok(()) => {
+                    // Create local entry to reflect the change
+                    let now = SystemTime::now();
+                    let entry = FileEntry {
+                        size: 0,
+                        is_dir: false,
+                        permissions: mode,
+                        uid: req.uid(),
+                        gid: req.gid(),
+                        created: now,
+                        modified: now,
+                        accessed: now,
+                        chunks: Vec::new(),
+                    };
+                    let inode = self.allocate_inode();
+                    self.inode_table.write().unwrap().insert(inode, file_path.clone());
+                    self.file_index.write().unwrap().insert(file_path, entry.clone());
+                    let fh = self.allocate_fh();
+                    self.open_files.write().unwrap().insert(fh, inode);
+                    let attr = self.entry_to_attr(&entry, inode);
+                    reply.created(&TTL, &attr, 0, fh, 0);
+                }
+                Err(errno) => reply.error(errno),
+            }
+            return;
+        }
+
+        // Leader: execute locally
+        let mut inode_table = self.inode_table.write().unwrap();
+        let mut file_index = self.file_index.write().unwrap();
 
         // Check if already exists
         if file_index.contains(&file_path) {
@@ -483,23 +693,48 @@ impl Filesystem for WolfDiskFS {
         let name_str = name.to_string_lossy();
         debug!("unlink: parent={}, name={}", parent, name_str);
 
-        let mut inode_table = self.inode_table.write().unwrap();
-        let mut file_index = self.file_index.write().unwrap();
-
-        // Get parent path
-        let parent_path = if parent == ROOT_INODE {
-            std::path::PathBuf::new()
-        } else {
-            match inode_table.get_path(parent) {
-                Some(p) => p.clone(),
-                None => {
-                    reply.error(libc::ENOENT);
-                    return;
+        // Get parent path first (needed for forwarding)
+        let parent_path = {
+            let inode_table = self.inode_table.read().unwrap();
+            if parent == ROOT_INODE {
+                std::path::PathBuf::new()
+            } else {
+                match inode_table.get_path(parent) {
+                    Some(p) => p.clone(),
+                    None => {
+                        reply.error(libc::ENOENT);
+                        return;
+                    }
                 }
             }
         };
 
         let file_path = parent_path.join(name);
+
+        // If not leader, forward to leader
+        if !self.is_leader() {
+            info!("Forwarding unlink to leader: {:?}", file_path);
+            match self.forward_unlink_to_leader(&file_path.to_string_lossy()) {
+                Ok(()) => {
+                    // Remove local entry
+                    let mut inode_table = self.inode_table.write().unwrap();
+                    let mut file_index = self.file_index.write().unwrap();
+                    if let Some(entry) = file_index.remove(&file_path) {
+                        for chunk in &entry.chunks {
+                            let _ = self.chunk_store.delete(&chunk.hash);
+                        }
+                    }
+                    inode_table.remove_path(&file_path);
+                    reply.ok();
+                }
+                Err(errno) => reply.error(errno),
+            }
+            return;
+        }
+
+        // Leader: execute locally
+        let mut inode_table = self.inode_table.write().unwrap();
+        let mut file_index = self.file_index.write().unwrap();
 
         // Check exists and is not a directory
         match file_index.get(&file_path) {
@@ -530,23 +765,44 @@ impl Filesystem for WolfDiskFS {
         let name_str = name.to_string_lossy();
         debug!("rmdir: parent={}, name={}", parent, name_str);
 
-        let mut inode_table = self.inode_table.write().unwrap();
-        let mut file_index = self.file_index.write().unwrap();
-
-        // Get parent path
-        let parent_path = if parent == ROOT_INODE {
-            std::path::PathBuf::new()
-        } else {
-            match inode_table.get_path(parent) {
-                Some(p) => p.clone(),
-                None => {
-                    reply.error(libc::ENOENT);
-                    return;
+        // Get parent path first (needed for forwarding)
+        let parent_path = {
+            let inode_table = self.inode_table.read().unwrap();
+            if parent == ROOT_INODE {
+                std::path::PathBuf::new()
+            } else {
+                match inode_table.get_path(parent) {
+                    Some(p) => p.clone(),
+                    None => {
+                        reply.error(libc::ENOENT);
+                        return;
+                    }
                 }
             }
         };
 
         let dir_path = parent_path.join(name);
+
+        // If not leader, forward to leader
+        if !self.is_leader() {
+            info!("Forwarding rmdir to leader: {:?}", dir_path);
+            match self.forward_rmdir_to_leader(&dir_path.to_string_lossy()) {
+                Ok(()) => {
+                    // Remove local entry
+                    let mut inode_table = self.inode_table.write().unwrap();
+                    let mut file_index = self.file_index.write().unwrap();
+                    file_index.remove(&dir_path);
+                    inode_table.remove_path(&dir_path);
+                    reply.ok();
+                }
+                Err(errno) => reply.error(errno),
+            }
+            return;
+        }
+
+        // Leader: execute locally
+        let mut inode_table = self.inode_table.write().unwrap();
+        let mut file_index = self.file_index.write().unwrap();
 
         // Check exists and is a directory
         match file_index.get(&dir_path) {

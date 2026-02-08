@@ -172,6 +172,23 @@ impl PeerManager {
         self.connections.read().unwrap().values().next().cloned()
     }
 
+    /// Get or create connection to leader by ID and address
+    pub fn get_or_connect_leader(&self, leader_id: &str, leader_addr: &str) -> Result<Arc<PeerConnection>, Box<dyn std::error::Error + Send + Sync>> {
+        // Check if already connected
+        {
+            let connections = self.connections.read().unwrap();
+            if let Some(conn) = connections.get(leader_id) {
+                return Ok(conn.clone());
+            }
+        }
+        
+        // Connect to leader
+        let conn = PeerConnection::connect(leader_id.to_string(), leader_addr)?;
+        let conn = Arc::new(conn);
+        self.connections.write().unwrap().insert(leader_id.to_string(), conn.clone());
+        Ok(conn)
+    }
+
     /// Stop the peer manager
     pub fn stop(&self) {
         *self.running.write().unwrap() = false;
