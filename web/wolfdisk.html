@@ -95,9 +95,10 @@
                         and have your data automatically synchronized across all nodes.
                     </p>
 
-                    <div class="info-box">
-                        <strong>🚧 Status:</strong> WolfDisk is currently in Phase 1 development. The local FUSE
-                        filesystem is complete; clustering features are coming soon.
+                    <div class="info-box"
+                        style="background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.3);">
+                        <strong>✅ Status:</strong> WolfDisk Phase 2 is complete! Clustering infrastructure including
+                        node roles, leader election, and auto-discovery is ready for testing.
                     </div>
 
                     <div
@@ -154,39 +155,90 @@
                     </div>
                 </section>
 
-                <!-- Quick Install Section -->
+                <!-- Node Roles Section -->
                 <section class="content-section">
-                    <h2>Quick Install</h2>
+                    <h2>Node Roles</h2>
 
-                    <p>Install WolfDisk with a single command:</p>
+                    <p>WolfDisk supports four node roles to match your deployment needs:</p>
 
-                    <div class="code-block">
-                        <div class="code-header">
-                            <span class="code-lang">bash</span>
-                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                        </div>
-                        <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/wolfdisk/setup.sh | bash</code></pre>
+                    <div class="table-wrapper">
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Role</th>
+                                    <th>Storage</th>
+                                    <th>Replication</th>
+                                    <th>Use Case</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Leader</strong></td>
+                                    <td>✅ Yes</td>
+                                    <td>Broadcasts to followers</td>
+                                    <td class="highlight">Primary write node</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Follower</strong></td>
+                                    <td>✅ Yes</td>
+                                    <td>Receives from leader</td>
+                                    <td class="highlight">Read replicas, failover</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Client</strong></td>
+                                    <td>❌ No</td>
+                                    <td>None (mount-only)</td>
+                                    <td class="highlight">Access shared drive remotely</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Auto</strong></td>
+                                    <td>✅ Yes</td>
+                                    <td>Dynamic election</td>
+                                    <td class="highlight">Default - lowest ID becomes leader</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
 
-                    <p style="margin-top: 1.5rem;">The installer will:</p>
-                    <ul>
-                        <li>Install FUSE3 and Rust (if needed)</li>
-                        <li>Clone the WolfScale repository</li>
-                        <li>Build the <code>wolfdisk</code> binary</li>
-                        <li>Create the systemd service</li>
-                        <li>Set up default configuration</li>
-                    </ul>
-                </section>
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>💡 Client Mode:</strong> Perfect for workstations that just need to access the shared
+                        filesystem without storing data locally. The client mounts the drive and forwards operations to
+                        the leader.
+                    </div>
 
-                <!-- Architecture Section -->
-                <section class="content-section">
-                    <h2>Architecture</h2>
+                    <!-- Quick Install Section -->
+                    <section class="content-section">
+                        <h2>Quick Install</h2>
 
-                    <div class="code-block">
-                        <div class="code-header">
-                            <span class="code-lang">text</span>
+                        <p>Install WolfDisk with a single command:</p>
+
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-lang">bash</span>
+                                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            </div>
+                            <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/wolfdisk/setup.sh | bash</code></pre>
                         </div>
-                        <pre><code>┌─────────────────────────────────────────────────────────────┐
+
+                        <p style="margin-top: 1.5rem;">The installer will:</p>
+                        <ul>
+                            <li>Install FUSE3 and Rust (if needed)</li>
+                            <li>Clone the WolfScale repository</li>
+                            <li>Build the <code>wolfdisk</code> binary</li>
+                            <li>Create the systemd service</li>
+                            <li>Set up default configuration</li>
+                        </ul>
+                    </section>
+
+                    <!-- Architecture Section -->
+                    <section class="content-section">
+                        <h2>Architecture</h2>
+
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-lang">text</span>
+                            </div>
+                            <pre><code>┌─────────────────────────────────────────────────────────────┐
 │                    Linux Applications                        │
 ├─────────────────────────────────────────────────────────────┤
 │                   mount /mnt/wolfdisk                        │
@@ -200,112 +252,114 @@
 ├─────────────────────────────────────────────────────────────┤
 │               Network Layer (WolfScale-based)                │
 └─────────────────────────────────────────────────────────────┘</code></pre>
-                    </div>
-
-                    <h3 style="margin-top: 2rem;">Key Components</h3>
-
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Component</th>
-                                    <th>Description</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>FUSE Layer</strong></td>
-                                    <td>Intercepts file operations (read, write, mkdir, etc.)</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>File Index</strong></td>
-                                    <td>Metadata mapping paths to chunk references</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Chunk Store</strong></td>
-                                    <td>Content-addressed storage with SHA256 hashing</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Replication</strong></td>
-                                    <td>Uses WolfScale's Raft-based consensus</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-
-                <!-- Configuration Section -->
-                <section class="content-section">
-                    <h2>Configuration</h2>
-
-                    <p>Edit <code>/etc/wolfdisk/config.toml</code>:</p>
-
-                    <div class="code-block">
-                        <div class="code-header">
-                            <span class="code-lang">toml</span>
-                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                         </div>
-                        <pre><code>[node]
+
+                        <h3 style="margin-top: 2rem;">Key Components</h3>
+
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Component</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>FUSE Layer</strong></td>
+                                        <td>Intercepts file operations (read, write, mkdir, etc.)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>File Index</strong></td>
+                                        <td>Metadata mapping paths to chunk references</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Chunk Store</strong></td>
+                                        <td>Content-addressed storage with SHA256 hashing</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Replication</strong></td>
+                                        <td>Uses WolfScale's Raft-based consensus</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <!-- Configuration Section -->
+                    <section class="content-section">
+                        <h2>Configuration</h2>
+
+                        <p>Edit <code>/etc/wolfdisk/config.toml</code>:</p>
+
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-lang">toml</span>
+                                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            </div>
+                            <pre><code>[node]
 id = "node1"
+role = "auto"    # auto, leader, follower, or client
 bind = "0.0.0.0:9500"
 data_dir = "/var/lib/wolfdisk"
 
 [cluster]
-peers = ["192.168.1.10:9500", "192.168.1.11:9500"]
-# Or use auto-discovery:
-# discovery = "udp://239.0.0.1:9501"
+# Auto-discovery via UDP multicast:
+discovery = "udp://239.255.0.1:9501"
+# Or specify peers manually:
+# peers = ["192.168.1.10:9500", "192.168.1.11:9500"]
 
 [replication]
-mode = "replicated"  # or "shared"
-factor = 3           # Number of copies
+mode = "shared"      # or "replicated"
+factor = 3           # Number of copies (replicated mode)
 chunk_size = 4194304 # 4MB chunks
 
 [mount]
 path = "/mnt/wolfdisk"
 allow_other = true</code></pre>
-                    </div>
-                </section>
-
-                <!-- CLI Section -->
-                <section class="content-section">
-                    <h2>CLI Reference</h2>
-
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Command</th>
-                                    <th>Description</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>wolfdisk init</code></td>
-                                    <td>Initialize the data directory</td>
-                                </tr>
-                                <tr>
-                                    <td><code>wolfdisk mount -m /mnt/wolfdisk</code></td>
-                                    <td>Mount the filesystem</td>
-                                </tr>
-                                <tr>
-                                    <td><code>wolfdisk unmount -m /mnt/wolfdisk</code></td>
-                                    <td>Unmount the filesystem</td>
-                                </tr>
-                                <tr>
-                                    <td><code>wolfdisk status</code></td>
-                                    <td>Show node and cluster status</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <h3 style="margin-top: 2rem;">Systemd Service</h3>
-
-                    <div class="code-block">
-                        <div class="code-header">
-                            <span class="code-lang">bash</span>
                         </div>
-                        <pre><code># Start the service
+                    </section>
+
+                    <!-- CLI Section -->
+                    <section class="content-section">
+                        <h2>CLI Reference</h2>
+
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Command</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><code>wolfdisk init</code></td>
+                                        <td>Initialize the data directory</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>wolfdisk mount -m /mnt/wolfdisk</code></td>
+                                        <td>Mount the filesystem</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>wolfdisk unmount -m /mnt/wolfdisk</code></td>
+                                        <td>Unmount the filesystem</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>wolfdisk status</code></td>
+                                        <td>Show node and cluster status</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <h3 style="margin-top: 2rem;">Systemd Service</h3>
+
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-lang">bash</span>
+                            </div>
+                            <pre><code># Start the service
 sudo systemctl start wolfdisk
 
 # Check status
@@ -313,115 +367,116 @@ sudo systemctl status wolfdisk
 
 # View logs
 sudo journalctl -u wolfdisk -f</code></pre>
+                        </div>
+                    </section>
+
+                    <!-- Comparison Section -->
+                    <section class="content-section">
+                        <h2>WolfDisk vs Other Solutions</h2>
+
+                        <div class="table-wrapper">
+                            <table class="comparison-table">
+                                <thead>
+                                    <tr>
+                                        <th>Feature</th>
+                                        <th>NFS</th>
+                                        <th>GlusterFS</th>
+                                        <th>Ceph</th>
+                                        <th>WolfDisk</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Replication</td>
+                                        <td>❌ None</td>
+                                        <td>✅ Yes</td>
+                                        <td>✅ Yes</td>
+                                        <td class="highlight">✅ Yes</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Setup Complexity</td>
+                                        <td>Easy</td>
+                                        <td>Medium</td>
+                                        <td>Complex</td>
+                                        <td class="highlight">Easy</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Deduplication</td>
+                                        <td>❌ No</td>
+                                        <td>❌ No</td>
+                                        <td>✅ Yes</td>
+                                        <td class="highlight">✅ Yes</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Metadata Server</td>
+                                        <td>Single</td>
+                                        <td>None</td>
+                                        <td>Required</td>
+                                        <td class="highlight">None</td>
+                                    </tr>
+                                    <tr>
+                                        <td>WolfScale Integration</td>
+                                        <td>❌ No</td>
+                                        <td>❌ No</td>
+                                        <td>❌ No</td>
+                                        <td class="highlight">✅ Native</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <!-- Roadmap Section -->
+                    <section class="content-section">
+                        <h2>Roadmap</h2>
+
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div
+                                style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px;">
+                                <span style="font-size: 1.5rem;">✅</span>
+                                <div>
+                                    <strong>Phase 1: Foundation</strong>
+                                    <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">FUSE filesystem,
+                                        chunk
+                                        storage, CLI, setup scripts</p>
+                                </div>
+                            </div>
+                            <div
+                                style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px;">
+                                <span style="font-size: 1.5rem;">✅</span>
+                                <div>
+                                    <strong>Phase 2: Clustering</strong>
+                                    <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Leader election,
+                                        node
+                                        discovery, node roles, cluster state</p>
+                                </div>
+                            </div>
+                            <div
+                                style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 8px;">
+                                <span style="font-size: 1.5rem;">🔄</span>
+                                <div>
+                                    <strong>Phase 3: Full Replication</strong>
+                                    <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Quorum writes,
+                                        index sync, read caching</p>
+                                </div>
+                            </div>
+                            <div
+                                style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px;">
+                                <span style="font-size: 1.5rem;">📋</span>
+                                <div>
+                                    <strong>Phase 4: Production</strong>
+                                    <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Benchmarks,
+                                        stress
+                                        testing, documentation</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="page-nav">
+                        <a href="load-balancer.html" class="prev">← Load Balancer</a>
+                        <a href="configuration.html" class="next">Configuration →</a>
                     </div>
-                </section>
-
-                <!-- Comparison Section -->
-                <section class="content-section">
-                    <h2>WolfDisk vs Other Solutions</h2>
-
-                    <div class="table-wrapper">
-                        <table class="comparison-table">
-                            <thead>
-                                <tr>
-                                    <th>Feature</th>
-                                    <th>NFS</th>
-                                    <th>GlusterFS</th>
-                                    <th>Ceph</th>
-                                    <th>WolfDisk</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Replication</td>
-                                    <td>❌ None</td>
-                                    <td>✅ Yes</td>
-                                    <td>✅ Yes</td>
-                                    <td class="highlight">✅ Yes</td>
-                                </tr>
-                                <tr>
-                                    <td>Setup Complexity</td>
-                                    <td>Easy</td>
-                                    <td>Medium</td>
-                                    <td>Complex</td>
-                                    <td class="highlight">Easy</td>
-                                </tr>
-                                <tr>
-                                    <td>Deduplication</td>
-                                    <td>❌ No</td>
-                                    <td>❌ No</td>
-                                    <td>✅ Yes</td>
-                                    <td class="highlight">✅ Yes</td>
-                                </tr>
-                                <tr>
-                                    <td>Metadata Server</td>
-                                    <td>Single</td>
-                                    <td>None</td>
-                                    <td>Required</td>
-                                    <td class="highlight">None</td>
-                                </tr>
-                                <tr>
-                                    <td>WolfScale Integration</td>
-                                    <td>❌ No</td>
-                                    <td>❌ No</td>
-                                    <td>❌ No</td>
-                                    <td class="highlight">✅ Native</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-
-                <!-- Roadmap Section -->
-                <section class="content-section">
-                    <h2>Roadmap</h2>
-
-                    <div style="display: flex; flex-direction: column; gap: 1rem;">
-                        <div
-                            style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px;">
-                            <span style="font-size: 1.5rem;">✅</span>
-                            <div>
-                                <strong>Phase 1: Foundation</strong>
-                                <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">FUSE filesystem,
-                                    chunk
-                                    storage, CLI, setup scripts</p>
-                            </div>
-                        </div>
-                        <div
-                            style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 8px;">
-                            <span style="font-size: 1.5rem;">🔄</span>
-                            <div>
-                                <strong>Phase 2: Clustering</strong>
-                                <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Leader election, node
-                                    discovery, chunk replication</p>
-                            </div>
-                        </div>
-                        <div
-                            style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px;">
-                            <span style="font-size: 1.5rem;">📋</span>
-                            <div>
-                                <strong>Phase 3: Full Replication</strong>
-                                <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Quorum writes,
-                                    conflict
-                                    resolution, read caching</p>
-                            </div>
-                        </div>
-                        <div
-                            style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px;">
-                            <span style="font-size: 1.5rem;">📋</span>
-                            <div>
-                                <strong>Phase 4: Production</strong>
-                                <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Benchmarks, stress
-                                    testing, documentation</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <div class="page-nav">
-                    <a href="load-balancer.html" class="prev">← Load Balancer</a>
-                    <a href="configuration.html" class="next">Configuration →</a>
-                </div>
             </div>
 
             <footer class="wiki-footer"

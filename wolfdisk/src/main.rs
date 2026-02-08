@@ -81,6 +81,16 @@ fn main() {
     match cli.command {
         Commands::Mount { mountpoint } => {
             info!("Mounting WolfDisk at {:?}", mountpoint);
+            info!("Node ID: {}, Role: {:?}", config.node.id, config.node.role);
+            
+            // Initialize cluster manager
+            let mut cluster = wolfdisk::ClusterManager::new(config.clone());
+            if let Err(e) = cluster.start() {
+                error!("Failed to start cluster manager: {}", e);
+                std::process::exit(1);
+            }
+            
+            info!("Cluster state: {:?}", cluster.state());
             
             // Create filesystem instance
             let fs = match WolfDiskFS::new(config) {
@@ -101,8 +111,11 @@ fn main() {
             // Mount the filesystem (this blocks)
             if let Err(e) = fuser::mount2(fs, &mountpoint, &options) {
                 error!("Mount failed: {}", e);
+                cluster.stop();
                 std::process::exit(1);
             }
+            
+            cluster.stop();
         }
 
         Commands::Unmount { mountpoint } => {
@@ -127,11 +140,19 @@ fn main() {
         }
 
         Commands::Status => {
-            info!("Cluster Status:");
+            info!("WolfDisk Status:");
             info!("  Node ID: {}", config.node.id);
+            info!("  Role: {:?}", config.node.role);
             info!("  Data Dir: {:?}", config.node.data_dir);
-            info!("  Mode: {:?}", config.replication.mode);
-            // TODO: Add cluster connectivity check
+            info!("  Replication: {:?}", config.replication.mode);
+            info!("  Chunk Size: {} bytes", config.replication.chunk_size);
+            
+            if let Some(ref discovery) = config.cluster.discovery {
+                info!("  Discovery: {}", discovery);
+            }
+            if !config.cluster.peers.is_empty() {
+                info!("  Peers: {:?}", config.cluster.peers);
+            }
         }
 
         Commands::Init { data_dir } => {

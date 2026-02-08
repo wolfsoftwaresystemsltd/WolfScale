@@ -7,7 +7,7 @@ use std::sync::{Arc, RwLock, Mutex};
 use std::time::Duration;
 use std::thread;
 
-use tracing::{debug, info, warn, error};
+use tracing::{debug, info, warn};
 
 use crate::network::protocol::{Message, encode_message, decode_message};
 
@@ -71,6 +71,7 @@ impl PeerConnection {
 
 /// Manages connections to all peers
 pub struct PeerManager {
+    #[allow(dead_code)]
     node_id: String,
     bind_address: String,
     connections: Arc<RwLock<HashMap<String, Arc<PeerConnection>>>>,

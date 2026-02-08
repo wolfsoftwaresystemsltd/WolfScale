@@ -3,14 +3,12 @@
 //! Handles chunk synchronization between leader and followers.
 
 use std::sync::{Arc, RwLock};
-use std::time::{Duration, Instant};
 use std::collections::HashSet;
 
-use tracing::{debug, info, warn, error};
+use tracing::{debug, info};
 
 use crate::config::{Config, ReplicationMode, NodeRole};
 use crate::cluster::{ClusterManager, ClusterState};
-use crate::network::peer::PeerManager;
 use crate::network::protocol::*;
 use crate::storage::chunks::ChunkStore;
 use crate::storage::index::FileIndex;
@@ -35,6 +33,7 @@ pub struct ReplicationManager {
     config: Config,
     cluster: Arc<ClusterManager>,
     chunk_store: Arc<ChunkStore>,
+    #[allow(dead_code)]
     file_index: Arc<RwLock<FileIndex>>,
     sync_state: Arc<RwLock<SyncState>>,
     index_version: Arc<RwLock<u64>>,
@@ -104,7 +103,7 @@ impl ReplicationManager {
     pub fn handle_write(
         &self,
         path: &str,
-        offset: u64,
+        _offset: u64,
         data: &[u8],
     ) -> Result<(), String> {
         match self.cluster.state() {
@@ -144,7 +143,7 @@ impl ReplicationManager {
 
     /// Handle incoming read request
     /// Returns true if read can proceed locally, false if should forward to leader
-    pub fn handle_read(&self, path: &str) -> bool {
+    pub fn handle_read(&self, _path: &str) -> bool {
         match self.cluster.state() {
             ClusterState::Leading | ClusterState::Standalone => {
                 // Leader/standalone always reads locally
@@ -167,7 +166,7 @@ impl ReplicationManager {
     }
 
     /// Replicate a chunk to followers (called after local write on leader)
-    pub fn replicate_chunk(&self, hash: &[u8; 32], data: &[u8]) {
+    pub fn replicate_chunk(&self, hash: &[u8; 32], _data: &[u8]) {
         if !self.cluster.is_leader() {
             return;
         }
@@ -202,7 +201,7 @@ impl ReplicationManager {
 
         debug!("Replicating index update (version {})", version);
         
-        let msg = IndexUpdateMsg {
+        let _msg = IndexUpdateMsg {
             version,
             operation,
         };

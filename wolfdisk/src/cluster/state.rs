@@ -5,12 +5,10 @@ use std::time::{Duration, Instant};
 use std::collections::HashMap;
 use std::thread;
 
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 
 use crate::config::{Config, NodeRole};
-use crate::network::discovery::{Discovery, DiscoveredPeer, DiscoveryRole};
-use crate::network::peer::PeerManager;
-use crate::network::protocol::{Message, AnnounceMsg, HeartbeatMsg, NodeRoleInfo};
+use crate::network::discovery::{Discovery, DiscoveredPeer};
 
 /// Cluster state for this node
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
