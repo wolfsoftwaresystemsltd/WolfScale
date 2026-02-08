@@ -33,3 +33,4 @@ web/
 
 # SQL dump files
 *.sql
+wolfdisk/target/
