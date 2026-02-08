@@ -353,7 +353,15 @@ allow_other = true</code></pre>
                                     </tr>
                                     <tr>
                                         <td><code>wolfdisk status</code></td>
-                                        <td>Show node and cluster status</td>
+                                        <td>Show node configuration and mount status</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>wolfdisk stats</code></td>
+                                        <td>Live cluster statistics (refreshes every second)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>wolfdisk list servers</code></td>
+                                        <td>List all discovered servers in the cluster</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -374,6 +382,48 @@ sudo systemctl status wolfdisk
 # View logs
 sudo journalctl -u wolfdisk -f</code></pre>
                         </div>
+                    </section>
+
+                    <!-- Leader Failover Section -->
+                    <section class="content-section">
+                        <h2>Leader Failover</h2>
+
+                        <p>WolfDisk automatically handles leader failures with fast failover:</p>
+
+                        <ul>
+                            <li><strong>Heartbeat Detection</strong> — Nodes monitor the leader with 2-second timeout
+                            </li>
+                            <li><strong>Automatic Election</strong> — Lowest node ID becomes the new leader</li>
+                            <li><strong>Seamless Transition</strong> — Followers continue serving reads during failover
+                            </li>
+                        </ul>
+
+                        <div class="code-block" style="margin-top: 1.5rem;">
+                            <div class="code-header">
+                                <span class="code-lang">text</span>
+                            </div>
+                            <pre><code>Initial State:
+  node-a (leader) ←→ node-b (follower) ←→ node-c (follower)
+
+node-a goes down:
+  ❌ node-a         node-b detects timeout (2s)
+                    node-b becomes leader (next lowest ID)
+
+node-a returns:
+  node-a syncs from node-b (gets missed changes)
+  node-a becomes leader again (lowest ID)</code></pre>
+                        </div>
+
+                        <h3 style="margin-top: 2rem;">Sync and Catchup</h3>
+
+                        <p>When a node starts or recovers from downtime, it automatically syncs with the leader:</p>
+
+                        <ul>
+                            <li><strong>Version Tracking</strong> — Every write increments the index version</li>
+                            <li><strong>Delta Sync</strong> — Only modified/new/deleted files are transferred</li>
+                            <li><strong>Efficient Catchup</strong> — A node that was down briefly only receives missed
+                                changes</li>
+                        </ul>
                     </section>
 
                     <!-- Comparison Section -->
