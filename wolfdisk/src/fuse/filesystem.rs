@@ -18,7 +18,7 @@ use crate::cluster::ClusterManager;
 use crate::config::Config;
 use crate::error::Result;
 use crate::network::peer::PeerManager;
-use crate::network::protocol::{Message, CreateFileMsg, CreateDirMsg, DeleteFileMsg, DeleteDirMsg, IndexUpdateMsg, IndexOperation, ChunkRefMsg, FileSyncMsg, RenameFileMsg, SetAttrMsg, ChunkWithData};
+use crate::network::protocol::{Message, CreateFileMsg, CreateDirMsg, DeleteFileMsg, DeleteDirMsg, IndexUpdateMsg, IndexOperation, ChunkRefMsg, FileSyncMsg, ChunkWithData};
 use crate::storage::{ChunkStore, FileIndex, FileEntry, InodeTable};
 
 /// TTL for attribute caching
