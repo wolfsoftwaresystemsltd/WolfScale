@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use std::collections::HashMap;
 use std::thread;
 
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 use crate::config::{Config, NodeRole};
 use crate::network::discovery::{Discovery, DiscoveredPeer};
@@ -168,6 +168,13 @@ impl ClusterManager {
     }
 
     /// Start the election monitor thread
+    /// 
+    /// Election model:
+    /// 1. All nodes start as followers (Discovering state)
+    /// 2. Wait for discovery to find other peers
+    /// 3. After discovery delay, determine leader by lowest node ID
+    /// 4. If I have lowest ID -> become leader
+    /// 5. Otherwise -> stay follower and wait for leader heartbeat
     fn start_election_monitor(&self) {
         let node_id = self.node_id.clone();
         let config_role = self.config.node.role;
@@ -177,88 +184,86 @@ impl ClusterManager {
         let running = Arc::clone(&self.running);
         let term = Arc::clone(&self.term);
         let last_leader_heartbeat = Arc::clone(&self.last_leader_heartbeat);
-        let discovery_delay = Duration::from_secs(3); // Wait for discovery
-        let leader_timeout = Duration::from_secs(2); // Fast failover
+        
+        // Give discovery enough time to find all peers before electing
+        let discovery_delay = Duration::from_secs(5);
         let peer_stale_threshold = Duration::from_secs(4);
 
         thread::spawn(move || {
-            info!("Election monitor started for node {}", node_id);
+            info!("Election monitor started for node {} - waiting for discovery", node_id);
             
-            // Give discovery time to find peers
+            // All nodes start as followers and wait for discovery
             thread::sleep(discovery_delay);
             
             while *running.read().unwrap() {
-                // Update state based on discovered peers
                 let current_state = *state.read().unwrap();
+                
+                // Clone active peers so we don't hold the lock
+                let active_peers: Vec<_> = {
+                    let snapshot = peers.read().unwrap();
+                    snapshot.values()
+                        .filter(|p| p.last_seen.elapsed() < peer_stale_threshold)
+                        .cloned()
+                        .collect()
+                };
+                
+                // Get all peer IDs for comparison
+                let peer_ids: Vec<&str> = active_peers.iter()
+                    .map(|p| p.node_id.as_str())
+                    .collect();
+                
+                // Am I the lowest ID? (I should be leader if so)
+                let i_am_lowest = peer_ids.is_empty() || 
+                    peer_ids.iter().all(|id| node_id.as_str() < *id);
+                
+                // Is there a visible leader already?
+                let current_leader = active_peers.iter()
+                    .find(|p| p.is_leader)
+                    .map(|p| p.node_id.clone());
                 
                 match current_state {
                     ClusterState::Discovering | ClusterState::Following => {
-                        // Check if we should become leader
-                        let peers_snapshot = peers.read().unwrap();
-                        let active_peers: Vec<_> = peers_snapshot.values()
-                            .filter(|p| p.last_seen.elapsed() < peer_stale_threshold)
-                            .collect();
-                        
-                        // Find current leader
-                        let current_leader = active_peers.iter()
-                            .find(|p| p.is_leader)
-                            .map(|p| p.node_id.clone());
-                        
-                        // Check if leader heartbeat has timed out
-                        let heartbeat_timed_out = last_leader_heartbeat.read().unwrap()
-                            .elapsed() > leader_timeout;
-                        
-                        if let Some(leader) = current_leader {
-                            // We have a visible leader - reset heartbeat timer
+                        if let Some(leader) = &current_leader {
+                            // There's a leader - follow them
                             *last_leader_heartbeat.write().unwrap() = std::time::Instant::now();
                             *leader_id.write().unwrap() = Some(leader.clone());
+                            
                             if current_state == ClusterState::Discovering {
                                 info!("Found leader: {}", leader);
                                 *state.write().unwrap() = ClusterState::Following;
                             }
-                        } else if heartbeat_timed_out || current_leader.is_none() {
-                            // No leader or leader timed out - should we become leader?
-                            // Rule: lowest node ID becomes leader (deterministic election)
-                            let should_be_leader = if config_role == NodeRole::Leader {
-                                // Explicit leader role
-                                true
-                            } else if config_role == NodeRole::Follower {
-                                // Explicit follower role - never become leader
-                                false
-                            } else {
-                                // Auto role - lowest ID wins
-                                let all_ids: Vec<_> = active_peers.iter()
-                                    .map(|p| p.node_id.as_str())
-                                    .collect();
-                                
-                                all_ids.is_empty() || 
-                                    all_ids.iter().all(|id| node_id.as_str() < *id)
-                            };
                             
-                            if should_be_leader {
-                                info!("Becoming leader (term {}) - previous leader timed out", *term.read().unwrap());
+                            // But if I have a lower ID, I should become leader
+                            if i_am_lowest && node_id.as_str() < leader.as_str() {
+                                info!("I have lower ID than current leader {} - taking over", leader);
                                 *term.write().unwrap() += 1;
                                 *leader_id.write().unwrap() = Some(node_id.clone());
                                 *state.write().unwrap() = ClusterState::Leading;
                             }
+                        } else if i_am_lowest && config_role != NodeRole::Follower {
+                            // No leader and I'm the lowest ID - become leader
+                            info!("Becoming leader (term {}) - I have the lowest node ID", *term.read().unwrap());
+                            *term.write().unwrap() += 1;
+                            *leader_id.write().unwrap() = Some(node_id.clone());
+                            *state.write().unwrap() = ClusterState::Leading;
+                        } else {
+                            // Not lowest ID, stay as follower and wait
+                            debug!("Not lowest ID ({} peers discovered) - staying follower", peer_ids.len());
+                            if current_state == ClusterState::Discovering {
+                                *state.write().unwrap() = ClusterState::Following;
+                            }
                         }
                     }
                     ClusterState::Leading => {
-                        // Check for higher-priority node that should be leader
-                        let peers_snapshot = peers.read().unwrap();
-                        let higher_priority = peers_snapshot.values()
-                            .filter(|p| p.last_seen.elapsed() < peer_stale_threshold)
-                            .any(|p| p.is_leader && p.node_id < node_id);
-                        
-                        if higher_priority {
-                            warn!("Stepping down - higher priority leader found");
+                        // Check if any peer has a lower ID - I should step down
+                        if !i_am_lowest {
+                            warn!("Stepping down - discovered peer with lower node ID");
                             *state.write().unwrap() = ClusterState::Following;
-                            // Reset heartbeat timer since we're now following
                             *last_leader_heartbeat.write().unwrap() = std::time::Instant::now();
                         }
                     }
                     ClusterState::Client | ClusterState::Standalone => {
-                        // Client/Standalone mode - no election participation
+                        // No election participation
                     }
                 }
                 
