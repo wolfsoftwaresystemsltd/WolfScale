@@ -210,7 +210,7 @@
                     <section class="content-section">
                         <h2>Quick Install</h2>
 
-                        <p>Install WolfDisk with a single command:</p>
+                        <p>Install WolfDisk with an interactive installer:</p>
 
                         <div class="code-block">
                             <div class="code-header">
@@ -220,13 +220,12 @@
                             <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/wolfdisk/setup.sh | bash</code></pre>
                         </div>
 
-                        <p style="margin-top: 1.5rem;">The installer will:</p>
+                        <p style="margin-top: 1.5rem;">The installer will prompt you for:</p>
                         <ul>
-                            <li>Install FUSE3 and Rust (if needed)</li>
-                            <li>Clone the WolfScale repository</li>
-                            <li>Build the <code>wolfdisk</code> binary</li>
-                            <li>Create the systemd service</li>
-                            <li>Set up default configuration</li>
+                            <li><strong>Node ID</strong> — Unique identifier (defaults to hostname)</li>
+                            <li><strong>Role</strong> — auto, leader, follower, or client</li>
+                            <li><strong>Discovery</strong> — Auto-discovery, manual peers, or standalone</li>
+                            <li><strong>Mount path</strong> — Where to mount the filesystem</li>
                         </ul>
                     </section>
 

@@ -144,15 +144,16 @@ Web Server 3 ─── WolfScale LB ───┘
 WolfDisk is a distributed file system that shares and replicates files across Linux servers using WolfScale's consensus infrastructure.
 
 ```bash
-# One-liner install
+# Interactive installer - prompts for node ID, role, and discovery
 curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/wolfdisk/setup.sh | bash
 ```
 
 **Features:**
+- **Node Roles** — Leader, Follower, Client (mount-only), or Auto-election
+- **Auto-Discovery** — UDP multicast for automatic peer discovery
 - **FUSE Integration** — Mount as a regular directory
 - **Content-Addressed Storage** — SHA256 deduplication
-- **Chunk-Based** — Efficient sync of large files
-- **Two Modes** — Replicated (HA) or Shared (simple)
+- **Client Mode** — Access shared drive without local storage
 
 See [`wolfdisk/README.md`](wolfdisk/README.md) for full documentation.
 
