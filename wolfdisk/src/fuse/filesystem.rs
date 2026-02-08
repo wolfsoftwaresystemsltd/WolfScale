@@ -203,13 +203,25 @@ impl WolfDiskFS {
         }
         
         if let (Some(cluster), Some(peer_manager)) = (&self.cluster, &self.peer_manager) {
+            // First, ensure we're connected to all discovered peers
+            let peers = cluster.peers();
+            for peer in &peers {
+                // Try to connect if not already connected
+                if peer_manager.get(&peer.node_id).is_none() {
+                    info!("Connecting to follower {} at {}", peer.node_id, peer.address);
+                    if let Err(e) = peer_manager.connect(&peer.node_id, &peer.address) {
+                        warn!("Failed to connect to {}: {}", peer.node_id, e);
+                    }
+                }
+            }
+            
             let version = cluster.increment_index_version();
             let msg = Message::IndexUpdate(IndexUpdateMsg {
                 version,
                 operation,
             });
             
-            info!("Broadcasting IndexUpdate (version {}) to followers", version);
+            info!("Broadcasting IndexUpdate (version {}) to {} followers", version, peers.len());
             peer_manager.broadcast(&msg);
         }
     }
