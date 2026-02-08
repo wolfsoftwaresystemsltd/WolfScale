@@ -49,6 +49,7 @@ pub struct DiscoveredPeer {
 }
 
 /// Discovery service for finding cluster peers via UDP broadcast
+#[derive(Clone)]
 pub struct Discovery {
     node_id: String,
     bind_address: String,

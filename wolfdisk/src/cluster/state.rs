@@ -156,6 +156,33 @@ impl ClusterManager {
                 self.config.node.role,
             );
             discovery.start()?;
+            
+            // Start a sync thread to copy discovered peers to our peer map
+            let cluster_peers = Arc::clone(&self.peers);
+            let running = Arc::clone(&self.running);
+            let discovery_clone = discovery.clone();
+            
+            thread::spawn(move || {
+                while *running.read().unwrap() {
+                    // Get peers from discovery
+                    let discovered = discovery_clone.peers();
+                    
+                    // Update our peer map
+                    let mut peers = cluster_peers.write().unwrap();
+                    for dp in discovered {
+                        peers.insert(dp.node_id.clone(), PeerInfo {
+                            node_id: dp.node_id,
+                            address: dp.address,
+                            is_leader: dp.is_leader,
+                            last_seen: dp.last_seen,
+                        });
+                    }
+                    drop(peers);
+                    
+                    thread::sleep(Duration::from_millis(500));
+                }
+            });
+            
             self.discovery = Some(discovery);
             
             info!("Discovery started for node {}", self.node_id);
