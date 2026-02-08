@@ -2,9 +2,9 @@
 
 <div align="center">
 
-🐺 **Database clustering without the pain** 🐺
+**WolfScale** — Database replication, clustering, and load balancing — **the easy way**
 
-**High-Availability MariaDB Replication with Automatic Failover**
+**WolfDisk** — Disk replication and sharing — **the easy way**
 
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -16,7 +16,7 @@
 
 ---
 
-WolfScale is a lightweight, high-availability replication layer for MariaDB stand alone servers. It provides **automatic leader election** with deterministic failover, **WAL-based replication** for strong consistency, and a **MySQL-compatible proxy** for transparent routing—all in a single Rust binary.
+WolfScale is a lightweight, high-availability replication layer for MariaDB/MySQL. It provides **automatic leader election** with deterministic failover, **WAL-based replication** for strong consistency, and a **MySQL-compatible proxy** for transparent routing—all in a single Rust binary.
 
 ## Why WolfScale?
 
