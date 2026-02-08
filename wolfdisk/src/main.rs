@@ -240,6 +240,51 @@ fn main() {
                                 info!("FileSync complete for {}", sync.path);
                                 None
                             }
+                            Message::WriteRequest(write_req) => {
+                                // Handle write request from follower (we're the leader)
+                                info!("Received WriteRequest from {}: {} (offset: {}, size: {})", 
+                                    peer_id, write_req.path, write_req.offset, write_req.data.len());
+                                
+                                // Write data to chunk store
+                                let path = std::path::PathBuf::from(&write_req.path);
+                                let mut index = file_index_for_handler.write().unwrap();
+                                
+                                if let Some(entry) = index.get_mut(&path) {
+                                    match chunk_store_for_handler.write(&mut entry.chunks, write_req.offset, &write_req.data) {
+                                        Ok(written) => {
+                                            let new_end = write_req.offset + written as u64;
+                                            if new_end > entry.size {
+                                                entry.size = new_end;
+                                            }
+                                            entry.modified = std::time::SystemTime::now();
+                                            info!("Leader wrote {} bytes to {}", written, write_req.path);
+                                            
+                                            // TODO: Broadcast FileSync to other followers
+                                            // For now, just respond success
+                                            Some(Message::ClientResponse(ClientResponseMsg {
+                                                success: true,
+                                                data: None,
+                                                error: None,
+                                            }))
+                                        }
+                                        Err(e) => {
+                                            tracing::warn!("Leader write error: {}", e);
+                                            Some(Message::ClientResponse(ClientResponseMsg {
+                                                success: false,
+                                                data: None,
+                                                error: Some(format!("Write failed: {}", e)),
+                                            }))
+                                        }
+                                    }
+                                } else {
+                                    tracing::warn!("File not found on leader: {}", write_req.path);
+                                    Some(Message::ClientResponse(ClientResponseMsg {
+                                        success: false,
+                                        data: None,
+                                        error: Some("File not found".to_string()),
+                                    }))
+                                }
+                            }
                             Message::DeleteFile(del) => {
                                 // Handle incoming delete request (if we're leader)
                                 info!("Received DeleteFile: {}", del.path);

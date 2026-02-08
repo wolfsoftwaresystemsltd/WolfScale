@@ -18,7 +18,7 @@ use crate::cluster::ClusterManager;
 use crate::config::Config;
 use crate::error::Result;
 use crate::network::peer::PeerManager;
-use crate::network::protocol::{Message, CreateFileMsg, CreateDirMsg, DeleteFileMsg, DeleteDirMsg, IndexUpdateMsg, IndexOperation, ChunkRefMsg, FileSyncMsg, ChunkWithData};
+use crate::network::protocol::{Message, CreateFileMsg, CreateDirMsg, DeleteFileMsg, DeleteDirMsg, IndexUpdateMsg, IndexOperation, ChunkRefMsg, FileSyncMsg, ChunkWithData, WriteRequestMsg};
 use crate::storage::{ChunkStore, FileIndex, FileEntry, InodeTable};
 
 /// TTL for attribute caching
@@ -147,6 +147,49 @@ impl WolfDiskFS {
             Message::FileOpResponse(resp) if resp.success => Ok(()),
             Message::FileOpResponse(resp) => {
                 warn!("Leader rejected create: {:?}", resp.error);
+                Err(libc::EIO)
+            }
+            _ => Err(libc::EIO),
+        }
+    }
+    
+    /// Forward a write operation to the leader
+    fn forward_write_to_leader(&self, path: &str, offset: u64, data: &[u8]) -> std::result::Result<u32, i32> {
+        let (cluster, peer_manager) = match (&self.cluster, &self.peer_manager) {
+            (Some(c), Some(p)) => (c, p),
+            _ => return Err(libc::EIO),
+        };
+
+        let leader_id = cluster.leader_id().ok_or(libc::ENOENT)?;
+        let leader_addr = cluster.leader_address().ok_or(libc::ENOENT)?;
+
+        info!("Forwarding write to leader {} for path: {} (offset: {}, size: {})", 
+            leader_id, path, offset, data.len());
+
+        let conn = peer_manager.get_or_connect_leader(&leader_id, &leader_addr)
+            .map_err(|e| {
+                warn!("Failed to connect to leader: {}", e);
+                libc::EIO
+            })?;
+
+        let msg = Message::WriteRequest(WriteRequestMsg {
+            path: path.to_string(),
+            offset,
+            data: data.to_vec(),
+        });
+
+        let response = conn.request(&msg).map_err(|e| {
+            warn!("Failed to send write request to leader: {}", e);
+            libc::EIO
+        })?;
+
+        match response {
+            Message::ClientResponse(resp) if resp.success => {
+                // Return bytes written (from data length or response)
+                Ok(data.len() as u32)
+            }
+            Message::ClientResponse(resp) => {
+                warn!("Leader rejected write: {:?}", resp.error);
                 Err(libc::EIO)
             }
             _ => Err(libc::EIO),
@@ -498,16 +541,33 @@ impl Filesystem for WolfDiskFS {
     ) {
         debug!("write: ino={}, offset={}, size={}", ino, offset, data.len());
 
-        let inode_table = self.inode_table.write().unwrap();
-        let mut file_index = self.file_index.write().unwrap();
-
-        let path = match inode_table.get_path(ino) {
-            Some(p) => p.clone(),
-            None => {
-                reply.error(libc::ENOENT);
-                return;
+        // Get the path for this inode
+        let path = {
+            let inode_table = self.inode_table.read().unwrap();
+            match inode_table.get_path(ino) {
+                Some(p) => p.clone(),
+                None => {
+                    reply.error(libc::ENOENT);
+                    return;
+                }
             }
         };
+
+        // If we're a follower, forward to leader
+        if !self.is_leader() {
+            match self.forward_write_to_leader(&path.to_string_lossy(), offset as u64, data) {
+                Ok(written) => {
+                    reply.written(written);
+                }
+                Err(errno) => {
+                    reply.error(errno);
+                }
+            }
+            return;
+        }
+
+        // We're the leader - write locally
+        let mut file_index = self.file_index.write().unwrap();
 
         let entry = match file_index.get_mut(&path) {
             Some(e) => e,
@@ -533,7 +593,6 @@ impl Filesystem for WolfDiskFS {
                 
                 // Drop locks before broadcast and reply
                 drop(file_index);
-                drop(inode_table);
                 
                 // Broadcast file sync to followers
                 self.broadcast_file_sync(&path_clone, &entry_clone);
