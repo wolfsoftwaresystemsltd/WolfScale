@@ -116,6 +116,12 @@ fn main() {
             ));
             let file_index_for_handler = file_index.clone();
             
+            // Create chunk store for replication
+            let chunk_store_for_handler = std::sync::Arc::new(
+                wolfdisk::storage::ChunkStore::new(config.chunks_dir(), 4 * 1024 * 1024)
+                    .expect("Failed to create chunk store for handler")
+            );
+            
             // Create peer manager for network communication
             let peer_manager = std::sync::Arc::new(
                 wolfdisk::network::peer::PeerManager::new(
@@ -174,10 +180,43 @@ fn main() {
                                     }
                                 }
                                 
-                                // Note: Index will be saved periodically by status file writer
-                                // Cannot call save() here as we don't have index_dir in closure
-                                
                                 None // No response needed for replication
+                            }
+                            Message::FileSync(sync) => {
+                                info!("Received FileSync from {}: {} ({} bytes, {} chunks)", 
+                                    peer_id, sync.path, sync.size, sync.chunk_data.len());
+                                
+                                // Store all chunks first
+                                for chunk_with_data in &sync.chunk_data {
+                                    if let Err(e) = chunk_store_for_handler.store_with_hash(&chunk_with_data.hash, &chunk_with_data.data) {
+                                        tracing::warn!("Failed to store chunk: {}", e);
+                                    }
+                                }
+                                
+                                // Update index
+                                let mut index = file_index_for_handler.write().unwrap();
+                                let chunk_refs: Vec<ChunkRef> = sync.chunks.iter()
+                                    .map(|c| ChunkRef {
+                                        hash: c.hash,
+                                        offset: c.offset,
+                                        size: c.size,
+                                    })
+                                    .collect();
+                                
+                                index.insert(std::path::PathBuf::from(&sync.path), FileEntry {
+                                    size: sync.size,
+                                    is_dir: sync.is_dir,
+                                    permissions: sync.permissions,
+                                    uid: sync.uid,
+                                    gid: sync.gid,
+                                    modified: std::time::UNIX_EPOCH + std::time::Duration::from_millis(sync.modified_ms),
+                                    created: std::time::UNIX_EPOCH + std::time::Duration::from_millis(sync.modified_ms),
+                                    accessed: std::time::SystemTime::now(),
+                                    chunks: chunk_refs,
+                                });
+                                
+                                info!("FileSync complete for {}", sync.path);
+                                None
                             }
                             Message::DeleteFile(del) => {
                                 // Handle incoming delete request (if we're leader)

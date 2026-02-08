@@ -31,6 +31,14 @@ pub enum Message {
     /// Response with full index
     SyncResponse(SyncResponseMsg),
 
+    // === Replication (leader -> follower) ===
+    /// Full file sync with chunk data (for writes)
+    FileSync(FileSyncMsg),
+    /// Rename a file or directory
+    RenameFile(RenameFileMsg),
+    /// Set file/directory attributes (chmod/chown)
+    SetAttr(SetAttrMsg),
+
     // === Client Operations ===
     /// Client requesting file read (forwarded to leader if needed)
     ReadRequest(ReadRequestMsg),
@@ -280,6 +288,54 @@ pub struct ReadDirResponseMsg {
     pub success: bool,
     pub entries: Vec<DirEntryMsg>,
     pub error: Option<String>,
+}
+
+/// Full file sync with chunk data (for writes and initial sync)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileSyncMsg {
+    /// File path
+    pub path: String,
+    /// Whether this is a directory
+    pub is_dir: bool,
+    /// File size in bytes
+    pub size: u64,
+    /// File permissions
+    pub permissions: u32,
+    /// Owner user ID
+    pub uid: u32,
+    /// Owner group ID
+    pub gid: u32,
+    /// Modification time (ms since epoch)
+    pub modified_ms: u64,
+    /// Chunk references
+    pub chunks: Vec<ChunkRefMsg>,
+    /// Actual chunk data (hash -> data)
+    pub chunk_data: Vec<ChunkWithData>,
+}
+
+/// Chunk with its actual data
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChunkWithData {
+    pub hash: [u8; 32],
+    pub data: Vec<u8>,
+}
+
+/// Rename file/directory message
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RenameFileMsg {
+    pub from_path: String,
+    pub to_path: String,
+}
+
+/// Set file attributes message (chmod/chown)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SetAttrMsg {
+    pub path: String,
+    pub permissions: Option<u32>,
+    pub uid: Option<u32>,
+    pub gid: Option<u32>,
+    pub size: Option<u64>,
+    pub modified_ms: Option<u64>,
 }
 
 /// Serialize a message for transmission

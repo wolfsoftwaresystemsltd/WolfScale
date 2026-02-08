@@ -65,6 +65,30 @@ impl ChunkStore {
         debug!("Stored chunk {} ({} bytes)", hex::encode(&hash), data.len());
         Ok(hash)
     }
+    
+    /// Store a chunk with a known hash (for replication)
+    pub fn store_with_hash(&self, hash: &[u8; 32], data: &[u8]) -> Result<()> {
+        let path = self.chunk_path(hash);
+
+        // Check if chunk already exists (deduplication)
+        if path.exists() {
+            debug!("Chunk {} already exists (deduplicated)", hex::encode(hash));
+            return Ok(());
+        }
+
+        // Create parent directory
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        // Write chunk to file
+        let mut file = File::create(&path)?;
+        file.write_all(data)?;
+        file.sync_all()?;
+
+        debug!("Stored replicated chunk {} ({} bytes)", hex::encode(hash), data.len());
+        Ok(())
+    }
 
     /// Retrieve a chunk by its hash
     pub fn get(&self, hash: &[u8; 32]) -> Result<Vec<u8>> {

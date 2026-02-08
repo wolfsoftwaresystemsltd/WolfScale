@@ -18,7 +18,7 @@ use crate::cluster::ClusterManager;
 use crate::config::Config;
 use crate::error::Result;
 use crate::network::peer::PeerManager;
-use crate::network::protocol::{Message, CreateFileMsg, CreateDirMsg, DeleteFileMsg, DeleteDirMsg, IndexUpdateMsg, IndexOperation};
+use crate::network::protocol::{Message, CreateFileMsg, CreateDirMsg, DeleteFileMsg, DeleteDirMsg, IndexUpdateMsg, IndexOperation, ChunkRefMsg, FileSyncMsg, RenameFileMsg, SetAttrMsg, ChunkWithData};
 use crate::storage::{ChunkStore, FileIndex, FileEntry, InodeTable};
 
 /// TTL for attribute caching
@@ -222,6 +222,67 @@ impl WolfDiskFS {
             });
             
             info!("Broadcasting IndexUpdate (version {}) to {} followers", version, peers.len());
+            peer_manager.broadcast(&msg);
+        }
+    }
+    
+    /// Broadcast a complete file with chunk data to followers (for writes)
+    fn broadcast_file_sync(&self, path: &std::path::Path, entry: &FileEntry) {
+        if !self.is_leader() {
+            return;
+        }
+        
+        if let (Some(cluster), Some(peer_manager)) = (&self.cluster, &self.peer_manager) {
+            // First, ensure we're connected to all discovered peers
+            let peers = cluster.peers();
+            for peer in &peers {
+                if peer_manager.get(&peer.node_id).is_none() {
+                    info!("Connecting to follower {} at {}", peer.node_id, peer.address);
+                    if let Err(e) = peer_manager.connect(&peer.node_id, &peer.address) {
+                        warn!("Failed to connect to {}: {}", peer.node_id, e);
+                    }
+                }
+            }
+            
+            // Read all chunk data
+            let mut chunk_data = Vec::new();
+            for chunk in &entry.chunks {
+                match self.chunk_store.get(&chunk.hash) {
+                    Ok(data) => {
+                        chunk_data.push(ChunkWithData {
+                            hash: chunk.hash,
+                            data,
+                        });
+                    }
+                    Err(e) => {
+                        warn!("Failed to read chunk for sync: {}", e);
+                    }
+                }
+            }
+            
+            let modified_ms = entry.modified
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis() as u64;
+            
+            let msg = Message::FileSync(FileSyncMsg {
+                path: path.to_string_lossy().to_string(),
+                is_dir: entry.is_dir,
+                size: entry.size,
+                permissions: entry.permissions,
+                uid: entry.uid,
+                gid: entry.gid,
+                modified_ms,
+                chunks: entry.chunks.iter().map(|c| ChunkRefMsg {
+                    hash: c.hash,
+                    offset: c.offset,
+                    size: c.size,
+                }).collect(),
+                chunk_data,
+            });
+            
+            info!("Broadcasting FileSync for {} ({} bytes, {} chunks) to {} followers", 
+                path.display(), entry.size, entry.chunks.len(), peers.len());
             peer_manager.broadcast(&msg);
         }
     }
@@ -455,6 +516,18 @@ impl Filesystem for WolfDiskFS {
                     entry.size = new_end;
                 }
                 entry.modified = SystemTime::now();
+                
+                // Clone entry for broadcast (need to do this before reply)
+                let entry_clone = entry.clone();
+                let path_clone = path.clone();
+                
+                // Drop locks before broadcast and reply
+                drop(file_index);
+                drop(inode_table);
+                
+                // Broadcast file sync to followers
+                self.broadcast_file_sync(&path_clone, &entry_clone);
+                
                 reply.written(written as u32);
             }
             Err(e) => {
@@ -613,10 +686,22 @@ impl Filesystem for WolfDiskFS {
 
         // Allocate inode and add to tables
         let inode = self.allocate_inode();
+        let dir_path_str = dir_path.to_string_lossy().to_string();
         inode_table.insert(inode, dir_path.clone());
         file_index.insert(dir_path, entry.clone());
+        
+        // Drop locks before broadcast
+        drop(inode_table);
+        drop(file_index);
 
         let attr = self.entry_to_attr(&entry, inode);
+        
+        // Broadcast mkdir to followers
+        self.broadcast_index_update(IndexOperation::Mkdir {
+            path: dir_path_str,
+            permissions: mode,
+        });
+        
         reply.entry(&TTL, &attr, 0);
     }
 
@@ -708,14 +793,29 @@ impl Filesystem for WolfDiskFS {
 
         // Allocate inode and add to tables
         let inode = self.allocate_inode();
+        let file_path_str = file_path.to_string_lossy().to_string();
         inode_table.insert(inode, file_path.clone());
         file_index.insert(file_path, entry.clone());
+        
+        // Drop locks before broadcast
+        drop(inode_table);
+        drop(file_index);
 
         // Allocate file handle
         let fh = self.allocate_fh();
         self.open_files.write().unwrap().insert(fh, inode);
 
         let attr = self.entry_to_attr(&entry, inode);
+        
+        // Broadcast file creation to followers
+        self.broadcast_index_update(IndexOperation::Upsert {
+            path: file_path_str,
+            size: 0,
+            modified_ms: now.duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis() as u64,
+            permissions: mode,
+            chunks: vec![],
+        });
+        
         reply.created(&TTL, &attr, 0, fh, 0);
     }
 
