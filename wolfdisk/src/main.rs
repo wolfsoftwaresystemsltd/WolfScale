@@ -123,6 +123,16 @@ fn main() {
             );
             let chunk_store_for_handler = chunk_store.clone();
             
+            // Build inode table from index (shared with WolfDiskFS)
+            let (inode_table_data, max_inode) = {
+                let index = file_index.read().unwrap();
+                wolfdisk::storage::InodeTable::from_index(&index)
+            };
+            let inode_table = std::sync::Arc::new(std::sync::RwLock::new(inode_table_data));
+            let next_inode = std::sync::Arc::new(std::sync::RwLock::new(max_inode + 1));
+            let inode_table_for_handler = inode_table.clone();
+            let next_inode_for_handler = next_inode.clone();
+            
             // Create peer manager for network communication
             let peer_manager = std::sync::Arc::new(
                 wolfdisk::network::peer::PeerManager::new(
@@ -204,7 +214,8 @@ fn main() {
                                     })
                                     .collect();
                                 
-                                index.insert(std::path::PathBuf::from(&sync.path), FileEntry {
+                                let path = std::path::PathBuf::from(&sync.path);
+                                index.insert(path.clone(), FileEntry {
                                     size: sync.size,
                                     is_dir: sync.is_dir,
                                     permissions: sync.permissions,
@@ -215,6 +226,16 @@ fn main() {
                                     accessed: std::time::SystemTime::now(),
                                     chunks: chunk_refs,
                                 });
+                                
+                                // Also update inode table so the file can be looked up
+                                let mut inode_tbl = inode_table_for_handler.write().unwrap();
+                                let mut next_ino = next_inode_for_handler.write().unwrap();
+                                if inode_tbl.get_inode(&path).is_none() {
+                                    let ino = *next_ino;
+                                    *next_ino += 1;
+                                    inode_tbl.insert(ino, path.clone());
+                                    info!("Added inode {} for replicated path: {}", ino, sync.path);
+                                }
                                 
                                 info!("FileSync complete for {}", sync.path);
                                 None
@@ -250,6 +271,8 @@ fn main() {
                 Some(peer_manager.clone()),
                 file_index.clone(),
                 chunk_store.clone(),
+                inode_table.clone(),
+                next_inode.clone(),
             ) {
                 Ok(fs) => fs,
                 Err(e) => {
