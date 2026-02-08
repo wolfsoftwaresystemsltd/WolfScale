@@ -139,6 +139,23 @@ Web Server 3 ─── WolfScale LB ───┘
 
 **Benefits:** No single point of failure • Zero latency (localhost) • Scales naturally • Auto-discovery
 
+### WolfDisk - Distributed File System
+
+WolfDisk is a distributed file system that shares and replicates files across Linux servers using WolfScale's consensus infrastructure.
+
+```bash
+# One-liner install
+curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/wolfdisk/setup.sh | bash
+```
+
+**Features:**
+- **FUSE Integration** — Mount as a regular directory
+- **Content-Addressed Storage** — SHA256 deduplication
+- **Chunk-Based** — Efficient sync of large files
+- **Two Modes** — Replicated (HA) or Shared (simple)
+
+See [`wolfdisk/README.md`](wolfdisk/README.md) for full documentation.
+
 ### Cluster Commands
 
 ```bash
