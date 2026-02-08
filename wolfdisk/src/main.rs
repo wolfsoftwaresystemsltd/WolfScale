@@ -1187,7 +1187,7 @@ fn main() {
                 println!("  ● {} (self) - {:?}", config.node.id, cluster.state());
                 for peer in &peers {
                     let status = if peer.last_seen.elapsed().as_secs() < 4 { "●" } else { "○" };
-                    let role = if peer.is_leader { "leader" } else { "follower" };
+                    let role = if peer.is_leader { "leader" } else if peer.is_client { "client" } else { "follower" };
                     let ago = peer.last_seen.elapsed().as_secs();
                     println!("  {} {} - {} (seen {}s ago)", status, peer.node_id, role, ago);
                 }
@@ -1224,12 +1224,12 @@ fn main() {
             println!("╠════════════════════════════════════════════════════════════════╣");
             
             // Print this node first
-            let my_role = if cluster.is_leader() { "LEADER" } else { "FOLLOWER" };
+            let my_role = if cluster.is_leader() { "LEADER" } else if cluster.state() == wolfdisk::cluster::ClusterState::Client { "CLIENT" } else { "FOLLOWER" };
             println!("║ ● {:15} {:22} {:8} ║", config.node.id, config.node.bind, my_role);
             
             for peer in &peers {
                 let status = if peer.last_seen.elapsed().as_secs() < 4 { "●" } else { "○" };
-                let role = if peer.is_leader { "LEADER" } else { "FOLLOWER" };
+                let role = if peer.is_leader { "LEADER" } else if peer.is_client { "CLIENT" } else { "FOLLOWER" };
                 println!("║ {} {:15} {:22} {:8} ║", status, peer.node_id, peer.address, role);
             }
             

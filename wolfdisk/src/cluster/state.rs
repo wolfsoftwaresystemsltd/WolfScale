@@ -355,7 +355,7 @@ impl ClusterManager {
         let state = self.state();
         let peers = self.peers();
         
-        let role = if self.is_leader() { "leader" } else { "follower" };
+        let role = if self.is_leader() { "leader" } else if state == ClusterState::Client { "client" } else { "follower" };
         let state_str = match state {
             ClusterState::Discovering => "discovering",
             ClusterState::Following => "following",
@@ -365,10 +365,13 @@ impl ClusterManager {
         };
         
         let peer_statuses: Vec<serde_json::Value> = peers.iter().map(|p| {
+            let peer_role = if p.is_leader { "leader" } else if p.is_client { "client" } else { "follower" };
             serde_json::json!({
                 "node_id": p.node_id,
                 "address": p.address,
+                "role": peer_role,
                 "is_leader": p.is_leader,
+                "is_client": p.is_client,
                 "last_seen_secs_ago": p.last_seen.elapsed().as_secs()
             })
         }).collect();
