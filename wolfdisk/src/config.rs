@@ -27,6 +27,10 @@ pub struct NodeConfig {
     /// Unique node identifier
     pub id: String,
 
+    /// Node role in the cluster
+    #[serde(default = "default_role")]
+    pub role: NodeRole,
+
     /// Bind address for cluster communication
     #[serde(default = "default_bind")]
     pub bind: String,
@@ -34,6 +38,10 @@ pub struct NodeConfig {
     /// Data directory for chunks and index
     #[serde(default = "default_data_dir")]
     pub data_dir: PathBuf,
+}
+
+fn default_role() -> NodeRole {
+    NodeRole::Auto
 }
 
 fn default_bind() -> String {
@@ -63,6 +71,20 @@ pub enum ReplicationMode {
     Replicated,
     /// Single leader, others are read-only clients
     Shared,
+}
+
+/// Node role in the cluster
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum NodeRole {
+    /// Leader node - accepts writes, replicates to followers
+    Leader,
+    /// Follower node - replicates data from leader
+    Follower,
+    /// Client node - mount-only, no replication, accesses shared drive via leader
+    Client,
+    /// Auto-detect role (will become leader if no others, otherwise follower)
+    Auto,
 }
 
 /// Replication configuration
@@ -120,6 +142,7 @@ impl Default for Config {
                 id: hostname::get()
                     .map(|h| h.to_string_lossy().to_string())
                     .unwrap_or_else(|_| "node1".to_string()),
+                role: default_role(),
                 bind: default_bind(),
                 data_dir: default_data_dir(),
             },

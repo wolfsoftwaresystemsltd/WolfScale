@@ -93,6 +93,11 @@ impl ChunkStore {
         Ok(())
     }
 
+    /// Check if a chunk exists
+    pub fn exists(&self, hash: &[u8; 32]) -> bool {
+        self.chunk_path(hash).exists()
+    }
+
     /// Read data from a file's chunks at a given offset
     pub fn read(&self, chunks: &[ChunkRef], offset: u64, size: usize) -> Result<Vec<u8>> {
         if chunks.is_empty() {
