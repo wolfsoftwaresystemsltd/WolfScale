@@ -133,6 +133,12 @@ fn main() {
             let inode_table_for_handler = inode_table.clone();
             let next_inode_for_handler = next_inode.clone();
             
+            // Broadcast queue for message handler to queue FileSync broadcasts
+            // (path, entry) tuples that need to be broadcast to followers
+            let broadcast_queue: std::sync::Arc<std::sync::Mutex<Vec<(std::path::PathBuf, wolfdisk::storage::FileEntry)>>> = 
+                std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+            let broadcast_queue_for_handler = broadcast_queue.clone();
+            
             // Create peer manager for network communication
             let peer_manager = std::sync::Arc::new(
                 wolfdisk::network::peer::PeerManager::new(
@@ -259,8 +265,12 @@ fn main() {
                                             entry.modified = std::time::SystemTime::now();
                                             info!("Leader wrote {} bytes to {}", written, write_req.path);
                                             
-                                            // TODO: Broadcast FileSync to other followers
-                                            // For now, just respond success
+                                            // Queue broadcast to all followers
+                                            let entry_clone = entry.clone();
+                                            let path_clone = path.clone();
+                                            drop(index); // Release lock before queueing
+                                            broadcast_queue_for_handler.lock().unwrap().push((path_clone, entry_clone));
+                                            
                                             Some(Message::ClientResponse(ClientResponseMsg {
                                                 success: true,
                                                 data: None,
@@ -325,11 +335,17 @@ fn main() {
                                     let mut next_ino = next_inode_for_handler.write().unwrap();
                                     let ino = *next_ino;
                                     *next_ino += 1;
-                                    inode_tbl.insert(ino, path);
+                                    inode_tbl.insert(ino, path.clone());
                                     
                                     info!("Leader created file: {} with inode {}", create_req.path, ino);
                                     
-                                    // TODO: Broadcast to other followers
+                                    // Queue broadcast to followers
+                                    let entry_for_broadcast = index.get(&path).unwrap().clone();
+                                    drop(index);
+                                    drop(inode_tbl);
+                                    drop(next_ino);
+                                    broadcast_queue_for_handler.lock().unwrap().push((path, entry_for_broadcast));
+                                    
                                     Some(Message::FileOpResponse(FileOpResponseMsg {
                                         success: true,
                                         error: None,
@@ -359,6 +375,63 @@ fn main() {
                 std::process::exit(1);
             }
             info!("Peer manager started on {}", config.node.bind);
+            
+            // Spawn broadcast processing thread
+            let peer_manager_for_broadcast = peer_manager.clone();
+            let chunk_store_for_broadcast = chunk_store.clone();
+            let broadcast_queue_for_thread = broadcast_queue.clone();
+            std::thread::spawn(move || {
+                use wolfdisk::network::protocol::{Message, FileSyncMsg, ChunkWithData};
+                loop {
+                    // Check queue every 50ms
+                    std::thread::sleep(std::time::Duration::from_millis(50));
+                    
+                    // Drain pending broadcasts
+                    let pending: Vec<_> = {
+                        let mut queue = broadcast_queue_for_thread.lock().unwrap();
+                        queue.drain(..).collect()
+                    };
+                    
+                    for (path, entry) in pending {
+                        // Read chunk data
+                        let mut chunks_with_data = Vec::new();
+                        for chunk_ref in &entry.chunks {
+                            if let Ok(data) = chunk_store_for_broadcast.get(&chunk_ref.hash) {
+                                chunks_with_data.push(ChunkWithData {
+                                    hash: chunk_ref.hash.clone(),
+                                    data,
+                                });
+                            }
+                        }
+                        
+                        // Convert SystemTime to ms since epoch
+                        let modified_ms = entry.modified
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .map(|d| d.as_millis() as u64)
+                            .unwrap_or(0);
+                        
+                        let msg = Message::FileSync(FileSyncMsg {
+                            path: path.to_string_lossy().to_string(),
+                            size: entry.size,
+                            is_dir: entry.is_dir,
+                            permissions: entry.permissions,
+                            uid: entry.uid,
+                            gid: entry.gid,
+                            modified_ms,
+                            chunks: entry.chunks.iter().map(|c| wolfdisk::network::protocol::ChunkRefMsg {
+                                hash: c.hash.clone(),
+                                offset: c.offset,
+                                size: c.size,
+                            }).collect(),
+                            chunk_data: chunks_with_data,
+                        });
+                        
+                        info!("Broadcasting FileSync for {} ({} bytes, {} chunks)", 
+                            path.display(), entry.size, entry.chunks.len());
+                        peer_manager_for_broadcast.broadcast(&msg);
+                    }
+                }
+            });
             
             // Create filesystem instance with cluster support (using shared state)
             let fs = match WolfDiskFS::with_cluster(
