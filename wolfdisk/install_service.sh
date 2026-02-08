@@ -52,8 +52,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/wolfdisk mount -m $MOUNT_POINT -c $CONFIG_FILE
-ExecStop=/usr/local/bin/wolfdisk unmount -m $MOUNT_POINT
+ExecStart=/usr/local/bin/wolfdisk --config $CONFIG_FILE mount --mountpoint $MOUNT_POINT
+ExecStop=/usr/local/bin/wolfdisk unmount --mountpoint $MOUNT_POINT
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
