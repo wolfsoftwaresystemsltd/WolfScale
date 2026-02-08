@@ -925,8 +925,14 @@ fn main() {
             });
             
             // Spawn initial sync thread for non-leader nodes
-            // This requests the full index from the leader when we first discover one
-            if !cluster.is_leader() {
+            // Use configured role, NOT runtime state, since all nodes start as Discovering
+            // before the election happens (5 second delay)
+            let should_sync = config.node.role == wolfdisk::config::NodeRole::Client
+                || config.node.role == wolfdisk::config::NodeRole::Follower;
+            // For Auto role, we need to sync in the thread after election decides
+            let is_auto_role = config.node.role == wolfdisk::config::NodeRole::Auto;
+            
+            if should_sync || is_auto_role {
                 let sync_cluster = cluster.clone();
                 let sync_peer_manager = peer_manager.clone();
                 let sync_file_index = file_index.clone();
@@ -934,6 +940,7 @@ fn main() {
                 let sync_next_inode = next_inode.clone();
                 let sync_is_client = config.node.role == wolfdisk::config::NodeRole::Client;
                 let _sync_chunk_store = chunk_store.clone();
+                let sync_node_id = config.node.id.clone();
                 
                 std::thread::spawn(move || {
                     use wolfdisk::network::protocol::*;
@@ -946,6 +953,13 @@ fn main() {
                     let mut leader_found = false;
                     for _ in 0..60 {
                         std::thread::sleep(std::time::Duration::from_millis(500));
+                        
+                        // If we became leader ourselves, abort sync (we ARE the source of truth)
+                        if sync_cluster.is_leader() {
+                            info!("We became leader - skipping initial sync (we are the source of truth)");
+                            return;
+                        }
+                        
                         if sync_cluster.leader_id().is_some() {
                             leader_found = true;
                             break;
@@ -958,6 +972,13 @@ fn main() {
                     }
                     
                     let leader_id = sync_cluster.leader_id().unwrap();
+                    
+                    // Don't sync from ourselves!
+                    if leader_id == sync_node_id {
+                        info!("We are the leader - skipping initial sync");
+                        return;
+                    }
+                    
                     let leader_addr = match sync_cluster.leader_address() {
                         Some(addr) => addr,
                         None => {
