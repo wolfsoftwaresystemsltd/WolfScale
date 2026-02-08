@@ -200,6 +200,28 @@ fn main() {
                                 None // No response needed for replication
                             }
                             Message::FileSync(sync) => {
+                                // Check if this is a deletion signal (size == u64::MAX)
+                                if sync.size == u64::MAX {
+                                    info!("Received FileDelete from {}: {}", peer_id, sync.path);
+                                    
+                                    let path = std::path::PathBuf::from(&sync.path);
+                                    let mut index = file_index_for_handler.write().unwrap();
+                                    
+                                    if let Some(entry) = index.remove(&path) {
+                                        // Delete chunks
+                                        for chunk in &entry.chunks {
+                                            let _ = chunk_store_for_handler.delete(&chunk.hash);
+                                        }
+                                        
+                                        // Remove from inode table
+                                        let mut inode_tbl = inode_table_for_handler.write().unwrap();
+                                        inode_tbl.remove_path(&path);
+                                        
+                                        info!("Deleted file from follower: {}", sync.path);
+                                    }
+                                    return None;
+                                }
+                                
                                 info!("Received FileSync from {}: {} ({} bytes, {} chunks)", 
                                     peer_id, sync.path, sync.size, sync.chunk_data.len());
                                 
@@ -355,10 +377,49 @@ fn main() {
                             Message::DeleteFile(del) => {
                                 // Handle incoming delete request (if we're leader)
                                 info!("Received DeleteFile: {}", del.path);
-                                Some(Message::FileOpResponse(FileOpResponseMsg {
-                                    success: true,
-                                    error: None,
-                                }))
+                                
+                                let path = std::path::PathBuf::from(&del.path);
+                                let mut index = file_index_for_handler.write().unwrap();
+                                
+                                if let Some(entry) = index.remove(&path) {
+                                    // Delete chunks
+                                    for chunk in &entry.chunks {
+                                        let _ = chunk_store_for_handler.delete(&chunk.hash);
+                                    }
+                                    
+                                    // Remove from inode table
+                                    let mut inode_tbl = inode_table_for_handler.write().unwrap();
+                                    inode_tbl.remove_path(&path);
+                                    
+                                    info!("Leader deleted file: {}", del.path);
+                                    
+                                    // Queue delete broadcast to followers
+                                    // We use a special entry with size u64::MAX to signal deletion
+                                    let delete_marker = wolfdisk::storage::FileEntry {
+                                        size: u64::MAX, // Signals deletion
+                                        is_dir: false,
+                                        permissions: 0,
+                                        uid: 0,
+                                        gid: 0,
+                                        modified: std::time::SystemTime::now(),
+                                        created: std::time::SystemTime::now(),
+                                        accessed: std::time::SystemTime::now(),
+                                        chunks: Vec::new(),
+                                    };
+                                    drop(index);
+                                    drop(inode_tbl);
+                                    broadcast_queue_for_handler.lock().unwrap().push((path, delete_marker));
+                                    
+                                    Some(Message::FileOpResponse(FileOpResponseMsg {
+                                        success: true,
+                                        error: None,
+                                    }))
+                                } else {
+                                    Some(Message::FileOpResponse(FileOpResponseMsg {
+                                        success: false,
+                                        error: Some("File not found".to_string()),
+                                    }))
+                                }
                             }
                             _ => {
                                 debug!("Unhandled message from {}: {:?}", peer_id, msg);
@@ -393,7 +454,27 @@ fn main() {
                     };
                     
                     for (path, entry) in pending {
-                        // Read chunk data
+                        // Check if this is a deletion (size == u64::MAX)
+                        if entry.size == u64::MAX {
+                            // Broadcast deletion
+                            let msg = Message::FileSync(FileSyncMsg {
+                                path: path.to_string_lossy().to_string(),
+                                size: u64::MAX, // Signals deletion
+                                is_dir: false,
+                                permissions: 0,
+                                uid: 0,
+                                gid: 0,
+                                modified_ms: 0,
+                                chunks: Vec::new(),
+                                chunk_data: Vec::new(),
+                            });
+                            
+                            info!("Broadcasting FileDelete for {}", path.display());
+                            peer_manager_for_broadcast.broadcast(&msg);
+                            continue;
+                        }
+                        
+                        // Normal file sync - read chunk data
                         let mut chunks_with_data = Vec::new();
                         for chunk_ref in &entry.chunks {
                             if let Ok(data) = chunk_store_for_broadcast.get(&chunk_ref.hash) {
