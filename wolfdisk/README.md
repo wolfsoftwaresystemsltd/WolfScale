@@ -186,6 +186,39 @@ Follower applies 5 changes, now at version 50
 
 This ensures efficient catchup — a node that was down briefly only receives missed changes, not the entire index.
 
+## Write Replication
+
+When the leader writes a file:
+
+1. **Local Write** — Leader stores chunks and updates index locally
+2. **Broadcast** — Leader sends index update and chunks to all followers
+3. **Apply** — Followers update their local index and store chunks
+
+```
+Application writes file.txt
+        ↓
+Leader: store chunks + update index (version++)
+        ↓
+Broadcast: IndexUpdate + StoreChunk to all followers
+        ↓
+Followers: apply updates, store chunks locally
+```
+
+No quorum required — lowest node ID is always leader.
+
+## Read Caching
+
+Followers cache chunks locally for fast reads:
+
+1. **Cache Hit** — Chunk exists locally → serve immediately
+2. **Cache Miss** — Request chunk from leader → cache locally → return
+
+```
+Follower read:
+  chunk exists locally? → return data (fast)
+  chunk missing? → fetch from leader → cache → return
+```
+
 ## Client Mode (Thin Client)
 
 Client mode mounts the filesystem without storing any data locally:
