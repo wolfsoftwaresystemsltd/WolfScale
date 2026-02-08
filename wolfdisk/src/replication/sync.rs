@@ -274,47 +274,155 @@ impl ReplicationManager {
     }
 
     /// Replicate a chunk to followers (called after local write on leader)
-    pub fn replicate_chunk(&self, hash: &[u8; 32], _data: &[u8]) {
+    pub fn replicate_chunk(&self, hash: &[u8; 32], data: &[u8]) {
         if !self.cluster.is_leader() {
             return;
         }
 
-        let mode = self.config.replication.mode;
-        match mode {
-            ReplicationMode::Shared => {
-                // Shared mode: broadcast to all followers
-                debug!("Broadcasting chunk {} to followers", hex::encode(hash));
-                // Would use PeerManager to send StoreChunkMsg
+        let peer_manager = match &self.peer_manager {
+            Some(pm) => pm,
+            None => {
+                debug!("No peer manager for chunk replication");
+                return;
             }
-            ReplicationMode::Replicated => {
-                // Replicated mode: write to N nodes with quorum
-                let factor = self.config.replication.factor;
-                debug!("Replicating chunk {} to {} nodes", hex::encode(hash), factor);
-                // Would use PeerManager to send to N peers and wait for quorum
+        };
+
+        let msg = Message::StoreChunk(StoreChunkMsg {
+            hash: *hash,
+            data: data.to_vec(),
+        });
+
+        // Broadcast to all known peers
+        let peers = self.cluster.peers();
+        for peer in peers {
+            if let Err(e) = peer_manager.send_to(&peer.node_id, &msg) {
+                warn!("Failed to replicate chunk to {}: {}", peer.node_id, e);
+            } else {
+                debug!("Replicated chunk {} to {}", hex::encode(hash), peer.node_id);
             }
         }
     }
 
-    /// Replicate index update to followers
+    /// Replicate index update to followers (called after file operations on leader)
     pub fn replicate_index_update(&self, operation: IndexOperation) {
         if !self.cluster.is_leader() {
             return;
         }
 
-        let version = {
-            let mut v = self.index_version.write().unwrap();
-            *v += 1;
-            *v
+        let peer_manager = match &self.peer_manager {
+            Some(pm) => pm,
+            None => {
+                debug!("No peer manager for index replication");
+                return;
+            }
         };
 
-        debug!("Replicating index update (version {})", version);
+        // Increment version
+        let version = self.cluster.increment_index_version();
+        *self.index_version.write().unwrap() = version;
+
+        info!("Broadcasting index update v{}: {:?}", version, operation);
         
-        let _msg = IndexUpdateMsg {
+        let msg = Message::IndexUpdate(IndexUpdateMsg {
             version,
             operation,
-        };
-        
-        // Would broadcast via PeerManager
+        });
+
+        // Broadcast to all known peers
+        let peers = self.cluster.peers();
+        for peer in peers {
+            if let Err(e) = peer_manager.send_to(&peer.node_id, &msg) {
+                warn!("Failed to send index update to {}: {}", peer.node_id, e);
+            } else {
+                debug!("Sent index update to {}", peer.node_id);
+            }
+        }
+    }
+
+    /// Handle incoming index update from leader (called on followers)
+    pub fn handle_index_update(&self, update: IndexUpdateMsg) {
+        if self.cluster.is_leader() {
+            debug!("Ignoring index update on leader");
+            return;
+        }
+
+        info!("Applying index update v{}: {:?}", update.version, update.operation);
+
+        let mut file_index = self.file_index.write().unwrap();
+        let mut pending = self.pending_chunks.write().unwrap();
+        let now = SystemTime::now();
+
+        match update.operation {
+            IndexOperation::Upsert { path, size, chunks, .. } => {
+                let chunk_refs: Vec<ChunkRef> = chunks.iter().map(|c| {
+                    // Track chunks we need to fetch
+                    if !self.chunk_store.exists(&c.hash) {
+                        pending.insert(c.hash);
+                    }
+                    ChunkRef {
+                        hash: c.hash,
+                        offset: c.offset,
+                        size: c.size,
+                    }
+                }).collect();
+
+                let entry = FileEntry {
+                    size,
+                    is_dir: false,
+                    permissions: 0o644,
+                    uid: 0,
+                    gid: 0,
+                    created: now,
+                    modified: now,
+                    accessed: now,
+                    chunks: chunk_refs,
+                };
+                file_index.insert(PathBuf::from(&path), entry);
+            }
+            IndexOperation::Mkdir { path, permissions } => {
+                let entry = FileEntry {
+                    size: 0,
+                    is_dir: true,
+                    permissions,
+                    uid: 0,
+                    gid: 0,
+                    created: now,
+                    modified: now,
+                    accessed: now,
+                    chunks: vec![],
+                };
+                file_index.insert(PathBuf::from(&path), entry);
+            }
+            IndexOperation::Delete { path } => {
+                file_index.remove(&PathBuf::from(&path));
+            }
+        }
+
+        // Update our version
+        self.cluster.set_index_version(update.version);
+        *self.index_version.write().unwrap() = update.version;
+
+        if !pending.is_empty() {
+            debug!("Need to fetch {} chunks", pending.len());
+        }
+    }
+
+    /// Handle incoming chunk from leader (called on followers)
+    pub fn handle_store_chunk(&self, hash: &[u8; 32], data: &[u8]) {
+        if self.cluster.is_leader() {
+            debug!("Ignoring store chunk on leader");
+            return;
+        }
+
+        // Store the chunk locally (store returns hash, we ignore it since we already have it)
+        if let Err(e) = self.chunk_store.store(data) {
+            warn!("Failed to store replicated chunk: {}", e);
+            return;
+        }
+
+        // Remove from pending if we were waiting for it
+        self.pending_chunks.write().unwrap().remove(hash);
+        debug!("Stored replicated chunk {}", hex::encode(hash));
     }
 
     /// Request full index sync from leader
