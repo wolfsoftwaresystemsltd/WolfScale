@@ -733,6 +733,172 @@ impl Filesystem for WolfDiskFS {
         reply.error(libc::ENOENT);
     }
 
+    fn setattr(
+        &mut self,
+        _req: &Request,
+        ino: u64,
+        mode: Option<u32>,
+        uid: Option<u32>,
+        gid: Option<u32>,
+        size: Option<u64>,
+        atime: Option<fuser::TimeOrNow>,
+        mtime: Option<fuser::TimeOrNow>,
+        _ctime: Option<SystemTime>,
+        _fh: Option<u64>,
+        _crtime: Option<SystemTime>,
+        _chgtime: Option<SystemTime>,
+        _bkuptime: Option<SystemTime>,
+        _flags: Option<u32>,
+        reply: ReplyAttr,
+    ) {
+        debug!("setattr: ino={}, size={:?}, mode={:?}", ino, size, mode);
+
+        if ino == ROOT_INODE {
+            reply.attr(&TTL, &self.root_attr());
+            return;
+        }
+
+        let path = {
+            let inode_table = self.inode_table.read().unwrap();
+            match inode_table.get_path(ino) {
+                Some(p) => p.clone(),
+                None => {
+                    reply.error(libc::ENOENT);
+                    return;
+                }
+            }
+        };
+
+        // Clear any write buffer for this inode on truncation
+        if size.is_some() {
+            let mut buffers = self.write_buffers.write().unwrap();
+            buffers.remove(&ino);
+        }
+
+        // Handle truncation on non-leader nodes by forwarding to leader
+        if !self.is_leader() {
+            if let Some(0) = size {
+                // Forward truncation as unlink + create to keep leader consistent
+                let (mode_val, uid_val, gid_val) = {
+                    let file_index = self.file_index.read().unwrap();
+                    match file_index.get(&path) {
+                        Some(e) => (e.permissions, e.uid, e.gid),
+                        None => {
+                            reply.error(libc::ENOENT);
+                            return;
+                        }
+                    }
+                };
+
+                let path_str = path.to_string_lossy().to_string();
+                if self.forward_unlink_to_leader(&path_str).is_ok() {
+                    let _ = self.forward_create_to_leader(&path_str, mode_val, uid_val, gid_val);
+                }
+            }
+
+            // Update local entry
+            let mut file_index = self.file_index.write().unwrap();
+            if let Some(entry) = file_index.get_mut(&path) {
+                if let Some(new_size) = size {
+                    if new_size == 0 {
+                        for chunk in &entry.chunks {
+                            let _ = self.chunk_store.delete(&chunk.hash);
+                        }
+                        entry.chunks.clear();
+                    }
+                    entry.size = new_size;
+                }
+                if let Some(m) = mode { entry.permissions = m; }
+                if let Some(u) = uid { entry.uid = u; }
+                if let Some(g) = gid { entry.gid = g; }
+                let now = SystemTime::now();
+                if let Some(a) = atime {
+                    entry.accessed = match a {
+                        fuser::TimeOrNow::SpecificTime(t) => t,
+                        fuser::TimeOrNow::Now => now,
+                    };
+                }
+                if let Some(m) = mtime {
+                    entry.modified = match m {
+                        fuser::TimeOrNow::SpecificTime(t) => t,
+                        fuser::TimeOrNow::Now => now,
+                    };
+                }
+                let attr = self.entry_to_attr(entry, ino);
+                reply.attr(&TTL, &attr);
+            } else {
+                reply.error(libc::ENOENT);
+            }
+            return;
+        }
+
+        // Leader: handle locally
+        let mut file_index = self.file_index.write().unwrap();
+        let entry = match file_index.get_mut(&path) {
+            Some(e) => e,
+            None => {
+                reply.error(libc::ENOENT);
+                return;
+            }
+        };
+
+        // Handle size change (truncation)
+        if let Some(new_size) = size {
+            if new_size == 0 {
+                // Full truncation: delete all chunks
+                for chunk in &entry.chunks {
+                    let _ = self.chunk_store.delete(&chunk.hash);
+                }
+                entry.chunks.clear();
+                entry.size = 0;
+            } else if new_size < entry.size {
+                // Partial truncation: remove chunks beyond new size
+                entry.chunks.retain(|chunk| chunk.offset < new_size);
+                entry.size = new_size;
+            } else {
+                // Extending: just update size (sparse file)
+                entry.size = new_size;
+            }
+        }
+
+        if let Some(m) = mode { entry.permissions = m; }
+        if let Some(u) = uid { entry.uid = u; }
+        if let Some(g) = gid { entry.gid = g; }
+
+        let now = SystemTime::now();
+        if let Some(a) = atime {
+            entry.accessed = match a {
+                fuser::TimeOrNow::SpecificTime(t) => t,
+                fuser::TimeOrNow::Now => now,
+            };
+        }
+        if let Some(m) = mtime {
+            entry.modified = match m {
+                fuser::TimeOrNow::SpecificTime(t) => t,
+                fuser::TimeOrNow::Now => now,
+            };
+        }
+
+        let attr = self.entry_to_attr(entry, ino);
+
+        // Drop lock before side effects
+        drop(file_index);
+
+        *self.index_dirty.write().unwrap() = true;
+
+        // Broadcast truncation to followers
+        if size.is_some() {
+            let file_index = self.file_index.read().unwrap();
+            if let Some(entry) = file_index.get(&path) {
+                let entry_clone = entry.clone();
+                drop(file_index);
+                self.broadcast_file_sync(&path, &entry_clone);
+            }
+        }
+
+        reply.attr(&TTL, &attr);
+    }
+
     fn read(
         &mut self,
         _req: &Request,
