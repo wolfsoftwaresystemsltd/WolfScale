@@ -161,6 +161,11 @@ impl PeerManager {
         }
     }
 
+    /// Get the number of active outbound connections
+    pub fn connection_count(&self) -> usize {
+        self.connections.read().unwrap().len()
+    }
+
     /// Get connection to a peer
     pub fn get(&self, node_id: &str) -> Option<Arc<PeerConnection>> {
         self.connections.read().unwrap().get(node_id).cloned()

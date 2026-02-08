@@ -980,12 +980,17 @@ fn main() {
                         queue.drain(..).collect()
                     };
                     
-                    for (hash, data) in pending_chunks {
+                    for (hash, data) in &pending_chunks {
                         let msg = Message::StoreChunk(StoreChunkMsg {
-                            hash,
-                            data,
+                            hash: *hash,
+                            data: data.clone(),
                         });
                         peer_manager_for_broadcast.broadcast(&msg);
+                    }
+                    if !pending_chunks.is_empty() {
+                        let num_conns = peer_manager_for_broadcast.connection_count();
+                        info!("Streamed {} chunks to {} followers (peers known: {})", 
+                            pending_chunks.len(), num_conns, peers.len());
                     }
                     
                     // Second, send metadata-only updates (file growing during writes)
@@ -1018,8 +1023,9 @@ fn main() {
                             chunk_data: Vec::new(), // Metadata only — chunks already streamed
                         });
                         
-                        debug!("Broadcasting metadata update for {} ({} bytes, {} chunks)", 
-                            path.display(), entry.size, entry.chunks.len());
+                        info!("Broadcasting metadata update for {} ({} bytes, {} chunks) to {} connections", 
+                            path.display(), entry.size, entry.chunks.len(),
+                            peer_manager_for_broadcast.connection_count());
                         peer_manager_for_broadcast.broadcast(&msg);
                     }
                     
