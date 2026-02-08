@@ -46,6 +46,17 @@ enum Commands {
     /// Show cluster status
     Status,
 
+    /// Live cluster statistics (refreshes every second)
+    Stats,
+
+    /// List all discovered servers in the cluster
+    #[command(name = "list")]
+    ListServers {
+        /// What to list (servers)  
+        #[arg(default_value = "servers")]
+        what: String,
+    },
+
     /// Initialize a new WolfDisk data directory
     Init {
         /// Data directory path
@@ -191,7 +202,109 @@ fn main() {
             }
             
             println!();
-            println!("Note: Run 'journalctl -u wolfdisk -f' to see live cluster status");
+            println!("Note: Run 'wolfdisk stats' for live cluster statistics");
+        }
+
+        Commands::Stats => {
+            println!("╔══════════════════════════════════════════════════════════════╗");
+            println!("║                   WolfDisk Live Stats                        ║");
+            println!("║                   Press Ctrl+C to exit                       ║");
+            println!("╚══════════════════════════════════════════════════════════════╝");
+            println!();
+
+            // Start cluster manager to get live stats
+            let mut cluster = wolfdisk::ClusterManager::new(config.clone());
+            if let Err(e) = cluster.start() {
+                error!("Failed to start cluster manager: {}", e);
+                std::process::exit(1);
+            }
+
+            // Set up Ctrl+C handler
+            let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+            let r = running.clone();
+            ctrlc::set_handler(move || {
+                r.store(false, std::sync::atomic::Ordering::SeqCst);
+            }).expect("Failed to set Ctrl+C handler");
+
+            // Give discovery time to find peers initially
+            std::thread::sleep(std::time::Duration::from_secs(2));
+
+            while running.load(std::sync::atomic::Ordering::SeqCst) {
+                // Clear screen and move cursor to top
+                print!("\x1B[2J\x1B[1;1H");
+                
+                let now = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
+                println!("WolfDisk Cluster Stats - {} (Ctrl+C to exit)", now);
+                println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                println!();
+                
+                println!("This Node:    {} ({:?})", config.node.id, cluster.state());
+                if let Some(leader) = cluster.leader_id() {
+                    let is_me = leader == config.node.id;
+                    println!("Leader:       {}{}", leader, if is_me { " (this node)" } else { "" });
+                } else {
+                    println!("Leader:       (discovering...)");
+                }
+                println!("Term:         {}", cluster.term());
+                println!("Index Ver:    {}", cluster.index_version());
+                println!();
+                
+                let peers = cluster.peers();
+                println!("Cluster Nodes ({}):", peers.len() + 1);
+                println!("  ● {} (self) - {:?}", config.node.id, cluster.state());
+                for peer in &peers {
+                    let status = if peer.last_seen.elapsed().as_secs() < 4 { "●" } else { "○" };
+                    let role = if peer.is_leader { "leader" } else { "follower" };
+                    let ago = peer.last_seen.elapsed().as_secs();
+                    println!("  {} {} - {} (seen {}s ago)", status, peer.node_id, role, ago);
+                }
+                
+                std::thread::sleep(std::time::Duration::from_secs(1));
+            }
+
+            cluster.stop();
+            println!("\nStopped.");
+        }
+
+        Commands::ListServers { what } => {
+            if what != "servers" {
+                error!("Unknown list type '{}'. Use: wolfdisk list servers", what);
+                std::process::exit(1);
+            }
+            
+            println!("Discovering servers...\n");
+
+            // Start cluster manager to discover peers
+            let mut cluster = wolfdisk::ClusterManager::new(config.clone());
+            if let Err(e) = cluster.start() {
+                error!("Failed to start cluster manager: {}", e);
+                std::process::exit(1);
+            }
+
+            // Give discovery time to find peers
+            std::thread::sleep(std::time::Duration::from_secs(3));
+
+            let peers = cluster.peers();
+            
+            println!("╔════════════════════════════════════════════════════════════════╗");
+            println!("║                    WolfDisk Servers                            ║");
+            println!("╠════════════════════════════════════════════════════════════════╣");
+            
+            // Print this node first
+            let my_role = if cluster.is_leader() { "LEADER" } else { "FOLLOWER" };
+            println!("║ ● {:15} {:22} {:8} ║", config.node.id, config.node.bind, my_role);
+            
+            for peer in &peers {
+                let status = if peer.last_seen.elapsed().as_secs() < 4 { "●" } else { "○" };
+                let role = if peer.is_leader { "LEADER" } else { "FOLLOWER" };
+                println!("║ {} {:15} {:22} {:8} ║", status, peer.node_id, peer.address, role);
+            }
+            
+            println!("╚════════════════════════════════════════════════════════════════╝");
+            println!();
+            println!("Total: {} server(s)", peers.len() + 1);
+            
+            cluster.stop();
         }
 
         Commands::Init { data_dir } => {
