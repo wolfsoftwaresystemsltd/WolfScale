@@ -100,6 +100,7 @@ sudo mkdir -p /mnt/wolfdisk
 echo "✓ Directories created"
 
 # Create config if not exists - with interactive prompts
+# Use /dev/tty to read from terminal even when script is piped
 if [ ! -f "/etc/wolfdisk/config.toml" ]; then
     echo ""
     echo "═══════════════════════════════════════════════════════════════"
@@ -111,7 +112,8 @@ if [ ! -f "/etc/wolfdisk/config.toml" ]; then
     DEFAULT_HOSTNAME=$(hostname)
     
     # Prompt for Node ID
-    read -p "Node ID [$DEFAULT_HOSTNAME]: " NODE_ID
+    echo -n "Node ID [$DEFAULT_HOSTNAME]: "
+    read NODE_ID < /dev/tty
     NODE_ID=${NODE_ID:-$DEFAULT_HOSTNAME}
     
     # Prompt for Role
@@ -122,7 +124,8 @@ if [ ! -f "/etc/wolfdisk/config.toml" ]; then
     echo "  3) follower - Force this node to be follower"
     echo "  4) client   - Mount-only (no local storage, access remote data)"
     echo ""
-    read -p "Select role [1-4, default: 1]: " ROLE_CHOICE
+    echo -n "Select role [1-4, default: 1]: "
+    read ROLE_CHOICE < /dev/tty
     
     case $ROLE_CHOICE in
         2) NODE_ROLE="leader" ;;
@@ -138,7 +141,8 @@ if [ ! -f "/etc/wolfdisk/config.toml" ]; then
     echo "  2) Manual peers (specify IP addresses)"
     echo "  3) Standalone (single node, no clustering)"
     echo ""
-    read -p "Select discovery method [1-3, default: 1]: " DISCOVERY_CHOICE
+    echo -n "Select discovery method [1-3, default: 1]: "
+    read DISCOVERY_CHOICE < /dev/tty
     
     DISCOVERY_CONFIG=""
     PEERS_CONFIG="peers = []"
@@ -146,7 +150,8 @@ if [ ! -f "/etc/wolfdisk/config.toml" ]; then
     case $DISCOVERY_CHOICE in
         2)
             echo ""
-            read -p "Enter peer addresses (comma-separated, e.g. 192.168.1.10:9500,192.168.1.11:9500): " PEERS_INPUT
+            echo -n "Enter peer addresses (comma-separated, e.g. 192.168.1.10:9500,192.168.1.11:9500): "
+            read PEERS_INPUT < /dev/tty
             if [ -n "$PEERS_INPUT" ]; then
                 # Convert comma-separated to TOML array format
                 PEERS_FORMATTED=$(echo "$PEERS_INPUT" | sed 's/,/", "/g')
@@ -163,7 +168,8 @@ if [ ! -f "/etc/wolfdisk/config.toml" ]; then
     
     # Prompt for mount path
     echo ""
-    read -p "Mount path [/mnt/wolfdisk]: " MOUNT_PATH
+    echo -n "Mount path [/mnt/wolfdisk]: "
+    read MOUNT_PATH < /dev/tty
     MOUNT_PATH=${MOUNT_PATH:-/mnt/wolfdisk}
     
     # Create the mount directory
