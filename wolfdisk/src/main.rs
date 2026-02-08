@@ -669,6 +669,168 @@ fn main() {
                                     error: None,
                                 }))
                             }
+                            Message::ReadRequest(read_req) => {
+                                // Handle read request from client (reads from local chunks)
+                                debug!("Received ReadRequest: {} offset={} size={}", read_req.path, read_req.offset, read_req.size);
+                                
+                                let file_path = std::path::PathBuf::from(&read_req.path);
+                                let index = file_index_for_handler.read().unwrap();
+                                
+                                match index.get(&file_path) {
+                                    Some(entry) => {
+                                        let chunks = entry.chunks.clone();
+                                        drop(index);
+                                        
+                                        match chunk_store_for_handler.read(&chunks, read_req.offset, read_req.size as usize) {
+                                            Ok(data) => {
+                                                Some(Message::ClientResponse(ClientResponseMsg {
+                                                    success: true,
+                                                    data: Some(data),
+                                                    error: None,
+                                                }))
+                                            }
+                                            Err(e) => {
+                                                Some(Message::ClientResponse(ClientResponseMsg {
+                                                    success: false,
+                                                    data: None,
+                                                    error: Some(format!("Read error: {}", e)),
+                                                }))
+                                            }
+                                        }
+                                    }
+                                    None => {
+                                        Some(Message::ClientResponse(ClientResponseMsg {
+                                            success: false,
+                                            data: None,
+                                            error: Some("File not found".to_string()),
+                                        }))
+                                    }
+                                }
+                            }
+                            Message::ReadDir(readdir_req) => {
+                                // Handle readdir request from client
+                                debug!("Received ReadDir: {}", readdir_req.path);
+                                
+                                let dir_path = std::path::PathBuf::from(&readdir_req.path);
+                                let index = file_index_for_handler.read().unwrap();
+                                
+                                let mut entries = Vec::new();
+                                for (path, entry) in index.iter() {
+                                    if let Some(parent) = path.parent() {
+                                        if parent == dir_path {
+                                            if let Some(name) = path.file_name() {
+                                                entries.push(DirEntryMsg {
+                                                    name: name.to_string_lossy().to_string(),
+                                                    is_dir: entry.is_dir,
+                                                });
+                                            }
+                                        }
+                                    } else if dir_path == std::path::PathBuf::new() {
+                                        // Root directory entries have no parent
+                                        if path.components().count() == 1 {
+                                            if let Some(name) = path.file_name() {
+                                                entries.push(DirEntryMsg {
+                                                    name: name.to_string_lossy().to_string(),
+                                                    is_dir: entry.is_dir,
+                                                });
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                Some(Message::ReadDirResponse(ReadDirResponseMsg {
+                                    success: true,
+                                    entries,
+                                    error: None,
+                                }))
+                            }
+                            Message::GetAttr(getattr_req) => {
+                                // Handle getattr request from client
+                                debug!("Received GetAttr: {}", getattr_req.path);
+                                
+                                let file_path = std::path::PathBuf::from(&getattr_req.path);
+                                let index = file_index_for_handler.read().unwrap();
+                                
+                                match index.get(&file_path) {
+                                    Some(entry) => {
+                                        let modified_ms = entry.modified
+                                            .duration_since(std::time::UNIX_EPOCH)
+                                            .unwrap_or_default()
+                                            .as_millis() as u64;
+                                        let created_ms = entry.created
+                                            .duration_since(std::time::UNIX_EPOCH)
+                                            .unwrap_or_default()
+                                            .as_millis() as u64;
+                                        let accessed_ms = entry.accessed
+                                            .duration_since(std::time::UNIX_EPOCH)
+                                            .unwrap_or_default()
+                                            .as_millis() as u64;
+                                        
+                                        Some(Message::GetAttrResponse(GetAttrResponseMsg {
+                                            exists: true,
+                                            is_dir: entry.is_dir,
+                                            size: entry.size,
+                                            permissions: entry.permissions,
+                                            uid: entry.uid,
+                                            gid: entry.gid,
+                                            modified_ms,
+                                            created_ms,
+                                            accessed_ms,
+                                        }))
+                                    }
+                                    None => {
+                                        Some(Message::GetAttrResponse(GetAttrResponseMsg {
+                                            exists: false,
+                                            is_dir: false,
+                                            size: 0,
+                                            permissions: 0,
+                                            uid: 0,
+                                            gid: 0,
+                                            modified_ms: 0,
+                                            created_ms: 0,
+                                            accessed_ms: 0,
+                                        }))
+                                    }
+                                }
+                            }
+                            Message::SyncRequest(_sync_req) => {
+                                // Handle full index sync request (from new follower/client)
+                                info!("Received SyncRequest from {} - sending full index", peer_id);
+                                
+                                let index = file_index_for_handler.read().unwrap();
+                                let mut entries = Vec::new();
+                                
+                                for (path, entry) in index.iter() {
+                                    let modified_ms = entry.modified
+                                        .duration_since(std::time::UNIX_EPOCH)
+                                        .unwrap_or_default()
+                                        .as_millis() as u64;
+                                    
+                                    let chunks: Vec<ChunkRefMsg> = entry.chunks.iter()
+                                        .map(|c| ChunkRefMsg {
+                                            hash: c.hash,
+                                            offset: c.offset,
+                                            size: c.size,
+                                        })
+                                        .collect();
+                                    
+                                    entries.push(IndexEntryMsg {
+                                        path: path.to_string_lossy().to_string(),
+                                        is_dir: entry.is_dir,
+                                        size: entry.size,
+                                        modified_ms,
+                                        permissions: entry.permissions,
+                                        chunks,
+                                    });
+                                }
+                                
+                                info!("Sending SyncResponse with {} entries", entries.len());
+                                
+                                Some(Message::SyncResponse(SyncResponseMsg {
+                                    current_version: 0,
+                                    entries,
+                                }))
+                            }
                             _ => {
                                 debug!("Unhandled message from {}: {:?}", peer_id, msg);
                                 None
@@ -761,6 +923,117 @@ fn main() {
                     }
                 }
             });
+            
+            // Spawn initial sync thread for non-leader nodes
+            // This requests the full index from the leader when we first discover one
+            if !cluster.is_leader() {
+                let sync_cluster = cluster.clone();
+                let sync_peer_manager = peer_manager.clone();
+                let sync_file_index = file_index.clone();
+                let sync_inode_table = inode_table.clone();
+                let sync_next_inode = next_inode.clone();
+                let sync_is_client = config.node.role == wolfdisk::config::NodeRole::Client;
+                let _sync_chunk_store = chunk_store.clone();
+                
+                std::thread::spawn(move || {
+                    use wolfdisk::network::protocol::*;
+                    use wolfdisk::storage::{ChunkRef, FileEntry};
+                    use tracing::{info, warn, debug};
+                    
+                    info!("Initial sync thread started - waiting for leader discovery...");
+                    
+                    // Wait for leader to be discovered (up to 30 seconds)
+                    let mut leader_found = false;
+                    for _ in 0..60 {
+                        std::thread::sleep(std::time::Duration::from_millis(500));
+                        if sync_cluster.leader_id().is_some() {
+                            leader_found = true;
+                            break;
+                        }
+                    }
+                    
+                    if !leader_found {
+                        warn!("No leader found after 30s - skipping initial sync");
+                        return;
+                    }
+                    
+                    let leader_id = sync_cluster.leader_id().unwrap();
+                    let leader_addr = match sync_cluster.leader_address() {
+                        Some(addr) => addr,
+                        None => {
+                            warn!("Leader found but no address available");
+                            return;
+                        }
+                    };
+                    
+                    info!("Leader discovered: {} at {} - requesting initial sync", leader_id, leader_addr);
+                    
+                    // Connect to leader and request sync
+                    match sync_peer_manager.get_or_connect_leader(&leader_id, &leader_addr) {
+                        Ok(conn) => {
+                            let msg = Message::SyncRequest(SyncRequestMsg { from_version: 0 });
+                            match conn.request(&msg) {
+                                Ok(Message::SyncResponse(response)) => {
+                                    info!("Received SyncResponse with {} entries", response.entries.len());
+                                    
+                                    let mut index = sync_file_index.write().unwrap();
+                                    let mut inode_tbl = sync_inode_table.write().unwrap();
+                                    let mut next_ino = sync_next_inode.write().unwrap();
+                                    
+                                    for entry_msg in &response.entries {
+                                        let path = std::path::PathBuf::from(&entry_msg.path);
+                                        
+                                        let chunk_refs: Vec<ChunkRef> = entry_msg.chunks.iter()
+                                            .map(|c| ChunkRef {
+                                                hash: c.hash,
+                                                offset: c.offset,
+                                                size: c.size,
+                                            })
+                                            .collect();
+                                        
+                                        let entry = FileEntry {
+                                            size: entry_msg.size,
+                                            is_dir: entry_msg.is_dir,
+                                            permissions: entry_msg.permissions,
+                                            uid: 0,
+                                            gid: 0,
+                                            modified: std::time::UNIX_EPOCH + std::time::Duration::from_millis(entry_msg.modified_ms),
+                                            created: std::time::SystemTime::now(),
+                                            accessed: std::time::SystemTime::now(),
+                                            chunks: chunk_refs,
+                                            symlink_target: None,
+                                        };
+                                        
+                                        index.insert(path.clone(), entry);
+                                        
+                                        // Add to inode table
+                                        let ino = *next_ino;
+                                        *next_ino += 1;
+                                        inode_tbl.insert(ino, path.clone());
+                                        
+                                        debug!("Synced: {} ({} bytes)", entry_msg.path, entry_msg.size);
+                                    }
+                                    
+                                    if sync_is_client {
+                                        info!("Initial index sync complete - {} files (client mode, no chunks stored)", response.entries.len());
+                                    } else {
+                                        info!("Initial index sync complete - {} files (follower will receive chunks via FileSync)", response.entries.len());
+                                    }
+                                }
+                                Ok(other) => {
+                                    warn!("Unexpected response to SyncRequest: {:?}", other);
+                                }
+                                Err(e) => {
+                                    warn!("Failed to get SyncResponse: {}", e);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            warn!("Failed to connect to leader for initial sync: {}", e);
+                        }
+                    }
+                });
+            }
             
             // Create filesystem instance with cluster support (using shared state)
             let fs = match WolfDiskFS::with_cluster(

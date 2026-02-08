@@ -18,7 +18,7 @@ use crate::cluster::ClusterManager;
 use crate::config::Config;
 use crate::error::Result;
 use crate::network::peer::PeerManager;
-use crate::network::protocol::{Message, CreateFileMsg, CreateDirMsg, DeleteFileMsg, DeleteDirMsg, IndexUpdateMsg, IndexOperation, ChunkRefMsg, FileSyncMsg, ChunkWithData, WriteRequestMsg, RenameFileMsg, CreateSymlinkMsg};
+use crate::network::protocol::{Message, CreateFileMsg, CreateDirMsg, DeleteFileMsg, DeleteDirMsg, IndexUpdateMsg, IndexOperation, ChunkRefMsg, FileSyncMsg, ChunkWithData, WriteRequestMsg, RenameFileMsg, CreateSymlinkMsg, ReadRequestMsg};
 use crate::storage::{ChunkStore, FileIndex, FileEntry, InodeTable};
 
 /// TTL for attribute caching
@@ -112,6 +112,47 @@ impl WolfDiskFS {
         match &self.cluster {
             Some(cluster) => cluster.is_leader(),
             None => true, // Standalone mode = always "leader"
+        }
+    }
+
+    /// Check if this node is a client (no local data, proxy to leader)
+    fn is_client(&self) -> bool {
+        match &self.cluster {
+            Some(cluster) => cluster.state() == crate::cluster::ClusterState::Client,
+            None => false,
+        }
+    }
+
+    /// Forward a read to the leader (for client mode)
+    fn forward_read_to_leader(&self, path: &str, offset: u64, size: u32) -> std::result::Result<Vec<u8>, i32> {
+        let (cluster, peer_manager) = match (&self.cluster, &self.peer_manager) {
+            (Some(c), Some(p)) => (c, p),
+            _ => return Err(libc::EIO),
+        };
+
+        let leader_id = cluster.leader_id().ok_or(libc::ENOENT)?;
+        let leader_addr = cluster.leader_address().ok_or(libc::ENOENT)?;
+
+        let conn = peer_manager.get_or_connect_leader(&leader_id, &leader_addr)
+            .map_err(|_| libc::EIO)?;
+
+        let msg = Message::ReadRequest(ReadRequestMsg {
+            path: path.to_string(),
+            offset,
+            size,
+        });
+
+        let response = conn.request(&msg).map_err(|_| libc::EIO)?;
+
+        match response {
+            Message::ClientResponse(resp) if resp.success => {
+                Ok(resp.data.unwrap_or_default())
+            }
+            Message::ClientResponse(resp) => {
+                warn!("Read forward failed: {:?}", resp.error);
+                Err(libc::EIO)
+            }
+            _ => Err(libc::EIO),
         }
     }
 
@@ -547,27 +588,36 @@ impl Filesystem for WolfDiskFS {
     ) {
         debug!("read: ino={}, offset={}, size={}", ino, offset, size);
 
-        let inode_table = self.inode_table.read().unwrap();
-        let file_index = self.file_index.read().unwrap();
-
-        let path = match inode_table.get_path(ino) {
-            Some(p) => p.clone(),
-            None => {
-                reply.error(libc::ENOENT);
-                return;
+        let path = {
+            let inode_table = self.inode_table.read().unwrap();
+            match inode_table.get_path(ino) {
+                Some(p) => p.clone(),
+                None => {
+                    reply.error(libc::ENOENT);
+                    return;
+                }
             }
         };
 
-        let entry = match file_index.get(&path) {
-            Some(e) => e.clone(),
-            None => {
-                reply.error(libc::ENOENT);
-                return;
+        // Client mode: forward read to leader (no local chunks)
+        if self.is_client() {
+            match self.forward_read_to_leader(&path.to_string_lossy(), offset as u64, size) {
+                Ok(data) => reply.data(&data),
+                Err(errno) => reply.error(errno),
+            }
+            return;
+        }
+
+        let entry = {
+            let file_index = self.file_index.read().unwrap();
+            match file_index.get(&path) {
+                Some(e) => e.clone(),
+                None => {
+                    reply.error(libc::ENOENT);
+                    return;
+                }
             }
         };
-
-        drop(file_index);
-        drop(inode_table);
 
         // Read data from chunks
         match self.chunk_store.read(&entry.chunks, offset as u64, size as usize) {

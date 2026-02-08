@@ -31,6 +31,7 @@ pub struct PeerInfo {
     pub node_id: String,
     pub address: String,
     pub is_leader: bool,
+    pub is_client: bool,
     pub last_seen: Instant,
 }
 
@@ -186,10 +187,12 @@ impl ClusterManager {
                             *cluster_leader_id.write().unwrap() = Some(dp.node_id.clone());
                         }
                         
+                        let is_client_peer = matches!(dp.role, crate::network::discovery::DiscoveryRole::Client);
                         peers.insert(dp.node_id.clone(), PeerInfo {
                             node_id: dp.node_id,
                             address: dp.address,
                             is_leader: dp.is_leader,
+                            is_client: is_client_peer,
                             last_seen: dp.last_seen,
                         });
                     }
@@ -252,8 +255,10 @@ impl ClusterManager {
                         .collect()
                 };
                 
-                // Get all peer IDs for comparison
+                // Get server peer IDs for comparison (exclude clients!)
+                // Clients should never be considered for leader election
                 let peer_ids: Vec<&str> = active_peers.iter()
+                    .filter(|p| !p.is_client)
                     .map(|p| p.node_id.as_str())
                     .collect();
                 
@@ -324,6 +329,7 @@ impl ClusterManager {
             node_id: peer.node_id.clone(),
             address: peer.address,
             is_leader,
+            is_client: matches!(peer.role, crate::network::discovery::DiscoveryRole::Client),
             last_seen: peer.last_seen,
         };
         
