@@ -249,14 +249,22 @@ Client mode is ideal for:
 
 ## Commands
 
+### wolfdisk (service)
+
 | Command | Description |
 |---------|-------------|
 | `wolfdisk init` | Initialize data directory |
 | `wolfdisk mount -m PATH` | Mount the filesystem |
 | `wolfdisk unmount -m PATH` | Unmount the filesystem |
-| `wolfdisk status` | Show node configuration and mount status |
-| `wolfdisk stats` | Live cluster statistics (refreshes every second) |
-| `wolfdisk list servers` | List all discovered servers in the cluster |
+| `wolfdisk status` | Show node configuration |
+
+### wolfdiskctl (control utility)
+
+| Command | Description |
+|---------|-------------|
+| `wolfdiskctl status` | Show live status from running service |
+| `wolfdiskctl list servers` | List all discovered servers in the cluster |
+| `wolfdiskctl stats` | Live cluster statistics (refreshes every second) |
 
 ## Systemd Service
 

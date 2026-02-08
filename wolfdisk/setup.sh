@@ -108,6 +108,11 @@ sudo cp "$INSTALL_DIR/wolfdisk/target/release/wolfdisk" /usr/local/bin/wolfdisk
 sudo chmod +x /usr/local/bin/wolfdisk
 echo "✓ wolfdisk installed to /usr/local/bin/wolfdisk"
 
+# Install wolfdiskctl control utility
+sudo cp "$INSTALL_DIR/wolfdisk/target/release/wolfdiskctl" /usr/local/bin/wolfdiskctl
+sudo chmod +x /usr/local/bin/wolfdiskctl
+echo "✓ wolfdiskctl installed to /usr/local/bin/wolfdiskctl"
+
 # Create data directory
 echo ""
 echo "Creating data directories..."

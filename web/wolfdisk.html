@@ -353,15 +353,34 @@ allow_other = true</code></pre>
                                     </tr>
                                     <tr>
                                         <td><code>wolfdisk status</code></td>
-                                        <td>Show node configuration and mount status</td>
+                                        <td>Show node configuration</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <h3 style="margin-top: 2rem;">wolfdiskctl (Control Utility)</h3>
+                        <p style="color: var(--text-muted);">Query the running service for cluster information:</p>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Command</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><code>wolfdiskctl status</code></td>
+                                        <td>Show live status from running service</td>
                                     </tr>
                                     <tr>
-                                        <td><code>wolfdisk stats</code></td>
-                                        <td>Live cluster statistics (refreshes every second)</td>
-                                    </tr>
-                                    <tr>
-                                        <td><code>wolfdisk list servers</code></td>
+                                        <td><code>wolfdiskctl list servers</code></td>
                                         <td>List all discovered servers in the cluster</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>wolfdiskctl stats</code></td>
+                                        <td>Live cluster statistics (refreshes every second)</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -516,21 +535,21 @@ node-a returns:
                                 </div>
                             </div>
                             <div
-                                style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 8px;">
-                                <span style="font-size: 1.5rem;">🔄</span>
+                                style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px;">
+                                <span style="font-size: 1.5rem;">✅</span>
                                 <div>
                                     <strong>Phase 4: Full Replication</strong>
-                                    <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Quorum writes,
-                                        read caching, conflict resolution</p>
+                                    <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Write replication
+                                        (leader → followers), read caching, chunk fetching</p>
                                 </div>
                             </div>
                             <div
-                                style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px;">
-                                <span style="font-size: 1.5rem;">📋</span>
+                                style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 8px;">
+                                <span style="font-size: 1.5rem;">🔄</span>
                                 <div>
                                     <strong>Phase 5: Production</strong>
                                     <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Benchmarks,
-                                        stress testing, documentation</p>
+                                        stress testing, multi-node validation</p>
                                 </div>
                             </div>
                         </div>
