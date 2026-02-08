@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-KK9NEE1S54');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Load Balancer - WolfScale</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=3">
+</head>
+
+<body>
+    <div class="wiki-layout">
+        <aside class="sidebar" id="sidebar">
+            <a href="index.html" class="sidebar-logo"><img
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
+                    alt="Wolf"><span>WolfScale</span></a>
+            <nav class="sidebar-nav">
+                <a href="features.html">Features</a>
+                <a href="architecture.html">Architecture</a>
+                <a href="how-it-works.html">How It Works</a>
+                <a href="quickstart.html">Quick Start</a>
+                <a href="binlog.html">Binlog Mode</a>
+                <a href="load-balancer.html" class="active">Load Balancer</a>
+                <a href="configuration.html">Configuration</a>
+                <a href="performance.html">Performance</a>
+                <a href="cli.html">CLI Reference</a>
+                <a href="api.html">API Reference</a>
+                <a href="troubleshooting.html">Troubleshooting</a>
+            </nav>
+            <div class="theme-toggle-wrapper">
+                <span class="theme-toggle-label">Theme</span>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-toggle-slider"></span>
+                </button>
+            </div>
+            <div class="sidebar-links">
+                <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
+                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+            </div>
+        </aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <main class="wiki-main">
+            <div class="mobile-header">
+                <a href="index.html" class="nav-logo"><img
+                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
+                        class="logo-img"><span>WolfScale</span></a>
+                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+            </div>
+
+            <div class="page-header">
+                <h1>Load Balancer Mode</h1>
+                <p>Distribute MySQL connections across your WolfScale cluster</p>
+            </div>
+
+            <div class="wiki-content">
+                <section class="content-section">
+                    <h2>Overview</h2>
+                    <p><strong>Install the WolfScale load balancer directly on any server that needs to access your
+                            database cluster.</strong></p>
+                    <p>The load balancer automatically discovers your WolfScale cluster nodes — no configuration needed.
+                        It listens on port <strong>3306</strong> and routes connections to healthy nodes with automatic
+                        failover.</p>
+
+                    <div class="info-box">
+                        <p><strong>Key Point:</strong> You can run as many load balancers as you like. Each one is
+                            completely independent and stateless — they don't know about each other and won't conflict.
+                            Install one on every web server, application server, or anywhere you need database access.
+                        </p>
+                    </div>
+                </section>
+
+                <section class="content-section">
+                    <h2>Recommended Architecture</h2>
+                    <p>For best performance and high availability, install a load balancer on each server that needs
+                        database access:</p>
+                    <div class="diagram-box">
+                        <pre>
+   Web Server 1 ─── WolfScale LB ──┐
+                (auto-discovers)   │
+                                   │
+   Web Server 2 ─── WolfScale LB ──┼──► WolfScale Cluster
+                (auto-discovers)   │    (Nodes 1, 2, 3)
+                                   │
+   Web Server 3 ─── WolfScale LB ──┘
+                (auto-discovers)
+</pre>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <tbody>
+                                <tr>
+                                    <td><strong>No single point of failure</strong></td>
+                                    <td>Each server has its own LB — if one server dies, others keep working</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Zero latency</strong></td>
+                                    <td>Applications connect to <code>localhost:3306</code></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Simple setup</strong></td>
+                                    <td>Auto-discovery finds cluster nodes automatically</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Scales naturally</strong></td>
+                                    <td>Add a web server, add a load balancer — done</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="content-section">
+                    <h2>Quick Install</h2>
+                    <p>Run this on the server that will act as your load balancer:</p>
+                    <div class="code-block large">
+                        <div class="code-header"><span>One-Line Install</span></div>
+                        <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/setup_lb.sh | bash</code></pre>
+                    </div>
+                    <p>This automatically installs dependencies, builds WolfScale, and configures the load balancer
+                        service.</p>
+                </section>
+
+                <section class="content-section">
+                    <h2>Zero-Config Setup</h2>
+                    <p>The easiest way to set up a load balancer is to copy a <code>wolfscale.toml</code> from any
+                        cluster node:</p>
+
+                    <div class="code-block">
+                        <div class="code-header"><span>Copy config from cluster node</span></div>
+                        <pre><code># On a cluster node:
+scp /opt/wolfscale/wolfscale.toml lb-server:/opt/wolfscale/
+
+# On the load balancer server:
+sudo ./install_service.sh lb</code></pre>
+                    </div>
+
+                    <p>The installer automatically detects cluster peers from the config file:</p>
+                    <div class="code-block">
+                        <div class="code-header"><span>Installer output</span></div>
+                        <pre><code>Found existing config: /opt/wolfscale/wolfscale.toml
+
+Detected WolfScale cluster peers from config:
+  10.0.10.115:7654,10.0.10.116:7654,10.0.10.117:7654
+
+Use these peers? (y/n) [y]: y
+Using peers from config file.
+
+MySQL proxy listen address [0.0.0.0:3306]: 
+Maximum replication lag (entries) [100]: 
+
+Load balancer configuration:
+  Listen:  0.0.0.0:3306 (MySQL clients connect here)
+  Peers:   10.0.10.115:7654,10.0.10.116:7654,10.0.10.117:7654</code></pre>
+                    </div>
+                </section>
+
+                <section class="content-section">
+                    <h2>Manual Setup</h2>
+                    <p>If you don't have a config file, the installer will prompt you for cluster addresses:</p>
+
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Prompt</th>
+                                    <th>What to Enter</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Cluster node address</td>
+                                    <td>Enter WolfScale node addresses (e.g., <code>10.0.10.115:7654</code>)</td>
+                                </tr>
+                                <tr>
+                                    <td>MySQL proxy listen address</td>
+                                    <td>Press Enter for default <code>0.0.0.0:3306</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Maximum replication lag</td>
+                                    <td>Press Enter for default <code>100</code></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="content-section">
+                    <h2>CLI Usage</h2>
+                    <p>You can also run the load balancer directly from the command line:</p>
+                    <div class="code-block">
+                        <div class="code-header"><span>Run load balancer manually</span></div>
+                        <pre><code>wolfscale load-balancer --peers 10.0.10.115:7654,10.0.10.116:7654 --listen 0.0.0.0:3306</code></pre>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Option</th>
+                                    <th>Description</th>
+                                    <th>Default</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>--peers</code></td>
+                                    <td>WolfScale cluster node addresses (comma-separated)</td>
+                                    <td><em>required</em></td>
+                                </tr>
+                                <tr>
+                                    <td><code>--listen</code></td>
+                                    <td>MySQL proxy listen address</td>
+                                    <td><code>0.0.0.0:3306</code></td>
+                                </tr>
+                                <tr>
+                                    <td><code>--max-lag</code></td>
+                                    <td>Max replication lag before skipping a node</td>
+                                    <td><code>100</code></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="content-section">
+                    <h2>Service Management</h2>
+                    <p>When installed as a service, the load balancer runs as <code>wolfscale-lb</code>:</p>
+                    <div class="code-block">
+                        <div class="code-header"><span>Systemd commands</span></div>
+                        <pre><code># Check status
+sudo systemctl status wolfscale-lb
+
+# View logs
+sudo journalctl -u wolfscale-lb -f
+
+# Restart service
+sudo systemctl restart wolfscale-lb</code></pre>
+                    </div>
+                </section>
+
+
+
+                <section class="content-section">
+                    <h2>Connecting Applications</h2>
+                    <p>Point your application to the load balancer on port 3306:</p>
+                    <div class="code-block">
+                        <div class="code-header"><span>Example connection string</span></div>
+                        <pre><code># PHP
+$pdo = new PDO('mysql:host=lb-server;port=3306;dbname=mydb', 'user', 'pass');
+
+# Python
+connection = pymysql.connect(host='lb-server', port=3306, user='user', password='pass')
+
+# Node.js
+const connection = mysql.createConnection({host: 'lb-server', port: 3306, user: 'user'});
+
+# Command line
+mysql -h lb-server -P 3306 -u user -p</code></pre>
+                    </div>
+                </section>
+
+                <div class="page-nav">
+                    <a href="binlog.html" class="prev">← Binlog Mode</a>
+                    <a href="configuration.html" class="next">Configuration →</a>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

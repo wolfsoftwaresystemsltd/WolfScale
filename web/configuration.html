@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-KK9NEE1S54');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration - WolfScale</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=3">
+</head>
+
+<body>
+    <div class="wiki-layout">
+        <aside class="sidebar" id="sidebar">
+            <a href="index.html" class="sidebar-logo"><img
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
+                    alt="Wolf"><span>WolfScale</span></a>
+            <nav class="sidebar-nav">
+                <a href="features.html">Features</a>
+                <a href="architecture.html">Architecture</a>
+                <a href="how-it-works.html">How It Works</a>
+                <a href="quickstart.html">Quick Start</a>
+                <a href="binlog.html">Binlog Mode</a>
+                <a href="load-balancer.html">Load Balancer</a>
+                <a href="wolfdisk.html">WolfDisk</a>
+                <a href="configuration.html" class="active">Configuration</a>
+                <a href="performance.html">Performance</a>
+                <a href="cli.html">CLI Reference</a>
+                <a href="api.html">API Reference</a>
+                <a href="troubleshooting.html">Troubleshooting</a>
+
+            </nav>
+            <div class="theme-toggle-wrapper">
+                <span class="theme-toggle-label">Theme</span>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-toggle-slider"></span>
+                </button>
+            </div>
+            <div class="sidebar-links">
+                <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
+                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+            </div>
+        </aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+        <main class="wiki-main">
+            <div class="mobile-header">
+                <a href="index.html" class="nav-logo"><img
+                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
+                        class="logo-img"><span>WolfScale</span></a>
+                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+            </div>
+            <div class="page-header">
+                <h1>Configuration</h1>
+                <p>Complete configuration reference</p>
+            </div>
+            <div class="wiki-content">
+                <section class="content-section">
+                    <h2>Example Config</h2>
+                    <div class="code-block large">
+                        <div class="code-header"><span>wolfscale.toml</span></div>
+                        <pre><code>[node]
+id = "node-1"
+bind_address = "0.0.0.0:7654"
+advertise_address = "10.0.10.10:7654"
+
+[database]
+host = "localhost"
+port = 3306
+user = "wolfscale"
+password = "your-password"
+
+[cluster]
+auto_discovery = true
+# cluster_name = "my-cluster"  # Optional: isolate clusters on same network
+# peers = ["10.0.10.11:7654"]  # Optional: seed nodes for faster discovery</code></pre>
+                    </div>
+                </section>
+                <section class="content-section">
+                    <h2>[node] Section</h2>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Key</th>
+                                    <th>Required</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>id</td>
+                                    <td>Yes</td>
+                                    <td>Unique node ID</td>
+                                </tr>
+                                <tr>
+                                    <td>bind_address</td>
+                                    <td>Yes</td>
+                                    <td>Cluster listen address</td>
+                                </tr>
+                                <tr>
+                                    <td>advertise_address</td>
+                                    <td>Yes</td>
+                                    <td>External address</td>
+                                </tr>
+                                <tr>
+                                    <td>data_dir</td>
+                                    <td>No</td>
+                                    <td>WAL storage directory</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                <section class="content-section">
+                    <h2>[database] Section</h2>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Key</th>
+                                    <th>Required</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>host</td>
+                                    <td>Yes</td>
+                                    <td>MariaDB host</td>
+                                </tr>
+                                <tr>
+                                    <td>port</td>
+                                    <td>Yes</td>
+                                    <td>MariaDB port</td>
+                                </tr>
+                                <tr>
+                                    <td>user</td>
+                                    <td>Yes</td>
+                                    <td>DB user</td>
+                                </tr>
+                                <tr>
+                                    <td>password</td>
+                                    <td>Yes</td>
+                                    <td>DB password</td>
+                                </tr>
+                                <tr>
+                                    <td>pool_size</td>
+                                    <td>No</td>
+                                    <td>Pool size (default 10)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                <section class="content-section">
+                    <h2>[cluster] Section</h2>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Key</th>
+                                    <th>Default</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>peers</td>
+                                    <td>[]</td>
+                                    <td>Seed node addresses (optional with auto-discovery)</td>
+                                </tr>
+                                <tr>
+                                    <td>auto_discovery</td>
+                                    <td>true</td>
+                                    <td>Enable UDP broadcast auto-discovery</td>
+                                </tr>
+                                <tr>
+                                    <td>cluster_name</td>
+                                    <td>(empty)</td>
+                                    <td>Optional name to isolate clusters on same network</td>
+                                </tr>
+                                <tr>
+                                    <td>heartbeat_interval_ms</td>
+                                    <td>500</td>
+                                    <td>Heartbeat frequency</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                <div class="page-nav"><a href="quickstart.html">← Quick Start</a><a href="api.html">API Reference →</a>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

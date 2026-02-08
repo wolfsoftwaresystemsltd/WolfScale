@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-KK9NEE1S54');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="WolfScale - High-Availability Replication for MySQL based databases with Built-in Load Balancer. Works with MySQL, MariaDB, Percona, RDS. Simple setup, automatic failover, open source.">
+    <meta name="keywords"
+        content="MySQL replication, MariaDB cluster, database high availability, load balancer, failover, open source, WolfScale">
+    <meta name="author" content="Wolf Software Systems Ltd">
+    <link rel="canonical" href="https://wolfscale.org/">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://wolfscale.org/">
+    <meta property="og:title" content="WolfScale - High-Availability Replication for MySQL Based Databases">
+    <meta property="og:description"
+        content="Database clustering without the pain. Built-in load balancer, automatic failover, zero config required. Works with MySQL, MariaDB, Percona, RDS.">
+    <meta property="og:image" content="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://wolfscale.org/">
+    <meta property="twitter:title" content="WolfScale - High-Availability Replication for MySQL Based Databases">
+    <meta property="twitter:description"
+        content="Database clustering without the pain. Built-in load balancer, automatic failover, zero config required.">
+
+    <title>WolfScale - High-Availability Replication for MySQL Based Databases</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=6">
+    <style>
+        /* Hero Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .animate-fade-in {
+            animation: fadeInUp 0.8s ease-out both;
+        }
+
+        .animate-delay-1 {
+            animation-delay: 0.1s;
+        }
+
+        .animate-delay-2 {
+            animation-delay: 0.2s;
+        }
+
+        .animate-delay-3 {
+            animation-delay: 0.3s;
+        }
+
+        .animate-delay-4 {
+            animation-delay: 0.4s;
+        }
+
+        /* Hero Section */
+        .hero-section {
+            text-align: center;
+            padding: 4rem 0 3rem;
+            position: relative;
+            min-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(220, 38, 38, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-logo {
+            width: 350px;
+            height: 350px;
+            margin-bottom: 0;
+            animation: float 4s ease-in-out infinite;
+            filter: drop-shadow(0 10px 40px rgba(220, 38, 38, 0.3));
+        }
+
+        .hero-title {
+            font-size: clamp(3rem, 6vw, 5rem);
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #fff 0%, #ff6b6b 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-tagline {
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            font-weight: 400;
+            max-width: 600px;
+        }
+
+        .hero-tagline strong {
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        .hero-subtitle {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+        }
+
+        .hero-cta {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 3rem;
+        }
+
+        .btn-hero {
+            padding: 18px 40px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-hero.primary {
+            background: var(--accent-gradient);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4);
+        }
+
+        .btn-hero.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 30px rgba(220, 38, 38, 0.5);
+        }
+
+        .btn-hero.secondary {
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-hero.secondary:hover {
+            border-color: var(--accent-primary);
+            background: var(--bg-tertiary);
+        }
+
+        /* Features List */
+        .features-list {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .features-list li {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .features-list li::before {
+            content: '✓';
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        /* Quick Links */
+        .quick-links {
+            padding: 2rem 0;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .quick-links-title {
+            text-align: center;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--text-secondary);
+        }
+
+        .quick-links-grid {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .quick-link {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1rem 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            min-width: 140px;
+        }
+
+        .quick-link:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-2px);
+        }
+
+        .quick-link h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .quick-link p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wiki-layout">
+        <aside class="sidebar" id="sidebar">
+            <a href="index.html" class="sidebar-logo"><img
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
+                    alt="Wolf"><span>WolfScale</span></a>
+            <nav class="sidebar-nav">
+                <a href="features.html">Features</a>
+                <a href="architecture.html">Architecture</a>
+                <a href="how-it-works.html">How It Works</a>
+                <a href="quickstart.html">Quick Start</a>
+                <a href="binlog.html">Binlog Mode</a>
+                <a href="load-balancer.html">Load Balancer</a>
+                <a href="wolfdisk.html">WolfDisk</a>
+                <a href="configuration.html">Configuration</a>
+                <a href="performance.html">Performance</a>
+                <a href="cli.html">CLI Reference</a>
+                <a href="api.html">API Reference</a>
+                <a href="troubleshooting.html">Troubleshooting</a>
+            </nav>
+            <div class="theme-toggle-wrapper">
+                <span class="theme-toggle-label">Theme</span>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-toggle-slider"></span>
+                </button>
+            </div>
+            <div class="sidebar-links">
+                <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
+                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+                <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+            </div>
+        </aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <main class="wiki-main">
+            <div class="mobile-header">
+                <a href="index.html" class="nav-logo"><img
+                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
+                        class="logo-img"><span>WolfScale</span></a>
+                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+            </div>
+
+            <div class="wiki-content">
+                <!-- Hero Section -->
+                <section class="hero-section">
+                    <div class="hero-badge animate-fade-in">Open Source • MIT License</div>
+                    <img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="WolfScale Logo"
+                        class="hero-logo animate-fade-in animate-delay-1">
+                    <h1 class="hero-title animate-fade-in animate-delay-2">WolfScale</h1>
+                    <p class="hero-tagline animate-fade-in animate-delay-2"
+                        style="font-size: 1.3rem; margin-bottom: 0.5rem;">
+                        🐺 Database clustering without the pain 🐺
+                    </p>
+                    <p class="hero-tagline animate-fade-in animate-delay-3">
+                        High-Availability Replication for MySQL Based Databases, with <strong>Built-in Load
+                            Balancer</strong>
+                    </p>
+                    <p class="hero-subtitle animate-fade-in animate-delay-3"
+                        style="font-size: 0.9rem; margin-bottom: 1rem;">
+                        Works with MySQL, Percona, and Amazon RDS • <strong>MariaDB recommended</strong>
+                    </p>
+                    <p class="hero-subtitle animate-fade-in animate-delay-3">
+                        Simple setup • Automatic failover • Zero configuration complexity
+                    </p>
+
+                    <div class="hero-cta animate-fade-in animate-delay-4">
+                        <a href="quickstart.html" class="btn-hero primary">Get Started →</a>
+                        <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank"
+                            class="btn-hero secondary">View on GitHub</a>
+                    </div>
+
+                    <ul class="features-list animate-fade-in animate-delay-4">
+                        <li>Automatic read/write splitting</li>
+                        <li>Sub-2 second failover</li>
+                        <li>Native MySQL protocol</li>
+                        <li>Single Rust binary</li>
+                    </ul>
+                </section>
+
+                <!-- What It Does Section -->
+                <section class="content-section" style="padding: 2rem 0; border-bottom: 1px solid var(--border-color);">
+                    <h2 style="text-align: center; margin-bottom: 1.5rem; font-size: 1.5rem;">What It Does</h2>
+
+                    <div style="max-width: 700px; margin: 0 auto; line-height: 1.8;">
+                        <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 1rem;">
+                            <strong style="color: var(--text-primary);">Imagine your database is a single
+                                notebook.</strong>
+                            If someone spills coffee on it, all your data is gone. If too many people need to read it at
+                            once, they have to wait in line.
+                        </p>
+
+                        <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 1rem;">
+                            <strong style="color: var(--text-primary);">WolfScale creates multiple identical copies of
+                                that notebook</strong>
+                            across different servers. When you write something, it automatically updates all the copies.
+                            When you need to read,
+                            it spreads the requests across all copies so no single one gets overwhelmed.
+                        </p>
+
+                        <div
+                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 2rem;">
+                            <div
+                                style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem; text-align: center;">
+                                <div style="font-size: 2rem; margin-bottom: 0.5rem;">📝</div>
+                                <div style="font-weight: 600; margin-bottom: 0.25rem;">One Server Writes</div>
+                                <div style="font-size: 0.85rem; color: var(--text-muted);">Changes go to the leader
+                                </div>
+                            </div>
+                            <div
+                                style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem; text-align: center;">
+                                <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔄</div>
+                                <div style="font-weight: 600; margin-bottom: 0.25rem;">Copies Stay in Sync</div>
+                                <div style="font-size: 0.85rem; color: var(--text-muted);">Updates replicate instantly
+                                </div>
+                            </div>
+                            <div
+                                style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem; text-align: center;">
+                                <div style="font-size: 2rem; margin-bottom: 0.5rem;">📖</div>
+                                <div style="font-weight: 600; margin-bottom: 0.25rem;">All Servers Read</div>
+                                <div style="font-size: 0.85rem; color: var(--text-muted);">Load balanced automatically
+                                </div>
+                            </div>
+                        </div>
+
+                        <p
+                            style="color: var(--text-secondary); margin-top: 1.5rem; font-size: 1rem; text-align: center;">
+                            <strong style="color: var(--success);">Result:</strong> Your data is always safe, and your
+                            app stays fast even under heavy load.
+                        </p>
+                    </div>
+                </section>
+
+                <!-- Architecture Section -->
+                <section class="content-section" style="padding: 2rem 0; border-bottom: 1px solid var(--border-color);">
+                    <h2 style="text-align: center; margin-bottom: 1rem; font-size: 1.5rem;">How It's Installed</h2>
+                    <p
+                        style="text-align: center; color: var(--text-secondary); margin-bottom: 2rem; max-width: 600px; margin-left: auto; margin-right: auto;">
+                        WolfScale runs on <strong>1 to N nodes</strong> and can be <strong>distributed
+                            geographically</strong> across data centers, cloud regions, or on-premises servers.
+                    </p>
+
+                    <div style="max-width: 800px; margin: 0 auto;">
+                        <!-- Architecture Diagram -->
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+
+                            <!-- Load Balancer -->
+                            <div
+                                style="background: linear-gradient(135deg, var(--accent-red), #b91c1c); color: white; padding: 1rem 2rem; border-radius: 8px; text-align: center; font-weight: 600; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);">
+                                🐺 WolfScale Load Balancer
+                            </div>
+
+                            <!-- Arrow Down -->
+                            <div style="font-size: 1.5rem; color: var(--text-muted);">↓</div>
+
+                            <!-- Nodes Container -->
+                            <div
+                                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; width: 100%;">
+
+                                <!-- Node 1 -->
+                                <div
+                                    style="background: var(--bg-card); border: 2px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                                    <div
+                                        style="background: var(--bg-tertiary); padding: 0.75rem; text-align: center; font-weight: 600; border-bottom: 1px solid var(--border-color);">
+                                        🐺 WolfScale Node 1
+                                    </div>
+                                    <div style="padding: 1rem; text-align: center;">
+                                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🗄️</div>
+                                        <div style="font-size: 0.9rem; color: var(--text-secondary);">MariaDB or MySQL
+                                        </div>
+                                        <div style="font-size: 0.8rem; color: var(--text-muted);">Database</div>
+                                    </div>
+                                </div>
+
+                                <!-- Node 2 -->
+                                <div
+                                    style="background: var(--bg-card); border: 2px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                                    <div
+                                        style="background: var(--bg-tertiary); padding: 0.75rem; text-align: center; font-weight: 600; border-bottom: 1px solid var(--border-color);">
+                                        🐺 WolfScale Node 2
+                                    </div>
+                                    <div style="padding: 1rem; text-align: center;">
+                                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🗄️</div>
+                                        <div style="font-size: 0.9rem; color: var(--text-secondary);">MariaDB or MySQL
+                                        </div>
+                                        <div style="font-size: 0.8rem; color: var(--text-muted);">Database</div>
+                                    </div>
+                                </div>
+
+                                <!-- Node 3 -->
+                                <div
+                                    style="background: var(--bg-card); border: 2px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                                    <div
+                                        style="background: var(--bg-tertiary); padding: 0.75rem; text-align: center; font-weight: 600; border-bottom: 1px solid var(--border-color);">
+                                        🐺 WolfScale Node 3
+                                    </div>
+                                    <div style="padding: 1rem; text-align: center;">
+                                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🗄️</div>
+                                        <div style="font-size: 0.9rem; color: var(--text-secondary);">MariaDB or MySQL
+                                        </div>
+                                        <div style="font-size: 0.8rem; color: var(--text-muted);">Database</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Important Note -->
+                        <div
+                            style="margin-top: 1.5rem; padding: 1rem; background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 8px;">
+                            <p style="margin: 0; color: var(--text-secondary); font-size: 0.9rem;">
+                                <strong style="color: #eab308;">⚠️ Important:</strong>
+                                At installation time, all databases must be <strong>up to date and in sync</strong> with
+                                each other.
+                                WolfScale keeps them synchronized going forward, but it needs a consistent starting
+                                point.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Comparison Section -->
+                <section class="content-section" style="padding: 2rem 0; border-bottom: 1px solid var(--border-color);">
+                    <h2 style="text-align: center; margin-bottom: 1.5rem; font-size: 1.5rem;">Why WolfScale?</h2>
+                    <p style="text-align: center; color: var(--text-secondary); margin-bottom: 2rem;">Traditional
+                        database HA requires multiple complex tools. WolfScale is all-in-one.</p>
+
+                    <div class="table-wrapper" style="max-width: 800px; margin: 0 auto;">
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Feature</th>
+                                    <th>Traditional Solutions</th>
+                                    <th>WolfScale</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Configuration</td>
+                                    <td>100+ lines across multiple files</td>
+                                    <td class="highlight">6 lines, single file</td>
+                                </tr>
+                                <tr>
+                                    <td>Components</td>
+                                    <td>Load balancer + replication + failover + monitoring</td>
+                                    <td class="highlight">Single binary</td>
+                                </tr>
+                                <tr>
+                                    <td>Node Discovery</td>
+                                    <td>Manual server lists</td>
+                                    <td class="highlight">Automatic</td>
+                                </tr>
+                                <tr>
+                                    <td>Read/Write Splitting</td>
+                                    <td>Complex regex rules</td>
+                                    <td class="highlight">Automatic</td>
+                                </tr>
+                                <tr>
+                                    <td>Session State</td>
+                                    <td>Often lost between queries</td>
+                                    <td class="highlight">Preserved</td>
+                                </tr>
+                                <tr>
+                                    <td>Failover</td>
+                                    <td>External tools (Pacemaker, etc.)</td>
+                                    <td class="highlight">Built-in, sub-2 second</td>
+                                </tr>
+                                <tr>
+                                    <td>Minimum Nodes</td>
+                                    <td>3 (for quorum)</td>
+                                    <td class="highlight">1</td>
+                                </tr>
+                                <tr>
+                                    <td>Learning Curve</td>
+                                    <td>Days/weeks</td>
+                                    <td class="highlight">Minutes</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Video Section -->
+                <section class="content-section" style="padding: 2rem 0; border-bottom: 1px solid var(--border-color);">
+                    <h2 style="text-align: center; margin-bottom: 1.5rem; font-size: 1.5rem;">See It In Action</h2>
+                    <div style="max-width: 800px; margin: 0 auto;">
+                        <div
+                            style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 12px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);">
+                            <iframe
+                                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;"
+                                src="https://www.youtube.com/embed/iGLQl4rP8xE" title="WolfScale Demo"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowfullscreen>
+                            </iframe>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Quick Links -->
+                <section class="quick-links">
+                    <h2 class="quick-links-title">Documentation</h2>
+                    <div class="quick-links-grid">
+                        <a href="quickstart.html" class="quick-link">
+                            <h4>Quick Start</h4>
+                            <p>Install & setup</p>
+                        </a>
+                        <a href="architecture.html" class="quick-link">
+                            <h4>Architecture</h4>
+                            <p>How it works</p>
+                        </a>
+                        <a href="load-balancer.html" class="quick-link">
+                            <h4>Load Balancer</h4>
+                            <p>Configuration</p>
+                        </a>
+                        <a href="features.html" class="quick-link">
+                            <h4>Features</h4>
+                            <p>Full list</p>
+                        </a>
+                    </div>
+                </section>
+
+                <div class="page-nav">
+                    <span></span>
+                    <a href="features.html" class="next">Features →</a>
+                </div>
+            </div>
+
+            <footer class="wiki-footer"
+                style="margin-top: 3rem; padding: 2rem 0; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; opacity: 0.7; font-size: 0.875rem;">
+                <p>© 2026 <a href="https://wolf.uk.com" target="_blank"
+                        style="color: inherit; text-decoration: underline;">Wolf Software Systems Ltd</a> • MIT License
+                </p>
+                <p style="font-size: 0.75rem; margin-top: 0.5rem;">
+                    USE AT YOUR OWN RISK. This software is provided "as is" without warranty of any kind.
+                </p>
+            </footer>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
