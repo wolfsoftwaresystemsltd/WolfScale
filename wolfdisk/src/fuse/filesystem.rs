@@ -3,10 +3,10 @@
 //! Implements the fuser::Filesystem trait to provide a mountable
 //! distributed filesystem.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::sync::{Arc, RwLock};
-use std::time::{Duration, SystemTime};
+use std::time::{Duration, Instant, SystemTime};
 
 use fuser::{
     FileAttr, FileType, Filesystem, ReplyAttr, ReplyData, ReplyDirectory, ReplyEntry,
@@ -26,6 +26,17 @@ const TTL: Duration = Duration::from_secs(1);
 
 /// Root inode number
 const ROOT_INODE: u64 = 1;
+
+/// Minimum interval between index saves (debounce)
+const INDEX_SAVE_INTERVAL: Duration = Duration::from_secs(5);
+
+/// Per-inode write buffer for coalescing small FUSE writes into full chunks
+struct WriteBuffer {
+    /// Accumulated data not yet stored as chunks
+    data: Vec<u8>,
+    /// File offset where this buffer starts
+    base_offset: u64,
+}
 
 /// WolfDisk FUSE Filesystem
 pub struct WolfDiskFS {
@@ -55,6 +66,18 @@ pub struct WolfDiskFS {
 
     /// Peer manager for network communication
     peer_manager: Option<Arc<PeerManager>>,
+
+    /// Per-inode write buffers for coalescing small writes
+    write_buffers: RwLock<HashMap<u64, WriteBuffer>>,
+
+    /// Inodes that have been written to and need replication on release
+    dirty_inodes: RwLock<HashSet<u64>>,
+
+    /// Timestamp of last index save (for debouncing)
+    last_index_save: RwLock<Instant>,
+
+    /// Whether the index has been modified since last save
+    index_dirty: RwLock<bool>,
 }
 
 impl WolfDiskFS {
@@ -104,6 +127,10 @@ impl WolfDiskFS {
             next_fh: RwLock::new(1),
             cluster,
             peer_manager,
+            write_buffers: RwLock::new(HashMap::new()),
+            dirty_inodes: RwLock::new(HashSet::new()),
+            last_index_save: RwLock::new(Instant::now()),
+            index_dirty: RwLock::new(false),
         })
     }
 
@@ -474,6 +501,137 @@ impl WolfDiskFS {
         fh
     }
 
+    /// Flush the write buffer for a given inode, storing accumulated data as chunks
+    fn flush_write_buffer(&self, ino: u64) {
+        let buffer = {
+            let mut buffers = self.write_buffers.write().unwrap();
+            buffers.remove(&ino)
+        };
+
+        if let Some(buffer) = buffer {
+            if buffer.data.is_empty() {
+                return;
+            }
+
+            // Get the path for this inode
+            let path = {
+                let inode_table = self.inode_table.read().unwrap();
+                match inode_table.get_path(ino) {
+                    Some(p) => p.clone(),
+                    None => return,
+                }
+            };
+
+            // Store the buffered data as chunks
+            let mut file_index = self.file_index.write().unwrap();
+            if let Some(entry) = file_index.get_mut(&path) {
+                let mut offset = buffer.base_offset;
+                let chunk_size = self.config.replication.chunk_size;
+                let mut pos = 0;
+
+                while pos < buffer.data.len() {
+                    let end = (pos + chunk_size).min(buffer.data.len());
+                    let chunk_data = &buffer.data[pos..end];
+
+                    match self.chunk_store.store(chunk_data) {
+                        Ok(hash) => {
+                            entry.chunks.push(crate::storage::ChunkRef {
+                                hash,
+                                offset,
+                                size: chunk_data.len() as u32,
+                            });
+                        }
+                        Err(e) => {
+                            warn!("Failed to flush write buffer chunk: {}", e);
+                            return;
+                        }
+                    }
+
+                    offset += chunk_data.len() as u64;
+                    pos = end;
+                }
+
+                let new_end = buffer.base_offset + buffer.data.len() as u64;
+                if new_end > entry.size {
+                    entry.size = new_end;
+                }
+                entry.modified = SystemTime::now();
+            }
+
+            *self.index_dirty.write().unwrap() = true;
+        }
+    }
+
+    /// Mark an inode as dirty (needs replication on release)
+    fn mark_dirty(&self, ino: u64) {
+        self.dirty_inodes.write().unwrap().insert(ino);
+        *self.index_dirty.write().unwrap() = true;
+    }
+
+    /// Replicate a dirty inode's data to followers and clear dirty flag
+    fn replicate_dirty(&self, ino: u64) {
+        if !self.is_leader() {
+            return;
+        }
+
+        let was_dirty = self.dirty_inodes.write().unwrap().remove(&ino);
+        if !was_dirty {
+            return;
+        }
+
+        // Get path and entry for replication
+        let (path, entry) = {
+            let inode_table = self.inode_table.read().unwrap();
+            let file_index = self.file_index.read().unwrap();
+            match inode_table.get_path(ino) {
+                Some(p) => match file_index.get(p) {
+                    Some(e) => (p.clone(), e.clone()),
+                    None => return,
+                },
+                None => return,
+            }
+        };
+
+        // Broadcast the complete file to followers
+        self.broadcast_file_sync(&path, &entry);
+    }
+
+    /// Save the index to disk if enough time has passed since last save
+    fn maybe_save_index(&self) {
+        let is_dirty = *self.index_dirty.read().unwrap();
+        if !is_dirty {
+            return;
+        }
+
+        let should_save = {
+            let last_save = self.last_index_save.read().unwrap();
+            last_save.elapsed() >= INDEX_SAVE_INTERVAL
+        };
+
+        if should_save {
+            if let Ok(index) = self.file_index.read() {
+                let _ = index.save(&self.config.index_dir());
+            }
+            *self.last_index_save.write().unwrap() = Instant::now();
+            *self.index_dirty.write().unwrap() = false;
+        }
+    }
+
+    /// Force save the index to disk regardless of debounce timer
+    #[allow(dead_code)]
+    fn force_save_index(&self) {
+        let is_dirty = *self.index_dirty.read().unwrap();
+        if !is_dirty {
+            return;
+        }
+
+        if let Ok(index) = self.file_index.read() {
+            let _ = index.save(&self.config.index_dir());
+        }
+        *self.last_index_save.write().unwrap() = Instant::now();
+        *self.index_dirty.write().unwrap() = false;
+    }
+
     /// Get root directory attributes
     fn root_attr(&self) -> FileAttr {
         FileAttr {
@@ -621,7 +779,38 @@ impl Filesystem for WolfDiskFS {
 
         // Read data from chunks
         match self.chunk_store.read(&entry.chunks, offset as u64, size as usize) {
-            Ok(data) => reply.data(&data),
+            Ok(mut data) => {
+                // Overlay any buffered-but-unflushed write data for read-after-write consistency
+                let buffers = self.write_buffers.read().unwrap();
+                if let Some(buffer) = buffers.get(&ino) {
+                    if !buffer.data.is_empty() {
+                        let read_start = offset as u64;
+                        let read_end = read_start + size as u64;
+                        let buf_start = buffer.base_offset;
+                        let buf_end = buf_start + buffer.data.len() as u64;
+
+                        // Check for overlap between read range and buffer
+                        if buf_start < read_end && buf_end > read_start {
+                            let overlap_start = read_start.max(buf_start);
+                            let overlap_end = read_end.min(buf_end);
+
+                            let result_offset = (overlap_start - read_start) as usize;
+                            let buf_offset = (overlap_start - buf_start) as usize;
+                            let overlap_len = (overlap_end - overlap_start) as usize;
+
+                            // Ensure result vector is large enough
+                            if data.len() < result_offset + overlap_len {
+                                data.resize(result_offset + overlap_len, 0);
+                            }
+
+                            data[result_offset..result_offset + overlap_len]
+                                .copy_from_slice(&buffer.data[buf_offset..buf_offset + overlap_len]);
+                        }
+                    }
+                }
+
+                reply.data(&data);
+            }
             Err(e) => {
                 warn!("Read error: {}", e);
                 reply.error(e.to_errno());
@@ -668,44 +857,116 @@ impl Filesystem for WolfDiskFS {
             return;
         }
 
-        // We're the leader - write locally
-        let mut file_index = self.file_index.write().unwrap();
+        // We're the leader - buffer the write for coalescing
+        let chunk_size = self.config.replication.chunk_size;
 
-        let entry = match file_index.get_mut(&path) {
-            Some(e) => e,
-            None => {
-                reply.error(libc::ENOENT);
-                return;
-            }
-        };
+        {
+            let mut buffers = self.write_buffers.write().unwrap();
+            let buffer = buffers.entry(ino).or_insert_with(|| WriteBuffer {
+                data: Vec::new(),
+                base_offset: offset as u64,
+            });
 
-        // Write data to chunks
-        match self.chunk_store.write(&mut entry.chunks, offset as u64, data) {
-            Ok(written) => {
-                // Update file size if needed
-                let new_end = offset as u64 + written as u64;
-                if new_end > entry.size {
-                    entry.size = new_end;
+            // Check if write is contiguous with existing buffer
+            let buffer_end = buffer.base_offset + buffer.data.len() as u64;
+            if offset as u64 == buffer_end {
+                // Contiguous: just append
+                buffer.data.extend_from_slice(data);
+            } else {
+                // Non-contiguous: flush existing buffer to chunks, start new one
+                if !buffer.data.is_empty() {
+                    let old_data = std::mem::take(&mut buffer.data);
+                    let old_offset = buffer.base_offset;
+
+                    // Store old buffer data as chunks
+                    let path_for_flush = path.clone();
+                    let mut file_index = self.file_index.write().unwrap();
+                    if let Some(entry) = file_index.get_mut(&path_for_flush) {
+                        let mut pos = 0;
+                        let mut off = old_offset;
+                        while pos < old_data.len() {
+                            let end = (pos + chunk_size).min(old_data.len());
+                            let chunk_data = &old_data[pos..end];
+                            match self.chunk_store.store(chunk_data) {
+                                Ok(hash) => {
+                                    entry.chunks.push(crate::storage::ChunkRef {
+                                        hash,
+                                        offset: off,
+                                        size: chunk_data.len() as u32,
+                                    });
+                                }
+                                Err(e) => {
+                                    warn!("Failed to flush non-contiguous buffer: {}", e);
+                                    break;
+                                }
+                            }
+                            off += chunk_data.len() as u64;
+                            pos = end;
+                        }
+                        let new_end = old_offset + old_data.len() as u64;
+                        if new_end > entry.size {
+                            entry.size = new_end;
+                        }
+                        entry.modified = SystemTime::now();
+                    }
                 }
-                entry.modified = SystemTime::now();
-                
-                // Clone entry for broadcast (need to do this before reply)
-                let entry_clone = entry.clone();
-                let path_clone = path.clone();
-                
-                // Drop locks before broadcast and reply
-                drop(file_index);
-                
-                // Broadcast file sync to followers
-                self.broadcast_file_sync(&path_clone, &entry_clone);
-                
-                reply.written(written as u32);
+
+                // Start new buffer
+                buffer.data = data.to_vec();
+                buffer.base_offset = offset as u64;
             }
-            Err(e) => {
-                warn!("Write error: {}", e);
-                reply.error(e.to_errno());
+
+            // Flush complete chunks from buffer while it exceeds chunk_size
+            while buffer.data.len() >= chunk_size {
+                let chunk_data: Vec<u8> = buffer.data.drain(..chunk_size).collect();
+                let flush_offset = buffer.base_offset;
+                buffer.base_offset += chunk_size as u64;
+
+                match self.chunk_store.store(&chunk_data) {
+                    Ok(hash) => {
+                        let mut file_index = self.file_index.write().unwrap();
+                        if let Some(entry) = file_index.get_mut(&path) {
+                            entry.chunks.push(crate::storage::ChunkRef {
+                                hash,
+                                offset: flush_offset,
+                                size: chunk_size as u32,
+                            });
+                            let new_end = flush_offset + chunk_size as u64;
+                            if new_end > entry.size {
+                                entry.size = new_end;
+                            }
+                            entry.modified = SystemTime::now();
+                        }
+                    }
+                    Err(e) => {
+                        warn!("Failed to flush full chunk from buffer: {}", e);
+                    }
+                }
             }
         }
+
+        // Update file size to include buffered data
+        {
+            let buffers = self.write_buffers.read().unwrap();
+            if let Some(buffer) = buffers.get(&ino) {
+                let buffered_end = buffer.base_offset + buffer.data.len() as u64;
+                let mut file_index = self.file_index.write().unwrap();
+                if let Some(entry) = file_index.get_mut(&path) {
+                    if buffered_end > entry.size {
+                        entry.size = buffered_end;
+                    }
+                    entry.modified = SystemTime::now();
+                }
+            }
+        }
+
+        // Mark as dirty for deferred replication (don't broadcast now)
+        self.mark_dirty(ino);
+
+        // Periodically save index
+        self.maybe_save_index();
+
+        reply.written(data.len() as u32);
     }
 
     fn readdir(
@@ -1288,20 +1549,24 @@ impl Filesystem for WolfDiskFS {
     fn release(
         &mut self,
         _req: &Request,
-        _ino: u64,
+        ino: u64,
         fh: u64,
         _flags: i32,
         _lock_owner: Option<u64>,
         _flush: bool,
         reply: fuser::ReplyEmpty,
     ) {
-        debug!("release: fh={}", fh);
+        debug!("release: ino={}, fh={}", ino, fh);
         self.open_files.write().unwrap().remove(&fh);
         
-        // Save index to persist changes
-        if let Ok(index) = self.file_index.read() {
-            let _ = index.save(&self.config.index_dir());
-        }
+        // Flush any pending write buffer for this inode
+        self.flush_write_buffer(ino);
+        
+        // Replicate to followers if this inode was modified (deferred from write)
+        self.replicate_dirty(ino);
+        
+        // Debounced index save (only saves if enough time has passed)
+        self.maybe_save_index();
         
         reply.ok();
     }

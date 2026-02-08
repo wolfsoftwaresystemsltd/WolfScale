@@ -1,14 +1,19 @@
 //! Chunk storage with content-addressed deduplication
 
+use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::PathBuf;
+use std::sync::Mutex;
 
 use sha2::{Sha256, Digest};
 use tracing::debug;
 
 use crate::error::{Error, Result};
 use super::ChunkRef;
+
+/// Maximum number of chunks to keep in the read cache
+const DEFAULT_CACHE_CAPACITY: usize = 256;
 
 /// Content-addressed chunk storage
 pub struct ChunkStore {
@@ -17,6 +22,61 @@ pub struct ChunkStore {
 
     /// Target chunk size in bytes
     chunk_size: usize,
+
+    /// In-memory read cache: hash -> chunk data
+    read_cache: Mutex<ReadCache>,
+}
+
+/// Simple LRU-style read cache for chunk data
+struct ReadCache {
+    entries: HashMap<[u8; 32], Vec<u8>>,
+    access_order: Vec<[u8; 32]>,
+    capacity: usize,
+}
+
+impl ReadCache {
+    fn new(capacity: usize) -> Self {
+        Self {
+            entries: HashMap::with_capacity(capacity),
+            access_order: Vec::with_capacity(capacity),
+            capacity,
+        }
+    }
+
+    fn get(&mut self, hash: &[u8; 32]) -> Option<Vec<u8>> {
+        if let Some(data) = self.entries.get(hash) {
+            // Move to end of access order (most recently used)
+            if let Some(pos) = self.access_order.iter().position(|h| h == hash) {
+                self.access_order.remove(pos);
+                self.access_order.push(*hash);
+            }
+            Some(data.clone())
+        } else {
+            None
+        }
+    }
+
+    fn insert(&mut self, hash: [u8; 32], data: Vec<u8>) {
+        if self.entries.contains_key(&hash) {
+            return;
+        }
+
+        // Evict oldest entries if at capacity
+        while self.entries.len() >= self.capacity && !self.access_order.is_empty() {
+            let oldest = self.access_order.remove(0);
+            self.entries.remove(&oldest);
+        }
+
+        self.entries.insert(hash, data);
+        self.access_order.push(hash);
+    }
+
+    fn remove(&mut self, hash: &[u8; 32]) {
+        self.entries.remove(hash);
+        if let Some(pos) = self.access_order.iter().position(|h| h == hash) {
+            self.access_order.remove(pos);
+        }
+    }
 }
 
 impl ChunkStore {
@@ -27,6 +87,7 @@ impl ChunkStore {
         Ok(Self {
             base_dir,
             chunk_size,
+            read_cache: Mutex::new(ReadCache::new(DEFAULT_CACHE_CAPACITY)),
         })
     }
 
@@ -57,10 +118,14 @@ impl ChunkStore {
             fs::create_dir_all(parent)?;
         }
 
-        // Write chunk to file
+        // Write chunk to file (no sync_all - let OS page cache handle durability)
         let mut file = File::create(&path)?;
         file.write_all(data)?;
-        file.sync_all()?;
+
+        // Populate read cache with the data we just wrote
+        if let Ok(mut cache) = self.read_cache.lock() {
+            cache.insert(hash, data.to_vec());
+        }
 
         debug!("Stored chunk {} ({} bytes)", hex::encode(&hash), data.len());
         Ok(hash)
@@ -81,10 +146,14 @@ impl ChunkStore {
             fs::create_dir_all(parent)?;
         }
 
-        // Write chunk to file
+        // Write chunk to file (no sync_all - let OS page cache handle durability)
         let mut file = File::create(&path)?;
         file.write_all(data)?;
-        file.sync_all()?;
+
+        // Populate read cache
+        if let Ok(mut cache) = self.read_cache.lock() {
+            cache.insert(*hash, data.to_vec());
+        }
 
         debug!("Stored replicated chunk {} ({} bytes)", hex::encode(hash), data.len());
         Ok(())
@@ -92,6 +161,14 @@ impl ChunkStore {
 
     /// Retrieve a chunk by its hash
     pub fn get(&self, hash: &[u8; 32]) -> Result<Vec<u8>> {
+        // Check read cache first
+        if let Ok(mut cache) = self.read_cache.lock() {
+            if let Some(data) = cache.get(hash) {
+                debug!("Cache hit for chunk {}", hex::encode(hash));
+                return Ok(data);
+            }
+        }
+
         let path = self.chunk_path(hash);
 
         if !path.exists() {
@@ -102,12 +179,22 @@ impl ChunkStore {
         let mut data = Vec::new();
         file.read_to_end(&mut data)?;
 
+        // Populate cache
+        if let Ok(mut cache) = self.read_cache.lock() {
+            cache.insert(*hash, data.clone());
+        }
+
         Ok(data)
     }
 
     /// Delete a chunk (used for garbage collection)
     pub fn delete(&self, hash: &[u8; 32]) -> Result<()> {
         let path = self.chunk_path(hash);
+
+        // Remove from cache
+        if let Ok(mut cache) = self.read_cache.lock() {
+            cache.remove(hash);
+        }
 
         if path.exists() {
             fs::remove_file(&path)?;
@@ -146,7 +233,7 @@ impl ChunkStore {
                 break;
             }
 
-            // Load chunk data
+            // Load chunk data (will use cache if available)
             let chunk_data = self.get(&chunk.hash)?;
 
             // Calculate how much of this chunk to read
@@ -238,3 +325,4 @@ mod tests {
         assert_eq!(hash1, hash2);
     }
 }
+
