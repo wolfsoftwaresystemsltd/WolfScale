@@ -1331,6 +1331,17 @@ impl Filesystem for WolfDiskFS {
             }
         }
 
+        // If chunks were streamed, also send metadata update so file appears on followers
+        if !flushed_chunks.is_empty() {
+            let entry = {
+                let file_index = self.file_index.read().unwrap();
+                file_index.get(&path).cloned()
+            };
+            if let Some(entry) = entry {
+                self.broadcast_file_sync_final(&path, &entry);
+            }
+        }
+
         // Mark as dirty for final index sync on release
         self.mark_dirty(ino);
 

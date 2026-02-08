@@ -12,7 +12,7 @@ use wolfdisk::{Config, fuse::WolfDiskFS, storage::{FileIndex, FileEntry, ChunkRe
 #[derive(Parser)]
 #[command(name = "wolfdisk")]
 #[command(author = "Wolf Software Systems Ltd")]
-#[command(version = "2.2.0")]
+#[command(version = "2.2.1")]
 #[command(about = "Distributed file system with replicated and shared storage", long_about = None)]
 struct Cli {
     #[command(subcommand)]
@@ -144,6 +144,12 @@ fn main() {
             let chunk_stream_queue: std::sync::Arc<std::sync::Mutex<Vec<([u8; 32], Vec<u8>)>>> =
                 std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
             let chunk_stream_queue_for_handler = chunk_stream_queue.clone();
+            
+            // Metadata update queue for sending metadata-only FileSync to followers
+            // during streaming replication (no chunk_data, just path + entry metadata)
+            let metadata_update_queue: std::sync::Arc<std::sync::Mutex<Vec<(std::path::PathBuf, wolfdisk::storage::FileEntry)>>> =
+                std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+            let metadata_update_queue_for_handler = metadata_update_queue.clone();
             
             // Track if this node is a client (clients don't store chunk data locally)
             let is_client_role = config.node.role == wolfdisk::config::NodeRole::Client;
@@ -335,8 +341,8 @@ fn main() {
                                                 }
                                             }
                                             
-                                            // Queue metadata broadcast (followers need the index update)
-                                            broadcast_queue_for_handler.lock().unwrap().push((path_clone, entry_clone));
+                                            // Queue metadata-only update (chunks already streamed above)
+                                            metadata_update_queue_for_handler.lock().unwrap().push((path_clone, entry_clone));
                                             
                                             info!("Leader wrote {} bytes to {} ({} new chunks streamed)", written, write_req.path, new_chunks.len());
                                             
@@ -948,8 +954,9 @@ fn main() {
             let chunk_store_for_broadcast = chunk_store.clone();
             let broadcast_queue_for_thread = broadcast_queue.clone();
             let chunk_stream_queue_for_thread = chunk_stream_queue.clone();
+            let metadata_update_queue_for_thread = metadata_update_queue.clone();
             std::thread::spawn(move || {
-                use wolfdisk::network::protocol::{Message, FileSyncMsg, ChunkWithData, StoreChunkMsg};
+                use wolfdisk::network::protocol::{Message, FileSyncMsg, ChunkWithData, StoreChunkMsg, ChunkRefMsg};
                 loop {
                     // Check queues every 50ms
                     std::thread::sleep(std::time::Duration::from_millis(50));
@@ -968,7 +975,42 @@ fn main() {
                         peer_manager_for_broadcast.broadcast(&msg);
                     }
                     
-                    // Drain pending broadcasts
+                    // Second, send metadata-only updates (file growing during writes)
+                    let pending_metadata: Vec<_> = {
+                        let mut queue = metadata_update_queue_for_thread.lock().unwrap();
+                        queue.drain(..).collect()
+                    };
+                    
+                    for (path, entry) in pending_metadata {
+                        let modified_ms = entry.modified
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .map(|d| d.as_millis() as u64)
+                            .unwrap_or(0);
+                        
+                        let chunk_refs: Vec<ChunkRefMsg> = entry.chunks.iter().map(|c| ChunkRefMsg {
+                            hash: c.hash,
+                            offset: c.offset,
+                            size: c.size,
+                        }).collect();
+                        
+                        let msg = Message::FileSync(FileSyncMsg {
+                            path: path.to_string_lossy().to_string(),
+                            size: entry.size,
+                            is_dir: entry.is_dir,
+                            permissions: entry.permissions,
+                            uid: entry.uid,
+                            gid: entry.gid,
+                            modified_ms,
+                            chunks: chunk_refs,
+                            chunk_data: Vec::new(), // Metadata only — chunks already streamed
+                        });
+                        
+                        debug!("Broadcasting metadata update for {} ({} bytes, {} chunks)", 
+                            path.display(), entry.size, entry.chunks.len());
+                        peer_manager_for_broadcast.broadcast(&msg);
+                    }
+                    
+                    // Third, drain full broadcasts (creates, deletes, directory syncs)
                     let pending: Vec<_> = {
                         let mut queue = broadcast_queue_for_thread.lock().unwrap();
                         queue.drain(..).collect()
