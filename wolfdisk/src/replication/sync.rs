@@ -9,7 +9,7 @@ use std::time::SystemTime;
 
 use tracing::{debug, info, warn};
 
-use crate::config::{Config, ReplicationMode, NodeRole};
+use crate::config::{Config, NodeRole};
 use crate::cluster::{ClusterManager, ClusterState};
 use crate::network::peer::PeerManager;
 use crate::network::protocol::*;
