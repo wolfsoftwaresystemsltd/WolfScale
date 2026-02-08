@@ -172,41 +172,26 @@ fn main() {
             println!("  Chunk Size:   {} bytes", config.replication.chunk_size);
             println!();
             
-            // Start cluster manager to discover peers
-            let mut cluster = wolfdisk::ClusterManager::new(config.clone());
-            if let Err(e) = cluster.start() {
-                println!("Cluster: Failed to start ({})", e);
-            } else {
-                // Give discovery a moment to find peers
-                std::thread::sleep(std::time::Duration::from_secs(2));
-                
-                println!("Cluster Status:");
-                println!("  State:        {:?}", cluster.state());
-                
-                if let Some(leader) = cluster.leader_id() {
-                    println!("  Leader:       {}", leader);
-                } else {
-                    println!("  Leader:       (none/unknown)");
-                }
-                
-                let peers = cluster.peers();
-                println!("  Known Peers:  {}", peers.len());
-                for peer in peers {
-                    let status = if peer.last_seen.elapsed().as_secs() < 10 { "active" } else { "stale" };
-                    let role = if peer.is_leader { "(leader)" } else { "" };
-                    println!("    - {} at {} [{}] {}", peer.node_id, peer.address, status, role);
-                }
-                
-                cluster.stop();
-            }
+            // Check if the mount path exists and is mounted
+            let mountpoint = &config.mount.path;
+            let is_mounted = std::path::Path::new(&mountpoint).exists() 
+                && std::fs::read_dir(&mountpoint).is_ok();
             
+            println!("Mount Status:");
+            println!("  Mount Path:   {}", mountpoint.display());
+            println!("  Mounted:      {}", if is_mounted { "Yes" } else { "No" });
             println!();
+            
+            // Show discovery/peer config (without starting discovery)
             if let Some(ref discovery) = config.cluster.discovery {
                 println!("Discovery:      {}", discovery);
             }
             if !config.cluster.peers.is_empty() {
                 println!("Static Peers:   {:?}", config.cluster.peers);
             }
+            
+            println!();
+            println!("Note: Run 'journalctl -u wolfdisk -f' to see live cluster status");
         }
 
         Commands::Init { data_dir } => {
