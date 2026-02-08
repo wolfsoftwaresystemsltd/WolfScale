@@ -18,7 +18,7 @@ use crate::cluster::ClusterManager;
 use crate::config::Config;
 use crate::error::Result;
 use crate::network::peer::PeerManager;
-use crate::network::protocol::{Message, CreateFileMsg, CreateDirMsg, DeleteFileMsg, DeleteDirMsg, IndexUpdateMsg, IndexOperation, ChunkRefMsg, FileSyncMsg, ChunkWithData, WriteRequestMsg, RenameFileMsg, CreateSymlinkMsg, ReadRequestMsg};
+use crate::network::protocol::{Message, CreateFileMsg, CreateDirMsg, DeleteFileMsg, DeleteDirMsg, IndexUpdateMsg, IndexOperation, ChunkRefMsg, FileSyncMsg, ChunkWithData, WriteRequestMsg, RenameFileMsg, CreateSymlinkMsg, ReadRequestMsg, SetAttrMsg};
 use crate::storage::{ChunkStore, FileIndex, FileEntry, InodeTable};
 
 /// TTL for attribute caching
@@ -288,6 +288,57 @@ impl WolfDiskFS {
 
         match response {
             Message::FileOpResponse(resp) if resp.success => Ok(()),
+            _ => Err(libc::EIO),
+        }
+    }
+
+    /// Forward a setattr operation to the leader (for truncation, chmod, etc.)
+    fn forward_setattr_to_leader(
+        &self,
+        path: &str,
+        size: Option<u64>,
+        permissions: Option<u32>,
+        uid: Option<u32>,
+        gid: Option<u32>,
+        modified_ms: Option<u64>,
+    ) -> std::result::Result<(), i32> {
+        let (cluster, peer_manager) = match (&self.cluster, &self.peer_manager) {
+            (Some(c), Some(p)) => (c, p),
+            _ => return Err(libc::EIO),
+        };
+
+        let leader_id = cluster.leader_id().ok_or(libc::ENOENT)?;
+        let leader_addr = cluster.leader_address().ok_or(libc::ENOENT)?;
+
+        info!("Forwarding setattr to leader {} for path: {} (size={:?})", 
+            leader_id, path, size);
+
+        let conn = peer_manager.get_or_connect_leader(&leader_id, &leader_addr)
+            .map_err(|e| {
+                warn!("Failed to connect to leader: {}", e);
+                libc::EIO
+            })?;
+
+        let msg = Message::SetAttr(SetAttrMsg {
+            path: path.to_string(),
+            permissions,
+            uid,
+            gid,
+            size,
+            modified_ms,
+        });
+
+        let response = conn.request(&msg).map_err(|e| {
+            warn!("Failed to send setattr to leader: {}", e);
+            libc::EIO
+        })?;
+
+        match response {
+            Message::FileOpResponse(resp) if resp.success => Ok(()),
+            Message::FileOpResponse(resp) => {
+                warn!("Leader rejected setattr: {:?}", resp.error);
+                Err(libc::EIO)
+            }
             _ => Err(libc::EIO),
         }
     }
@@ -775,24 +826,29 @@ impl Filesystem for WolfDiskFS {
             buffers.remove(&ino);
         }
 
-        // Handle truncation on non-leader nodes by forwarding to leader
+        // Handle changes on non-leader nodes by forwarding to leader
         if !self.is_leader() {
-            if let Some(0) = size {
-                // Forward truncation as unlink + create to keep leader consistent
-                let (mode_val, uid_val, gid_val) = {
-                    let file_index = self.file_index.read().unwrap();
-                    match file_index.get(&path) {
-                        Some(e) => (e.permissions, e.uid, e.gid),
-                        None => {
-                            reply.error(libc::ENOENT);
-                            return;
-                        }
-                    }
-                };
+            if size.is_some() || mode.is_some() || uid.is_some() || gid.is_some() {
+                // Forward setattr to leader using the SetAttr protocol message
+                let mtime_ms = mtime.map(|m| {
+                    let t = match m {
+                        fuser::TimeOrNow::SpecificTime(t) => t,
+                        fuser::TimeOrNow::Now => SystemTime::now(),
+                    };
+                    t.duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis() as u64
+                });
 
-                let path_str = path.to_string_lossy().to_string();
-                if self.forward_unlink_to_leader(&path_str).is_ok() {
-                    let _ = self.forward_create_to_leader(&path_str, mode_val, uid_val, gid_val);
+                if let Err(e) = self.forward_setattr_to_leader(
+                    &path.to_string_lossy(),
+                    size,
+                    mode,
+                    uid,
+                    gid,
+                    mtime_ms,
+                ) {
+                    warn!("Failed to forward setattr to leader: {}", e);
+                    reply.error(e);
+                    return;
                 }
             }
 

@@ -267,8 +267,14 @@ impl ChunkStore {
             return Ok(0);
         }
 
-        // For simplicity in MVP, we append new chunks
-        // A more sophisticated implementation would handle in-place updates
+        let write_end = offset + data.len() as u64;
+
+        // Remove any existing chunks that overlap with the write range
+        chunks.retain(|chunk| {
+            let chunk_end = chunk.offset + chunk.size as u64;
+            // Keep chunks that DON'T overlap with [offset, write_end)
+            chunk_end <= offset || chunk.offset >= write_end
+        });
 
         let mut written = 0;
         let mut current_offset = offset;
@@ -291,6 +297,9 @@ impl ChunkStore {
             written += chunk_size;
             current_offset += chunk_size as u64;
         }
+
+        // Sort chunks by offset for correct read ordering
+        chunks.sort_by_key(|c| c.offset);
 
         Ok(written)
     }

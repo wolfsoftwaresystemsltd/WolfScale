@@ -669,6 +669,64 @@ fn main() {
                                     error: None,
                                 }))
                             }
+                            Message::SetAttr(setattr_req) => {
+                                // Handle setattr request (truncation, chmod, chown, etc.)
+                                info!("Received SetAttr from {}: {} (size={:?})", 
+                                    peer_id, setattr_req.path, setattr_req.size);
+                                
+                                let path = std::path::PathBuf::from(&setattr_req.path);
+                                let mut index = file_index_for_handler.write().unwrap();
+                                
+                                if let Some(entry) = index.get_mut(&path) {
+                                    // Handle truncation
+                                    if let Some(new_size) = setattr_req.size {
+                                        if new_size == 0 {
+                                            // Full truncation: delete all chunks
+                                            for chunk in &entry.chunks {
+                                                let _ = chunk_store_for_handler.delete(&chunk.hash);
+                                            }
+                                            entry.chunks.clear();
+                                            entry.size = 0;
+                                        } else if new_size < entry.size {
+                                            // Partial truncation
+                                            entry.chunks.retain(|chunk| chunk.offset < new_size);
+                                            entry.size = new_size;
+                                        } else {
+                                            entry.size = new_size;
+                                        }
+                                    }
+                                    
+                                    if let Some(perms) = setattr_req.permissions {
+                                        entry.permissions = perms;
+                                    }
+                                    if let Some(uid) = setattr_req.uid {
+                                        entry.uid = uid;
+                                    }
+                                    if let Some(gid) = setattr_req.gid {
+                                        entry.gid = gid;
+                                    }
+                                    if let Some(mtime_ms) = setattr_req.modified_ms {
+                                        entry.modified = std::time::UNIX_EPOCH + std::time::Duration::from_millis(mtime_ms);
+                                    }
+                                    
+                                    info!("Leader applied setattr to {}", setattr_req.path);
+                                    
+                                    // Queue broadcast to followers
+                                    let entry_clone = entry.clone();
+                                    drop(index);
+                                    broadcast_queue_for_handler.lock().unwrap().push((path, entry_clone));
+                                    
+                                    Some(Message::FileOpResponse(FileOpResponseMsg {
+                                        success: true,
+                                        error: None,
+                                    }))
+                                } else {
+                                    Some(Message::FileOpResponse(FileOpResponseMsg {
+                                        success: false,
+                                        error: Some("File not found".to_string()),
+                                    }))
+                                }
+                            }
                             Message::ReadRequest(read_req) => {
                                 // Handle read request from client (reads from local chunks)
                                 debug!("Received ReadRequest: {} offset={} size={}", read_req.path, read_req.offset, read_req.size);
