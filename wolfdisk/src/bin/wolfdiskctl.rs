@@ -129,25 +129,44 @@ fn show_status(path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
 fn list_servers(path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let status = read_status(path)?;
 
+    // Find leader
+    let leader = if status.role == "leader" {
+        status.node_id.clone()
+    } else {
+        status.peers.iter()
+            .find(|p| p.is_leader)
+            .map(|p| p.node_id.clone())
+            .unwrap_or_else(|| "unknown".to_string())
+    };
+
+    // Count active nodes
+    let active_peers = status.peers.iter()
+        .filter(|p| p.last_seen_secs_ago < 10)
+        .count();
+    let total_nodes = status.peers.len() + 1;
+    let active_nodes = active_peers + 1; // Include self
+
     println!();
-    println!("╔════════════════════════════════════════════════════════════════╗");
-    println!("║                    WolfDisk Servers                            ║");
-    println!("╠════════════════════════════════════════════════════════════════╣");
+    println!("WolfDisk Cluster Status (wolfdiskctl v0.1.0)");
+    println!("============================================");
+    println!();
+    println!("Total: {} nodes  |  Active: {}", total_nodes, active_nodes);
+    println!("Leader: {}", leader);
+    println!();
+    println!("{:20} {:25} {:10} {:10}", "NODE ID", "ADDRESS", "STATUS", "ROLE");
+    println!("{}", "-".repeat(65));
 
     // Print this node first
-    let my_role = if status.role == "leader" { "LEADER" } else { "FOLLOWER" };
-    println!("║ ● {:15} {:22} {:8} ║", status.node_id, status.bind_address, my_role);
+    let my_role = if status.role == "leader" { "Leader" } else { "Follower" };
+    println!("{:20} {:25} {:10} {:10}", status.node_id, status.bind_address, "Active", my_role);
 
     // Print peers
     for peer in &status.peers {
-        let indicator = if peer.last_seen_secs_ago < 4 { "●" } else { "○" };
-        let role = if peer.is_leader { "LEADER" } else { "FOLLOWER" };
-        println!("║ {} {:15} {:22} {:8} ║", indicator, peer.node_id, peer.address, role);
+        let node_status = if peer.last_seen_secs_ago < 10 { "Active" } else { "Stale" };
+        let role = if peer.is_leader { "Leader" } else { "Follower" };
+        println!("{:20} {:25} {:10} {:10}", peer.node_id, peer.address, node_status, role);
     }
 
-    println!("╚════════════════════════════════════════════════════════════════╝");
-    println!();
-    println!("Total: {} server(s)", status.peers.len() + 1);
     println!();
 
     Ok(())
