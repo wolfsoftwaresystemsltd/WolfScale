@@ -138,6 +138,27 @@ curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/mai
 
 The load balancer listens on port **3306** and routes traffic to healthy cluster nodes.
 
+#### Recommended: LB Per Web Server
+
+For **maximum availability**, install WolfScale load balancer directly on each web server:
+
+```
+Web Server 1 ─── WolfScale LB ───┐
+             (auto-discovers)    │
+                                 │
+Web Server 2 ─── WolfScale LB ───┼──► WolfScale DB Cluster
+             (auto-discovers)    │
+                                 │
+Web Server 3 ─── WolfScale LB ───┘
+             (auto-discovers)
+```
+
+**Benefits:**
+- **No single point of failure** — if one web server dies, others still have database access
+- **Zero latency** — each web app connects to `localhost:3306`
+- **Scales naturally** — add a web server, add a load balancer
+- **Trivial setup** — auto-discovery finds cluster nodes automatically
+
 ### Cluster Commands
 
 ```bash
