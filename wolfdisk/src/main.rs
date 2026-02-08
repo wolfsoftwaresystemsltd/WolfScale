@@ -116,11 +116,12 @@ fn main() {
             ));
             let file_index_for_handler = file_index.clone();
             
-            // Create chunk store for replication
-            let chunk_store_for_handler = std::sync::Arc::new(
+            // Create chunk store for replication (shared with WolfDiskFS)
+            let chunk_store = std::sync::Arc::new(
                 wolfdisk::storage::ChunkStore::new(config.chunks_dir(), 4 * 1024 * 1024)
-                    .expect("Failed to create chunk store for handler")
+                    .expect("Failed to create chunk store")
             );
+            let chunk_store_for_handler = chunk_store.clone();
             
             // Create peer manager for network communication
             let peer_manager = std::sync::Arc::new(
@@ -242,11 +243,13 @@ fn main() {
             }
             info!("Peer manager started on {}", config.node.bind);
             
-            // Create filesystem instance with cluster support
+            // Create filesystem instance with cluster support (using shared state)
             let fs = match WolfDiskFS::with_cluster(
                 config.clone(),
                 Some(cluster.clone()),
                 Some(peer_manager.clone()),
+                file_index.clone(),
+                chunk_store.clone(),
             ) {
                 Ok(fs) => fs,
                 Err(e) => {

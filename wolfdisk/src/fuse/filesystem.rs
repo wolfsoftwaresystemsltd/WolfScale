@@ -32,11 +32,11 @@ pub struct WolfDiskFS {
     /// Configuration
     config: Config,
 
-    /// Chunk storage backend
-    chunk_store: ChunkStore,
+    /// Chunk storage backend (shared for replication)
+    chunk_store: Arc<ChunkStore>,
 
-    /// File metadata index
-    file_index: RwLock<FileIndex>,
+    /// File metadata index (shared for replication)
+    file_index: Arc<RwLock<FileIndex>>,
 
     /// Inode to path mapping
     inode_table: RwLock<InodeTable>,
@@ -60,7 +60,14 @@ pub struct WolfDiskFS {
 impl WolfDiskFS {
     /// Create a new WolfDisk filesystem (standalone mode)
     pub fn new(config: Config) -> Result<Self> {
-        Self::with_cluster(config, None, None)
+        // Create chunk store and file index for standalone mode
+        std::fs::create_dir_all(config.chunks_dir())?;
+        std::fs::create_dir_all(config.index_dir())?;
+        
+        let chunk_store = Arc::new(ChunkStore::new(config.chunks_dir(), config.replication.chunk_size)?);
+        let file_index = Arc::new(RwLock::new(FileIndex::load_or_create(&config.index_dir())?));
+        
+        Self::with_cluster(config, None, None, file_index, chunk_store)
     }
 
     /// Create a new WolfDisk filesystem with cluster support
@@ -68,6 +75,8 @@ impl WolfDiskFS {
         config: Config,
         cluster: Option<Arc<ClusterManager>>,
         peer_manager: Option<Arc<PeerManager>>,
+        file_index: Arc<RwLock<FileIndex>>,
+        chunk_store: Arc<ChunkStore>,
     ) -> Result<Self> {
         info!("Initializing WolfDisk filesystem");
 
@@ -75,19 +84,16 @@ impl WolfDiskFS {
         std::fs::create_dir_all(config.chunks_dir())?;
         std::fs::create_dir_all(config.index_dir())?;
 
-        // Initialize chunk store
-        let chunk_store = ChunkStore::new(config.chunks_dir(), config.replication.chunk_size)?;
-
-        // Load or create file index
-        let file_index = FileIndex::load_or_create(&config.index_dir())?;
-
         // Build inode table from index
-        let (inode_table, max_inode) = InodeTable::from_index(&file_index);
+        let (inode_table, max_inode) = {
+            let index = file_index.read().unwrap();
+            InodeTable::from_index(&index)
+        };
 
         Ok(Self {
             config,
             chunk_store,
-            file_index: RwLock::new(file_index),
+            file_index,
             inode_table: RwLock::new(inode_table),
             next_inode: RwLock::new(max_inode + 1),
             open_files: RwLock::new(HashMap::new()),
