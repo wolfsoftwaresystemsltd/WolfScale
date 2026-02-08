@@ -78,4 +78,16 @@
         <changefreq>monthly</changefreq>
         <priority>0.7</priority>
     </url>
+    <url>
+        <loc>https://wolfscale.org/about.html</loc>
+        <lastmod>2026-02-08</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.6</priority>
+    </url>
+    <url>
+        <loc>https://wolfscale.org/contact.html</loc>
+        <lastmod>2026-02-08</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.6</priority>
+    </url>
 </urlset>

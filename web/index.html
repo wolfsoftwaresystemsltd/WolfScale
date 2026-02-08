@@ -267,18 +267,29 @@
                     src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
                     alt="Wolf"><span>WolfScale</span></a>
             <nav class="sidebar-nav">
-                <a href="features.html">Features</a>
-                <a href="architecture.html">Architecture</a>
-                <a href="how-it-works.html">How It Works</a>
-                <a href="quickstart.html">Quick Start</a>
-                <a href="binlog.html">Binlog Mode</a>
-                <a href="load-balancer.html">Load Balancer</a>
-                <a href="wolfdisk.html">WolfDisk</a>
-                <a href="configuration.html">Configuration</a>
-                <a href="performance.html">Performance</a>
-                <a href="cli.html">CLI Reference</a>
-                <a href="api.html">API Reference</a>
-                <a href="troubleshooting.html">Troubleshooting</a>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfScale</div>
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="features.html">Features</a>
+                    <a href="architecture.html">Architecture</a>
+                    <a href="how-it-works.html">How It Works</a>
+                    <a href="binlog.html">Binlog Mode</a>
+                    <a href="load-balancer.html">Load Balancer</a>
+                    <a href="configuration.html">Configuration</a>
+                    <a href="performance.html">Performance</a>
+                    <a href="cli.html">CLI Reference</a>
+                    <a href="api.html">API Reference</a>
+                    <a href="troubleshooting.html">Troubleshooting</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfDisk</div>
+                    <a href="wolfdisk.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Company</div>
+                    <a href="about.html">About</a>
+                    <a href="contact.html">Contact</a>
+                </div>
             </nav>
             <div class="theme-toggle-wrapper">
                 <span class="theme-toggle-label">Theme</span>
@@ -309,42 +320,45 @@
                     <img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf Logo"
                         class="hero-logo animate-fade-in animate-delay-1">
 
-                    <!-- WolfScale -->
-                    <h1 class="hero-title animate-fade-in animate-delay-2">WolfScale</h1>
-                    <p class="hero-tagline animate-fade-in animate-delay-2"
-                        style="font-size: 1.3rem; margin-bottom: 2rem;">
-                        Database replication, clustering and load balancing — <strong>the easy way</strong>
-                    </p>
-
-                    <!-- WolfDisk -->
-                    <h2 class="animate-fade-in animate-delay-3"
-                        style="font-size: clamp(2rem, 4vw, 3rem); font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);">
-                        WolfDisk</h2>
-                    <p class="hero-tagline animate-fade-in animate-delay-3"
-                        style="font-size: 1.3rem; margin-bottom: 2rem;">
-                        Disk replication and sharing — <strong>the easy way</strong>
-                    </p>
-
-                    <p class="hero-subtitle animate-fade-in animate-delay-3"
-                        style="font-size: 0.9rem; margin-bottom: 1rem;">
-                        Works with MySQL, Percona, and Amazon RDS • <strong>MariaDB recommended</strong>
-                    </p>
-                    <p class="hero-subtitle animate-fade-in animate-delay-3">
-                        Simple setup • Automatic failover • Zero configuration complexity
-                    </p>
-
-                    <div class="hero-cta animate-fade-in animate-delay-4">
-                        <a href="quickstart.html" class="btn-hero primary">Get Started →</a>
-                        <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank"
-                            class="btn-hero secondary">View on GitHub</a>
+                    <!-- WolfScale Product -->
+                    <div class="animate-fade-in animate-delay-2" style="margin-bottom: 3rem;">
+                        <h1 class="hero-title">WolfScale</h1>
+                        <p class="hero-tagline" style="font-size: 1.3rem; margin-bottom: 1rem;">
+                            Database replication, clustering and load balancing — <strong>the easy way</strong>
+                        </p>
+                        <p class="hero-subtitle" style="font-size: 0.9rem; margin-bottom: 1.5rem;">
+                            Works with MySQL, Percona, and Amazon RDS • <strong>MariaDB recommended</strong>
+                        </p>
+                        <div class="hero-cta">
+                            <a href="quickstart.html" class="btn-hero primary">Get Started - Database Replication →</a>
+                            <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank"
+                                class="btn-hero secondary">View on GitHub</a>
+                        </div>
                     </div>
 
-                    <ul class="features-list animate-fade-in animate-delay-4">
-                        <li>Automatic read/write splitting</li>
-                        <li>Sub-2 second failover</li>
-                        <li>Native MySQL protocol</li>
-                        <li>Single Rust binary</li>
-                    </ul>
+                    <!-- WolfDisk Product -->
+                    <div class="animate-fade-in animate-delay-3"
+                        style="margin-bottom: 2rem; padding-top: 2rem; border-top: 1px solid var(--border-color);">
+                        <h2
+                            style="font-size: clamp(2rem, 4vw, 3rem); font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);">
+                            WolfDisk</h2>
+                        <p class="hero-tagline" style="font-size: 1.3rem; margin-bottom: 1rem;">
+                            Disk replication and sharing — <strong>the easy way</strong>
+                        </p>
+                        <p class="hero-subtitle" style="font-size: 0.9rem; margin-bottom: 1.5rem;">
+                            FUSE-based distributed filesystem • Automatic replication • POSIX compatible
+                        </p>
+                        <div class="hero-cta">
+                            <a href="wolfdisk.html" class="btn-hero primary">Get Started - Disk Replication & Sharing
+                                →</a>
+                            <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank"
+                                class="btn-hero secondary">View on GitHub</a>
+                        </div>
+                    </div>
+
+                    <p class="hero-subtitle animate-fade-in animate-delay-4">
+                        Simple setup • Automatic failover • Zero configuration complexity
+                    </p>
                 </section>
 
                 <!-- What It Does Section -->
