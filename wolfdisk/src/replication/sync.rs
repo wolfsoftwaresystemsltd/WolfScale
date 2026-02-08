@@ -273,6 +273,92 @@ impl ReplicationManager {
         }
     }
 
+    /// Get chunk data - from local cache or fetch from leader
+    /// Returns the chunk data if available
+    pub fn get_chunk(&self, hash: &[u8; 32]) -> Option<Vec<u8>> {
+        // Try local cache first
+        if let Ok(data) = self.chunk_store.get(hash) {
+            return Some(data);
+        }
+
+        // If we're leader or standalone, chunk doesn't exist
+        if self.cluster.is_leader() || self.sync_state() == SyncState::Standalone {
+            return None;
+        }
+
+        // Try to fetch from leader
+        self.fetch_chunk_from_leader(hash)
+    }
+
+    /// Fetch a chunk from the leader (for read caching)
+    fn fetch_chunk_from_leader(&self, hash: &[u8; 32]) -> Option<Vec<u8>> {
+        let peer_manager = self.peer_manager.as_ref()?;
+        let leader_id = self.cluster.leader_id()?;
+        let leader_addr = self.cluster.leader_address()?;
+
+        debug!("Fetching chunk {} from leader {}", hex::encode(hash), leader_id);
+
+        let msg = Message::GetChunk(GetChunkMsg { hash: *hash });
+
+        // Get or connect to leader
+        let conn = match peer_manager.get_or_connect_leader(&leader_id, &leader_addr) {
+            Ok(c) => c,
+            Err(e) => {
+                warn!("Failed to connect to leader: {}", e);
+                return None;
+            }
+        };
+
+        match conn.request(&msg) {
+            Ok(Message::ChunkData(resp)) => {
+                if let Some(data) = resp.data {
+                    // Cache locally for future reads
+                    if let Err(e) = self.chunk_store.store(&data) {
+                        warn!("Failed to cache fetched chunk: {}", e);
+                    }
+                    Some(data)
+                } else {
+                    debug!("Chunk not found on leader");
+                    None
+                }
+            }
+            Ok(_) => {
+                warn!("Unexpected response when fetching chunk");
+                None
+            }
+            Err(e) => {
+                warn!("Failed to fetch chunk from leader: {}", e);
+                None
+            }
+        }
+    }
+
+    /// Fetch all pending chunks from leader (background sync)
+    pub fn fetch_pending_chunks(&self) {
+        if self.cluster.is_leader() {
+            return;
+        }
+
+        let pending: Vec<[u8; 32]> = self.pending_chunks.read().unwrap().iter().copied().collect();
+        
+        if pending.is_empty() {
+            return;
+        }
+
+        info!("Fetching {} pending chunks from leader", pending.len());
+
+        for hash in pending {
+            if self.fetch_chunk_from_leader(&hash).is_some() {
+                self.pending_chunks.write().unwrap().remove(&hash);
+            }
+        }
+
+        if self.pending_chunks.read().unwrap().is_empty() {
+            *self.sync_state.write().unwrap() = SyncState::Synced;
+            info!("All chunks synced - now fully in sync with leader");
+        }
+    }
+
     /// Replicate a chunk to followers (called after local write on leader)
     pub fn replicate_chunk(&self, hash: &[u8; 32], data: &[u8]) {
         if !self.cluster.is_leader() {
