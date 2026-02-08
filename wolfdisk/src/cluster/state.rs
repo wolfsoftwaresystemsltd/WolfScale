@@ -141,14 +141,14 @@ impl ClusterManager {
     pub fn start(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         *self.running.write().unwrap() = true;
         
-        // Skip discovery for client-only mode and single-node mode
-        if self.config.node.role == NodeRole::Client {
-            info!("Starting in client-only mode (no replication)");
+        // Client mode: run discovery to find leader, but never become leader
+        let is_client = self.config.node.role == NodeRole::Client;
+        if is_client {
+            info!("Starting in client mode (read/write but will not become leader)");
             *self.state.write().unwrap() = ClusterState::Client;
-            return Ok(());
         }
 
-        // Start discovery if enabled
+        // Start discovery if enabled (including for clients!)
         if self.config.cluster.discovery.is_some() || !self.config.cluster.peers.is_empty() {
             let discovery = Discovery::new(
                 self.node_id.clone(),
@@ -161,21 +161,31 @@ impl ClusterManager {
             // AND sync our leader status to Discovery for broadcasts
             let cluster_peers = Arc::clone(&self.peers);
             let cluster_state = Arc::clone(&self.state);
+            let cluster_leader_id = Arc::clone(&self.leader_id);
             let running = Arc::clone(&self.running);
             let discovery_clone = discovery.clone();
+            let is_client_mode = is_client;
             
             thread::spawn(move || {
                 while *running.read().unwrap() {
                     // Sync our leader status TO discovery (for broadcasts)
-                    let is_leading = *cluster_state.read().unwrap() == ClusterState::Leading;
-                    discovery_clone.set_leader(is_leading);
+                    // Clients never advertise as leader
+                    if !is_client_mode {
+                        let is_leading = *cluster_state.read().unwrap() == ClusterState::Leading;
+                        discovery_clone.set_leader(is_leading);
+                    }
                     
                     // Get peers FROM discovery
                     let discovered = discovery_clone.peers();
                     
-                    // Update our peer map
+                    // Update our peer map and track leader
                     let mut peers = cluster_peers.write().unwrap();
                     for dp in discovered {
+                        // If client mode, also track who the leader is
+                        if is_client_mode && dp.is_leader {
+                            *cluster_leader_id.write().unwrap() = Some(dp.node_id.clone());
+                        }
+                        
                         peers.insert(dp.node_id.clone(), PeerInfo {
                             node_id: dp.node_id,
                             address: dp.address,
@@ -194,8 +204,10 @@ impl ClusterManager {
             info!("Discovery started for node {}", self.node_id);
         }
 
-        // Start election monitor in background
-        self.start_election_monitor();
+        // Start election monitor in background (but NOT for clients)
+        if !is_client {
+            self.start_election_monitor();
+        }
 
         Ok(())
     }

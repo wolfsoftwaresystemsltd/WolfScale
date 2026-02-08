@@ -1401,4 +1401,164 @@ impl Filesystem for WolfDiskFS {
             None => reply.error(libc::ENOENT),
         }
     }
+
+    fn link(
+        &mut self,
+        req: &Request,
+        ino: u64,
+        newparent: u64,
+        newname: &OsStr,
+        reply: ReplyEntry,
+    ) {
+        let newname_str = newname.to_string_lossy();
+        debug!("link: ino={}, newparent={}, newname={}", ino, newparent, newname_str);
+
+        // Get source path
+        let source_path = {
+            let inode_table = self.inode_table.read().unwrap();
+            match inode_table.get_path(ino) {
+                Some(p) => p.clone(),
+                None => {
+                    reply.error(libc::ENOENT);
+                    return;
+                }
+            }
+        };
+
+        // Get destination parent path
+        let newparent_path = {
+            let inode_table = self.inode_table.read().unwrap();
+            if newparent == ROOT_INODE {
+                std::path::PathBuf::new()
+            } else {
+                match inode_table.get_path(newparent) {
+                    Some(p) => p.clone(),
+                    None => {
+                        reply.error(libc::ENOENT);
+                        return;
+                    }
+                }
+            }
+        };
+
+        let link_path = newparent_path.join(newname);
+
+        // Get source entry
+        let source_entry = {
+            let file_index = self.file_index.read().unwrap();
+            match file_index.get(&source_path) {
+                Some(e) => e.clone(),
+                None => {
+                    reply.error(libc::ENOENT);
+                    return;
+                }
+            }
+        };
+
+        // Can't hard link directories
+        if source_entry.is_dir {
+            reply.error(libc::EPERM);
+            return;
+        }
+
+        // Create a copy of the source entry at the new path
+        let now = SystemTime::now();
+        let new_entry = FileEntry {
+            size: source_entry.size,
+            is_dir: false,
+            permissions: source_entry.permissions,
+            uid: req.uid(),
+            gid: req.gid(),
+            created: now,
+            modified: source_entry.modified,
+            accessed: now,
+            chunks: source_entry.chunks.clone(),
+            symlink_target: None,
+        };
+
+        let inode = self.allocate_inode();
+        self.inode_table.write().unwrap().insert(inode, link_path.clone());
+        self.file_index.write().unwrap().insert(link_path.clone(), new_entry.clone());
+
+        info!("Created hard link: {:?} -> {:?}", link_path, source_path);
+
+        let attr = self.entry_to_attr(&new_entry, inode);
+        reply.entry(&TTL, &attr, 0);
+    }
+
+    fn mknod(
+        &mut self,
+        req: &Request,
+        parent: u64,
+        name: &OsStr,
+        mode: u32,
+        _umask: u32,
+        _rdev: u32,
+        reply: ReplyEntry,
+    ) {
+        let name_str = name.to_string_lossy();
+        debug!("mknod: parent={}, name={}, mode={:o}", parent, name_str, mode);
+
+        // Get parent path
+        let parent_path = {
+            let inode_table = self.inode_table.read().unwrap();
+            if parent == ROOT_INODE {
+                std::path::PathBuf::new()
+            } else {
+                match inode_table.get_path(parent) {
+                    Some(p) => p.clone(),
+                    None => {
+                        reply.error(libc::ENOENT);
+                        return;
+                    }
+                }
+            }
+        };
+
+        let file_path = parent_path.join(name);
+
+        // Check if path already exists
+        {
+            let file_index = self.file_index.read().unwrap();
+            if file_index.contains(&file_path) {
+                reply.error(libc::EEXIST);
+                return;
+            }
+        }
+
+        // Extract file type from mode
+        let file_type = mode & libc::S_IFMT as u32;
+        
+        // We only support regular files via mknod (same as create)
+        if file_type != libc::S_IFREG as u32 && file_type != 0 {
+            warn!("mknod: unsupported file type {:o}", file_type);
+            reply.error(libc::ENOTSUP);
+            return;
+        }
+
+        // Create regular file entry
+        let permissions = mode & 0o7777;
+        let now = SystemTime::now();
+        let entry = FileEntry {
+            size: 0,
+            is_dir: false,
+            permissions,
+            uid: req.uid(),
+            gid: req.gid(),
+            created: now,
+            modified: now,
+            accessed: now,
+            chunks: Vec::new(),
+            symlink_target: None,
+        };
+
+        let inode = self.allocate_inode();
+        self.inode_table.write().unwrap().insert(inode, file_path.clone());
+        self.file_index.write().unwrap().insert(file_path.clone(), entry.clone());
+
+        info!("Created file via mknod: {:?}", file_path);
+
+        let attr = self.entry_to_attr(&entry, inode);
+        reply.entry(&TTL, &attr, 0);
+    }
 }
