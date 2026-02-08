@@ -285,6 +285,52 @@ fn main() {
                                     }))
                                 }
                             }
+                            Message::CreateFile(create_req) => {
+                                // Handle create file request from follower (we're the leader)
+                                info!("Received CreateFile from {}: {} (mode: {:o})", 
+                                    peer_id, create_req.path, create_req.mode);
+                                
+                                let path = std::path::PathBuf::from(&create_req.path);
+                                let mut index = file_index_for_handler.write().unwrap();
+                                
+                                if index.get(&path).is_some() {
+                                    // File already exists
+                                    Some(Message::FileOpResponse(FileOpResponseMsg {
+                                        success: false,
+                                        error: Some("File already exists".to_string()),
+                                    }))
+                                } else {
+                                    // Create new empty file entry
+                                    let entry = FileEntry {
+                                        size: 0,
+                                        is_dir: false,
+                                        permissions: create_req.mode,
+                                        uid: create_req.uid,
+                                        gid: create_req.gid,
+                                        modified: std::time::SystemTime::now(),
+                                        created: std::time::SystemTime::now(),
+                                        accessed: std::time::SystemTime::now(),
+                                        chunks: Vec::new(),
+                                    };
+                                    
+                                    index.insert(path.clone(), entry);
+                                    
+                                    // Also update inode table
+                                    let mut inode_tbl = inode_table_for_handler.write().unwrap();
+                                    let mut next_ino = next_inode_for_handler.write().unwrap();
+                                    let ino = *next_ino;
+                                    *next_ino += 1;
+                                    inode_tbl.insert(ino, path);
+                                    
+                                    info!("Leader created file: {} with inode {}", create_req.path, ino);
+                                    
+                                    // TODO: Broadcast to other followers
+                                    Some(Message::FileOpResponse(FileOpResponseMsg {
+                                        success: true,
+                                        error: None,
+                                    }))
+                                }
+                            }
                             Message::DeleteFile(del) => {
                                 // Handle incoming delete request (if we're leader)
                                 info!("Received DeleteFile: {}", del.path);
