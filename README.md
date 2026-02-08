@@ -1,16 +1,29 @@
-# Wolf Software
+# 🐺 Wolf — Server Clustering Tools Made Simple
 
 <div align="center">
 
-🐺 **Two powerful open-source tools for high availability** 🐺
+**Open-source tools for building robust, clustered server infrastructure**
 
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Patreon](https://img.shields.io/badge/Patreon-Support%20Us-orange.svg)](https://www.patreon.com/15362110/join)
 
-**© Wolf Software Systems Ltd** — [wolf.uk.com](https://wolf.uk.com)
+**[wolfscale.org](https://wolfscale.org)** • **[wolf.uk.com](https://wolf.uk.com)** • **[Discord](https://discord.gg/q9qMjHjUQY)**
+
+© Wolf Software Systems Ltd
 
 </div>
+
+---
+
+Wolf started as a database replication tool and has grown into a suite of server clustering utilities. Every tool runs as a single Rust binary, uses auto-discovery, and is designed to be simple to set up.
+
+| Tool | Description | Status |
+|------|-------------|--------|
+| **[WolfScale](#wolfscale--database-replication)** | MariaDB/MySQL replication, clustering & load balancing | ✅ Available |
+| **[WolfDisk](#wolfdisk--distributed-filesystem)** | Disk sharing & replication across networks | ✅ Available |
+| **[WolfNet](#wolfnet--private-networking)** | Secure private networking across the internet | 🔜 Coming Soon |
+| **[WolfVPN](#wolfvpn--remote-access)** | Remote access plugin for WolfNet | 🔜 Coming Soon |
 
 ---
 
@@ -35,47 +48,6 @@ Works with MySQL, Percona, and Amazon RDS • **MariaDB recommended**
 | **Built-in Load Balancer** | Distribute connections across cluster nodes with automatic failover |
 | **Single Binary** | No patched databases, no complex dependencies |
 
----
-
-## WolfDisk — Disk Replication & Sharing
-
-**Disk replication and sharing — the easy way**
-
-WolfDisk is a FUSE-based distributed filesystem that provides automatic file replication across nodes. Create a shared storage cluster where files written on any node are automatically replicated to all others.
-
-POSIX compatible • Automatic chunking • Leader-follower architecture
-
-### Why WolfDisk?
-
-| Feature | Benefit |
-|---------|---------|
-| **FUSE-Based** | Mount as a regular filesystem—works with any application |
-| **Automatic Replication** | Files sync to all nodes automatically |
-| **Content-Addressed Storage** | Efficient deduplication via SHA256 chunking |
-| **Leader-Follower Model** | Strong consistency with automatic failover |
-| **Client Mode** | Workstations can connect read/write without becoming leader |
-
----
-
-## Key Features (WolfScale)
-
-### Binlog Replication Mode (v3.0+)
-
-Capture writes directly from any MySQL-compatible database:
-
-```bash
-# Auto-detect binlog position and generate config
-wolfctl binlog-setup
-
-# Supports: MariaDB, MySQL, Galera, Percona, Amazon RDS
-```
-
-### Deterministic Leader Election
-No voting, no split-brain. The node with the lowest ID among active nodes becomes leader immediately.
-
-### WAL-Based Replication
-Write-Ahead Log with LZ4 compression ensures all changes are durably replicated. Nodes that fall behind automatically catch up.
-
 ### Fastest Replication in the Industry
 
 | System | Typical Replication Lag |
@@ -85,55 +57,22 @@ Write-Ahead Log with LZ4 compression ensures all changes are durably replicated.
 | MariaDB Galera | 10-20ms |
 | **WolfScale** | **<1ms** ⚡ |
 
-WolfScale uses push-based replication that triggers immediately when writes are committed, rather than polling. This gives you the fastest replication available.
-
-### MySQL Proxy Mode
-```bash
-# Connect like a normal MySQL client
-mysql -h wolfscale-host -P 8007 -u user -p
-
-# Writes automatically route to leader
-# Reads distributed across followers
-```
-
-### Real-Time Health Monitoring
-Leader continuously monitors database health. If MariaDB goes down, WolfScale steps down and fails over to the next node—automatically.
-
-## Quick Start
-
-### Choose Your Setup Path
+### Quick Start
 
 > **All cluster nodes MUST have identical data before starting WolfScale.** WolfScale replicates new changes only — it does NOT sync existing data between nodes.
 
-| Option 1: Brand New | Option 2: Backup & Restore | Option 3: Binlog Mode |
-|---------------------|---------------------------|----------------------|
-| **Empty databases** | **Can take source offline** | **Live database, no downtime** |
-| Create the cluster | mysqldump your existing database | Use Binlog Mode |
-| Point your software to the MySQL proxy | Set up empty WolfScale cluster | Replicate live from your existing database |
-| Start using WolfScale immediately | Restore to leader via proxy | Works with Galera clusters too |
-| | Data replicates to all nodes | Switch to WolfScale when ready |
-
-> **Restoring Large Databases:** When restoring databases with large content (WordPress, BLOBs, vector embeddings), use `mysqldump --skip-extended-insert` to create single-row INSERT statements. This prevents proxy buffer issues with very large rows.
-
-### One-Line Install
-
-Run this on each server:
-
 ```bash
+# Install WolfScale on each server
 curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/setup.sh | bash
 ```
 
-This automatically installs dependencies, builds WolfScale, and runs the interactive configuration wizard.
+### Load Balancer
 
-### Load Balancer Mode (v5.4.0+)
-
-**Install the load balancer directly on any server that needs database access.** It auto-discovers your WolfScale cluster — no configuration needed.
+Install the load balancer directly on any server that needs database access. It auto-discovers your cluster — no configuration needed.
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/setup_lb.sh | bash
 ```
-
-**Key point:** You can run as many load balancers as you like. Each one is completely independent and stateless — they don't know about each other and won't conflict.
 
 ```
 Web Server 1 ─── WolfScale LB ───┐
@@ -146,58 +85,86 @@ Web Server 3 ─── WolfScale LB ───┘
              (auto-discovers)
 ```
 
-**Benefits:** No single point of failure • Zero latency (localhost) • Scales naturally • Auto-discovery
+### Cluster Commands
 
-### WolfDisk - Distributed File System
+```bash
+wolfctl list servers     # Check cluster status
+wolfctl stats            # Live throughput monitoring
+wolfctl migrate --from 10.0.10.111:8080   # Migrate data to new node
+wolfctl reset --force    # Reset WAL and state (DESTRUCTIVE)
+```
 
-WolfDisk is a distributed file system that shares and replicates files across Linux servers using WolfScale's consensus infrastructure.
+---
+
+## WolfDisk — Distributed Filesystem
+
+**Disk sharing and replication across networks — the easy way**
+
+WolfDisk is a FUSE-based distributed filesystem that shares and replicates files across Linux servers. Mount a shared directory on any number of machines and have your data automatically synchronised. Supports leader, follower, and client modes.
+
+### Why WolfDisk?
+
+| Feature | Benefit |
+|---------|---------|
+| **FUSE-Based** | Mount as a regular filesystem—works with any application |
+| **Automatic Replication** | Files sync to all nodes automatically |
+| **Content-Addressed Storage** | Efficient deduplication via SHA256 chunking |
+| **Leader-Follower Model** | Strong consistency with automatic failover |
+| **Client Mode** | Workstations can access the shared drive without local storage |
+| **Multiple Drives** | Run multiple independent filesystems per node |
+
+### Quick Start
 
 ```bash
 # Interactive installer - prompts for node ID, role, and discovery
 curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/wolfdisk/setup.sh | bash
 ```
 
-**Features:**
-- **Node Roles** — Leader, Follower, Client (mount-only), or Auto-election
-- **Auto-Discovery** — UDP multicast for automatic peer discovery
-- **FUSE Integration** — Mount as a regular directory
-- **Content-Addressed Storage** — SHA256 deduplication
-- **Client Mode** — Access shared drive without local storage
+### Node Roles
+
+| Role | Storage | Description |
+|------|---------|-------------|
+| **Leader** | ✅ Local | Primary node — accepts writes, replicates to followers |
+| **Follower** | ✅ Local | Receives replicated data, can become leader on failover |
+| **Client** | ❌ None | Mount-only — reads/writes forwarded to leader, no local data |
+| **Auto** | ✅ Local | Auto-election — lowest ID becomes leader |
 
 See [`wolfdisk/README.md`](wolfdisk/README.md) for full documentation.
 
-### Cluster Commands
+---
 
-```bash
-# Check cluster status
-wolfctl list servers
+## WolfNet — Private Networking
 
-# Live throughput monitoring
-wolfctl stats
+> 🔜 **Coming Soon**
 
-# Reset WAL and state on ALL nodes (DESTRUCTIVE)
-wolfctl reset --force
-```
+Create a secure private network across the internet. Connect servers across data centres, cloud providers, and on-premises infrastructure as if they were on the same local network.
 
-### Adding New Nodes
+- **Encrypted mesh networking** — peer-to-peer, zero-trust
+- **Works across clouds and data centres** — AWS, GCP, Azure, on-prem
+- **Zero-config peer discovery** — uses the same auto-discovery as WolfScale
+- **NAT traversal built-in** — works behind firewalls without port forwarding
 
-When adding a new node to an existing cluster with data:
+---
 
-```bash
-# On the new node - migrate database from an existing node
-wolfctl migrate --from 10.0.10.111:8080
+## WolfVPN — Remote Access
 
-# Then start WolfScale normally
-systemctl start wolfscale
-```
+> 🔜 **Coming Soon**
 
-## Architecture
+A plugin for WolfNet that provides secure remote access to your private network. Give developers, admins, and remote workers access to internal services without exposing them to the public internet.
+
+- **Plugin for WolfNet** — seamless integration
+- **Per-user access controls** — fine-grained permissions
+- **No public IP exposure** — services stay hidden from the internet
+
+---
+
+## Architecture (WolfScale)
 
 | Layer        | Component                                      |
-|--------------|------------------------------------------------|
-| Applications | Connect via HTTP API or MySQL Protocol         |
-| WolfScale    | Leader + Followers replicate via WAL           |
-| Database     | Each node has local MariaDB (localhost:3306)   |
+|--------------|-------------------------------------------------|
+| Applications | Connect via HTTP API or MySQL Protocol          |
+| WolfScale    | Leader + Followers replicate via WAL            |
+| Database     | Each node has local MariaDB (localhost:3306)    |
 
 **Write Flow:** Client → Any Node → Forwarded to Leader → Replicated to All Nodes
 
@@ -213,38 +180,34 @@ systemctl start wolfscale
 | 5     | 4 node failures   | Recommended for production      |
 | 7     | 6 node failures   | High availability               |
 
-**Geo-Distribution:** Nodes can be deployed across different data centers or regions. Connect to your nearest node for low-latency reads - if the data isn't up-to-date, the request is automatically forwarded to the leader.
+**Geo-Distribution:** Nodes can be deployed across different data centres or regions. Connect to your nearest node for low-latency reads — if the data isn't up-to-date, the request is automatically forwarded to the leader.
 
-> **Note:** WolfScale doesn't use quorum - only one node needs to survive. While the cluster can run on a single remaining node, it's recommended to maintain at least 2 active nodes for redundancy.
-
-> **Note:** The install wizard creates your configuration file automatically. See the [full documentation](docs/DOCUMENTATION.md) for advanced configuration options.
+> **Note:** WolfScale doesn't use quorum — only one node needs to survive. While the cluster can run on a single remaining node, it's recommended to maintain at least 2 active nodes for redundancy.
 
 ## Documentation
 
-See [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md) for complete documentation including:
-- Cluster communication and heartbeat timing
-- Leader election and node status transitions
-- Disaster recovery and WAL catch-up
-- Configuration best practices
-- API reference
+- **Website:** [wolfscale.org](https://wolfscale.org)
+- **Full Docs:** [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md)
+- **WolfDisk Docs:** [wolfdisk/README.md](wolfdisk/README.md)
+
+---
+
+## Support
+
+- ❤️ **Patreon:** [Support development](https://www.patreon.com/15362110/join)
+- 💬 **Discord:** [Join our community](https://discord.gg/q9qMjHjUQY)
+- 🌐 **Website:** [wolf.uk.com](https://wolf.uk.com)
+- ⭐ **GitHub:** [Star this repo](https://github.com/wolfsoftwaresystemsltd/WolfScale)
+- 🐛 **Issues:** [Report a bug](https://github.com/wolfsoftwaresystemsltd/WolfScale/issues)
 
 ---
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
-
----
+MIT License — see [LICENSE](LICENSE) for details.
 
 ## ⚠️ Disclaimer
 
 **USE AT YOUR OWN RISK.** This software is provided "as is" without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement. In no event shall Wolf Software Systems Ltd be liable for any claim, damages, or other liability arising from the use of this software.
 
-By using WolfScale, you acknowledge that you are solely responsible for your data and any consequences of using this software.
-
-## Support
-
-- **Discord:** [Join our community](https://discord.gg/q9qMjHjUQY)
-- **Website:** [wolf.uk.com](https://wolf.uk.com)
-- **Issues:** [GitHub Issues](https://github.com/wolfsoftwaresystemsltd/WolfScale/issues)
-- **Support Us:** [Patreon](https://www.patreon.com/15362110/join)
+By using Wolf tools, you acknowledge that you are solely responsible for your data and any consequences of using this software.

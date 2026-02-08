@@ -139,6 +139,9 @@ fn main() {
                 std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
             let broadcast_queue_for_handler = broadcast_queue.clone();
             
+            // Track if this node is a client (clients don't store chunk data locally)
+            let is_client_role = config.node.role == wolfdisk::config::NodeRole::Client;
+            
             // Create peer manager for network communication
             let peer_manager = std::sync::Arc::new(
                 wolfdisk::network::peer::PeerManager::new(
@@ -233,10 +236,12 @@ fn main() {
                                 info!("Received FileSync from {}: {} ({} bytes, {} chunks)", 
                                     peer_id, sync.path, sync.size, sync.chunk_data.len());
                                 
-                                // Store all chunks first
-                                for chunk_with_data in &sync.chunk_data {
-                                    if let Err(e) = chunk_store_for_handler.store_with_hash(&chunk_with_data.hash, &chunk_with_data.data) {
-                                        tracing::warn!("Failed to store chunk: {}", e);
+                                // Store chunks locally (skip for client nodes - they read from leader)
+                                if !is_client_role {
+                                    for chunk_with_data in &sync.chunk_data {
+                                        if let Err(e) = chunk_store_for_handler.store_with_hash(&chunk_with_data.hash, &chunk_with_data.data) {
+                                            tracing::warn!("Failed to store chunk: {}", e);
+                                        }
                                     }
                                 }
                                 
@@ -1058,6 +1063,16 @@ fn main() {
                                     let mut index = sync_file_index.write().unwrap();
                                     let mut inode_tbl = sync_inode_table.write().unwrap();
                                     let mut next_ino = sync_next_inode.write().unwrap();
+                                    
+                                    // Clear existing index and inode table to remove stale entries
+                                    // from previous sessions (especially important for clients)
+                                    if sync_is_client {
+                                        info!("Client mode: clearing local index before sync ({} stale entries)", index.len());
+                                        // Replace index with a fresh one
+                                        *index = wolfdisk::storage::FileIndex::new();
+                                        *inode_tbl = wolfdisk::storage::InodeTable::new();
+                                        *next_ino = 2; // Reset inodes (1 = root)
+                                    }
                                     
                                     for entry_msg in &response.entries {
                                         let path = std::path::PathBuf::from(&entry_msg.path);
