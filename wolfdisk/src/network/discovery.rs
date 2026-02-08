@@ -1,31 +1,29 @@
-//! UDP multicast discovery for WolfDisk nodes
+//! UDP Broadcast Discovery for WolfDisk nodes
+//!
+//! Uses broadcast (255.255.255.255) for node discovery, same as WolfScale.
 
-use std::net::{SocketAddr, UdpSocket, Ipv4Addr};
+use std::net::SocketAddr;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
 use std::thread;
+use std::net::UdpSocket;
 
 use tracing::{debug, info, warn};
-use serde::{Deserialize, Serialize};
 
 use crate::config::NodeRole;
 
-/// Default multicast group for discovery
-pub const DEFAULT_MULTICAST_ADDR: &str = "239.255.0.1";
-pub const DEFAULT_MULTICAST_PORT: u16 = 9501;
+/// Discovery port
+pub const DISCOVERY_PORT: u16 = 9501;
 
-/// Discovery announcement packet
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiscoveryPacket {
-    pub node_id: String,
-    pub address: String,
-    pub role: DiscoveryRole,
-    pub is_leader: bool,
-}
+/// Discovery message prefix
+const DISCOVERY_PREFIX: &str = "WOLFDISK";
+
+/// Discovery message version
+const DISCOVERY_VERSION: u8 = 1;
 
 /// Role in discovery packet
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy)]
 pub enum DiscoveryRole {
     Server,  // Leader or Follower - participates in replication
     Client,  // Client-only - mount access only
@@ -50,13 +48,11 @@ pub struct DiscoveredPeer {
     pub last_seen: Instant,
 }
 
-/// Discovery service for finding cluster peers
+/// Discovery service for finding cluster peers via UDP broadcast
 pub struct Discovery {
     node_id: String,
     bind_address: String,
     role: DiscoveryRole,
-    multicast_addr: Ipv4Addr,
-    multicast_port: u16,
     peers: Arc<RwLock<HashMap<String, DiscoveredPeer>>>,
     is_leader: Arc<RwLock<bool>>,
     running: Arc<RwLock<bool>>,
@@ -69,19 +65,10 @@ impl Discovery {
             node_id,
             bind_address,
             role: role.into(),
-            multicast_addr: DEFAULT_MULTICAST_ADDR.parse().unwrap(),
-            multicast_port: DEFAULT_MULTICAST_PORT,
             peers: Arc::new(RwLock::new(HashMap::new())),
             is_leader: Arc::new(RwLock::new(false)),
             running: Arc::new(RwLock::new(false)),
         }
-    }
-
-    /// Set custom multicast address and port
-    pub fn with_multicast(mut self, addr: Ipv4Addr, port: u16) -> Self {
-        self.multicast_addr = addr;
-        self.multicast_port = port;
-        self
     }
 
     /// Set leader status
@@ -102,52 +89,35 @@ impl Discovery {
             .cloned()
     }
 
-    /// Start discovery in background thread
+    /// Start discovery in background threads
     pub fn start(&self) -> std::io::Result<()> {
         *self.running.write().unwrap() = true;
-        
+
+        // Start broadcaster thread
         let node_id = self.node_id.clone();
         let bind_address = self.bind_address.clone();
         let role = self.role;
-        let multicast_addr = self.multicast_addr;
-        let multicast_port = self.multicast_port;
-        let peers = Arc::clone(&self.peers);
         let is_leader = Arc::clone(&self.is_leader);
         let running = Arc::clone(&self.running);
 
-        // Receiver thread
-        let recv_peers = Arc::clone(&peers);
-        let recv_running = Arc::clone(&running);
-        let recv_node_id = node_id.clone();
-        
         thread::spawn(move || {
-            if let Err(e) = run_receiver(
-                recv_node_id,
-                multicast_addr,
-                multicast_port,
-                recv_peers,
-                recv_running,
-            ) {
-                warn!("Discovery receiver error: {}", e);
+            if let Err(e) = run_broadcaster(node_id, bind_address, role, is_leader, running) {
+                warn!("Discovery broadcaster error: {}", e);
             }
         });
 
-        // Sender thread
+        // Start listener thread
+        let node_id = self.node_id.clone();
+        let peers = Arc::clone(&self.peers);
+        let running = Arc::clone(&self.running);
+
         thread::spawn(move || {
-            if let Err(e) = run_sender(
-                node_id,
-                bind_address,
-                role,
-                multicast_addr,
-                multicast_port,
-                is_leader,
-                running,
-            ) {
-                warn!("Discovery sender error: {}", e);
+            if let Err(e) = run_listener(node_id, peers, running) {
+                warn!("Discovery listener error: {}", e);
             }
         });
 
-        info!("Discovery started on {}:{}", multicast_addr, multicast_port);
+        info!("Discovery started on port {} (UDP broadcast)", DISCOVERY_PORT);
         Ok(())
     }
 
@@ -157,35 +127,127 @@ impl Discovery {
     }
 }
 
-/// Run the discovery receiver
-fn run_receiver(
+/// Format a discovery broadcast message
+fn format_message(node_id: &str, address: &str, is_server: bool, is_leader: bool) -> String {
+    let role = if is_server { "S" } else { "C" };
+    let leader = if is_leader { "L" } else { "F" };
+    format!(
+        "{}|{}|{}|{}|{}|{}",
+        DISCOVERY_PREFIX,
+        DISCOVERY_VERSION,
+        node_id,
+        address,
+        role,
+        leader
+    )
+}
+
+/// Parse a discovery broadcast message
+fn parse_message(message: &str) -> Option<(String, String, bool, bool)> {
+    let parts: Vec<&str> = message.split('|').collect();
+    
+    if parts.len() < 6 {
+        return None;
+    }
+
+    // Validate prefix
+    if parts[0] != DISCOVERY_PREFIX {
+        return None;
+    }
+
+    // Validate version
+    let version: u8 = parts[1].parse().ok()?;
+    if version != DISCOVERY_VERSION {
+        return None;
+    }
+
+    let node_id = parts[2].to_string();
+    let address = parts[3].to_string();
+    let is_server = parts[4] == "S";
+    let is_leader = parts[5] == "L";
+
+    Some((node_id, address, is_server, is_leader))
+}
+
+/// Run the discovery broadcaster
+fn run_broadcaster(
     node_id: String,
-    multicast_addr: Ipv4Addr,
-    port: u16,
+    bind_address: String,
+    role: DiscoveryRole,
+    is_leader: Arc<RwLock<bool>>,
+    running: Arc<RwLock<bool>>,
+) -> std::io::Result<()> {
+    // Create UDP socket for broadcasting
+    let socket = UdpSocket::bind("0.0.0.0:0")?;
+    socket.set_broadcast(true)?;
+    
+    let broadcast_addr: SocketAddr = format!("255.255.255.255:{}", DISCOVERY_PORT)
+        .parse()
+        .unwrap();
+
+    info!("Discovery broadcaster started for node {}", node_id);
+
+    while *running.read().unwrap() {
+        let is_server = matches!(role, DiscoveryRole::Server);
+        let leader = *is_leader.read().unwrap();
+        
+        let message = format_message(&node_id, &bind_address, is_server, leader);
+
+        match socket.send_to(message.as_bytes(), broadcast_addr) {
+            Ok(_) => debug!("Discovery broadcast sent: {}", message),
+            Err(e) => debug!("Broadcast send failed: {}", e),
+        }
+
+        thread::sleep(Duration::from_secs(2));
+    }
+
+    Ok(())
+}
+
+/// Run the discovery listener
+fn run_listener(
+    node_id: String,
     peers: Arc<RwLock<HashMap<String, DiscoveredPeer>>>,
     running: Arc<RwLock<bool>>,
 ) -> std::io::Result<()> {
-    let socket = UdpSocket::bind(("0.0.0.0", port))?;
-    socket.join_multicast_v4(&multicast_addr, &Ipv4Addr::UNSPECIFIED)?;
+    // Bind to discovery port
+    let socket = match UdpSocket::bind(format!("0.0.0.0:{}", DISCOVERY_PORT)) {
+        Ok(s) => {
+            info!("Discovery listener bound to port {}", DISCOVERY_PORT);
+            s
+        }
+        Err(e) => {
+            warn!("Failed to bind discovery listener on port {}: {}", DISCOVERY_PORT, e);
+            return Err(e);
+        }
+    };
+    
     socket.set_read_timeout(Some(Duration::from_secs(1)))?;
 
-    let mut buf = [0u8; 1024];
+    let mut buf = [0u8; 512];
+    let stale_threshold = Duration::from_secs(10);
 
     while *running.read().unwrap() {
         match socket.recv_from(&mut buf) {
-            Ok((len, _src)) => {
-                if let Ok(packet) = bincode::deserialize::<DiscoveryPacket>(&buf[..len]) {
-                    // Don't add ourselves
-                    if packet.node_id != node_id {
-                        debug!("Discovered peer: {} at {}", packet.node_id, packet.address);
+            Ok((len, src)) => {
+                if let Ok(message) = std::str::from_utf8(&buf[..len]) {
+                    if let Some((msg_node_id, msg_address, is_server, is_leader)) = parse_message(message) {
+                        // Skip our own broadcasts
+                        if msg_node_id == node_id {
+                            continue;
+                        }
+
+                        info!("Discovered peer: {} at {} (from {})", msg_node_id, msg_address, src);
+
+                        let role = if is_server { DiscoveryRole::Server } else { DiscoveryRole::Client };
                         
                         peers.write().unwrap().insert(
-                            packet.node_id.clone(),
+                            msg_node_id.clone(),
                             DiscoveredPeer {
-                                node_id: packet.node_id,
-                                address: packet.address,
-                                role: packet.role,
-                                is_leader: packet.is_leader,
+                                node_id: msg_node_id,
+                                address: msg_address,
+                                role,
+                                is_leader,
                                 last_seen: Instant::now(),
                             },
                         );
@@ -193,47 +255,15 @@ fn run_receiver(
                 }
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                // Timeout, check for stale peers
-                let stale_threshold = Duration::from_secs(10);
+                // Timeout - clean up stale peers
                 peers.write().unwrap().retain(|_, peer| {
                     peer.last_seen.elapsed() < stale_threshold
                 });
             }
             Err(e) => {
-                warn!("Discovery receive error: {}", e);
+                debug!("Discovery recv error: {}", e);
             }
         }
-    }
-
-    Ok(())
-}
-
-/// Run the discovery sender
-fn run_sender(
-    node_id: String,
-    bind_address: String,
-    role: DiscoveryRole,
-    multicast_addr: Ipv4Addr,
-    port: u16,
-    is_leader: Arc<RwLock<bool>>,
-    running: Arc<RwLock<bool>>,
-) -> std::io::Result<()> {
-    let socket = UdpSocket::bind("0.0.0.0:0")?;
-    let dest: SocketAddr = (multicast_addr, port).into();
-
-    while *running.read().unwrap() {
-        let packet = DiscoveryPacket {
-            node_id: node_id.clone(),
-            address: bind_address.clone(),
-            role,
-            is_leader: *is_leader.read().unwrap(),
-        };
-
-        if let Ok(data) = bincode::serialize(&packet) {
-            let _ = socket.send_to(&data, dest);
-        }
-
-        thread::sleep(Duration::from_secs(2));
     }
 
     Ok(())
