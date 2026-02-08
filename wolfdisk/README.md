@@ -139,6 +139,81 @@ allow_other = true
 └─────────────────────────────────────────────────────────────┘
 ```
 
+## Leader Failover
+
+WolfDisk automatically handles leader failures with fast failover:
+
+1. **Heartbeat Detection** — Nodes monitor the leader with 2-second timeout
+2. **Automatic Election** — Lowest node ID becomes the new leader
+3. **Seamless Transition** — Followers continue serving reads during failover
+
+### How Failover Works
+
+```
+Initial State:
+  node-a (leader) ←→ node-b (follower) ←→ node-c (follower)
+
+node-a goes down:
+  ❌ node-a         node-b detects timeout (2s)
+                    node-b becomes leader (next lowest ID)
+
+node-a returns:
+  node-a syncs from node-b (gets missed changes)
+  node-a becomes leader again (lowest ID)
+```
+
+### Deterministic Election
+
+- No voting or consensus delay
+- Lowest node ID always wins
+- Explicit role overrides: `role = "leader"` or `role = "follower"`
+
+## Sync and Catchup
+
+When a node starts or recovers from downtime, it automatically syncs with the leader:
+
+1. **Version Tracking** — Every write increments the index version
+2. **Delta Sync** — Follower sends "my version is X, give me changes since X"
+3. **Incremental Updates** — Only modified/new/deleted files are transferred
+
+### Example Sync Flow
+
+```
+Follower (version 45) → Leader: "SyncRequest(from_version=45)"
+Leader (version 50)   → Follower: "SyncResponse(entries=[5 changes])"
+Follower applies 5 changes, now at version 50
+```
+
+This ensures efficient catchup — a node that was down briefly only receives missed changes, not the entire index.
+
+## Client Mode (Thin Client)
+
+Client mode mounts the filesystem without storing any data locally:
+
+| Aspect | Leader/Follower | Client |
+|--------|-----------------|--------|
+| Local Storage | ✅ Stores data | ❌ No local storage |
+| Reads | Local | Forwarded to leader |
+| Writes | Local (leader) or forwarded | Forwarded to leader |
+| Use Case | Data nodes | Workstations, containers |
+
+### How Client Works
+
+```
+Application → /mnt/shared/file.txt
+                    ↓
+            WolfDisk Client
+                    ↓ (network)
+            Leader Node → reads/writes data
+                    ↓
+            Response → Application
+```
+
+Client mode is ideal for:
+- Workstations accessing shared files
+- Containers needing cluster access
+- Read-heavy applications with low latency needs
+
 ## Commands
 
 | Command | Description |
