@@ -51,3 +51,7 @@ tempfile = "3"
 [[bin]]
 name = "wolfdisk"
 path = "src/main.rs"
+
+[[bin]]
+name = "wolfdiskctl"
+path = "src/bin/wolfdiskctl.rs"

@@ -135,6 +135,15 @@ fn main() {
                 fuser::MountOption::AllowOther,
             ];
 
+            // Start status file writer thread for wolfdiskctl
+            let status_cluster = cluster.clone();
+            std::thread::spawn(move || {
+                while std::sync::Arc::strong_count(&status_cluster) > 1 {
+                    status_cluster.write_status_file();
+                    std::thread::sleep(std::time::Duration::from_secs(1));
+                }
+            });
+
             // Mount the filesystem (this blocks)
             if let Err(e) = fuser::mount2(fs, &mountpoint, &options) {
                 error!("Mount failed: {}", e);

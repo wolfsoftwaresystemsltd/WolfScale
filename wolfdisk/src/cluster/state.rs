@@ -285,6 +285,57 @@ impl ClusterManager {
         }
     }
 
+    /// Write cluster status to file for wolfdiskctl
+    pub fn write_status_file(&self) {
+        use std::time::{SystemTime, UNIX_EPOCH};
+        
+        let status_dir = std::path::Path::new(&self.config.node.data_dir);
+        if !status_dir.exists() {
+            return; // Data dir doesn't exist yet
+        }
+        
+        let status_path = status_dir.join("cluster_status.json");
+        
+        let state = self.state();
+        let peers = self.peers();
+        
+        let role = if self.is_leader() { "leader" } else { "follower" };
+        let state_str = match state {
+            ClusterState::Discovering => "discovering",
+            ClusterState::Following => "following",
+            ClusterState::Leading => "leading",
+            ClusterState::Client => "client",
+            ClusterState::Standalone => "standalone",
+        };
+        
+        let peer_statuses: Vec<serde_json::Value> = peers.iter().map(|p| {
+            serde_json::json!({
+                "node_id": p.node_id,
+                "address": p.address,
+                "is_leader": p.is_leader,
+                "last_seen_secs_ago": p.last_seen.elapsed().as_secs()
+            })
+        }).collect();
+        
+        let status = serde_json::json!({
+            "node_id": self.node_id,
+            "role": role,
+            "state": state_str,
+            "bind_address": self.config.node.bind,
+            "leader_id": self.leader_id(),
+            "index_version": self.index_version(),
+            "peers": peer_statuses,
+            "updated_at": SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+        });
+        
+        if let Ok(json) = serde_json::to_string_pretty(&status) {
+            let _ = std::fs::write(&status_path, json);
+        }
+    }
+
     /// Stop the cluster manager
     pub fn stop(&self) {
         *self.running.write().unwrap() = false;
