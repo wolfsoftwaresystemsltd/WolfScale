@@ -60,7 +60,11 @@ pub struct ClusterStatus {
 pub struct PeerStatus {
     pub node_id: String,
     pub address: String,
+    #[serde(default)]
+    pub role: Option<String>,
     pub is_leader: bool,
+    #[serde(default)]
+    pub is_client: bool,
     pub last_seen_secs_ago: u64,
 }
 
@@ -157,13 +161,13 @@ fn list_servers(path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", "-".repeat(65));
 
     // Print this node first
-    let my_role = if status.role == "leader" { "Leader" } else { "Follower" };
+    let my_role = if status.role == "leader" { "Leader" } else if status.role == "client" { "Client" } else { "Follower" };
     println!("{:20} {:25} {:10} {:10}", status.node_id, status.bind_address, "Active", my_role);
 
     // Print peers
     for peer in &status.peers {
         let node_status = if peer.last_seen_secs_ago < 10 { "Active" } else { "Stale" };
-        let role = if peer.is_leader { "Leader" } else { "Follower" };
+        let role = if peer.is_leader { "Leader" } else if peer.is_client { "Client" } else { "Follower" };
         println!("{:20} {:25} {:10} {:10}", peer.node_id, peer.address, node_status, role);
     }
 
@@ -196,7 +200,7 @@ fn show_stats(path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
                 
                 for peer in &status.peers {
                     let indicator = if peer.last_seen_secs_ago < 4 { "●" } else { "○" };
-                    let role = if peer.is_leader { "leader" } else { "follower" };
+                    let role = if peer.is_leader { "leader" } else if peer.is_client { "client" } else { "follower" };
                     println!("║   {} {} - {} (seen {}s ago)                    ║", 
                         indicator, peer.node_id, role, peer.last_seen_secs_ago);
                 }
