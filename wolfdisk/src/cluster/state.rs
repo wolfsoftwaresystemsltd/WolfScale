@@ -158,13 +158,19 @@ impl ClusterManager {
             discovery.start()?;
             
             // Start a sync thread to copy discovered peers to our peer map
+            // AND sync our leader status to Discovery for broadcasts
             let cluster_peers = Arc::clone(&self.peers);
+            let cluster_state = Arc::clone(&self.state);
             let running = Arc::clone(&self.running);
             let discovery_clone = discovery.clone();
             
             thread::spawn(move || {
                 while *running.read().unwrap() {
-                    // Get peers from discovery
+                    // Sync our leader status TO discovery (for broadcasts)
+                    let is_leading = *cluster_state.read().unwrap() == ClusterState::Leading;
+                    discovery_clone.set_leader(is_leading);
+                    
+                    // Get peers FROM discovery
                     let discovered = discovery_clone.peers();
                     
                     // Update our peer map
@@ -275,7 +281,7 @@ impl ClusterManager {
                             *state.write().unwrap() = ClusterState::Leading;
                         } else {
                             // Not lowest ID, stay as follower and wait
-                            debug!("Not lowest ID ({} peers discovered) - staying follower", peer_ids.len());
+                            debug!("Not becoming leader: i_am_lowest={}, config_role={:?}", i_am_lowest, config_role);
                             if current_state == ClusterState::Discovering {
                                 *state.write().unwrap() = ClusterState::Following;
                             }
