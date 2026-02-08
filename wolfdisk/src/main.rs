@@ -277,7 +277,12 @@ fn main() {
                                         }
                                     }
                                 } else {
-                                    tracing::warn!("File not found on leader: {}", write_req.path);
+                                    // Log all paths in index for debugging
+                                    let paths: Vec<String> = index.iter()
+                                        .map(|(p, _)| format!("{:?}", p))
+                                        .collect();
+                                    tracing::warn!("File not found on leader: {:?} (path string: {})", path, write_req.path);
+                                    tracing::warn!("Index contains {} entries: {:?}", paths.len(), paths);
                                     Some(Message::ClientResponse(ClientResponseMsg {
                                         success: false,
                                         data: None,
