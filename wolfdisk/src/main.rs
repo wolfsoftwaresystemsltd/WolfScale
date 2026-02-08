@@ -955,11 +955,24 @@ fn main() {
             let broadcast_queue_for_thread = broadcast_queue.clone();
             let chunk_stream_queue_for_thread = chunk_stream_queue.clone();
             let metadata_update_queue_for_thread = metadata_update_queue.clone();
+            let cluster_for_broadcast = cluster.clone();
             std::thread::spawn(move || {
                 use wolfdisk::network::protocol::{Message, FileSyncMsg, ChunkWithData, StoreChunkMsg, ChunkRefMsg};
                 loop {
                     // Check queues every 50ms
                     std::thread::sleep(std::time::Duration::from_millis(50));
+                    
+                    // Ensure we have outbound connections to all known peers
+                    let peers = cluster_for_broadcast.peers();
+                    for peer in &peers {
+                        if peer_manager_for_broadcast.get(&peer.node_id).is_none() {
+                            if let Err(e) = peer_manager_for_broadcast.connect(&peer.node_id, &peer.address) {
+                                tracing::warn!("Broadcast thread: failed to connect to {}: {}", peer.node_id, e);
+                            } else {
+                                info!("Broadcast thread: connected to follower {} at {}", peer.node_id, peer.address);
+                            }
+                        }
+                    }
                     
                     // First, drain and broadcast any streamed chunks (high priority)
                     let pending_chunks: Vec<_> = {
