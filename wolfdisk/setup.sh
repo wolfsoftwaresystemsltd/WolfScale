@@ -247,16 +247,23 @@ EOF
 else
     echo ""
     echo "✓ Config already exists at /etc/wolfdisk/config.toml"
+    echo "  (Upgrade mode - skipping configuration prompts)"
 fi
 
-# Run service installer
-echo ""
-echo "═══════════════════════════════════════════════════════════════"
-echo "Installation complete! Running service setup..."
-echo "═══════════════════════════════════════════════════════════════"
-echo ""
-
-bash "$INSTALL_DIR/wolfdisk/install_service.sh"
+# Run service installer only for new installations
+if [ ! -f "/etc/systemd/system/wolfdisk.service" ]; then
+    echo ""
+    echo "═══════════════════════════════════════════════════════════════"
+    echo "Installation complete! Running service setup..."
+    echo "═══════════════════════════════════════════════════════════════"
+    echo ""
+    
+    bash "$INSTALL_DIR/wolfdisk/install_service.sh"
+else
+    echo ""
+    echo "✓ Service already installed - reloading systemd"
+    sudo systemctl daemon-reload
+fi
 
 # Restart service if it was running before upgrade
 if [ "$RESTART_SERVICE" = "true" ]; then
