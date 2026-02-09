@@ -435,14 +435,19 @@ fn run_daemon(config_path: &PathBuf) {
     let has_configured_peers = !config.peers.is_empty();
     let is_gateway = config.network.gateway || has_configured_peers;
 
-    // Enable gateway (IP forwarding + NAT) if configured or auto-detected
-    if is_gateway {
+    // Full gateway setup (iptables NAT rules) only when explicitly configured
+    // Auto-gateway just enables IP forwarding for relay — no iptables changes
+    if config.network.gateway {
         let subnet = config.cidr();
         if let Err(e) = wolfnet::gateway::enable_gateway(tun.name(), &subnet) {
             warn!("Gateway setup failed: {}", e);
         }
-        if has_configured_peers && !config.network.gateway {
-            info!("Auto-gateway enabled: this node has configured peers and will relay traffic");
+    } else if has_configured_peers {
+        // Auto-gateway: just enable IP forwarding so we can relay packets
+        if let Err(e) = std::fs::write("/proc/sys/net/ipv4/ip_forward", "1") {
+            warn!("Failed to enable IP forwarding: {}", e);
+        } else {
+            info!("Auto-relay enabled: IP forwarding on (this node has configured peers)");
         }
     }
 
@@ -733,7 +738,7 @@ fn run_daemon(config_path: &PathBuf) {
 
     // Cleanup
     info!("Shutting down WolfNet...");
-    if is_gateway {
+    if config.network.gateway {
         wolfnet::gateway::disable_gateway(tun.name(), &config.cidr());
     }
     let _ = std::fs::remove_file("/var/run/wolfnet/status.json");
