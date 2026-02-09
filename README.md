@@ -134,7 +134,6 @@ See [`wolfdisk/README.md`](wolfdisk/README.md) for full documentation.
 
 ## WolfNet — Private Networking
 
-
 WolfNet creates a secure, encrypted private network between your machines over the internet. Machines on WolfNet can see each other as if they were on the same LAN, but all traffic is encrypted with modern cryptography (X25519 + ChaCha20-Poly1305 — the same crypto as WireGuard).
 
 ### Why WolfNet?
@@ -143,6 +142,8 @@ WolfNet creates a secure, encrypted private network between your machines over t
 |---------|---------|
 | **WireGuard-Class Crypto** | X25519 key exchange + ChaCha20-Poly1305 AEAD encryption |
 | **Mesh Networking** | Every node can reach every other node directly — no single point of failure |
+| **Invite/Join System** | Connect new peers with a single token — no manual key exchange |
+| **Relay Forwarding** | Nodes behind NAT can communicate through a relay — no port forwarding needed |
 | **Gateway Mode** | Route internet traffic through a gateway node with NAT masquerading |
 | **LAN Auto-Discovery** | Nodes find each other automatically on the same network |
 | **TUN-Based** | Uses kernel TUN interfaces for near-native performance |
@@ -162,6 +163,50 @@ The installer will:
 - Generate an X25519 keypair
 - Prompt for WolfNet IP address, port, and gateway mode
 - Create a systemd service for automatic startup
+
+### Easy Peer Setup (Invite/Join)
+
+Connect two machines in seconds — no manual key exchange:
+
+```bash
+# On the first machine (the one with a public IP / port forwarding):
+sudo wolfnet invite
+
+# Output:  sudo wolfnet join --config /etc/wolfnet/config.toml eyJwa...
+
+# Copy that command and run it on the second machine:
+sudo wolfnet join --config /etc/wolfnet/config.toml eyJwa...
+
+# It will output a reverse token — run that on the first machine:
+sudo wolfnet join --config /etc/wolfnet/config.toml eyJlc...
+
+# Restart WolfNet on both:
+sudo systemctl restart wolfnet
+```
+
+The invite token auto-detects the node's public IP, includes the public key, and assigns WolfNet IPs automatically.
+
+### NAT Traversal (Relay Forwarding)
+
+WolfNet supports **relay forwarding** so machines behind NAT firewalls can communicate without port forwarding:
+
+```
+Laptop (behind NAT)          Server (public IP)           Home PC (behind NAT)
+    10.0.10.1                   10.0.10.2                   10.0.10.3
+        │                           │                           │
+        └───── encrypted UDP ──────►│◄────── encrypted UDP ─────┘
+                                    │
+                             Relay forwards
+                            packets between
+                           Laptop ◄──► Home PC
+```
+
+**How it works:**
+1. Both the laptop and home PC connect to the server (which has a public IP)
+2. When the laptop sends a packet to the home PC, the server detects it's not the destination
+3. The server decrypts, re-encrypts for the home PC, and forwards it
+4. This happens automatically — no configuration needed
+5. Any node that can be reached by both parties can act as a relay
 
 ### Architecture
 
@@ -193,6 +238,8 @@ wolfnet init --address 10.0.10.1 # Generate config and keypair
 wolfnet genkey                   # Generate a new X25519 keypair
 wolfnet pubkey                   # Show this node's public key
 wolfnet token                    # Show join token for sharing
+wolfnet invite                   # Generate invite token for a new peer
+wolfnet join <token>             # Join a network using an invite token
 
 # Control utility
 wolfnetctl status                # Show node status, IP, uptime
