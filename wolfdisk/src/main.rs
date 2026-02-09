@@ -1802,26 +1802,16 @@ fn main() {
             let persist_file_index = file_index.clone();
             let persist_index_dir = config.index_dir().to_path_buf();
             std::thread::spawn(move || {
-                let mut last_hash: u64 = 0;
                 loop {
                     std::thread::sleep(std::time::Duration::from_secs(5));
                     if std::sync::Arc::strong_count(&persist_file_index) <= 1 {
                         break;
                     }
-                    // Only save if the index has changed (simple length check + hash)
-                    let current_hash = {
-                        let index = persist_file_index.read().unwrap();
-                        // Use entry count as a cheap change indicator
-                        index.len() as u64
-                    };
-                    if current_hash != last_hash {
-                        let index = persist_file_index.read().unwrap();
-                        if let Err(e) = index.save(&persist_index_dir) {
-                            tracing::warn!("Failed to persist index: {}", e);
-                        } else {
-                            tracing::debug!("Periodic index save: {} entries", index.len());
-                        }
-                        last_hash = current_hash;
+                    let index = persist_file_index.read().unwrap();
+                    if let Err(e) = index.save(&persist_index_dir) {
+                        tracing::warn!("Failed to persist index: {}", e);
+                    } else {
+                        tracing::debug!("Periodic index save: {} entries", index.len());
                     }
                 }
             });
