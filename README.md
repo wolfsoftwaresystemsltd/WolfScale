@@ -22,8 +22,7 @@ Wolf started as a database replication tool and has grown into a suite of server
 |------|-------------|--------|
 | **[WolfScale](#wolfscale--database-replication)** | MariaDB/MySQL replication, clustering & load balancing | ✅ Available |
 | **[WolfDisk](#wolfdisk--distributed-filesystem)** | Disk sharing & replication across networks | ✅ Available |
-| **[WolfNet](#wolfnet--private-networking)** | Secure private networking across the internet | 🧪 Beta |
-| **[WolfVPN](#wolfvpn--remote-access)** | Remote access plugin for WolfNet | 🔜 Coming Soon |
+| **[WolfNet](#wolfnet--private-networking)** | Secure private networking across the internet | ✅ Available |
 
 ---
 
@@ -135,7 +134,6 @@ See [`wolfdisk/README.md`](wolfdisk/README.md) for full documentation.
 
 ## WolfNet — Private Networking
 
-> 🧪 **Beta** — Core networking and encryption are implemented. Not yet extensively tested in production.
 
 WolfNet creates a secure, encrypted private network between your machines over the internet. Machines on WolfNet can see each other as if they were on the same LAN, but all traffic is encrypted with modern cryptography (X25519 + ChaCha20-Poly1305 — the same crypto as WireGuard).
 
@@ -218,18 +216,6 @@ sudo journalctl -u wolfnet -f    # View logs
 | Key Storage | Private keys stored with 0600 permissions |
 
 > ⚠️ **Proxmox/LXC Users:** The TUN device (`/dev/net/tun`) is blocked by default in LXC containers. See [wolfscale.org/wolfnet.html](https://wolfscale.org/wolfnet.html) for setup instructions.
-
----
-
-## WolfVPN — Remote Access
-
-> 🔜 **Coming Soon**
-
-A plugin for WolfNet that provides secure remote access to your private network. Give developers, admins, and remote workers access to internal services without exposing them to the public internet.
-
-- **Plugin for WolfNet** — seamless integration
-- **Per-user access controls** — fine-grained permissions
-- **No public IP exposure** — services stay hidden from the internet
 
 ---
 
