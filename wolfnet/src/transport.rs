@@ -203,7 +203,10 @@ pub fn send_peer_exchange(
     my_ip: Ipv4Addr,
 ) {
     let pex_packet = build_peer_exchange(my_ip, peer_manager);
-    if pex_packet.len() <= 1 { return; } // No peers to share
+    if pex_packet.len() <= 1 {
+        debug!("PEX: no peers to share");
+        return;
+    } // No peers to share
 
     for ip in peer_manager.all_ips() {
         peer_manager.with_peer_by_ip(&ip, |peer| {
@@ -215,7 +218,7 @@ pub fn send_peer_exchange(
                             if let Err(e) = socket.send_to(&pkt, endpoint) {
                                 debug!("PEX send error to {}: {}", ip, e);
                             } else {
-                                debug!("Sent peer exchange to {} ({} bytes)", ip, pex_packet.len());
+                                info!("PEX sent to {} at {} ({} bytes)", ip, endpoint, pex_packet.len());
                             }
                         }
                         Err(e) => debug!("PEX encrypt error for {}: {}", ip, e),

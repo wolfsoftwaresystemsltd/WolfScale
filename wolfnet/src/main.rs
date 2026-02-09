@@ -705,7 +705,8 @@ fn run_daemon(config_path: &PathBuf) {
                                 let decrypted = peer_manager.with_peer_by_ip(&peer_ip, |peer| {
                                     peer.decrypt(counter, ciphertext)
                                 });
-                                if let Some(Ok(plaintext)) = decrypted {
+                                match decrypted {
+                                    Some(Ok(plaintext)) => {
                                     // Update endpoint if it changed (roaming)
                                     let known_endpoint = peer_manager.with_peer_by_ip(&peer_ip, |peer| peer.endpoint);
                                     if known_endpoint != Some(Some(src)) {
@@ -782,6 +783,13 @@ fn run_daemon(config_path: &PathBuf) {
                                     } else {
                                         unsafe { libc::write(tun_fd, plaintext.as_ptr() as *const _, plaintext.len()) };
                                     }
+                                    }
+                                    Some(Err(e)) => {
+                                        warn!("Decrypt failed from {} (counter={}): {}", peer_ip, counter, e);
+                                    }
+                                    None => {
+                                        debug!("Peer {} not found during decrypt", src);
+                                    }
                                 }
                             } else {
                                 debug!("Data from unknown endpoint: {}", src);
@@ -802,8 +810,8 @@ fn run_daemon(config_path: &PathBuf) {
             Err(e) => debug!("UDP recv error: {}", e),
         }
 
-        // 3. Periodic handshakes (every 10s)
-        if last_handshake.elapsed() > Duration::from_secs(10) {
+        // 3. Periodic handshakes (every 15s)
+        if last_handshake.elapsed() > Duration::from_secs(15) {
             transport::send_handshakes(&socket, &keypair, &peer_manager, wolfnet_ip, config.network.listen_port, &hostname, is_gateway);
             last_handshake = Instant::now();
         }
@@ -814,8 +822,8 @@ fn run_daemon(config_path: &PathBuf) {
             last_keepalive = Instant::now();
         }
 
-        // 5. Periodic peer exchange (every 30s)
-        if last_pex.elapsed() > Duration::from_secs(30) {
+        // 5. Periodic peer exchange (every 15s)
+        if last_pex.elapsed() > Duration::from_secs(15) {
             transport::send_peer_exchange(&socket, &keypair, &peer_manager, wolfnet_ip);
             last_pex = Instant::now();
         }
