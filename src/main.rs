@@ -1262,9 +1262,8 @@ async fn run_load_balancer(mut peers: Vec<String>, listen_address: String, clust
     let lb_id = format!("lb-{}", &uuid::Uuid::new_v4().to_string()[..8]);
     
     println!();
-    println!("╔═══════════════════════════════════════════════════════════════╗");
-    println!("║             WolfScale Load Balancer Mode                      ║");
-    println!("╚═══════════════════════════════════════════════════════════════╝");
+    println!("  WolfScale Load Balancer Mode");
+    println!("  {}", "─".repeat(50));
     println!();
     println!("  Node ID:     {}", lb_id);
     println!("  Listen:      {}", listen_address);

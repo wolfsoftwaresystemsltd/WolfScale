@@ -8,10 +8,10 @@
 
 set -e
 
-echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║               WolfScale Load Balancer Installer              ║"
-echo "║            Distribute MySQL across your cluster              ║"
-echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
+echo "  WolfScale Load Balancer Installer"
+echo "  Distribute MySQL across your cluster"
+echo "  $(printf '%0.s─' {1..50})"
 echo ""
 
 # Detect package manager
@@ -100,9 +100,9 @@ if [ -f "target/release/wolfctl" ]; then
 fi
 
 echo ""
-echo "═══════════════════════════════════════════════════════════════"
-echo "             Load Balancer Configuration"
-echo "═══════════════════════════════════════════════════════════════"
+echo "  $(printf '%0.s─' {1..50})"
+echo "  Load Balancer Configuration"
+echo "  $(printf '%0.s─' {1..50})"
 echo ""
 
 # Check for existing config
@@ -243,10 +243,10 @@ sudo systemctl start wolfscale-lb
 echo "✓ wolfscale-lb service installed and started"
 
 echo ""
-echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║           Load Balancer Installation Complete!               ║"
-echo "╠══════════════════════════════════════════════════════════════╣"
-echo "║  Connect:  mysql -h 127.0.0.1 -P 3306 -u USER -p            ║"
-echo "║  Status:   sudo systemctl status wolfscale-lb                ║"
-echo "║  Logs:     sudo journalctl -u wolfscale-lb -f                ║"
-echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
+echo "  Load Balancer Installation Complete!"
+echo "  $(printf '%0.s─' {1..50})"
+echo "  Connect:  mysql -h 127.0.0.1 -P 3306 -u USER -p"
+echo "  Status:   sudo systemctl status wolfscale-lb"
+echo "  Logs:     sudo journalctl -u wolfscale-lb -f"
+echo ""

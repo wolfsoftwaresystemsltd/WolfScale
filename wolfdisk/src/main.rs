@@ -12,7 +12,7 @@ use wolfdisk::{Config, fuse::WolfDiskFS, storage::{FileIndex, FileEntry, ChunkRe
 #[derive(Parser)]
 #[command(name = "wolfdisk")]
 #[command(author = "Wolf Software Systems Ltd")]
-#[command(version = "2.2.2")]
+#[command(version = "2.2.4")]
 #[command(about = "Distributed file system with replicated and shared storage", long_about = None)]
 struct Cli {
     #[command(subcommand)]
@@ -1394,52 +1394,62 @@ fn main() {
                                 Ok(Message::SyncResponse(response)) => {
                                     info!("Received SyncResponse with {} entries", response.entries.len());
                                     
-                                    let mut index = sync_file_index.write().unwrap();
-                                    let mut inode_tbl = sync_inode_table.write().unwrap();
-                                    let mut next_ino = sync_next_inode.write().unwrap();
-                                    
                                     // Clear existing index and inode table to remove stale entries
                                     // from previous sessions (especially important for clients)
                                     if sync_is_client {
+                                        let mut index = sync_file_index.write().unwrap();
+                                        let mut inode_tbl = sync_inode_table.write().unwrap();
+                                        let mut next_ino = sync_next_inode.write().unwrap();
                                         info!("Client mode: clearing local index before sync ({} stale entries)", index.len());
-                                        // Replace index with a fresh one
                                         *index = wolfdisk::storage::FileIndex::new();
                                         *inode_tbl = wolfdisk::storage::InodeTable::new();
                                         *next_ino = 2; // Reset inodes (1 = root)
                                     }
                                     
-                                    for entry_msg in &response.entries {
-                                        let path = std::path::PathBuf::from(&entry_msg.path);
+                                    // Apply entries in batches of 50 to avoid starving FUSE operations.
+                                    // readdir/lookup/getattr need read locks on file_index & inode_table;
+                                    // holding write locks for thousands of entries causes the client to
+                                    // hang when running `ls /mnt/wolfdisk/`.
+                                    let batch_size = 50;
+                                    for chunk in response.entries.chunks(batch_size) {
+                                        let mut index = sync_file_index.write().unwrap();
+                                        let mut inode_tbl = sync_inode_table.write().unwrap();
+                                        let mut next_ino = sync_next_inode.write().unwrap();
                                         
-                                        let chunk_refs: Vec<ChunkRef> = entry_msg.chunks.iter()
-                                            .map(|c| ChunkRef {
-                                                hash: c.hash,
-                                                offset: c.offset,
-                                                size: c.size,
-                                            })
-                                            .collect();
-                                        
-                                        let entry = FileEntry {
-                                            size: entry_msg.size,
-                                            is_dir: entry_msg.is_dir,
-                                            permissions: entry_msg.permissions,
-                                            uid: 0,
-                                            gid: 0,
-                                            modified: std::time::UNIX_EPOCH + std::time::Duration::from_millis(entry_msg.modified_ms),
-                                            created: std::time::SystemTime::now(),
-                                            accessed: std::time::SystemTime::now(),
-                                            chunks: chunk_refs,
-                                            symlink_target: None,
-                                        };
-                                        
-                                        index.insert(path.clone(), entry);
-                                        
-                                        // Add to inode table
-                                        let ino = *next_ino;
-                                        *next_ino += 1;
-                                        inode_tbl.insert(ino, path.clone());
-                                        
-                                        debug!("Synced: {} ({} bytes)", entry_msg.path, entry_msg.size);
+                                        for entry_msg in chunk {
+                                            let path = std::path::PathBuf::from(&entry_msg.path);
+                                            
+                                            let chunk_refs: Vec<ChunkRef> = entry_msg.chunks.iter()
+                                                .map(|c| ChunkRef {
+                                                    hash: c.hash,
+                                                    offset: c.offset,
+                                                    size: c.size,
+                                                })
+                                                .collect();
+                                            
+                                            let entry = FileEntry {
+                                                size: entry_msg.size,
+                                                is_dir: entry_msg.is_dir,
+                                                permissions: entry_msg.permissions,
+                                                uid: 0,
+                                                gid: 0,
+                                                modified: std::time::UNIX_EPOCH + std::time::Duration::from_millis(entry_msg.modified_ms),
+                                                created: std::time::SystemTime::now(),
+                                                accessed: std::time::SystemTime::now(),
+                                                chunks: chunk_refs,
+                                                symlink_target: None,
+                                            };
+                                            
+                                            index.insert(path.clone(), entry);
+                                            
+                                            // Add to inode table
+                                            let ino = *next_ino;
+                                            *next_ino += 1;
+                                            inode_tbl.insert(ino, path.clone());
+                                            
+                                            debug!("Synced: {} ({} bytes)", entry_msg.path, entry_msg.size);
+                                        }
+                                        // Locks dropped here — FUSE ops can proceed between batches
                                     }
                                     
                                     if sync_is_client {
@@ -1525,58 +1535,66 @@ fn main() {
                                     continue;
                                 }
                                 
-                                let mut index = resync_file_index.write().unwrap();
-                                let mut inode_tbl = resync_inode_table.write().unwrap();
-                                let mut next_ino = resync_next_inode.write().unwrap();
                                 let mut added = 0;
                                 let mut updated = 0;
                                 
-                                for entry_msg in &response.entries {
-                                    let path = std::path::PathBuf::from(&entry_msg.path);
+                                // Apply in batches of 50 to avoid starving FUSE operations.
+                                // readdir/lookup/getattr need read locks on file_index & inode_table;
+                                // holding write locks for thousands of entries causes hangs.
+                                let batch_size = 50;
+                                for chunk in response.entries.chunks(batch_size) {
+                                    let mut index = resync_file_index.write().unwrap();
+                                    let mut inode_tbl = resync_inode_table.write().unwrap();
+                                    let mut next_ino = resync_next_inode.write().unwrap();
                                     
-                                    let chunk_refs: Vec<ChunkRef> = entry_msg.chunks.iter()
-                                        .map(|c| ChunkRef {
-                                            hash: c.hash,
-                                            offset: c.offset,
-                                            size: c.size,
-                                        })
-                                        .collect();
-                                    
-                                    let new_entry = FileEntry {
-                                        size: entry_msg.size,
-                                        is_dir: entry_msg.is_dir,
-                                        permissions: entry_msg.permissions,
-                                        uid: 0,
-                                        gid: 0,
-                                        modified: std::time::UNIX_EPOCH + std::time::Duration::from_millis(entry_msg.modified_ms),
-                                        created: std::time::SystemTime::now(),
-                                        accessed: std::time::SystemTime::now(),
-                                        chunks: chunk_refs,
-                                        symlink_target: None,
-                                    };
-                                    
-                                    // Only update if missing or if leader has newer/different data
-                                    match index.get(&path) {
-                                        None => {
-                                            index.insert(path.clone(), new_entry);
-                                            let ino = *next_ino;
-                                            *next_ino += 1;
-                                            inode_tbl.insert(ino, path.clone());
-                                            added += 1;
-                                        }
-                                        Some(existing) if existing.size != entry_msg.size 
-                                            || existing.chunks.len() != entry_msg.chunks.len() => {
-                                            index.insert(path.clone(), new_entry);
-                                            // Ensure inode exists
-                                            if inode_tbl.get_inode(&path).is_none() {
+                                    for entry_msg in chunk {
+                                        let path = std::path::PathBuf::from(&entry_msg.path);
+                                        
+                                        let chunk_refs: Vec<ChunkRef> = entry_msg.chunks.iter()
+                                            .map(|c| ChunkRef {
+                                                hash: c.hash,
+                                                offset: c.offset,
+                                                size: c.size,
+                                            })
+                                            .collect();
+                                        
+                                        let new_entry = FileEntry {
+                                            size: entry_msg.size,
+                                            is_dir: entry_msg.is_dir,
+                                            permissions: entry_msg.permissions,
+                                            uid: 0,
+                                            gid: 0,
+                                            modified: std::time::UNIX_EPOCH + std::time::Duration::from_millis(entry_msg.modified_ms),
+                                            created: std::time::SystemTime::now(),
+                                            accessed: std::time::SystemTime::now(),
+                                            chunks: chunk_refs,
+                                            symlink_target: None,
+                                        };
+                                        
+                                        // Only update if missing or if leader has newer/different data
+                                        match index.get(&path) {
+                                            None => {
+                                                index.insert(path.clone(), new_entry);
                                                 let ino = *next_ino;
                                                 *next_ino += 1;
                                                 inode_tbl.insert(ino, path.clone());
+                                                added += 1;
                                             }
-                                            updated += 1;
+                                            Some(existing) if existing.size != entry_msg.size 
+                                                || existing.chunks.len() != entry_msg.chunks.len() => {
+                                                index.insert(path.clone(), new_entry);
+                                                // Ensure inode exists
+                                                if inode_tbl.get_inode(&path).is_none() {
+                                                    let ino = *next_ino;
+                                                    *next_ino += 1;
+                                                    inode_tbl.insert(ino, path.clone());
+                                                }
+                                                updated += 1;
+                                            }
+                                            _ => {} // Already in sync
                                         }
-                                        _ => {} // Already in sync
                                     }
+                                    // Locks automatically dropped here, allowing FUSE ops between batches
                                 }
                                 
                                 // Update our version to the leader's version
@@ -1623,9 +1641,16 @@ fn main() {
 
             // Start status file writer thread for wolfdiskctl
             let status_cluster = cluster.clone();
+            let status_file_index = file_index.clone();
             std::thread::spawn(move || {
                 while std::sync::Arc::strong_count(&status_cluster) > 1 {
-                    status_cluster.write_status_file();
+                    let (file_count, total_size) = {
+                        let index = status_file_index.read().unwrap();
+                        let count = index.len();
+                        let size: u64 = index.iter().map(|(_, e)| e.size).sum();
+                        (count, size)
+                    };
+                    status_cluster.write_status_file_with_stats(file_count, total_size);
                     std::thread::sleep(std::time::Duration::from_secs(1));
                 }
             });
@@ -1662,9 +1687,9 @@ fn main() {
         }
 
         Commands::Status => {
-            println!("╔══════════════════════════════════════════════════════════════╗");
-            println!("║                     WolfDisk Status                          ║");
-            println!("╚══════════════════════════════════════════════════════════════╝");
+            println!();
+            println!("  WolfDisk Status");
+            println!("  {}", "─".repeat(50));
             println!();
             println!("Node Configuration:");
             println!("  Node ID:      {}", config.node.id);
@@ -1701,10 +1726,9 @@ fn main() {
         }
 
         Commands::Stats => {
-            println!("╔══════════════════════════════════════════════════════════════╗");
-            println!("║                   WolfDisk Live Stats                        ║");
-            println!("║                   Press Ctrl+C to exit                       ║");
-            println!("╚══════════════════════════════════════════════════════════════╝");
+            println!();
+            println!("  WolfDisk Live Stats");
+            println!("  {}", "─".repeat(50));
             println!();
 
             // Start cluster manager to get live stats
@@ -1781,23 +1805,23 @@ fn main() {
 
             let peers = cluster.peers();
             
-            println!("╔════════════════════════════════════════════════════════════════╗");
-            println!("║                    WolfDisk Servers                            ║");
-            println!("╠════════════════════════════════════════════════════════════════╣");
+            println!();
+            println!("  WolfDisk Servers");
+            println!("  {}", "─".repeat(50));
+            println!();
             
             // Print this node first
             let my_role = if cluster.is_leader() { "LEADER" } else if cluster.state() == wolfdisk::cluster::ClusterState::Client { "CLIENT" } else { "FOLLOWER" };
-            println!("║ ● {:15} {:22} {:8} ║", config.node.id, config.node.bind, my_role);
+            println!("  ● {:15} {:22} {}", config.node.id, config.node.bind, my_role);
             
             for peer in &peers {
                 let status = if peer.last_seen.elapsed().as_secs() < 4 { "●" } else { "○" };
                 let role = if peer.is_leader { "LEADER" } else if peer.is_client { "CLIENT" } else { "FOLLOWER" };
-                println!("║ {} {:15} {:22} {:8} ║", status, peer.node_id, peer.address, role);
+                println!("  {} {:15} {:22} {}", status, peer.node_id, peer.address, role);
             }
             
-            println!("╚════════════════════════════════════════════════════════════════╝");
             println!();
-            println!("Total: {} server(s)", peers.len() + 1);
+            println!("  Total: {} server(s)", peers.len() + 1);
             
             cluster.stop();
         }

@@ -540,9 +540,8 @@ struct WalConfig {
 
 fn check_config(path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     println!();
-    println!("\x1b[1;36m╔══════════════════════════════════════════════════════════════╗\x1b[0m");
-    println!("\x1b[1;36m║\x1b[0m            \x1b[1;37mWolfScale Configuration Check\x1b[0m                     \x1b[1;36m║\x1b[0m");
-    println!("\x1b[1;36m╚══════════════════════════════════════════════════════════════╝\x1b[0m");
+    println!("\x1b[1;36m  WolfScale Configuration Check\x1b[0m");
+    println!("  {}", "─".repeat(50));
     println!();
 
     // Check if file exists
@@ -776,9 +775,8 @@ async fn binlog_setup(
     password: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!();
-    println!("\x1b[1;36m╔══════════════════════════════════════════════════════════════╗\x1b[0m");
-    println!("\x1b[1;36m║\x1b[0m            \x1b[1;37mWolfScale Binlog Replication Setup\x1b[0m              \x1b[1;36m║\x1b[0m");
-    println!("\x1b[1;36m╚══════════════════════════════════════════════════════════════╝\x1b[0m");
+    println!("\x1b[1;36m  WolfScale Binlog Replication Setup\x1b[0m");
+    println!("  {}", "─".repeat(50));
     println!();
 
     // Load config to get database settings if not overridden
@@ -863,15 +861,13 @@ async fn binlog_setup(
 
     println!("\x1b[1;33mAdd this to your WolfScale config.toml:\x1b[0m");
     println!();
-    println!("┌────────────────────────────────────────────────────────┐");
-    println!("  [replication]                                          │");
-    println!("  mode = \"binlog\"                                        │");
-    println!("                                                         │");
-    println!("  [binlog]                                               │");
-    println!("  server_id = {}                                       │", server_id);
-    println!("  start_file = \"{}\"                           │", binlog_file);
-    println!("  start_position = {}                                   │", binlog_pos);
-    println!("└────────────────────────────────────────────────────────┘");
+    println!("  [replication]");
+    println!("  mode = \"binlog\"");
+    println!();
+    println!("  [binlog]");
+    println!("  server_id = {}", server_id);
+    println!("  start_file = \"{}\"", binlog_file);
+    println!("  start_position = {}", binlog_pos);
     println!();
     println!("\x1b[1;36mNote:\x1b[0m server_id must be unique across all MySQL replicas.");
     println!();
@@ -1483,9 +1479,8 @@ fn tune_mariadb(
     dry_run: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!();
-    println!("\x1b[1;36m╔══════════════════════════════════════════════════════════════╗\x1b[0m");
-    println!("\x1b[1;36m║\x1b[0m            \x1b[1;37mWolfScale MariaDB Auto-Tuner\x1b[0m                   \x1b[1;36m║\x1b[0m");
-    println!("\x1b[1;36m╚══════════════════════════════════════════════════════════════╝\x1b[0m");
+    println!("\x1b[1;36m  WolfScale MariaDB Auto-Tuner\x1b[0m");
+    println!("  {}", "─".repeat(50));
     println!();
 
     // Detect system RAM

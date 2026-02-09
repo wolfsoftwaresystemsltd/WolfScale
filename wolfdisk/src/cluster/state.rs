@@ -406,6 +406,11 @@ impl ClusterManager {
 
     /// Write cluster status to file for wolfdiskctl
     pub fn write_status_file(&self) {
+        self.write_status_file_with_stats(0, 0);
+    }
+
+    /// Write cluster status with file index stats for wolfdiskctl
+    pub fn write_status_file_with_stats(&self, file_count: usize, total_size: u64) {
         use std::time::{SystemTime, UNIX_EPOCH};
         
         let status_dir = std::path::Path::new(&self.config.node.data_dir);
@@ -446,6 +451,8 @@ impl ClusterManager {
             "bind_address": self.config.node.bind,
             "leader_id": self.leader_id(),
             "index_version": self.index_version(),
+            "file_count": file_count,
+            "total_size": total_size,
             "peers": peer_statuses,
             "updated_at": SystemTime::now()
                 .duration_since(UNIX_EPOCH)

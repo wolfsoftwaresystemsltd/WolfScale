@@ -52,6 +52,10 @@ pub struct ClusterStatus {
     pub bind_address: String,
     pub leader_id: Option<String>,
     pub index_version: u64,
+    #[serde(default)]
+    pub file_count: usize,
+    #[serde(default)]
+    pub total_size: u64,
     pub peers: Vec<PeerStatus>,
     pub updated_at: u64, // Unix timestamp
 }
@@ -109,22 +113,36 @@ fn read_status(path: &PathBuf) -> Result<ClusterStatus, Box<dyn std::error::Erro
     Ok(status)
 }
 
+fn format_size(bytes: u64) -> String {
+    if bytes >= 1_073_741_824 {
+        format!("{:.1} GB", bytes as f64 / 1_073_741_824.0)
+    } else if bytes >= 1_048_576 {
+        format!("{:.1} MB", bytes as f64 / 1_048_576.0)
+    } else if bytes >= 1024 {
+        format!("{:.1} KB", bytes as f64 / 1024.0)
+    } else {
+        format!("{} B", bytes)
+    }
+}
+
 fn show_status(path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let status = read_status(path)?;
 
     println!();
-    println!("WolfDisk Status");
-    println!("===============");
+    println!("  WolfDisk Status");
+    println!("  {}", "─".repeat(40));
     println!();
-    println!("Node ID:       {}", status.node_id);
-    println!("Role:          {}", status.role);
-    println!("State:         {}", status.state);
-    println!("Bind Address:  {}", status.bind_address);
+    println!("  Node ID       {}", status.node_id);
+    println!("  Role          {}", status.role.to_uppercase());
+    println!("  State         {}", status.state);
+    println!("  Bind Address  {}", status.bind_address);
     if let Some(ref leader) = status.leader_id {
-        println!("Leader:        {}", leader);
+        println!("  Leader        {}", leader);
     }
-    println!("Index Version: {}", status.index_version);
-    println!("Peers:         {}", status.peers.len());
+    println!("  Index Version {}", status.index_version);
+    println!("  Files         {}", status.file_count);
+    println!("  Total Size    {}", format_size(status.total_size));
+    println!("  Peers         {}", status.peers.len());
     println!();
 
     Ok(())
@@ -148,27 +166,27 @@ fn list_servers(path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         .filter(|p| p.last_seen_secs_ago < 10)
         .count();
     let total_nodes = status.peers.len() + 1;
-    let active_nodes = active_peers + 1; // Include self
+    let active_nodes = active_peers + 1;
 
     println!();
-    println!("WolfDisk Cluster Status (wolfdiskctl v2.1.1)");
-    println!("============================================");
+    println!("  WolfDisk Cluster");
+    println!("  {}", "─".repeat(50));
     println!();
-    println!("Total: {} nodes  |  Active: {}", total_nodes, active_nodes);
-    println!("Leader: {}", leader);
+    println!("  Nodes {} active / {} total    Leader: {}", active_nodes, total_nodes, leader);
     println!();
-    println!("{:20} {:25} {:10} {:10}", "NODE ID", "ADDRESS", "STATUS", "ROLE");
-    println!("{}", "-".repeat(65));
+    println!("  {:20} {:25} {:10}", "NODE", "ADDRESS", "ROLE");
+    println!("  {:20} {:25} {:10}", "─".repeat(18), "─".repeat(23), "─".repeat(8));
 
     // Print this node first
     let my_role = if status.role == "leader" { "Leader" } else if status.role == "client" { "Client" } else { "Follower" };
-    println!("{:20} {:25} {:10} {:10}", status.node_id, status.bind_address, "Active", my_role);
+    println!("  {:20} {:25} {:10}", format!("● {} (self)", status.node_id), status.bind_address, my_role);
 
     // Print peers
     for peer in &status.peers {
-        let node_status = if peer.last_seen_secs_ago < 10 { "Active" } else { "Stale" };
+        let indicator = if peer.last_seen_secs_ago < 10 { "●" } else { "○" };
         let role = if peer.is_leader { "Leader" } else if peer.is_client { "Client" } else { "Follower" };
-        println!("{:20} {:25} {:10} {:10}", peer.node_id, peer.address, node_status, role);
+        let name = format!("{} {}", indicator, peer.node_id);
+        println!("  {:20} {:25} {:10}", name, peer.address, role);
     }
 
     println!();
@@ -177,35 +195,35 @@ fn list_servers(path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn show_stats(path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
-    println!("WolfDisk Live Stats (Ctrl+C to exit)");
-    println!();
-    
     loop {
         // Clear screen
         print!("\x1B[2J\x1B[1;1H");
 
         match read_status(path) {
             Ok(status) => {
-                println!("╔════════════════════════════════════════════════════════════════╗");
-                println!("║                    WolfDisk Cluster Stats                      ║");
-                println!("╠════════════════════════════════════════════════════════════════╣");
-                println!("║ Node:    {:54} ║", status.node_id);
-                println!("║ Role:    {:54} ║", status.role.to_uppercase());
-                println!("║ State:   {:54} ║", status.state);
-                println!("║ Version: {:54} ║", status.index_version);
-                println!("╠════════════════════════════════════════════════════════════════╣");
-                
-                println!("║ Cluster Nodes ({})                                              ║", status.peers.len() + 1);
-                println!("║   ● {} (self) - {}                          ║", status.node_id, status.state);
+                println!();
+                println!("  WolfDisk Cluster Stats");
+                println!("  {}", "─".repeat(50));
+                println!();
+                println!("  Node       {}", status.node_id);
+                println!("  Role       {}", status.role.to_uppercase());
+                println!("  State      {}", status.state);
+                println!("  Version    {}", status.index_version);
+                println!("  Files      {}    Size  {}", status.file_count, format_size(status.total_size));
+                println!();
+                println!("  Cluster Nodes ({})", status.peers.len() + 1);
+                println!("  {}", "─".repeat(50));
+                println!("    ● {} (self) - {}", status.node_id, status.state);
                 
                 for peer in &status.peers {
                     let indicator = if peer.last_seen_secs_ago < 4 { "●" } else { "○" };
                     let role = if peer.is_leader { "leader" } else if peer.is_client { "client" } else { "follower" };
-                    println!("║   {} {} - {} (seen {}s ago)                    ║", 
+                    println!("    {} {} - {} (seen {}s ago)", 
                         indicator, peer.node_id, role, peer.last_seen_secs_ago);
                 }
                 
-                println!("╚════════════════════════════════════════════════════════════════╝");
+                println!();
+                println!("  Ctrl+C to exit");
             }
             Err(e) => {
                 println!("Error reading status: {}", e);

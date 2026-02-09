@@ -197,9 +197,9 @@ echo "✓ Directories created"
 # Use /dev/tty to read from terminal even when script is piped
 if [ ! -f "/etc/wolfnet/config.toml" ]; then
     echo ""
-    echo "═══════════════════════════════════════════════════════════════"
-    echo "                   WolfNet Configuration"
-    echo "═══════════════════════════════════════════════════════════════"
+    echo "  $(printf '%0.s─' {1..50})"
+    echo "  WolfNet Configuration"
+    echo "  $(printf '%0.s─' {1..50})"
     echo ""
 
     # Detect default IP
@@ -305,9 +305,9 @@ fi
 # Create systemd service if not exists
 if [ ! -f "/etc/systemd/system/wolfnet.service" ]; then
     echo ""
-    echo "═══════════════════════════════════════════════════════════════"
-    echo "Creating systemd service..."
-    echo "═══════════════════════════════════════════════════════════════"
+    echo "  $(printf '%0.s─' {1..50})"
+    echo "  Creating systemd service..."
+    echo "  $(printf '%0.s─' {1..50})"
     echo ""
 
     cat > /etc/systemd/system/wolfnet.service <<EOF

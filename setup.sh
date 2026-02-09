@@ -8,10 +8,10 @@
 
 set -e
 
-echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║                    WolfScale Installer                        ║"
-echo "║           Distributed MariaDB Synchronization                 ║"
-echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
+echo "  WolfScale Installer"
+echo "  Distributed MariaDB Synchronization"
+echo "  $(printf '%0.s─' {1..50})"
 echo ""
 
 # Detect package manager
@@ -121,18 +121,18 @@ if [ "$IS_UPGRADE" = true ]; then
     fi
     
     echo ""
-    echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║                   Upgrade Complete!                          ║"
-    echo "╠══════════════════════════════════════════════════════════════╣"
-    echo "║  Status:   sudo systemctl status wolfscale                   ║"
-    echo "║  Logs:     sudo journalctl -u wolfscale -f                   ║"
-    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    echo "  Upgrade Complete!"
+    echo "  $(printf '%0.s─' {1..50})"
+    echo "  Status:   sudo systemctl status wolfscale"
+    echo "  Logs:     sudo journalctl -u wolfscale -f"
+    echo ""
 else
     # New install: run interactive installer
     echo ""
-    echo "═══════════════════════════════════════════════════════════════"
-    echo "Build complete! Starting service installer..."
-    echo "═══════════════════════════════════════════════════════════════"
+    echo "  $(printf '%0.s─' {1..50})"
+    echo "  Build complete! Starting service installer..."
+    echo "  $(printf '%0.s─' {1..50})"
     echo ""
     
     # Run installer with TTY for interactive input
@@ -151,12 +151,12 @@ else
     fi
     
     echo ""
-    echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║                Installation Complete!                        ║"
-    echo "╠══════════════════════════════════════════════════════════════╣"
-    echo "║  Connect:  mariadb -h 127.0.0.1 -P 8007 -u USER -p          ║"
-    echo "║  Status:   sudo systemctl status wolfscale                   ║"
-    echo "║  Logs:     sudo journalctl -u wolfscale -f                   ║"
-    echo "║  Cluster:  wolfctl list servers                              ║"
-    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    echo "  Installation Complete!"
+    echo "  $(printf '%0.s─' {1..50})"
+    echo "  Connect:  mariadb -h 127.0.0.1 -P 8007 -u USER -p"
+    echo "  Status:   sudo systemctl status wolfscale"
+    echo "  Logs:     sudo journalctl -u wolfscale -f"
+    echo "  Cluster:  wolfctl list servers"
+    echo ""
 fi
