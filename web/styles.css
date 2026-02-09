@@ -1,29 +1,29 @@
 /* WolfScale Website Styles - Red Theme */
 
 :root {
-    --bg-primary: #0a0a0c;
-    --bg-secondary: #111114;
-    --bg-tertiary: #1a1a1e;
-    --bg-card: #141418;
-    --bg-code: #0c0c0e;
-    --bg-sidebar: #0d0d10;
+    --bg-primary: #1a1c22;
+    --bg-secondary: #22252c;
+    --bg-tertiary: #2c2f38;
+    --bg-card: #242830;
+    --bg-code: #1e2028;
+    --bg-sidebar: #1e2028;
 
-    --text-primary: #f0f0f2;
-    --text-secondary: #9a9aa8;
-    --text-muted: #5a5a68;
+    --text-primary: #f5f5f7;
+    --text-secondary: #c8c8d4;
+    --text-muted: #8888a0;
 
     /* Red theme */
     --accent-primary: #dc2626;
     --accent-secondary: #ef4444;
     --accent-gradient: linear-gradient(135deg, #b91c1c 0%, #dc2626 50%, #ef4444 100%);
     --accent-glow: rgba(220, 38, 38, 0.35);
-    --accent-subtle: rgba(220, 38, 38, 0.1);
+    --accent-subtle: rgba(220, 38, 38, 0.12);
 
     --success: #22c55e;
     --warning: #f59e0b;
     --patreon: #ff424d;
 
-    --border-color: rgba(255, 255, 255, 0.06);
+    --border-color: rgba(255, 255, 255, 0.1);
     --border-glow: rgba(220, 38, 38, 0.4);
 
     --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -116,7 +116,7 @@ code {
     left: 0;
     right: 0;
     z-index: 1000;
-    background: rgba(10, 10, 12, 0.95);
+    background: rgba(26, 28, 34, 0.95);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border-color);
 }
@@ -316,7 +316,7 @@ code {
 .nav-desc {
     display: block;
     font-size: 0.6rem;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-weight: 400;
     text-transform: none;
     letter-spacing: 0;
