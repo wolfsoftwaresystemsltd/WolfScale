@@ -534,6 +534,10 @@
                     <a href="wolfdisk.html">Overview & Quick Start</a>
                 </div>
                 <div class="nav-section">
+                    <div class="nav-section-title">WolfNet</div>
+                    <a href="wolfnet.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
                     <div class="nav-section-title">Company</div>
                     <a href="https://wolf.uk.com" target="_blank">Wolf Software</a>
                     <a href="about.html">About</a>
@@ -584,6 +588,12 @@
                     <p class="hero-subtitle animate-fade-in animate-delay-3">
                         An open source clustering solution
                     </p>
+                    <a href="https://www.patreon.com/15362110/join" target="_blank"
+                        class="animate-fade-in animate-delay-4"
+                        style="display: inline-flex; align-items: center; gap: 0.5rem; margin-top: 1.5rem; padding: 0.75rem 2rem; background: linear-gradient(135deg, #f96854, #e8453c); color: #fff; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 1rem; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(249, 104, 84, 0.4);"
+                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 25px rgba(249, 104, 84, 0.5)'"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(249, 104, 84, 0.4)'">❤️
+                        Support us on Patreon</a>
                 </section>
 
                 <!-- Products Section -->
@@ -634,21 +644,23 @@
                         </div>
 
                         <!-- WolfNet -->
-                        <div class="product-card coming-soon animate-fade-in animate-delay-5">
+                        <div class="product-card animate-fade-in animate-delay-5">
                             <div class="product-icon">🌐</div>
                             <div class="product-name">WolfNet</div>
-                            <span class="product-status coming">Coming Soon</span>
+                            <span class="product-status"
+                                style="background: rgba(234, 179, 8, 0.2); color: #eab308;">Beta</span>
                             <p class="product-description">
                                 Create a secure private network across the internet. Connect servers across data
                                 centres, cloud providers and on-premises infrastructure as if they were on the same
-                                local network. Encrypted, zero-trust, peer-to-peer.
+                                local network. X25519 + ChaCha20-Poly1305 encrypted.
                             </p>
                             <ul class="product-features">
-                                <li>Encrypted mesh networking</li>
+                                <li>Encrypted mesh networking (WireGuard-class crypto)</li>
                                 <li>Works across clouds and data centres</li>
-                                <li>Zero-config peer discovery</li>
-                                <li>NAT traversal built-in</li>
+                                <li>LAN auto-discovery + WAN manual peers</li>
+                                <li>Gateway mode with NAT for internet access</li>
                             </ul>
+                            <a href="wolfnet.html" class="product-cta">Get Started →</a>
                         </div>
 
                         <!-- WolfVPN -->
