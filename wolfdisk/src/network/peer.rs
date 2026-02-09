@@ -23,7 +23,9 @@ impl PeerConnection {
     pub fn connect(node_id: String, address: &str) -> std::io::Result<Self> {
         let stream = TcpStream::connect(address)?;
         stream.set_read_timeout(Some(Duration::from_secs(30)))?;
-        stream.set_write_timeout(Some(Duration::from_secs(10)))?;
+        stream.set_read_timeout(Some(Duration::from_secs(30)))?;
+        // Reduced to 2s to prevent slow/dead peers from stalling broadcast
+        stream.set_write_timeout(Some(Duration::from_secs(2)))?;
         
         Ok(Self {
             node_id,
@@ -169,22 +171,30 @@ impl PeerManager {
     /// Broadcast message to all peers
     /// Automatically removes broken connections so they can be re-established
     pub fn broadcast(&self, msg: &Message) {
-        let failed: Vec<String> = {
+        // specific timeout for broadcast can be handled in send if needed, 
+        // but for now relying on connection timeout
+
+        // Clone connections to release lock before network I/O
+        let peers: Vec<(String, Arc<PeerConnection>)> = {
             let connections = self.connections.read().unwrap();
-            let mut failed_ids = Vec::new();
-            for (id, conn) in connections.iter() {
-                if let Err(e) = conn.send(msg) {
-                    warn!("Failed to send to {}: {} (removing broken connection)", id, e);
-                    failed_ids.push(id.clone());
-                }
-            }
-            failed_ids
+            connections.iter()
+                .map(|(id, conn)| (id.clone(), conn.clone()))
+                .collect()
         };
+
+        let mut failed_ids = Vec::new();
+
+        for (id, conn) in peers {
+            if let Err(e) = conn.send(msg) {
+                warn!("Failed to send to {}: {} (removing broken connection)", id, e);
+                failed_ids.push(id);
+            }
+        }
         
         // Remove broken connections so broadcast thread can reconnect
-        if !failed.is_empty() {
+        if !failed_ids.is_empty() {
             let mut connections = self.connections.write().unwrap();
-            for id in &failed {
+            for id in &failed_ids {
                 connections.remove(id);
                 info!("Removed broken connection to {} (will reconnect)", id);
             }
