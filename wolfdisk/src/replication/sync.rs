@@ -405,7 +405,13 @@ impl ReplicationManager {
         };
 
         // Increment version
-        let version = self.cluster.increment_index_version();
+        let op_path = match &operation {
+            IndexOperation::Upsert { path, .. } => std::path::PathBuf::from(path),
+            IndexOperation::Delete { path } => std::path::PathBuf::from(path),
+            IndexOperation::Mkdir { path, .. } => std::path::PathBuf::from(path),
+            IndexOperation::Rename { to_path, .. } => std::path::PathBuf::from(to_path),
+        };
+        let version = self.cluster.increment_index_version(op_path);
         *self.index_version.write().unwrap() = version;
 
         info!("Broadcasting index update v{}: {:?}", version, operation);

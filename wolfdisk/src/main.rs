@@ -403,7 +403,7 @@ fn main() {
                                             }
                                             
                                             // Queue metadata-only update (chunks already streamed above)
-                                            cluster_for_handler.increment_index_version();
+                                            cluster_for_handler.increment_index_version(path_clone.clone());
                                             metadata_update_queue_for_handler.lock().unwrap().push((path_clone, entry_clone));
                                             
                                             info!("Leader wrote {} bytes to {} ({} new chunks streamed)", written, write_req.path, new_chunks.len());
@@ -478,7 +478,7 @@ fn main() {
                                     info!("Leader created file: {} with inode {}", create_req.path, ino);
                                     
                                     // Queue broadcast to followers
-                                    cluster_for_handler.increment_index_version();
+                                    cluster_for_handler.increment_index_version(path.clone());
                                     let entry_for_broadcast = index.get(&path).unwrap().clone();
                                     drop(index);
                                     drop(inode_tbl);
@@ -526,7 +526,7 @@ fn main() {
                                     };
                                     drop(index);
                                     drop(inode_tbl);
-                                    cluster_for_handler.increment_index_version();
+                                    cluster_for_handler.increment_index_version(path.clone());
                                     broadcast_queue_for_handler.lock().unwrap().push((path, delete_marker));
                                     
                                     Some(Message::FileOpResponse(FileOpResponseMsg {
@@ -960,7 +960,7 @@ fn main() {
                                 }
                             }
                             Message::SyncRequest(sync_req) => {
-                                // Handle full index sync request (from follower/client)
+                                // Handle index sync request (from follower/client)
                                 let current_version = cluster_for_handler.index_version();
                                 
                                 // If follower is already at current version, skip transfer
@@ -970,9 +970,94 @@ fn main() {
                                         current_version,
                                         entries: Vec::new(),
                                     }))
+                                } else if sync_req.from_version > 0 {
+                                    // Try delta sync — only send files that changed since their version
+                                    match cluster_for_handler.changes_since(sync_req.from_version) {
+                                        Some(changed_paths) => {
+                                            // Delta sync: only send the changed entries
+                                            let index = file_index_for_handler.read().unwrap();
+                                            let mut entries = Vec::new();
+                                            
+                                            for changed_path in &changed_paths {
+                                                if let Some(entry) = index.get(changed_path) {
+                                                    let modified_ms = entry.modified
+                                                        .duration_since(std::time::UNIX_EPOCH)
+                                                        .unwrap_or_default()
+                                                        .as_millis() as u64;
+                                                    
+                                                    let chunks: Vec<ChunkRefMsg> = entry.chunks.iter()
+                                                        .map(|c| ChunkRefMsg {
+                                                            hash: c.hash,
+                                                            offset: c.offset,
+                                                            size: c.size,
+                                                        })
+                                                        .collect();
+                                                    
+                                                    entries.push(IndexEntryMsg {
+                                                        path: changed_path.to_string_lossy().to_string(),
+                                                        is_dir: entry.is_dir,
+                                                        size: entry.size,
+                                                        modified_ms,
+                                                        permissions: entry.permissions,
+                                                        chunks,
+                                                    });
+                                                }
+                                                // If entry not in index, it was deleted — follower
+                                                // will detect this via missing entry on next full sync
+                                            }
+                                            
+                                            info!("Delta sync to {} — {} changed files (version {} → {})", 
+                                                peer_id, entries.len(), sync_req.from_version, current_version);
+                                            
+                                            Some(Message::SyncResponse(SyncResponseMsg {
+                                                current_version,
+                                                entries,
+                                            }))
+                                        }
+                                        None => {
+                                            // Changelog truncated, fall back to full sync
+                                            info!("Changelog too old for {} (version {}), sending full index", 
+                                                peer_id, sync_req.from_version);
+                                            
+                                            let index = file_index_for_handler.read().unwrap();
+                                            let mut entries = Vec::new();
+                                            
+                                            for (path, entry) in index.iter() {
+                                                let modified_ms = entry.modified
+                                                    .duration_since(std::time::UNIX_EPOCH)
+                                                    .unwrap_or_default()
+                                                    .as_millis() as u64;
+                                                
+                                                let chunks: Vec<ChunkRefMsg> = entry.chunks.iter()
+                                                    .map(|c| ChunkRefMsg {
+                                                        hash: c.hash,
+                                                        offset: c.offset,
+                                                        size: c.size,
+                                                    })
+                                                    .collect();
+                                                
+                                                entries.push(IndexEntryMsg {
+                                                    path: path.to_string_lossy().to_string(),
+                                                    is_dir: entry.is_dir,
+                                                    size: entry.size,
+                                                    modified_ms,
+                                                    permissions: entry.permissions,
+                                                    chunks,
+                                                });
+                                            }
+                                            
+                                            info!("Sending full SyncResponse with {} entries (version {})", entries.len(), current_version);
+                                            
+                                            Some(Message::SyncResponse(SyncResponseMsg {
+                                                current_version,
+                                                entries,
+                                            }))
+                                        }
+                                    }
                                 } else {
-                                    info!("Received SyncRequest from {} (their version: {}, ours: {}) - sending full index", 
-                                        peer_id, sync_req.from_version, current_version);
+                                    // from_version == 0: initial sync, send everything
+                                    info!("Initial SyncRequest from {} - sending full index ({} version)", 
+                                        peer_id, current_version);
                                     
                                     let index = file_index_for_handler.read().unwrap();
                                     let mut entries = Vec::new();
@@ -1001,7 +1086,7 @@ fn main() {
                                         });
                                     }
                                     
-                                    info!("Sending SyncResponse with {} entries (version {})", entries.len(), current_version);
+                                    info!("Sending full SyncResponse with {} entries (version {})", entries.len(), current_version);
                                     
                                     Some(Message::SyncResponse(SyncResponseMsg {
                                         current_version,

@@ -52,6 +52,9 @@ pub struct ClusterManager {
     /// Whether initial sync from leader has completed
     /// Election monitor waits for this before allowing leader promotion
     initial_sync_complete: Arc<RwLock<bool>>,
+    /// Changelog: (version, path) pairs tracking which files changed at each version
+    /// Used for delta sync - leader only sends entries that changed since follower's version
+    changelog: Arc<RwLock<Vec<(u64, std::path::PathBuf)>>>,
 }
 
 impl ClusterManager {
@@ -75,6 +78,7 @@ impl ClusterManager {
             last_leader_heartbeat: Arc::new(RwLock::new(Instant::now())),
             index_version: Arc::new(RwLock::new(0)),
             initial_sync_complete: Arc::new(RwLock::new(false)),
+            changelog: Arc::new(RwLock::new(Vec::new())),
         }
     }
 
@@ -116,10 +120,47 @@ impl ClusterManager {
     }
 
     /// Increment and return the new index version (called on writes)
-    pub fn increment_index_version(&self) -> u64 {
+    /// Records the changed path in the changelog for delta sync
+    pub fn increment_index_version(&self, path: std::path::PathBuf) -> u64 {
         let mut v = self.index_version.write().unwrap();
         *v += 1;
-        *v
+        let version = *v;
+        
+        let mut log = self.changelog.write().unwrap();
+        log.push((version, path));
+        
+        // Cap changelog at 10,000 entries to prevent unbounded growth
+        // If a follower is more than 10,000 changes behind, it gets a full sync
+        if log.len() > 10_000 {
+            let drain_count = log.len() - 10_000;
+            log.drain(0..drain_count);
+        }
+        
+        version
+    }
+    
+    /// Get the paths that changed since a given version
+    /// Returns None if the changelog doesn't go back far enough (need full sync)
+    pub fn changes_since(&self, from_version: u64) -> Option<Vec<std::path::PathBuf>> {
+        let log = self.changelog.read().unwrap();
+        
+        // Check if changelog goes back far enough
+        if let Some((oldest_version, _)) = log.first() {
+            if from_version < *oldest_version {
+                // Changelog truncated, need full sync
+                return None;
+            }
+        }
+        
+        // Collect unique paths changed since from_version
+        let mut changed: std::collections::HashSet<std::path::PathBuf> = std::collections::HashSet::new();
+        for (v, path) in log.iter() {
+            if *v > from_version {
+                changed.insert(path.clone());
+            }
+        }
+        
+        Some(changed.into_iter().collect())
     }
 
     /// Set the index version (used during sync)
