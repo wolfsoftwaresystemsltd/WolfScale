@@ -113,6 +113,9 @@ pub struct PeerStatus {
     pub rx_bytes: u64,
     pub tx_bytes: u64,
     pub connected: bool,
+    /// Whether this peer is a gateway node
+    #[serde(default)]
+    pub is_gateway: bool,
     /// If learned via PEX, the IP of the peer that told us about this one
     #[serde(skip_serializing_if = "Option::is_none")]
     pub relay_via: Option<String>,

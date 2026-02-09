@@ -371,6 +371,7 @@ impl PeerManager {
                 rx_bytes: p.rx_bytes,
                 tx_bytes: p.tx_bytes,
                 connected: p.is_connected(),
+                is_gateway: p.is_gateway,
                 relay_via: p.relay_via.map(|ip| ip.to_string()),
             }
         }).collect()

@@ -1,4 +1,10 @@
 //! wolfnetctl — CLI utility for WolfNet status and management
+//!
+//! Usage:
+//!   wolfnetctl status          - Show node status
+//!   wolfnetctl list servers    - List all servers on the network
+//!   wolfnetctl peers           - Show detailed peer info
+//!   wolfnetctl info            - Show full network summary
 
 use std::path::PathBuf;
 use clap::{Parser, Subcommand};
@@ -17,10 +23,21 @@ struct Cli {
 enum Commands {
     /// Show this node's status
     Status,
+    /// List servers, peers, etc.
+    List {
+        #[command(subcommand)]
+        what: ListSubcommand,
+    },
     /// List all peers on the network with hostnames
     Peers,
     /// Show network summary
     Info,
+}
+
+#[derive(Subcommand)]
+enum ListSubcommand {
+    /// List all servers on the WolfNet network
+    Servers,
 }
 
 #[derive(serde::Deserialize)]
@@ -48,6 +65,8 @@ struct PeerStatus {
     connected: bool,
     #[serde(default)]
     relay_via: Option<String>,
+    #[serde(default)]
+    is_gateway: bool,
 }
 
 fn main() {
@@ -56,6 +75,9 @@ fn main() {
 
     match cli.command {
         Commands::Status => cmd_status(&status),
+        Commands::List { what } => match what {
+            ListSubcommand::Servers => cmd_list_servers(&status),
+        },
         Commands::Peers => cmd_peers(&status),
         Commands::Info => cmd_info(&status),
     }
@@ -93,6 +115,42 @@ fn cmd_status(status: &NodeStatus) {
         status.peers.len(),
         status.peers.iter().filter(|p| p.connected).count(),
     );
+    println!();
+}
+
+fn cmd_list_servers(status: &NodeStatus) {
+    // Count active nodes
+    let connected_peers = status.peers.iter()
+        .filter(|p| p.connected)
+        .count();
+    let total_nodes = status.peers.len() + 1;
+    let active_nodes = connected_peers + 1;
+
+    println!();
+    println!("  WolfNet Network");
+    println!("  {}", "─".repeat(50));
+    println!();
+    println!("  Nodes {} active / {} total", active_nodes, total_nodes);
+    println!();
+    println!("  {:20} {:25} {:10}", "NODE", "ADDRESS", "ROLE");
+    println!("  {:20} {:25} {:10}", "─".repeat(18), "─".repeat(23), "─".repeat(8));
+
+    // Print this node first
+    let my_role = if status.gateway { "Gateway" } else { "Node" };
+    println!("  {:20} {:25} {:10}",
+        format!("● {} (self)", status.hostname),
+        format!("{}:{}", status.address, status.listen_port),
+        my_role);
+
+    // Print peers
+    for peer in &status.peers {
+        let indicator = if peer.connected { "●" } else { "○" };
+        let role = if peer.is_gateway { "Gateway" } else { "Node" };
+        let name = format!("{} {}", indicator, peer.hostname);
+        let addr = format!("{}:{}", peer.address, status.listen_port);
+        println!("  {:20} {:25} {:10}", name, addr, role);
+    }
+
     println!();
 }
 
