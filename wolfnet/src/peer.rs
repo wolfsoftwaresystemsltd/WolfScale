@@ -160,6 +160,13 @@ impl PeerManager {
         if let Some(peer) = peers.get_mut(&wolfnet_ip) {
             if peer.public_key == *public_key {
                 // Same IP, same key — just update endpoint
+                // Clean up old endpoint mapping first
+                if let Some(old_ep) = peer.endpoint {
+                    if old_ep != endpoint {
+                        self.endpoint_to_ip.write().unwrap().remove(&old_ep);
+                        debug!("Peer {} endpoint updated: {} -> {} (discovery)", wolfnet_ip, old_ep, endpoint);
+                    }
+                }
                 peer.endpoint = Some(endpoint);
                 peer.hostname = hostname.to_string();
                 peer.is_gateway = is_gateway;
