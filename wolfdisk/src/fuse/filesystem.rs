@@ -21,8 +21,14 @@ use crate::network::peer::PeerManager;
 use crate::network::protocol::{Message, CreateFileMsg, CreateDirMsg, DeleteFileMsg, DeleteDirMsg, IndexUpdateMsg, IndexOperation, ChunkRefMsg, FileSyncMsg, ChunkWithData, WriteRequestMsg, RenameFileMsg, CreateSymlinkMsg, ReadRequestMsg, SetAttrMsg};
 use crate::storage::{ChunkStore, FileIndex, FileEntry, InodeTable};
 
+/// Messages for the async replication queue
+enum ReplicationMsg {
+    /// Send a chunk or sync metadata to all followers
+    Broadcast(Message),
+}
+
 /// TTL for attribute caching
-const TTL: Duration = Duration::from_secs(1);
+const TTL: Duration = Duration::from_secs(30);
 
 /// Root inode number
 const ROOT_INODE: u64 = 1;
@@ -78,6 +84,10 @@ pub struct WolfDiskFS {
 
     /// Whether the index has been modified since last save
     index_dirty: RwLock<bool>,
+
+    /// Async replication queue — write() pushes chunks here
+    /// Bounded channel (SyncSender) to prevent OOM during massive writes
+    replication_tx: Option<std::sync::mpsc::SyncSender<ReplicationMsg>>,
 }
 
 impl WolfDiskFS {
@@ -117,6 +127,40 @@ impl WolfDiskFS {
         std::fs::create_dir_all(config.chunks_dir())?;
         std::fs::create_dir_all(config.index_dir())?;
 
+        // Start async replication thread if we have a peer manager
+        let replication_tx = if let Some(ref pm) = peer_manager {
+            // Use a bounded channel to prevent unlimited memory growth during fast writes
+            // 500 chunks * 1MB = ~500MB max buffer. 
+            // If full, we drop chunks (lossy) but block on metadata (reliable).
+            let (tx, rx) = std::sync::mpsc::sync_channel::<ReplicationMsg>(500);
+            let pm_clone = pm.clone();
+            let cluster_clone = cluster.clone();
+            std::thread::Builder::new()
+                .name("replication-sender".into())
+                .spawn(move || {
+                    while let Ok(msg) = rx.recv() {
+                        // Ensure connections before sending
+                        if let Some(ref cluster) = cluster_clone {
+                            let peers = cluster.peers();
+                            for peer in &peers {
+                                if pm_clone.get(&peer.node_id).is_none() {
+                                    let _ = pm_clone.connect(&peer.node_id, &peer.address);
+                                }
+                            }
+                        }
+                        match msg {
+                            ReplicationMsg::Broadcast(m) => {
+                                pm_clone.broadcast(&m);
+                            }
+                        }
+                    }
+                    info!("Replication sender thread exiting");
+                })?;
+            Some(tx)
+        } else {
+            None
+        };
+
         Ok(Self {
             config,
             chunk_store,
@@ -131,6 +175,7 @@ impl WolfDiskFS {
             dirty_inodes: RwLock::new(HashSet::new()),
             last_index_save: RwLock::new(Instant::now()),
             index_dirty: RwLock::new(false),
+            replication_tx,
         })
     }
 
@@ -314,19 +359,7 @@ impl WolfDiskFS {
             return;
         }
         
-        if let (Some(cluster), Some(peer_manager)) = (&self.cluster, &self.peer_manager) {
-            // First, ensure we're connected to all discovered peers
-            let peers = cluster.peers();
-            for peer in &peers {
-                // Try to connect if not already connected
-                if peer_manager.get(&peer.node_id).is_none() {
-                    info!("Connecting to follower {} at {}", peer.node_id, peer.address);
-                    if let Err(e) = peer_manager.connect(&peer.node_id, &peer.address) {
-                        warn!("Failed to connect to {}: {}", peer.node_id, e);
-                    }
-                }
-            }
-            
+        if let Some(ref cluster) = self.cluster {
             let op_path = match &operation {
                 IndexOperation::Upsert { path, .. } => std::path::PathBuf::from(path),
                 IndexOperation::Delete { path } => std::path::PathBuf::from(path),
@@ -344,8 +377,10 @@ impl WolfDiskFS {
                 operation,
             });
             
-            info!("Broadcasting IndexUpdate (version {}) to {} followers", version, peers.len());
-            peer_manager.broadcast(&msg);
+            // Queue for async broadcast
+            if let Some(ref tx) = self.replication_tx {
+                let _ = tx.send(ReplicationMsg::Broadcast(msg));
+            }
         }
     }
     
@@ -439,37 +474,29 @@ impl WolfDiskFS {
         }
     }
 
-    /// Stream a single chunk to all followers immediately (for streaming replication).
-    /// Called during write() as each chunk is produced, so followers get data in real-time
-    /// rather than waiting for file close.
-    fn stream_chunk_to_followers(&self, path: &std::path::Path, hash: &[u8; 32], data: &[u8], offset: u64, size: u32) {
+    /// Queue a single chunk for async replication to followers.
+    /// Non-blocking: just pushes to the channel, the background thread handles sends.
+    fn stream_chunk_to_followers(&self, _path: &std::path::Path, hash: &[u8; 32], data: &[u8], _offset: u64, _size: u32) {
         if !self.is_leader() {
             return;
         }
         
-        if let (Some(cluster), Some(peer_manager)) = (&self.cluster, &self.peer_manager) {
-            let peers = cluster.peers();
-            if peers.is_empty() {
-                return;
-            }
-            
-            // Ensure connections
-            for peer in &peers {
-                if peer_manager.get(&peer.node_id).is_none() {
-                    if let Err(e) = peer_manager.connect(&peer.node_id, &peer.address) {
-                        warn!("Failed to connect to {}: {}", peer.node_id, e);
-                    }
-                }
-            }
-
+        if let Some(ref tx) = self.replication_tx {
             let msg = Message::StoreChunk(crate::network::protocol::StoreChunkMsg {
                 hash: *hash,
                 data: data.to_vec(),
             });
-
-            debug!("Streaming chunk {} ({} bytes at offset {}) for {} to {} followers",
-                hex::encode(hash), size, offset, path.display(), peers.len());
-            peer_manager.broadcast(&msg);
+            // Try to send non-blocking. If queue is full, drop the chunk.
+            // Followers will fetch missing chunks on-demand via GetChunk.
+            match tx.try_send(ReplicationMsg::Broadcast(msg)) {
+                Ok(_) => {},
+                Err(std::sync::mpsc::TrySendError::Full(_)) => {
+                    tracing::debug!("Replication queue full, dropping chunk push (follower will fetch later)");
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to queue replication chunk: {}", e);
+                }
+            }
         }
     }
 
@@ -643,28 +670,13 @@ impl WolfDiskFS {
     }
 
     /// Broadcast final file metadata to followers after all chunks have been streamed.
-    /// Unlike broadcast_file_sync (which sends all chunk data), this sends only
-    /// the metadata + chunk references. Followers already have the chunk data
-    /// from streaming replication during write().
+    /// Non-blocking: queues the message for the background replication thread.
     fn broadcast_file_sync_final(&self, path: &std::path::Path, entry: &FileEntry) {
         if !self.is_leader() {
             return;
         }
 
-        if let (Some(cluster), Some(peer_manager)) = (&self.cluster, &self.peer_manager) {
-            let peers = cluster.peers();
-            if peers.is_empty() {
-                return;
-            }
-
-            for peer in &peers {
-                if peer_manager.get(&peer.node_id).is_none() {
-                    if let Err(e) = peer_manager.connect(&peer.node_id, &peer.address) {
-                        warn!("Failed to connect to {}: {}", peer.node_id, e);
-                    }
-                }
-            }
-
+        if let Some(ref tx) = self.replication_tx {
             let modified_ms = entry.modified
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
@@ -676,7 +688,6 @@ impl WolfDiskFS {
                 size: c.size,
             }).collect();
 
-            // Send only metadata + chunk refs (no chunk data — already streamed)
             let msg = Message::FileSync(FileSyncMsg {
                 path: path.to_string_lossy().to_string(),
                 is_dir: entry.is_dir,
@@ -686,12 +697,12 @@ impl WolfDiskFS {
                 gid: entry.gid,
                 modified_ms,
                 chunks: chunk_refs,
-                chunk_data: Vec::new(), // Chunks already streamed during write()
+                chunk_data: Vec::new(),
             });
 
-            info!("Broadcasting final FileSync metadata for {} ({} bytes, {} chunks) to {} followers",
-                path.display(), entry.size, entry.chunks.len(), peers.len());
-            peer_manager.broadcast(&msg);
+            debug!("Queuing FileSync for {} ({} bytes, {} chunks)",
+                path.display(), entry.size, entry.chunks.len());
+            let _ = tx.send(ReplicationMsg::Broadcast(msg));
         }
     }
 
@@ -1351,9 +1362,6 @@ impl Filesystem for WolfDiskFS {
 
         // Mark as dirty for final index sync on release
         self.mark_dirty(ino);
-
-        // Periodically save index
-        self.maybe_save_index();
 
         reply.written(data.len() as u32);
     }
