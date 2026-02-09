@@ -2324,4 +2324,199 @@ impl Filesystem for WolfDiskFS {
         let attr = self.entry_to_attr(&entry, inode);
         reply.entry(&TTL, &attr, 0);
     }
+
+    /// Check file access permissions.
+    /// Dolphin calls this before most file operations. Returning OK for all
+    /// since our getattr already reports correct permissions.
+    fn access(&mut self, _req: &Request, ino: u64, mask: i32, reply: fuser::ReplyEmpty) {
+        debug!("access: ino={}, mask={:#o}", ino, mask);
+
+        // For root inode, always allow
+        if ino == ROOT_INODE {
+            reply.ok();
+            return;
+        }
+
+        // Check inode exists
+        let inode_table = self.inode_table.read().unwrap();
+        if inode_table.get_path(ino).is_some() {
+            reply.ok();
+        } else {
+            reply.error(libc::ENOENT);
+        }
+    }
+
+    /// Get an extended attribute.
+    /// Dolphin queries xattrs (e.g. security.selinux, user.mime_type).
+    /// We don't support xattrs, so return ENODATA (attribute not found).
+    fn getxattr(
+        &mut self,
+        _req: &Request,
+        ino: u64,
+        name: &OsStr,
+        _size: u32,
+        reply: fuser::ReplyXattr,
+    ) {
+        debug!("getxattr: ino={}, name={:?}", ino, name);
+        reply.error(libc::ENODATA);
+    }
+
+    /// List extended attribute names.
+    /// Return empty list (size 0) since we don't support xattrs.
+    fn listxattr(&mut self, _req: &Request, ino: u64, size: u32, reply: fuser::ReplyXattr) {
+        debug!("listxattr: ino={}, size={}", ino, size);
+        if size == 0 {
+            // Return the buffer size needed (0 = no xattrs)
+            reply.size(0);
+        } else {
+            // Return empty data
+            reply.data(&[]);
+        }
+    }
+
+    /// Set an extended attribute.
+    /// Return ENOSYS to indicate xattrs are not supported. This tells
+    /// the VFS layer to stop trying, preventing repeated calls.
+    fn setxattr(
+        &mut self,
+        _req: &Request,
+        ino: u64,
+        name: &OsStr,
+        _value: &[u8],
+        _flags: i32,
+        _position: u32,
+        reply: fuser::ReplyEmpty,
+    ) {
+        debug!("setxattr: ino={}, name={:?}", ino, name);
+        reply.error(libc::ENOSYS);
+    }
+
+    /// Remove an extended attribute.
+    fn removexattr(
+        &mut self,
+        _req: &Request,
+        ino: u64,
+        name: &OsStr,
+        reply: fuser::ReplyEmpty,
+    ) {
+        debug!("removexattr: ino={}, name={:?}", ino, name);
+        reply.error(libc::ENOSYS);
+    }
+
+    /// Pre-allocate or deallocate space for a file.
+    /// Dolphin/KIO may call this before writing. We treat it as a no-op
+    /// since our chunk-based storage doesn't benefit from pre-allocation.
+    fn fallocate(
+        &mut self,
+        _req: &Request,
+        ino: u64,
+        _fh: u64,
+        offset: i64,
+        length: i64,
+        mode: i32,
+        reply: fuser::ReplyEmpty,
+    ) {
+        debug!("fallocate: ino={}, offset={}, length={}, mode={}", ino, offset, length, mode);
+
+        // Mode 0 = allocate space, which we can just accept as no-op
+        // FALLOC_FL_KEEP_SIZE (1) = allocate but don't change size, also no-op
+        // FALLOC_FL_PUNCH_HOLE (2) = deallocate, we don't support
+        if mode & 0x02 != 0 {
+            // Punch hole not supported
+            reply.error(libc::ENOSYS);
+            return;
+        }
+
+        reply.ok();
+    }
+
+    /// Synchronize file contents to storage.
+    /// Flush any buffered writes for the given inode.
+    fn fsync(
+        &mut self,
+        _req: &Request,
+        ino: u64,
+        _fh: u64,
+        _datasync: bool,
+        reply: fuser::ReplyEmpty,
+    ) {
+        debug!("fsync: ino={}, datasync={}", ino, _datasync);
+
+        // Flush write buffer if this node is the leader
+        if self.is_leader() {
+            self.flush_write_buffer(ino);
+        }
+
+        reply.ok();
+    }
+
+    /// Server-side file copy. Return ENOSYS to tell the kernel to fall back
+    /// to read+write copying. This is fine for correctness; the kernel
+    /// handles it transparently.
+    fn copy_file_range(
+        &mut self,
+        _req: &Request,
+        _ino_in: u64,
+        _fh_in: u64,
+        _offset_in: i64,
+        _ino_out: u64,
+        _fh_out: u64,
+        _offset_out: i64,
+        _len: u64,
+        _flags: u32,
+        reply: fuser::ReplyWrite,
+    ) {
+        debug!("copy_file_range: not supported, falling back to read+write");
+        reply.error(libc::ENOSYS);
+    }
+
+    /// Flush is called on each close() of a file descriptor.
+    /// Dolphin may have multiple fds open; flush write buffers to ensure
+    /// data is persisted.
+    fn flush(
+        &mut self,
+        _req: &Request,
+        ino: u64,
+        _fh: u64,
+        _lock_owner: u64,
+        reply: fuser::ReplyEmpty,
+    ) {
+        debug!("flush: ino={}", ino);
+
+        if self.is_leader() {
+            self.flush_write_buffer(ino);
+        }
+
+        reply.ok();
+    }
+
+    /// Open a directory. Dolphin calls this before readdir.
+    fn opendir(&mut self, _req: &Request, ino: u64, _flags: i32, reply: ReplyOpen) {
+        debug!("opendir: ino={}", ino);
+
+        if ino == ROOT_INODE {
+            reply.opened(0, 0);
+            return;
+        }
+
+        let inode_table = self.inode_table.read().unwrap();
+        if inode_table.get_path(ino).is_some() {
+            reply.opened(0, 0);
+        } else {
+            reply.error(libc::ENOENT);
+        }
+    }
+
+    /// Release (close) a directory.
+    fn releasedir(
+        &mut self,
+        _req: &Request,
+        ino: u64,
+        _fh: u64,
+        _flags: i32,
+        reply: fuser::ReplyEmpty,
+    ) {
+        debug!("releasedir: ino={}", ino);
+        reply.ok();
+    }
 }
