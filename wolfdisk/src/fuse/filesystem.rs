@@ -1116,7 +1116,12 @@ impl Filesystem for WolfDiskFS {
         };
 
         // Client mode: forward read to leader (no local chunks)
-        if self.is_client() {
+        // Also forward if follower is in dirty state (initial sync not yet complete)
+        let sync_not_complete = match &self.cluster {
+            Some(cluster) => !cluster.is_leader() && !cluster.is_sync_complete(),
+            None => false,
+        };
+        if self.is_client() || sync_not_complete {
             match self.forward_read_to_leader(&path.to_string_lossy(), offset as u64, size) {
                 Ok(data) => reply.data(&data),
                 Err(errno) => reply.error(errno),

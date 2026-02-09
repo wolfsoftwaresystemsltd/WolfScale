@@ -153,6 +153,7 @@ fn main() {
             
             // Track if this node is a client (clients don't store chunk data locally)
             let is_client_role = config.node.role == wolfdisk::config::NodeRole::Client;
+            let cluster_for_handler = cluster.clone();
             
             // Create peer manager for network communication
             let peer_manager = std::sync::Arc::new(
@@ -402,6 +403,7 @@ fn main() {
                                             }
                                             
                                             // Queue metadata-only update (chunks already streamed above)
+                                            cluster_for_handler.increment_index_version();
                                             metadata_update_queue_for_handler.lock().unwrap().push((path_clone, entry_clone));
                                             
                                             info!("Leader wrote {} bytes to {} ({} new chunks streamed)", written, write_req.path, new_chunks.len());
@@ -476,6 +478,7 @@ fn main() {
                                     info!("Leader created file: {} with inode {}", create_req.path, ino);
                                     
                                     // Queue broadcast to followers
+                                    cluster_for_handler.increment_index_version();
                                     let entry_for_broadcast = index.get(&path).unwrap().clone();
                                     drop(index);
                                     drop(inode_tbl);
@@ -523,6 +526,7 @@ fn main() {
                                     };
                                     drop(index);
                                     drop(inode_tbl);
+                                    cluster_for_handler.increment_index_version();
                                     broadcast_queue_for_handler.lock().unwrap().push((path, delete_marker));
                                     
                                     Some(Message::FileOpResponse(FileOpResponseMsg {
@@ -955,43 +959,55 @@ fn main() {
                                     }
                                 }
                             }
-                            Message::SyncRequest(_sync_req) => {
-                                // Handle full index sync request (from new follower/client)
-                                info!("Received SyncRequest from {} - sending full index", peer_id);
+                            Message::SyncRequest(sync_req) => {
+                                // Handle full index sync request (from follower/client)
+                                let current_version = cluster_for_handler.index_version();
                                 
-                                let index = file_index_for_handler.read().unwrap();
-                                let mut entries = Vec::new();
-                                
-                                for (path, entry) in index.iter() {
-                                    let modified_ms = entry.modified
-                                        .duration_since(std::time::UNIX_EPOCH)
-                                        .unwrap_or_default()
-                                        .as_millis() as u64;
+                                // If follower is already at current version, skip transfer
+                                if sync_req.from_version > 0 && sync_req.from_version == current_version {
+                                    debug!("SyncRequest from {}: already at version {} — no transfer needed", peer_id, current_version);
+                                    Some(Message::SyncResponse(SyncResponseMsg {
+                                        current_version,
+                                        entries: Vec::new(),
+                                    }))
+                                } else {
+                                    info!("Received SyncRequest from {} (their version: {}, ours: {}) - sending full index", 
+                                        peer_id, sync_req.from_version, current_version);
                                     
-                                    let chunks: Vec<ChunkRefMsg> = entry.chunks.iter()
-                                        .map(|c| ChunkRefMsg {
-                                            hash: c.hash,
-                                            offset: c.offset,
-                                            size: c.size,
-                                        })
-                                        .collect();
+                                    let index = file_index_for_handler.read().unwrap();
+                                    let mut entries = Vec::new();
                                     
-                                    entries.push(IndexEntryMsg {
-                                        path: path.to_string_lossy().to_string(),
-                                        is_dir: entry.is_dir,
-                                        size: entry.size,
-                                        modified_ms,
-                                        permissions: entry.permissions,
-                                        chunks,
-                                    });
+                                    for (path, entry) in index.iter() {
+                                        let modified_ms = entry.modified
+                                            .duration_since(std::time::UNIX_EPOCH)
+                                            .unwrap_or_default()
+                                            .as_millis() as u64;
+                                        
+                                        let chunks: Vec<ChunkRefMsg> = entry.chunks.iter()
+                                            .map(|c| ChunkRefMsg {
+                                                hash: c.hash,
+                                                offset: c.offset,
+                                                size: c.size,
+                                            })
+                                            .collect();
+                                        
+                                        entries.push(IndexEntryMsg {
+                                            path: path.to_string_lossy().to_string(),
+                                            is_dir: entry.is_dir,
+                                            size: entry.size,
+                                            modified_ms,
+                                            permissions: entry.permissions,
+                                            chunks,
+                                        });
+                                    }
+                                    
+                                    info!("Sending SyncResponse with {} entries (version {})", entries.len(), current_version);
+                                    
+                                    Some(Message::SyncResponse(SyncResponseMsg {
+                                        current_version,
+                                        entries,
+                                    }))
                                 }
-                                
-                                info!("Sending SyncResponse with {} entries", entries.len());
-                                
-                                Some(Message::SyncResponse(SyncResponseMsg {
-                                    current_version: 0,
-                                    entries,
-                                }))
                             }
                             Message::GetChunk(get_chunk) => {
                                 // Handle chunk fetch request from follower
@@ -1383,6 +1399,9 @@ fn main() {
                     // Wait for initial sync to complete first
                     std::thread::sleep(std::time::Duration::from_secs(15));
                     
+                    // Track last synced version — if leader version matches, no transfer needed
+                    let mut last_synced_version: u64 = 0;
+                    
                     loop {
                         std::thread::sleep(std::time::Duration::from_secs(30));
                         
@@ -1401,7 +1420,7 @@ fn main() {
                             None => continue,
                         };
                         
-                        debug!("Periodic re-sync: requesting index from leader {}", leader_id);
+                        debug!("Periodic re-sync: checking leader {} (our version: {})", leader_id, last_synced_version);
                         
                         let conn = match resync_peer_manager.get_or_connect_leader(&leader_id, &leader_addr) {
                             Ok(c) => c,
@@ -1411,9 +1430,16 @@ fn main() {
                             }
                         };
                         
-                        let msg = Message::SyncRequest(SyncRequestMsg { from_version: 0 });
+                        let msg = Message::SyncRequest(SyncRequestMsg { from_version: last_synced_version });
                         match conn.request(&msg) {
                             Ok(Message::SyncResponse(response)) => {
+                                // If versions match and no entries, we're up to date
+                                if response.entries.is_empty() {
+                                    debug!("Periodic re-sync: already at version {}, no changes", response.current_version);
+                                    last_synced_version = response.current_version;
+                                    continue;
+                                }
+                                
                                 let mut index = resync_file_index.write().unwrap();
                                 let mut inode_tbl = resync_inode_table.write().unwrap();
                                 let mut next_ino = resync_next_inode.write().unwrap();
@@ -1468,10 +1494,13 @@ fn main() {
                                     }
                                 }
                                 
+                                // Update our version to the leader's version
+                                last_synced_version = response.current_version;
+                                
                                 if added > 0 || updated > 0 {
-                                    info!("Periodic re-sync: added {} files, updated {} files", added, updated);
+                                    info!("Periodic re-sync: added {} files, updated {} (now at version {})", added, updated, last_synced_version);
                                 } else {
-                                    debug!("Periodic re-sync: index is up to date ({} entries)", response.entries.len());
+                                    debug!("Periodic re-sync: index verified ({} entries, version {})", response.entries.len(), last_synced_version);
                                 }
                             }
                             Ok(_) => {}
