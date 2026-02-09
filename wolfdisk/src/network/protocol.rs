@@ -356,13 +356,18 @@ pub struct CreateSymlinkMsg {
     pub target: String,
 }
 
-/// Serialize a message for transmission
+/// Serialize and compress a message for transmission
+/// Uses LZ4 compression — extremely fast with good ratios for file data
 pub fn encode_message(msg: &Message) -> Result<Vec<u8>, bincode::Error> {
-    bincode::serialize(msg)
+    let serialized = bincode::serialize(msg)?;
+    Ok(lz4_flex::compress_prepend_size(&serialized))
 }
 
-/// Deserialize a message from bytes
+/// Decompress and deserialize a message from bytes
 pub fn decode_message(data: &[u8]) -> Result<Message, bincode::Error> {
-    bincode::deserialize(data)
+    let decompressed = lz4_flex::decompress_size_prepended(data)
+        .map_err(|e| bincode::Error::from(bincode::ErrorKind::Custom(
+            format!("LZ4 decompression failed: {}", e)
+        )))?;
+    bincode::deserialize(&decompressed)
 }
-
