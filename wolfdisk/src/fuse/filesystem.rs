@@ -841,7 +841,7 @@ impl WolfDiskFS {
             ctime: SystemTime::now(),
             crtime: SystemTime::now(),
             kind: FileType::Directory,
-            perm: 0o755,
+            perm: 0o777,
             nlink: 2,
             uid: unsafe { libc::getuid() },
             gid: unsafe { libc::getgid() },

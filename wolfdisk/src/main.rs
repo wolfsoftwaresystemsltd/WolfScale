@@ -206,7 +206,8 @@ fn main() {
                                             })
                                             .collect();
                                         let now = std::time::SystemTime::now();
-                                        index.insert(std::path::PathBuf::from(&path), FileEntry {
+                                        let file_path = std::path::PathBuf::from(&path);
+                                        index.insert(file_path.clone(), FileEntry {
                                             size,
                                             modified: std::time::UNIX_EPOCH + std::time::Duration::from_millis(modified_ms),
                                             permissions,
@@ -218,11 +219,20 @@ fn main() {
                                             accessed: now,
                                             symlink_target: None,
                                         });
+                                        // Ensure inode exists so FUSE can see this file
+                                        let mut inode_tbl = inode_table_for_handler.write().unwrap();
+                                        if inode_tbl.get_inode(&file_path).is_none() {
+                                            let mut next_ino = next_inode_for_handler.write().unwrap();
+                                            let ino = *next_ino;
+                                            *next_ino += 1;
+                                            inode_tbl.insert(ino, file_path);
+                                        }
                                     }
                                     IndexOperation::Mkdir { path, permissions } => {
                                         info!("Replicating mkdir: {}", path);
                                         let now = std::time::SystemTime::now();
-                                        index.insert(std::path::PathBuf::from(&path), FileEntry {
+                                        let dir_path = std::path::PathBuf::from(&path);
+                                        index.insert(dir_path.clone(), FileEntry {
                                             size: 0,
                                             modified: now,
                                             permissions,
@@ -234,11 +244,28 @@ fn main() {
                                             accessed: now,
                                             symlink_target: None,
                                         });
+                                        // Ensure inode exists so FUSE can see this directory
+                                        let mut inode_tbl = inode_table_for_handler.write().unwrap();
+                                        if inode_tbl.get_inode(&dir_path).is_none() {
+                                            let mut next_ino = next_inode_for_handler.write().unwrap();
+                                            let ino = *next_ino;
+                                            *next_ino += 1;
+                                            inode_tbl.insert(ino, dir_path);
+                                        }
                                     }
                                     IndexOperation::Rename { from_path, to_path } => {
                                         info!("Replicating rename: {} -> {}", from_path, to_path);
-                                        if let Some(entry) = index.remove(&std::path::PathBuf::from(&from_path)) {
-                                            index.insert(std::path::PathBuf::from(&to_path), entry);
+                                        let from = std::path::PathBuf::from(&from_path);
+                                        let to = std::path::PathBuf::from(&to_path);
+                                        if let Some(entry) = index.remove(&from) {
+                                            index.insert(to.clone(), entry);
+                                            // Update inode table: remove old path, add new
+                                            let mut inode_tbl = inode_table_for_handler.write().unwrap();
+                                            inode_tbl.remove_path(&from);
+                                            let mut next_ino = next_inode_for_handler.write().unwrap();
+                                            let ino = *next_ino;
+                                            *next_ino += 1;
+                                            inode_tbl.insert(ino, to);
                                         }
                                     }
                                 }
