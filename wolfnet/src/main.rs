@@ -676,9 +676,10 @@ fn run_daemon(config_path: &PathBuf) {
                 let data = &recv_buf[..n];
                 match data[0] {
                     transport::PKT_HANDSHAKE => {
-                        if let Some((pub_key, peer_ip, peer_port, is_gw, peer_hostname)) = transport::parse_handshake(data) {
-                            info!("Handshake from {} ({}) at {}", peer_hostname, peer_ip, src);
-                            let endpoint = SocketAddr::new(src.ip(), peer_port);
+                        if let Some((pub_key, peer_ip, _peer_port, is_gw, peer_hostname)) = transport::parse_handshake(data) {
+                            // Use the actual UDP source address — NOT the advertised port.
+                            // Over NAT, the source port differs from listen_port.
+                            let endpoint = src;
                             peer_manager.update_from_discovery(&pub_key, endpoint, peer_ip, &peer_hostname, is_gw);
                             peer_manager.with_peer_by_ip(&peer_ip, |peer| {
                                 // Always re-establish session on handshake — the peer
@@ -810,8 +811,8 @@ fn run_daemon(config_path: &PathBuf) {
             Err(e) => debug!("UDP recv error: {}", e),
         }
 
-        // 3. Periodic handshakes (every 15s)
-        if last_handshake.elapsed() > Duration::from_secs(15) {
+        // 3. Periodic handshakes (every 10s)
+        if last_handshake.elapsed() > Duration::from_secs(10) {
             transport::send_handshakes(&socket, &keypair, &peer_manager, wolfnet_ip, config.network.listen_port, &hostname, is_gateway);
             last_handshake = Instant::now();
         }
@@ -822,8 +823,8 @@ fn run_daemon(config_path: &PathBuf) {
             last_keepalive = Instant::now();
         }
 
-        // 5. Periodic peer exchange (every 15s)
-        if last_pex.elapsed() > Duration::from_secs(15) {
+        // 5. Periodic peer exchange (every 30s)
+        if last_pex.elapsed() > Duration::from_secs(30) {
             transport::send_peer_exchange(&socket, &keypair, &peer_manager, wolfnet_ip);
             last_pex = Instant::now();
         }
