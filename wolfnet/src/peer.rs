@@ -1,6 +1,7 @@
 //! Peer management for WolfNet
 //!
 //! Tracks connected peers, their keys, endpoints, and session state.
+//! Supports peer exchange (PEX) for automatic mesh topology propagation.
 
 use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddr};
@@ -9,8 +10,10 @@ use std::sync::{Arc, RwLock};
 use std::time::Instant;
 use x25519_dalek::{PublicKey, StaticSecret};
 use tracing::{info, debug};
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 
 use crate::crypto::{SessionCipher, KeyPair};
+use crate::transport::PexEntry;
 
 /// Information about a known peer
 pub struct Peer {
@@ -36,6 +39,9 @@ pub struct Peer {
     pub tx_bytes: u64,
     /// Last handshake time
     pub last_handshake: Option<Instant>,
+    /// If we learned about this peer via PEX, which peer told us (relay via)
+    /// This is the WolfNet IP of the peer that shared this entry with us
+    pub relay_via: Option<Ipv4Addr>,
 }
 
 impl Peer {
@@ -54,6 +60,7 @@ impl Peer {
             rx_bytes: 0,
             tx_bytes: 0,
             last_handshake: None,
+            relay_via: None,
         }
     }
 
@@ -170,6 +177,8 @@ impl PeerManager {
                 peer.endpoint = Some(endpoint);
                 peer.hostname = hostname.to_string();
                 peer.is_gateway = is_gateway;
+                // Direct discovery clears relay — we can reach them directly
+                peer.relay_via = None;
                 self.endpoint_to_ip.write().unwrap().insert(endpoint, wolfnet_ip);
                 return;
             }
@@ -197,6 +206,7 @@ impl PeerManager {
                 peer.endpoint = Some(endpoint);
                 peer.hostname = hostname.to_string();
                 peer.is_gateway = is_gateway;
+                peer.relay_via = None;
                 let peer_id = peer.peer_id;
                 
                 // Update all mappings
@@ -225,9 +235,127 @@ impl PeerManager {
         self.peers_by_ip.read().unwrap().keys().copied().collect()
     }
 
+    /// Find a connected gateway peer to route traffic through
+    /// Returns the WolfNet IP of the first connected gateway peer
+    pub fn find_gateway(&self) -> Option<Ipv4Addr> {
+        let peers = self.peers_by_ip.read().unwrap();
+        peers.iter()
+            .find(|(_, p)| p.is_gateway && p.is_connected())
+            .map(|(ip, _)| *ip)
+    }
+
+    /// Find the relay peer for a given destination IP
+    /// If we learned about dest_ip via PEX from another peer, return that peer's IP
+    pub fn find_relay_for(&self, dest_ip: &Ipv4Addr) -> Option<Ipv4Addr> {
+        let peers = self.peers_by_ip.read().unwrap();
+        if let Some(peer) = peers.get(dest_ip) {
+            // If this peer has a relay_via and isn't directly connected, use the relay
+            if !peer.is_connected() {
+                return peer.relay_via;
+            }
+        }
+        None
+    }
+
     /// Get peer count
     pub fn count(&self) -> usize {
         self.peers_by_ip.read().unwrap().len()
+    }
+
+    /// Build PEX entries for all known peers (to share with others)
+    /// Excludes the requesting peer's own IP and our own IP
+    pub fn get_pex_entries(&self, my_ip: Ipv4Addr) -> Vec<PexEntry> {
+        let peers = self.peers_by_ip.read().unwrap();
+        peers.values()
+            .filter(|p| p.wolfnet_ip != my_ip)
+            .map(|p| {
+                PexEntry {
+                    public_key: BASE64.encode(p.public_key.as_bytes()),
+                    wolfnet_ip: p.wolfnet_ip.to_string(),
+                    endpoint: p.endpoint.map(|e| e.to_string()),
+                    hostname: p.hostname.clone(),
+                    is_gateway: p.is_gateway,
+                }
+            })
+            .collect()
+    }
+
+    /// Process received PEX entries from a peer
+    /// Adds new peers we haven't seen before, marking them as relay-via the sender
+    pub fn add_from_pex(
+        &self,
+        entries: &[PexEntry],
+        sender_ip: Ipv4Addr,
+        my_ip: Ipv4Addr,
+        keypair: &KeyPair,
+    ) {
+        let mut peers = self.peers_by_ip.write().unwrap();
+
+        for entry in entries {
+            // Skip ourselves
+            let entry_ip: Ipv4Addr = match entry.wolfnet_ip.parse() {
+                Ok(ip) => ip,
+                Err(_) => continue,
+            };
+            if entry_ip == my_ip { continue; }
+
+            // Skip if we already know this peer directly (LAN discovery or configured)
+            if let Some(existing) = peers.get(&entry_ip) {
+                if existing.is_connected() || existing.relay_via.is_none() {
+                    // Already directly connected or manually configured — don't overwrite
+                    continue;
+                }
+            }
+
+            // Parse the public key
+            let pub_key = match crate::crypto::parse_public_key(&entry.public_key) {
+                Ok(k) => k,
+                Err(_) => continue,
+            };
+
+            // Check if peer already exists by public key under a different IP
+            let existing_by_key = peers.iter()
+                .find(|(_, p)| p.public_key == pub_key)
+                .map(|(ip, _)| *ip);
+            if let Some(existing_ip) = existing_by_key {
+                if existing_ip != entry_ip {
+                    // Key exists under different IP — skip to avoid confusion
+                    continue;
+                }
+            }
+
+            if peers.contains_key(&entry_ip) {
+                // Update relay_via if not directly connected
+                if let Some(peer) = peers.get_mut(&entry_ip) {
+                    if !peer.is_connected() {
+                        peer.relay_via = Some(sender_ip);
+                    }
+                }
+                continue;
+            }
+
+            // New peer from PEX — add it with relay routing through sender
+            let mut peer = Peer::new(pub_key, entry_ip);
+            peer.hostname = entry.hostname.clone();
+            peer.is_gateway = entry.is_gateway;
+            peer.relay_via = Some(sender_ip);
+
+            // Parse endpoint if available
+            if let Some(ref ep_str) = entry.endpoint {
+                if let Ok(ep) = ep_str.parse::<SocketAddr>() {
+                    peer.endpoint = Some(ep);
+                    self.endpoint_to_ip.write().unwrap().insert(ep, entry_ip);
+                }
+            }
+
+            // Establish crypto session so we can encrypt/decrypt
+            peer.establish_session(&keypair.secret, &keypair.public);
+
+            let peer_id = peer.peer_id;
+            self.id_to_ip.write().unwrap().insert(peer_id, entry_ip);
+            info!("PEX: learned about {} ({}) via {}", entry.hostname, entry_ip, sender_ip);
+            peers.insert(entry_ip, peer);
+        }
     }
 
     /// Collect status info for all peers
@@ -238,11 +366,12 @@ impl PeerManager {
                 hostname: p.hostname.clone(),
                 address: p.wolfnet_ip.to_string(),
                 endpoint: p.endpoint.map_or("-".into(), |e| e.to_string()),
-                public_key: base64::Engine::encode(&base64::engine::general_purpose::STANDARD, p.public_key.as_bytes()),
+                public_key: BASE64.encode(p.public_key.as_bytes()),
                 last_seen_secs: p.last_seen.map_or(u64::MAX, |t| t.elapsed().as_secs()),
                 rx_bytes: p.rx_bytes,
                 tx_bytes: p.tx_bytes,
                 connected: p.is_connected(),
+                relay_via: p.relay_via.map(|ip| ip.to_string()),
             }
         }).collect()
     }

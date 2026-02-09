@@ -2,6 +2,9 @@
 //!
 //! Creates encrypted tunnels between machines using TUN interfaces,
 //! X25519 key exchange, and ChaCha20-Poly1305 encryption.
+//!
+//! Supports automatic peer exchange (PEX) so joining one node
+//! automatically gives you access to all its peers.
 
 use std::net::{UdpSocket, Ipv4Addr, SocketAddr, TcpStream};
 use std::io::{Read, Write};
@@ -524,25 +527,71 @@ fn run_daemon(config_path: &PathBuf) {
     let mut recv_buf = [0u8; 65536];
     let mut last_handshake = Instant::now();
     let mut last_keepalive = Instant::now();
+    let mut last_pex = Instant::now();
     let tun_fd = tun.raw_fd();
 
     while running.load(Ordering::Relaxed) {
         // 1. Process packets from TUN (outbound: encrypt and send via UDP)
         while let Ok(packet) = tun_rx.try_recv() {
             if let Some(dest_ip) = tun::get_dest_ip(&packet) {
-                peer_manager.with_peer_by_ip(&dest_ip, |peer| {
+                // Try direct peer first
+                let sent = peer_manager.with_peer_by_ip(&dest_ip, |peer| {
                     if let Some(endpoint) = peer.endpoint {
-                        match peer.encrypt(&packet) {
-                            Ok((counter, ciphertext)) => {
-                                let pkt = transport::build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
-                                if let Err(e) = socket.send_to(&pkt, endpoint) {
-                                    debug!("UDP send error to {}: {}", endpoint, e);
+                        if peer.is_connected() {
+                            match peer.encrypt(&packet) {
+                                Ok((counter, ciphertext)) => {
+                                    let pkt = transport::build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
+                                    if let Err(e) = socket.send_to(&pkt, endpoint) {
+                                        debug!("UDP send error to {}: {}", endpoint, e);
+                                    }
+                                    return true;
                                 }
+                                Err(e) => { debug!("Encrypt error for {}: {}", dest_ip, e); }
                             }
-                            Err(e) => debug!("Encrypt error for {}: {}", dest_ip, e),
                         }
                     }
+                    false
                 });
+
+                if sent.unwrap_or(false) { continue; }
+
+                // Not directly connected — try relay via PEX-learned route
+                let relay_ip = peer_manager.find_relay_for(&dest_ip);
+                if let Some(relay_ip) = relay_ip {
+                    peer_manager.with_peer_by_ip(&relay_ip, |relay_peer| {
+                        if let Some(endpoint) = relay_peer.endpoint {
+                            match relay_peer.encrypt(&packet) {
+                                Ok((counter, ciphertext)) => {
+                                    let pkt = transport::build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
+                                    if let Err(e) = socket.send_to(&pkt, endpoint) {
+                                        debug!("UDP send error to relay {}: {}", endpoint, e);
+                                    } else {
+                                        debug!("Relayed packet to {} via {}", dest_ip, relay_ip);
+                                    }
+                                }
+                                Err(e) => debug!("Encrypt error for relay {}: {}", relay_ip, e),
+                            }
+                        }
+                    });
+                    continue;
+                }
+
+                // Fall back to gateway routing
+                if let Some(gw_ip) = peer_manager.find_gateway() {
+                    peer_manager.with_peer_by_ip(&gw_ip, |gw_peer| {
+                        if let Some(endpoint) = gw_peer.endpoint {
+                            match gw_peer.encrypt(&packet) {
+                                Ok((counter, ciphertext)) => {
+                                    let pkt = transport::build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
+                                    if let Err(e) = socket.send_to(&pkt, endpoint) {
+                                        debug!("UDP send error to gateway {}: {}", endpoint, e);
+                                    }
+                                }
+                                Err(e) => debug!("Encrypt error for gateway {}: {}", gw_ip, e),
+                            }
+                        }
+                    });
+                }
             }
         }
 
@@ -587,6 +636,20 @@ fn run_daemon(config_path: &PathBuf) {
                                     if known_endpoint != Some(Some(src)) {
                                         info!("Peer {} roamed to new endpoint: {}", peer_ip, src);
                                         peer_manager.update_endpoint(&peer_ip, src);
+                                    }
+
+                                    // Check if this is a PEX message
+                                    if plaintext.len() > 1 && plaintext[0] == transport::PKT_PEER_EXCHANGE {
+                                        if let Some(entries) = transport::parse_peer_exchange(&plaintext) {
+                                            info!("Received PEX from {} with {} peers", peer_ip, entries.len());
+                                            peer_manager.add_from_pex(&entries, peer_ip, wolfnet_ip, &keypair);
+
+                                            // Enable IP forwarding if we have multiple peers (we're a relay)
+                                            if peer_manager.count() >= 2 {
+                                                let _ = std::fs::write("/proc/sys/net/ipv4/ip_forward", "1");
+                                            }
+                                        }
+                                        continue;
                                     }
 
                                     // Check if this packet is for us or needs relaying
@@ -650,6 +713,12 @@ fn run_daemon(config_path: &PathBuf) {
         if last_keepalive.elapsed() > Duration::from_secs(25) {
             transport::send_keepalives(&socket, &keypair, &peer_manager);
             last_keepalive = Instant::now();
+        }
+
+        // 5. Periodic peer exchange (every 30s)
+        if last_pex.elapsed() > Duration::from_secs(30) {
+            transport::send_peer_exchange(&socket, &keypair, &peer_manager, wolfnet_ip);
+            last_pex = Instant::now();
         }
     }
 

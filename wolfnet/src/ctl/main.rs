@@ -46,6 +46,8 @@ struct PeerStatus {
     rx_bytes: u64,
     tx_bytes: u64,
     connected: bool,
+    #[serde(default)]
+    relay_via: Option<String>,
 }
 
 fn main() {
@@ -109,15 +111,21 @@ fn cmd_peers(status: &NodeStatus) {
     println!("  ─────────────────────────────────────────────────────────────────────");
 
     for peer in &status.peers {
-        let status_str = if peer.connected { "online" } else { "offline" };
-        let status_icon = if peer.connected { "●" } else { "○" };
+        let status_str = if peer.connected {
+            "online".to_string()
+        } else if peer.relay_via.is_some() {
+            format!("via {}", peer.relay_via.as_deref().unwrap_or("?"))
+        } else {
+            "offline".to_string()
+        };
+        let status_icon = if peer.connected { "●" } else if peer.relay_via.is_some() { "◉" } else { "○" };
         let last_seen = if peer.last_seen_secs == u64::MAX {
             "never".to_string()
         } else {
             format_duration(peer.last_seen_secs)
         };
         let host = if peer.hostname.is_empty() { "-" } else { &peer.hostname };
-        println!("  {:<16} {:<16} {:<24} {} {:<8} {}",
+        println!("  {:<16} {:<16} {:<24} {} {:<14} {}",
             host, peer.address, peer.endpoint, status_icon, status_str, last_seen);
     }
 

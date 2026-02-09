@@ -1,6 +1,7 @@
 //! Network transport layer for WolfNet
 //!
-//! Handles UDP packet framing, handshake protocol, and discovery broadcasts.
+//! Handles UDP packet framing, handshake protocol, discovery broadcasts,
+//! and peer exchange (PEX) for automatic mesh topology propagation.
 
 use std::net::{UdpSocket, SocketAddr, Ipv4Addr};
 use std::sync::Arc;
@@ -15,6 +16,7 @@ pub const PKT_HANDSHAKE: u8 = 0x01;
 pub const PKT_DATA: u8 = 0x03;
 pub const PKT_KEEPALIVE: u8 = 0x04;
 pub const PKT_DISCOVERY: u8 = 0x05;
+pub const PKT_PEER_EXCHANGE: u8 = 0x06;
 
 /// Discovery port (UDP broadcast)
 pub const DISCOVERY_PORT: u16 = 9601;
@@ -152,6 +154,72 @@ pub fn parse_discovery(message: &str) -> Option<(String, x25519_dalek::PublicKey
     let hostname = parts[6].to_string();
     let is_gateway = parts[7] == "G";
     Some((node_id, public_key, wolfnet_ip, listen_port, hostname, is_gateway))
+}
+
+/// A single peer entry in a peer exchange message
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct PexEntry {
+    /// Base64 encoded public key
+    pub public_key: String,
+    /// WolfNet IP address
+    pub wolfnet_ip: String,
+    /// Real endpoint (ip:port) if known
+    pub endpoint: Option<String>,
+    /// Hostname
+    pub hostname: String,
+    /// Whether this peer is a gateway
+    pub is_gateway: bool,
+}
+
+/// Build a peer exchange packet:
+/// [1: type] [N: JSON array of PexEntry]
+pub fn build_peer_exchange(my_ip: Ipv4Addr, peer_manager: &PeerManager) -> Vec<u8> {
+    let entries = peer_manager.get_pex_entries(my_ip);
+    let mut pkt = Vec::new();
+    pkt.push(PKT_PEER_EXCHANGE);
+    if let Ok(json) = serde_json::to_vec(&entries) {
+        pkt.extend_from_slice(&json);
+    }
+    pkt
+}
+
+/// Parse a peer exchange packet
+pub fn parse_peer_exchange(data: &[u8]) -> Option<Vec<PexEntry>> {
+    if data.is_empty() || data[0] != PKT_PEER_EXCHANGE {
+        return None;
+    }
+    serde_json::from_slice(&data[1..]).ok()
+}
+
+/// Send peer exchange to all connected peers
+pub fn send_peer_exchange(
+    socket: &UdpSocket,
+    keypair: &KeyPair,
+    peer_manager: &PeerManager,
+    my_ip: Ipv4Addr,
+) {
+    let pex_packet = build_peer_exchange(my_ip, peer_manager);
+    if pex_packet.len() <= 1 { return; } // No peers to share
+
+    for ip in peer_manager.all_ips() {
+        peer_manager.with_peer_by_ip(&ip, |peer| {
+            if peer.is_connected() {
+                if let Some(endpoint) = peer.endpoint {
+                    match peer.encrypt(&pex_packet) {
+                        Ok((counter, ciphertext)) => {
+                            let pkt = build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
+                            if let Err(e) = socket.send_to(&pkt, endpoint) {
+                                debug!("PEX send error to {}: {}", ip, e);
+                            } else {
+                                debug!("Sent peer exchange to {} ({} bytes)", ip, pex_packet.len());
+                            }
+                        }
+                        Err(e) => debug!("PEX encrypt error for {}: {}", ip, e),
+                    }
+                }
+            }
+        });
+    }
 }
 
 /// Run discovery broadcaster in a loop (call from a thread)
