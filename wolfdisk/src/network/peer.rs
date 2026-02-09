@@ -23,9 +23,11 @@ impl PeerConnection {
     pub fn connect(node_id: String, address: &str) -> std::io::Result<Self> {
         let stream = TcpStream::connect(address)?;
         stream.set_read_timeout(Some(Duration::from_secs(30)))?;
-        stream.set_read_timeout(Some(Duration::from_secs(30)))?;
-        // Reduced to 2s to prevent slow/dead peers from stalling broadcast
-        stream.set_write_timeout(Some(Duration::from_secs(2)))?;
+        // 30s write timeout to support WAN/internet connections via WolfNet
+        stream.set_write_timeout(Some(Duration::from_secs(30)))?;
+        // Disable Nagle's algorithm - each FUSE op is a synchronous round-trip,
+        // so we want messages sent immediately, not buffered
+        stream.set_nodelay(true)?;
         
         Ok(Self {
             node_id,
@@ -257,6 +259,9 @@ fn handle_peer_connection(
     handler: Arc<dyn Fn(String, Message) -> Option<Message> + Send + Sync>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     stream.set_read_timeout(Some(Duration::from_secs(60)))?;
+    stream.set_write_timeout(Some(Duration::from_secs(30)))?;
+    // Disable Nagle's algorithm for prompt responses
+    stream.set_nodelay(true)?;
     
     loop {
         // Read length prefix
