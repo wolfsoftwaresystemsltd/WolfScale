@@ -155,26 +155,62 @@ impl PeerManager {
     /// Update a peer's endpoint and hostname from discovery
     pub fn update_from_discovery(&self, public_key: &PublicKey, endpoint: SocketAddr, wolfnet_ip: Ipv4Addr, hostname: &str, is_gateway: bool) {
         let mut peers = self.peers_by_ip.write().unwrap();
+        
+        // First check: does a peer with this exact IP exist?
         if let Some(peer) = peers.get_mut(&wolfnet_ip) {
             if peer.public_key == *public_key {
+                // Same IP, same key — just update endpoint
                 peer.endpoint = Some(endpoint);
                 peer.hostname = hostname.to_string();
                 peer.is_gateway = is_gateway;
                 self.endpoint_to_ip.write().unwrap().insert(endpoint, wolfnet_ip);
+                return;
             }
-        } else {
-            // New peer discovered on LAN, add it
-            let mut peer = Peer::new(*public_key, wolfnet_ip);
-            peer.endpoint = Some(endpoint);
-            peer.hostname = hostname.to_string();
-            peer.is_gateway = is_gateway;
-            let peer_id = peer.peer_id;
-
-            self.endpoint_to_ip.write().unwrap().insert(endpoint, wolfnet_ip);
-            self.id_to_ip.write().unwrap().insert(peer_id, wolfnet_ip);
-            peers.insert(wolfnet_ip, peer);
-            info!("Discovered new peer: {} ({}) at {}", hostname, wolfnet_ip, endpoint);
         }
+        
+        // Second check: does a peer with this public key exist under a DIFFERENT IP?
+        // This handles the case where a peer's address changed (e.g., token join changed their IP)
+        let existing_ip = peers.iter()
+            .find(|(_, p)| p.public_key == *public_key)
+            .map(|(ip, _)| *ip);
+        
+        if let Some(old_ip) = existing_ip {
+            if old_ip != wolfnet_ip {
+                // Peer changed their WolfNet IP — migrate to new IP
+                info!("Peer {} ({}) changed IP: {} -> {}", hostname, hex::encode(KeyPair::peer_id(public_key)), old_ip, wolfnet_ip);
+                let mut peer = peers.remove(&old_ip).unwrap();
+                
+                // Update old endpoint mapping
+                if let Some(old_endpoint) = peer.endpoint {
+                    self.endpoint_to_ip.write().unwrap().remove(&old_endpoint);
+                }
+                
+                // Update peer with new info
+                peer.wolfnet_ip = wolfnet_ip;
+                peer.endpoint = Some(endpoint);
+                peer.hostname = hostname.to_string();
+                peer.is_gateway = is_gateway;
+                let peer_id = peer.peer_id;
+                
+                // Update all mappings
+                self.endpoint_to_ip.write().unwrap().insert(endpoint, wolfnet_ip);
+                self.id_to_ip.write().unwrap().insert(peer_id, wolfnet_ip);
+                peers.insert(wolfnet_ip, peer);
+                return;
+            }
+        }
+        
+        // Entirely new peer discovered on LAN
+        let mut peer = Peer::new(*public_key, wolfnet_ip);
+        peer.endpoint = Some(endpoint);
+        peer.hostname = hostname.to_string();
+        peer.is_gateway = is_gateway;
+        let peer_id = peer.peer_id;
+
+        self.endpoint_to_ip.write().unwrap().insert(endpoint, wolfnet_ip);
+        self.id_to_ip.write().unwrap().insert(peer_id, wolfnet_ip);
+        peers.insert(wolfnet_ip, peer);
+        info!("Discovered new peer: {} ({}) at {}", hostname, wolfnet_ip, endpoint);
     }
 
     /// Get all peer IPs
