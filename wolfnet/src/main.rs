@@ -69,6 +69,18 @@ fn main() {
         .with_env_filter(tracing_subscriber::EnvFilter::new(filter))
         .init();
 
+    // Commands that need root access (for /etc/wolfnet/)
+    match &cli.command {
+        Some(Commands::Invite) | Some(Commands::Join { .. }) | None => {
+            if unsafe { libc::geteuid() } != 0 {
+                eprintln!("✗ This command needs root access (to read /etc/wolfnet/).");
+                eprintln!("  Run with: sudo wolfnet {}", std::env::args().skip(1).collect::<Vec<_>>().join(" "));
+                std::process::exit(1);
+            }
+        }
+        _ => {}
+    }
+
     match cli.command {
         Some(Commands::Genkey { output }) => cmd_genkey(&output),
         Some(Commands::Pubkey) => cmd_pubkey(&cli.config),
