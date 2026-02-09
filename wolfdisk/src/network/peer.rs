@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 use std::io::{Read, Write};
-use std::net::{TcpStream, TcpListener, SocketAddr};
+use std::net::{TcpStream, TcpListener, SocketAddr, ToSocketAddrs};
 use std::sync::{Arc, RwLock, Mutex};
 use std::time::Duration;
 use std::thread;
@@ -19,12 +19,22 @@ pub struct PeerConnection {
 }
 
 impl PeerConnection {
-    /// Connect to a peer
+    /// Connect to a peer with a connect timeout.
+    /// This is critical for client nodes over WolfNet — without a timeout,
+    /// TcpStream::connect() blocks for 2+ minutes on unreachable hosts,
+    /// which freezes all FUSE operations and hangs Dolphin.
     pub fn connect(node_id: String, address: &str) -> std::io::Result<Self> {
-        let stream = TcpStream::connect(address)?;
-        stream.set_read_timeout(Some(Duration::from_secs(30)))?;
-        // 30s write timeout to support WAN/internet connections via WolfNet
-        stream.set_write_timeout(Some(Duration::from_secs(30)))?;
+        // Resolve address and connect with a 5-second timeout.
+        // Over WolfNet tunnels, initial connection should complete in <1s;
+        // 5s gives headroom for congested links without freezing Dolphin.
+        let sock_addr: SocketAddr = address.to_socket_addrs()?
+            .next()
+            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidInput, "cannot resolve address"))?;
+        let stream = TcpStream::connect_timeout(&sock_addr, Duration::from_secs(5))?;
+        // 10s read/write timeouts — short enough to keep Dolphin responsive,
+        // long enough for WAN round-trips over WolfNet.
+        stream.set_read_timeout(Some(Duration::from_secs(10)))?;
+        stream.set_write_timeout(Some(Duration::from_secs(10)))?;
         // Disable Nagle's algorithm - each FUSE op is a synchronous round-trip,
         // so we want messages sent immediately, not buffered
         stream.set_nodelay(true)?;
@@ -258,8 +268,10 @@ fn handle_peer_connection(
     addr: SocketAddr,
     handler: Arc<dyn Fn(String, Message) -> Option<Message> + Send + Sync>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    stream.set_read_timeout(Some(Duration::from_secs(60)))?;
-    stream.set_write_timeout(Some(Duration::from_secs(30)))?;
+    // Inbound connections can afford slightly longer timeouts since they
+    // handle sync requests which transfer more data.
+    stream.set_read_timeout(Some(Duration::from_secs(30)))?;
+    stream.set_write_timeout(Some(Duration::from_secs(15)))?;
     // Disable Nagle's algorithm for prompt responses
     stream.set_nodelay(true)?;
     

@@ -351,20 +351,27 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
 
     // Create network client for outbound messages
     let network_client = Arc::new(NetworkClient::new(
-        Duration::from_secs(5),   // connect timeout
-        Duration::from_secs(10),  // request timeout
+        Duration::from_secs(2),   // connect timeout (short - each send is spawned separately)
+        Duration::from_secs(5),   // request timeout
     ));
 
     // Start OUTGOING message delivery loop - sends queued messages to peers
+    // Each send is spawned as a separate task so one failed connection doesn't
+    // block all other messages. This is critical for:
+    // 1. Startup order independence (down leader doesn't block other peer messages)
+    // 2. Leader failover (messages to dead leader don't block messages to new leader)
     let delivery_client = Arc::clone(&network_client);
     tokio::spawn(async move {
         while let Some((target_address, message)) = outgoing_rx.recv().await {
             tracing::trace!("SENDING {} to {}", message.type_name(), target_address);
             
-            match delivery_client.send_async(&target_address, message).await {
-                Ok(()) => {}
-                Err(e) => tracing::error!("FAILED to deliver to {}: {}", target_address, e),
-            }
+            let client = Arc::clone(&delivery_client);
+            tokio::spawn(async move {
+                match client.send_async(&target_address, message).await {
+                    Ok(()) => {}
+                    Err(e) => tracing::debug!("Failed to deliver to {}: {}", target_address, e),
+                }
+            });
         }
     });
 
@@ -878,8 +885,12 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
             loop {
                 interval.tick().await;
                 
-                // Get all known real peers (exclude synthetic peers from membership lists)
-                let peers = peer_cluster.real_peers().await;
+                // Get ALL known peers including synthetic ones - critical for startup order
+                // independence. If this follower starts before the leader, synthetic peers
+                // (peer-host-port) are the only way to reach the leader address.
+                // Once the leader comes up and receives our PeerHeartbeat, it will
+                // register us and start sending heartbeats back.
+                let peers = peer_cluster.peers().await;
                 let self_node = peer_cluster.get_self().await;
                 
                 // Build membership list

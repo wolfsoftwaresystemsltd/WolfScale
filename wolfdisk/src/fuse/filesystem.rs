@@ -44,6 +44,20 @@ struct WriteBuffer {
     base_offset: u64,
 }
 
+/// Client write-back cache entry.
+/// Buffers writes locally so FUSE returns instantly; data is forwarded
+/// to the leader on flush/release. This is the same pattern NFS and SMB use.
+struct ClientWriteEntry {
+    /// Path of the file being written
+    path: String,
+    /// Buffered write segments: (offset, data)
+    segments: Vec<(u64, Vec<u8>)>,
+    /// Current known file size (updated optimistically)
+    size: u64,
+    /// Whether a setattr (truncation) needs forwarding
+    pending_truncate: Option<u64>,
+}
+
 /// WolfDisk FUSE Filesystem
 pub struct WolfDiskFS {
     /// Configuration
@@ -88,6 +102,11 @@ pub struct WolfDiskFS {
     /// Async replication queue — write() pushes chunks here
     /// Bounded channel (SyncSender) to prevent OOM during massive writes
     replication_tx: Option<std::sync::mpsc::SyncSender<ReplicationMsg>>,
+
+    /// Client-side write-back cache (client/follower nodes only).
+    /// Writes are buffered here and only forwarded to the leader on flush/release.
+    /// This prevents FUSE from blocking on every write(), keeping Dolphin responsive.
+    client_write_cache: RwLock<HashMap<u64, ClientWriteEntry>>,
 }
 
 impl WolfDiskFS {
@@ -193,6 +212,7 @@ impl WolfDiskFS {
             last_index_save: RwLock::new(Instant::now()),
             index_dirty: RwLock::new(false),
             replication_tx,
+            client_write_cache: RwLock::new(HashMap::new()),
         })
     }
 
@@ -669,6 +689,85 @@ impl WolfDiskFS {
         *self.index_dirty.write().unwrap() = false;
     }
 
+    /// Drain the client write-back cache for a given inode, forwarding all
+    /// buffered writes to the leader. Called on flush()/release().
+    ///
+    /// This is where the actual network I/O happens. By deferring it to
+    /// file close, we keep individual write() calls instant (no FUSE blocking).
+    fn drain_client_writes(&self, ino: u64) -> std::result::Result<(), i32> {
+        let cache_entry = {
+            let mut cache = self.client_write_cache.write().unwrap();
+            cache.remove(&ino)
+        };
+
+        let entry = match cache_entry {
+            Some(e) => e,
+            None => return Ok(()), // Nothing buffered for this inode
+        };
+
+        info!("Draining client write cache for ino={} path={} ({} segments, {} bytes, truncate={:?})",
+            ino, entry.path, entry.segments.len(), entry.size, entry.pending_truncate);
+
+        // Step 1: Forward pending truncation to leader first
+        if let Some(trunc_size) = entry.pending_truncate {
+            if let Err(e) = self.forward_setattr_to_leader(
+                &entry.path,
+                Some(trunc_size),
+                None,
+                None,
+                None,
+                None,
+            ) {
+                warn!("Failed to forward truncation to leader for {}: {}", entry.path, e);
+                return Err(e);
+            }
+        }
+
+        // Step 2: Sort segments by offset and coalesce adjacent/overlapping ones
+        // to minimize the number of round-trips over WolfNet
+        let mut segments = entry.segments;
+        if segments.is_empty() {
+            return Ok(());
+        }
+
+        segments.sort_by_key(|(off, _)| *off);
+
+        // Coalesce contiguous segments
+        let mut coalesced: Vec<(u64, Vec<u8>)> = Vec::new();
+        for (offset, data) in segments {
+            if let Some(last) = coalesced.last_mut() {
+                let last_end = last.0 + last.1.len() as u64;
+                if offset <= last_end {
+                    // Overlapping or contiguous — merge
+                    if offset < last_end {
+                        // Overlapping: extend with only the non-overlapping part
+                        let overlap = (last_end - offset) as usize;
+                        if data.len() > overlap {
+                            last.1.extend_from_slice(&data[overlap..]);
+                        }
+                    } else {
+                        // Exactly contiguous
+                        last.1.extend_from_slice(&data);
+                    }
+                    continue;
+                }
+            }
+            coalesced.push((offset, data));
+        }
+
+        // Step 3: Forward each coalesced segment to the leader
+        for (offset, data) in &coalesced {
+            if let Err(e) = self.forward_write_to_leader(&entry.path, *offset, data) {
+                warn!("Failed to forward write to leader for {} at offset {}: {}", entry.path, offset, e);
+                return Err(e);
+            }
+        }
+
+        info!("Successfully drained {} write segments to leader for {}",
+            coalesced.len(), entry.path);
+        Ok(())
+    }
+
     /// Get root directory attributes
     fn root_attr(&self) -> FileAttr {
         FileAttr {
@@ -857,10 +956,31 @@ impl Filesystem for WolfDiskFS {
             buffers.remove(&ino);
         }
 
-        // Handle changes on non-leader nodes by forwarding to leader
+        // Handle changes on non-leader nodes.
+        // For truncation during file copy, we defer forwarding to the leader
+        // and just update local state. The truncation will be sent as part of
+        // the write-back drain on flush/release. This keeps Dolphin responsive.
         if !self.is_leader() {
-            if size.is_some() || mode.is_some() || uid.is_some() || gid.is_some() {
-                // Forward setattr to leader using the SetAttr protocol message
+            if let Some(new_size) = size {
+                // Record pending truncation in the write-back cache
+                let mut cache = self.client_write_cache.write().unwrap();
+                let cache_entry = cache.entry(ino).or_insert_with(|| ClientWriteEntry {
+                    path: path.to_string_lossy().to_string(),
+                    segments: Vec::new(),
+                    size: new_size,
+                    pending_truncate: None,
+                });
+                cache_entry.pending_truncate = Some(new_size);
+                // Clear any buffered writes past the truncation point
+                if new_size == 0 {
+                    cache_entry.segments.clear();
+                } else {
+                    cache_entry.segments.retain(|(off, _)| *off < new_size);
+                }
+                cache_entry.size = new_size;
+            } else if mode.is_some() || uid.is_some() || gid.is_some() {
+                // Non-truncation setattr (chmod, chown) — forward synchronously.
+                // These are rare and fast, so blocking is OK.
                 let mtime_ms = mtime.map(|m| {
                     let t = match m {
                         fuser::TimeOrNow::SpecificTime(t) => t,
@@ -871,7 +991,7 @@ impl Filesystem for WolfDiskFS {
 
                 if let Err(e) = self.forward_setattr_to_leader(
                     &path.to_string_lossy(),
-                    size,
+                    None, // no size change
                     mode,
                     uid,
                     gid,
@@ -1137,26 +1257,40 @@ impl Filesystem for WolfDiskFS {
             }
         };
 
-        // If we're a follower or client, forward to leader
+        // If we're a follower or client, buffer locally (write-back cache).
+        // This returns instantly to FUSE so Dolphin stays responsive.
+        // Data is forwarded to the leader on flush()/release().
         if !self.is_leader() {
-            match self.forward_write_to_leader(&path.to_string_lossy(), offset as u64, data) {
-                Ok(written) => {
-                    // Update local index entry size so getattr returns correct size.
-                    // Without this, the client reports size=0 and the kernel never reads.
-                    let new_end = offset as u64 + written as u64;
-                    let mut file_index = self.file_index.write().unwrap();
-                    if let Some(entry) = file_index.get_mut(&path) {
-                        if new_end > entry.size {
-                            entry.size = new_end;
-                        }
-                        entry.modified = SystemTime::now();
-                    }
-                    reply.written(written);
-                }
-                Err(errno) => {
-                    reply.error(errno);
+            let written = data.len() as u32;
+            let new_end = offset as u64 + written as u64;
+
+            // Buffer the write data
+            {
+                let mut cache = self.client_write_cache.write().unwrap();
+                let entry = cache.entry(ino).or_insert_with(|| ClientWriteEntry {
+                    path: path.to_string_lossy().to_string(),
+                    segments: Vec::new(),
+                    size: 0,
+                    pending_truncate: None,
+                });
+                entry.segments.push((offset as u64, data.to_vec()));
+                if new_end > entry.size {
+                    entry.size = new_end;
                 }
             }
+
+            // Update local index entry size so getattr returns correct size
+            {
+                let mut file_index = self.file_index.write().unwrap();
+                if let Some(entry) = file_index.get_mut(&path) {
+                    if new_end > entry.size {
+                        entry.size = new_end;
+                    }
+                    entry.modified = SystemTime::now();
+                }
+            }
+
+            reply.written(written);
             return;
         }
 
@@ -1934,6 +2068,15 @@ impl Filesystem for WolfDiskFS {
     ) {
         debug!("release: ino={}, fh={}", ino, fh);
         self.open_files.write().unwrap().remove(&fh);
+
+        // Drain client write-back cache to leader (client/follower nodes)
+        if !self.is_leader() {
+            if let Err(e) = self.drain_client_writes(ino) {
+                warn!("Failed to drain client writes on release: {}", e);
+                // Don't fail release — the file is already closed locally.
+                // The error was logged and the data is lost (same as NFS async error).
+            }
+        }
         
         // Flush any pending write buffer for this inode
         self.flush_write_buffer(ino);
@@ -2413,6 +2556,15 @@ impl Filesystem for WolfDiskFS {
 
         if self.is_leader() {
             self.flush_write_buffer(ino);
+        } else {
+            // Drain client write-back cache to leader.
+            // flush() is called when a file descriptor is closed (e.g. dup2),
+            // which can happen multiple times before release().
+            if let Err(e) = self.drain_client_writes(ino) {
+                warn!("Failed to drain client writes on flush: {}", e);
+                reply.error(libc::EIO);
+                return;
+            }
         }
 
         reply.ok();
