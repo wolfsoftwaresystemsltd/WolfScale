@@ -177,6 +177,20 @@ impl ReplicationManager {
         // Update our index version  
         self.cluster.set_index_version(response.current_version);
         *self.index_version.write().unwrap() = response.current_version;
+        
+        // Apply deletions from the leader's changelog
+        if !response.deleted_paths.is_empty() {
+            let mut removed = 0;
+            for del_path_str in &response.deleted_paths {
+                let del_path = PathBuf::from(del_path_str);
+                if file_index.remove(&del_path).is_some() {
+                    removed += 1;
+                }
+            }
+            if removed > 0 {
+                info!("Sync: removed {} deleted entries", removed);
+            }
+        }
 
         if !pending.is_empty() {
             info!("Need to fetch {} chunks from leader", pending.len());
@@ -411,7 +425,12 @@ impl ReplicationManager {
             IndexOperation::Mkdir { path, .. } => std::path::PathBuf::from(path),
             IndexOperation::Rename { to_path, .. } => std::path::PathBuf::from(to_path),
         };
-        let version = self.cluster.increment_index_version(op_path);
+        let is_delete = matches!(&operation, IndexOperation::Delete { .. });
+        let version = if is_delete {
+            self.cluster.record_deletion(op_path)
+        } else {
+            self.cluster.increment_index_version(op_path)
+        };
         *self.index_version.write().unwrap() = version;
 
         info!("Broadcasting index update v{}: {:?}", version, operation);
@@ -542,8 +561,8 @@ impl ReplicationManager {
 
     /// Handle incoming sync response from leader
     pub fn handle_sync_response(&self, response: SyncResponseMsg) {
-        info!("Received sync response: {} entries, version {}",
-              response.entries.len(), response.current_version);
+        info!("Received sync response: {} entries, {} deletions, version {}",
+              response.entries.len(), response.deleted_paths.len(), response.current_version);
         
         // Update local index version
         *self.index_version.write().unwrap() = response.current_version;
@@ -555,6 +574,21 @@ impl ReplicationManager {
                 if !self.chunk_store.exists(&chunk.hash) {
                     pending.insert(chunk.hash);
                 }
+            }
+        }
+        
+        // Apply deletions
+        if !response.deleted_paths.is_empty() {
+            let mut file_index = self.file_index.write().unwrap();
+            let mut removed = 0;
+            for del_path_str in &response.deleted_paths {
+                let del_path = PathBuf::from(del_path_str);
+                if file_index.remove(&del_path).is_some() {
+                    removed += 1;
+                }
+            }
+            if removed > 0 {
+                info!("Sync response: removed {} deleted entries", removed);
             }
         }
         

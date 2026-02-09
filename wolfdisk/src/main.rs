@@ -526,7 +526,7 @@ fn main() {
                                     };
                                     drop(index);
                                     drop(inode_tbl);
-                                    cluster_for_handler.increment_index_version(path.clone());
+                                    cluster_for_handler.record_deletion(path.clone());
                                     broadcast_queue_for_handler.lock().unwrap().push((path, delete_marker));
                                     
                                     Some(Message::FileOpResponse(FileOpResponseMsg {
@@ -651,6 +651,7 @@ fn main() {
                                         };
                                         drop(index);
                                         drop(inode_tbl);
+                                        cluster_for_handler.record_deletion(path.clone());
                                         broadcast_queue_for_handler.lock().unwrap().push((path, delete_marker));
                                         
                                         Some(Message::FileOpResponse(FileOpResponseMsg {
@@ -969,12 +970,13 @@ fn main() {
                                     Some(Message::SyncResponse(SyncResponseMsg {
                                         current_version,
                                         entries: Vec::new(),
+                                        deleted_paths: Vec::new(),
                                     }))
                                 } else if sync_req.from_version > 0 {
                                     // Try delta sync — only send files that changed since their version
                                     match cluster_for_handler.changes_since(sync_req.from_version) {
-                                        Some(changed_paths) => {
-                                            // Delta sync: only send the changed entries
+                                        Some((changed_paths, deleted_paths_buf)) => {
+                                            // Delta sync: send changed entries + deleted paths
                                             let index = file_index_for_handler.read().unwrap();
                                             let mut entries = Vec::new();
                                             
@@ -1002,16 +1004,20 @@ fn main() {
                                                         chunks,
                                                     });
                                                 }
-                                                // If entry not in index, it was deleted — follower
-                                                // will detect this via missing entry on next full sync
                                             }
                                             
-                                            info!("Delta sync to {} — {} changed files (version {} → {})", 
-                                                peer_id, entries.len(), sync_req.from_version, current_version);
+                                            // Convert deleted paths to strings for the response
+                                            let deleted_strs: Vec<String> = deleted_paths_buf.iter()
+                                                .map(|p| p.to_string_lossy().to_string())
+                                                .collect();
+                                            
+                                            info!("Delta sync to {} — {} changed, {} deleted (version {} → {})", 
+                                                peer_id, entries.len(), deleted_strs.len(), sync_req.from_version, current_version);
                                             
                                             Some(Message::SyncResponse(SyncResponseMsg {
                                                 current_version,
                                                 entries,
+                                                deleted_paths: deleted_strs,
                                             }))
                                         }
                                         None => {
@@ -1051,6 +1057,7 @@ fn main() {
                                             Some(Message::SyncResponse(SyncResponseMsg {
                                                 current_version,
                                                 entries,
+                                                deleted_paths: Vec::new(),
                                             }))
                                         }
                                     }
@@ -1091,6 +1098,7 @@ fn main() {
                                     Some(Message::SyncResponse(SyncResponseMsg {
                                         current_version,
                                         entries,
+                                        deleted_paths: Vec::new(),
                                     }))
                                 }
                             }
@@ -1342,14 +1350,36 @@ fn main() {
                 std::thread::spawn(move || {
                     use wolfdisk::network::protocol::*;
                     use wolfdisk::storage::{ChunkRef, FileEntry};
-                    use tracing::{info, warn, debug};
+                    use tracing::{info, warn};
                     
                     info!("Initial sync thread started - waiting for leader discovery...");
                     
-                    // Wait for leader to be discovered (up to 30 seconds)
+                    // Check if we already have data loaded from disk
+                    let have_local_data = {
+                        let index = sync_file_index.read().unwrap();
+                        !index.is_empty()
+                    };
+                    
+                    // How long to wait for a leader depends on our role:
+                    // - Client: wait FOREVER (a client is useless without a leader)
+                    // - Auto with existing data: wait 10s (we're likely the leader restarting)
+                    // - Follower/Auto with no data: wait 30s (we need a leader to get data)
+                    let max_wait_iterations = if sync_is_client {
+                        u64::MAX  // Wait forever
+                    } else if have_local_data {
+                        20  // 10 seconds
+                    } else {
+                        60  // 30 seconds
+                    };
+                    
                     let mut leader_found = false;
-                    for _ in 0..60 {
+                    let mut wait_count = 0u64;
+                    loop {
+                        if wait_count >= max_wait_iterations {
+                            break;
+                        }
                         std::thread::sleep(std::time::Duration::from_millis(500));
+                        wait_count += 1;
                         
                         if let Some(lid) = sync_cluster.leader_id() {
                             // Don't try to sync from ourselves
@@ -1358,10 +1388,20 @@ fn main() {
                                 break;
                             }
                         }
+                        
+                        // Log progress for clients waiting a long time
+                        if sync_is_client && wait_count % 20 == 0 {
+                            info!("Client waiting for leader... ({}s elapsed)", wait_count / 2);
+                        }
                     }
                     
                     if !leader_found {
-                        info!("No leader found after 30s - marking sync complete (sole node)");
+                        if have_local_data {
+                            info!("No leader found but we have {} local files - marking sync complete (will become leader)", 
+                                sync_file_index.read().unwrap().len());
+                        } else {
+                            info!("No leader found after waiting - marking sync complete (sole node)");
+                        }
                         sync_cluster.set_sync_complete();
                         return;
                     }
@@ -1392,31 +1432,26 @@ fn main() {
                             let msg = Message::SyncRequest(SyncRequestMsg { from_version: 0 });
                             match conn.request(&msg) {
                                 Ok(Message::SyncResponse(response)) => {
-                                    info!("Received SyncResponse with {} entries", response.entries.len());
+                                    info!("Received SyncResponse with {} entries from leader", response.entries.len());
                                     
-                                    // Clear existing index and inode table to remove stale entries
-                                    // from previous sessions (especially important for clients)
-                                    if sync_is_client {
-                                        let mut index = sync_file_index.write().unwrap();
-                                        let mut inode_tbl = sync_inode_table.write().unwrap();
-                                        let mut next_ino = sync_next_inode.write().unwrap();
-                                        info!("Client mode: clearing local index before sync ({} stale entries)", index.len());
-                                        *index = wolfdisk::storage::FileIndex::new();
-                                        *inode_tbl = wolfdisk::storage::InodeTable::new();
-                                        *next_ino = 2; // Reset inodes (1 = root)
-                                    }
+                                    // ALL ROLES: Merge semantics (add/update only, never delete).
+                                    // - Workers store actual chunk data locally
+                                    // - Clients keep the same index for FUSE lookups but pull
+                                    //   actual file data from the leader on read
+                                    // Both maintain the same index structure. Deletions are
+                                    // handled by real-time DeleteFile/DeleteDir broadcasts.
+                                    let mut added = 0usize;
+                                    let mut updated = 0usize;
+                                    let mut unchanged = 0usize;
                                     
-                                    // Apply entries in batches of 50 to avoid starving FUSE operations.
-                                    // readdir/lookup/getattr need read locks on file_index & inode_table;
-                                    // holding write locks for thousands of entries causes the client to
-                                    // hang when running `ls /mnt/wolfdisk/`.
+                                    // Apply in batches of 50 to avoid starving FUSE operations
                                     let batch_size = 50;
-                                    for chunk in response.entries.chunks(batch_size) {
+                                    for batch in response.entries.chunks(batch_size) {
                                         let mut index = sync_file_index.write().unwrap();
                                         let mut inode_tbl = sync_inode_table.write().unwrap();
                                         let mut next_ino = sync_next_inode.write().unwrap();
                                         
-                                        for entry_msg in chunk {
+                                        for entry_msg in batch {
                                             let path = std::path::PathBuf::from(&entry_msg.path);
                                             
                                             let chunk_refs: Vec<ChunkRef> = entry_msg.chunks.iter()
@@ -1427,35 +1462,71 @@ fn main() {
                                                 })
                                                 .collect();
                                             
-                                            let entry = FileEntry {
-                                                size: entry_msg.size,
-                                                is_dir: entry_msg.is_dir,
-                                                permissions: entry_msg.permissions,
-                                                uid: 0,
-                                                gid: 0,
-                                                modified: std::time::UNIX_EPOCH + std::time::Duration::from_millis(entry_msg.modified_ms),
-                                                created: std::time::SystemTime::now(),
-                                                accessed: std::time::SystemTime::now(),
-                                                chunks: chunk_refs,
-                                                symlink_target: None,
+                                            // Only add/update, never delete
+                                            let should_update = match index.get(&path) {
+                                                None => true,
+                                                Some(existing) => {
+                                                    existing.size != entry_msg.size 
+                                                        || existing.chunks.len() != entry_msg.chunks.len()
+                                                }
                                             };
                                             
-                                            index.insert(path.clone(), entry);
-                                            
-                                            // Add to inode table
-                                            let ino = *next_ino;
-                                            *next_ino += 1;
-                                            inode_tbl.insert(ino, path.clone());
-                                            
-                                            debug!("Synced: {} ({} bytes)", entry_msg.path, entry_msg.size);
+                                            if should_update {
+                                                let is_new = !index.contains(&path);
+                                                
+                                                let entry = FileEntry {
+                                                    size: entry_msg.size,
+                                                    is_dir: entry_msg.is_dir,
+                                                    permissions: entry_msg.permissions,
+                                                    uid: 0,
+                                                    gid: 0,
+                                                    modified: std::time::UNIX_EPOCH + std::time::Duration::from_millis(entry_msg.modified_ms),
+                                                    created: std::time::SystemTime::now(),
+                                                    accessed: std::time::SystemTime::now(),
+                                                    chunks: chunk_refs,
+                                                    symlink_target: None,
+                                                };
+                                                
+                                                index.insert(path.clone(), entry);
+                                                
+                                                if is_new {
+                                                    if inode_tbl.get_inode(&path).is_none() {
+                                                        let ino = *next_ino;
+                                                        *next_ino += 1;
+                                                        inode_tbl.insert(ino, path);
+                                                    }
+                                                    added += 1;
+                                                } else {
+                                                    updated += 1;
+                                                }
+                                            } else {
+                                                unchanged += 1;
+                                            }
                                         }
                                         // Locks dropped here — FUSE ops can proceed between batches
                                     }
                                     
-                                    if sync_is_client {
-                                        info!("Initial index sync complete - {} files (client mode, no chunks stored)", response.entries.len());
-                                    } else {
-                                        info!("Initial index sync complete - {} files (follower will receive chunks via FileSync)", response.entries.len());
+                                    info!("Initial sync complete: {} added, {} updated, {} unchanged (total from leader: {})",
+                                        added, updated, unchanged, response.entries.len());
+                                    
+                                    // Apply deletions from the leader's changelog
+                                    if !response.deleted_paths.is_empty() {
+                                        let mut removed = 0usize;
+                                        for del_batch in response.deleted_paths.chunks(50) {
+                                            let mut index = sync_file_index.write().unwrap();
+                                            let mut inode_tbl = sync_inode_table.write().unwrap();
+                                            for del_path_str in del_batch {
+                                                let del_path = std::path::PathBuf::from(del_path_str);
+                                                if index.remove(&del_path).is_some() {
+                                                    inode_tbl.remove_path(&del_path);
+                                                    removed += 1;
+                                                }
+                                            }
+                                            // Locks dropped between batches
+                                        }
+                                        if removed > 0 {
+                                            info!("Initial sync: removed {} deleted entries from leader changelog", removed);
+                                        }
                                     }
                                 }
                                 Ok(other) => {
@@ -1597,11 +1668,28 @@ fn main() {
                                     // Locks automatically dropped here, allowing FUSE ops between batches
                                 }
                                 
+                                // Apply deletions from the leader's changelog
+                                let mut removed = 0usize;
+                                if !response.deleted_paths.is_empty() {
+                                    for del_batch in response.deleted_paths.chunks(50) {
+                                        let mut index = resync_file_index.write().unwrap();
+                                        let mut inode_tbl = resync_inode_table.write().unwrap();
+                                        for del_path_str in del_batch {
+                                            let del_path = std::path::PathBuf::from(del_path_str);
+                                            if index.remove(&del_path).is_some() {
+                                                inode_tbl.remove_path(&del_path);
+                                                removed += 1;
+                                            }
+                                        }
+                                        // Locks dropped between batches
+                                    }
+                                }
+                                
                                 // Update our version to the leader's version
                                 last_synced_version = response.current_version;
                                 
-                                if added > 0 || updated > 0 {
-                                    info!("Periodic re-sync: added {} files, updated {} (now at version {})", added, updated, last_synced_version);
+                                if added > 0 || updated > 0 || removed > 0 {
+                                    info!("Periodic re-sync: added {}, updated {}, removed {} (now at version {})", added, updated, removed, last_synced_version);
                                 } else {
                                     debug!("Periodic re-sync: index verified ({} entries, version {})", response.entries.len(), last_synced_version);
                                 }

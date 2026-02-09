@@ -393,7 +393,12 @@ impl WolfDiskFS {
                 IndexOperation::Mkdir { path, .. } => std::path::PathBuf::from(path),
                 IndexOperation::Rename { to_path, .. } => std::path::PathBuf::from(to_path),
             };
-            let version = cluster.increment_index_version(op_path);
+            let is_delete = matches!(&operation, IndexOperation::Delete { .. });
+            let version = if is_delete {
+                cluster.record_deletion(op_path)
+            } else {
+                cluster.increment_index_version(op_path)
+            };
             let msg = Message::IndexUpdate(IndexUpdateMsg {
                 version,
                 operation,

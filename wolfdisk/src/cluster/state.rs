@@ -52,9 +52,10 @@ pub struct ClusterManager {
     /// Whether initial sync from leader has completed
     /// Election monitor waits for this before allowing leader promotion
     initial_sync_complete: Arc<RwLock<bool>>,
-    /// Changelog: (version, path) pairs tracking which files changed at each version
+    /// Changelog: (version, path, is_deleted) triples tracking which files changed at each version
     /// Used for delta sync - leader only sends entries that changed since follower's version
-    changelog: Arc<RwLock<Vec<(u64, std::path::PathBuf)>>>,
+    /// The is_deleted flag tracks deletions so followers can remove entries they no longer need
+    changelog: Arc<RwLock<Vec<(u64, std::path::PathBuf, bool)>>>,
 }
 
 impl ClusterManager {
@@ -122,12 +123,22 @@ impl ClusterManager {
     /// Increment and return the new index version (called on writes)
     /// Records the changed path in the changelog for delta sync
     pub fn increment_index_version(&self, path: std::path::PathBuf) -> u64 {
+        self.record_change(path, false)
+    }
+    
+    /// Record a deletion in the changelog so followers can remove the entry
+    pub fn record_deletion(&self, path: std::path::PathBuf) -> u64 {
+        self.record_change(path, true)
+    }
+    
+    /// Internal: record a change (create/update/delete) in the changelog
+    fn record_change(&self, path: std::path::PathBuf, is_deleted: bool) -> u64 {
         let mut v = self.index_version.write().unwrap();
         *v += 1;
         let version = *v;
         
         let mut log = self.changelog.write().unwrap();
-        log.push((version, path));
+        log.push((version, path, is_deleted));
         
         // Cap changelog at 10,000 entries to prevent unbounded growth
         // If a follower is more than 10,000 changes behind, it gets a full sync
@@ -141,11 +152,13 @@ impl ClusterManager {
     
     /// Get the paths that changed since a given version
     /// Returns None if the changelog doesn't go back far enough (need full sync)
-    pub fn changes_since(&self, from_version: u64) -> Option<Vec<std::path::PathBuf>> {
+    /// Returns (changed_paths, deleted_paths) — changed_paths are creates/updates,
+    /// deleted_paths are files that were removed
+    pub fn changes_since(&self, from_version: u64) -> Option<(Vec<std::path::PathBuf>, Vec<std::path::PathBuf>)> {
         let log = self.changelog.read().unwrap();
         
         // Check if changelog goes back far enough
-        if let Some((oldest_version, _)) = log.first() {
+        if let Some((oldest_version, _, _)) = log.first() {
             if from_version < *oldest_version {
                 // Changelog truncated, need full sync
                 return None;
@@ -153,14 +166,25 @@ impl ClusterManager {
         }
         
         // Collect unique paths changed since from_version
-        let mut changed: std::collections::HashSet<std::path::PathBuf> = std::collections::HashSet::new();
-        for (v, path) in log.iter() {
+        // A path's latest operation wins (if deleted then re-created, it's a change not a delete)
+        let mut latest_ops: std::collections::HashMap<std::path::PathBuf, bool> = std::collections::HashMap::new();
+        for (v, path, is_deleted) in log.iter() {
             if *v > from_version {
-                changed.insert(path.clone());
+                latest_ops.insert(path.clone(), *is_deleted);
             }
         }
         
-        Some(changed.into_iter().collect())
+        let mut changed = Vec::new();
+        let mut deleted = Vec::new();
+        for (path, is_deleted) in latest_ops {
+            if is_deleted {
+                deleted.push(path);
+            } else {
+                changed.push(path);
+            }
+        }
+        
+        Some((changed, deleted))
     }
 
     /// Set the index version (used during sync)

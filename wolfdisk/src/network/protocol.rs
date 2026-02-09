@@ -182,6 +182,9 @@ pub struct SyncRequestMsg {
 pub struct SyncResponseMsg {
     pub current_version: u64,
     pub entries: Vec<IndexEntryMsg>,
+    /// Paths deleted since the requested version (for delta sync)
+    #[serde(default)]
+    pub deleted_paths: Vec<String>,
 }
 
 /// Index entry in sync response
