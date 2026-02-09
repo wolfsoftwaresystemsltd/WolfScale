@@ -240,13 +240,24 @@ fn run_listener(
 
                         info!("Discovered peer: {} at {} (from {})", msg_node_id, msg_address, src);
 
+                        // If the advertised address uses 0.0.0.0 (wildcard bind),
+                        // replace with the actual source IP from the UDP packet
+                        let actual_address = if msg_address.starts_with("0.0.0.0:") {
+                            let port = msg_address.strip_prefix("0.0.0.0:").unwrap_or("9500");
+                            let fixed = format!("{}:{}", src.ip(), port);
+                            info!("Peer {} advertised 0.0.0.0, using actual IP: {}", msg_node_id, fixed);
+                            fixed
+                        } else {
+                            msg_address
+                        };
+
                         let role = if is_server { DiscoveryRole::Server } else { DiscoveryRole::Client };
                         
                         peers.write().unwrap().insert(
                             msg_node_id.clone(),
                             DiscoveredPeer {
                                 node_id: msg_node_id,
-                                address: msg_address,
+                                address: actual_address,
                                 role,
                                 is_leader,
                                 last_seen: Instant::now(),

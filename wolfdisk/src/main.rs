@@ -1017,14 +1017,18 @@ fn main() {
                     // Check queues every 50ms
                     std::thread::sleep(std::time::Duration::from_millis(50));
                     
-                    // Ensure we have outbound connections to all known peers
+                    // Ensure we have outbound connections to all known follower peers
+                    // (skip client peers - they read from leader directly, no chunk broadcasts needed)
                     let peers = cluster_for_broadcast.peers();
-                    for peer in &peers {
+                    let follower_peers: Vec<_> = peers.iter().filter(|p| !p.is_client).collect();
+                    for peer in &follower_peers {
                         if peer_manager_for_broadcast.get(&peer.node_id).is_none() {
+                            info!("Broadcast thread: connecting to follower {} at {}", peer.node_id, peer.address);
                             if let Err(e) = peer_manager_for_broadcast.connect(&peer.node_id, &peer.address) {
-                                tracing::warn!("Broadcast thread: failed to connect to {}: {}", peer.node_id, e);
+                                tracing::warn!("Broadcast thread: failed to connect to {} at {}: {}", peer.node_id, peer.address, e);
                             } else {
-                                info!("Broadcast thread: connected to follower {} at {}", peer.node_id, peer.address);
+                                info!("Broadcast thread: connected to follower {} at {} (total connections: {})", 
+                                    peer.node_id, peer.address, peer_manager_for_broadcast.connection_count());
                             }
                         }
                     }

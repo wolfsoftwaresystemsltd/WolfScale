@@ -143,22 +143,57 @@ impl PeerManager {
     }
 
     /// Send message to a specific peer
+    /// Removes broken connection on failure so it can be re-established
     pub fn send_to(&self, node_id: &str, msg: &Message) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let connections = self.connections.read().unwrap();
-        if let Some(conn) = connections.get(node_id) {
-            conn.send(msg)?;
+        let result = {
+            let connections = self.connections.read().unwrap();
+            if let Some(conn) = connections.get(node_id) {
+                Some(conn.send(msg))
+            } else {
+                None
+            }
+        };
+        
+        match result {
+            Some(Err(e)) => {
+                // Remove broken connection so it can be re-established
+                self.connections.write().unwrap().remove(node_id);
+                warn!("Failed to send to {}: {} (removed broken connection)", node_id, e);
+                Err(e)
+            }
+            Some(Ok(())) => Ok(()),
+            None => Ok(()), // No connection exists
         }
-        Ok(())
     }
 
     /// Broadcast message to all peers
+    /// Automatically removes broken connections so they can be re-established
     pub fn broadcast(&self, msg: &Message) {
-        let connections = self.connections.read().unwrap();
-        for (id, conn) in connections.iter() {
-            if let Err(e) = conn.send(msg) {
-                warn!("Failed to send to {}: {}", id, e);
+        let failed: Vec<String> = {
+            let connections = self.connections.read().unwrap();
+            let mut failed_ids = Vec::new();
+            for (id, conn) in connections.iter() {
+                if let Err(e) = conn.send(msg) {
+                    warn!("Failed to send to {}: {} (removing broken connection)", id, e);
+                    failed_ids.push(id.clone());
+                }
+            }
+            failed_ids
+        };
+        
+        // Remove broken connections so broadcast thread can reconnect
+        if !failed.is_empty() {
+            let mut connections = self.connections.write().unwrap();
+            for id in &failed {
+                connections.remove(id);
+                info!("Removed broken connection to {} (will reconnect)", id);
             }
         }
+    }
+
+    /// Remove a peer connection (e.g. when it becomes stale)
+    pub fn remove_peer(&self, node_id: &str) {
+        self.connections.write().unwrap().remove(node_id);
     }
 
     /// Get the number of active outbound connections
