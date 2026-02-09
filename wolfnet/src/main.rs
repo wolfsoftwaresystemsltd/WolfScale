@@ -3,7 +3,8 @@
 //! Creates encrypted tunnels between machines using TUN interfaces,
 //! X25519 key exchange, and ChaCha20-Poly1305 encryption.
 
-use std::net::{UdpSocket, Ipv4Addr, SocketAddr};
+use std::net::{UdpSocket, Ipv4Addr, SocketAddr, TcpStream};
+use std::io::{Read, Write};
 use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
 use std::time::{Duration, Instant};
 use std::path::PathBuf;
@@ -51,6 +52,13 @@ enum Commands {
         #[arg(short, long, default_value = "10.0.10.1")]
         address: String,
     },
+    /// Generate an invite token for a new peer to join your network
+    Invite,
+    /// Join a WolfNet network using an invite token
+    Join {
+        /// The invite token from 'wolfnet invite'
+        token: String,
+    },
 }
 
 fn main() {
@@ -66,6 +74,8 @@ fn main() {
         Some(Commands::Pubkey) => cmd_pubkey(&cli.config),
         Some(Commands::Token) => cmd_token(&cli.config),
         Some(Commands::Init { address }) => cmd_init(&cli.config, &address),
+        Some(Commands::Invite) => cmd_invite(&cli.config),
+        Some(Commands::Join { token }) => cmd_join(&cli.config, &token),
         None => run_daemon(&cli.config),
     }
 }
@@ -125,6 +135,190 @@ fn cmd_init(config_path: &PathBuf, address: &str) {
         }
         Err(e) => { error!("Failed to write config: {}", e); std::process::exit(1); }
     }
+}
+
+/// Auto-detect our public IP address
+fn detect_public_ip() -> Option<String> {
+    // Try multiple services in case one is down
+    let services = [
+        ("api.ipify.org", "GET / HTTP/1.1\r\nHost: api.ipify.org\r\nConnection: close\r\n\r\n"),
+        ("ifconfig.me", "GET /ip HTTP/1.1\r\nHost: ifconfig.me\r\nConnection: close\r\n\r\n"),
+    ];
+    for (host, request) in &services {
+        if let Ok(mut stream) = TcpStream::connect(format!("{}:80", host)) {
+            stream.set_read_timeout(Some(Duration::from_secs(5))).ok();
+            if stream.write_all(request.as_bytes()).is_ok() {
+                let mut response = String::new();
+                let _ = stream.read_to_string(&mut response);
+                // Parse HTTP response — IP is in the body after \r\n\r\n
+                if let Some(body) = response.split("\r\n\r\n").nth(1) {
+                    let ip = body.trim().to_string();
+                    if ip.parse::<Ipv4Addr>().is_ok() {
+                        return Some(ip);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+fn cmd_invite(config_path: &PathBuf) {
+    let config = load_config(config_path);
+    let kp = KeyPair::load_or_generate(&config.security.private_key_file).unwrap_or_else(|e| {
+        error!("{}", e); std::process::exit(1);
+    });
+
+    // Auto-detect public IP
+    let public_ip = detect_public_ip();
+    let endpoint = match &public_ip {
+        Some(ip) => format!("{}:{}", ip, config.network.listen_port),
+        None => {
+            eprintln!("⚠ Could not auto-detect public IP. Using local address.");
+            eprintln!("  If this node is behind NAT, peers will need a relay node.");
+            format!("{}:{}", config.network.address, config.network.listen_port)
+        }
+    };
+
+    // Build invite token as JSON → base64
+    let invite = serde_json::json!({
+        "pk": kp.public_key_base64(),
+        "ep": endpoint,
+        "ip": config.network.address,
+        "sn": config.network.subnet,
+        "pt": config.network.listen_port,
+    });
+    let token = base64::Engine::encode(
+        &base64::engine::general_purpose::STANDARD,
+        invite.to_string().as_bytes(),
+    );
+
+    println!("╔══════════════════════════════════════════════════════════════╗");
+    println!("║              🐺  WolfNet Invite Token                       ║");
+    println!("╚══════════════════════════════════════════════════════════════╝");
+    println!();
+    println!("Your network: {}/{}", config.network.address, config.network.subnet);
+    println!("Public endpoint: {}", endpoint);
+    println!();
+    println!("Share this token with the peer you want to invite:");
+    println!();
+    println!("  sudo wolfnet join --config /etc/wolfnet/config.toml {}", token);
+    println!();
+    println!("After they join, they'll get a reverse token for you to run.");
+}
+
+fn cmd_join(config_path: &PathBuf, token: &str) {
+    use base64::Engine;
+    use wolfnet::config::PeerConfig;
+
+    // Decode token
+    let decoded = base64::engine::general_purpose::STANDARD.decode(token.trim()).unwrap_or_else(|e| {
+        error!("Invalid invite token: {}", e);
+        std::process::exit(1);
+    });
+    let invite: serde_json::Value = serde_json::from_slice(&decoded).unwrap_or_else(|e| {
+        error!("Invalid invite token format: {}", e);
+        std::process::exit(1);
+    });
+
+    let peer_pubkey = invite["pk"].as_str().unwrap_or_else(|| {
+        error!("Token missing public key"); std::process::exit(1);
+    });
+    let peer_endpoint = invite["ep"].as_str().unwrap_or_else(|| {
+        error!("Token missing endpoint"); std::process::exit(1);
+    });
+    let peer_ip = invite["ip"].as_str().unwrap_or_else(|| {
+        error!("Token missing IP"); std::process::exit(1);
+    });
+    let subnet = invite["sn"].as_u64().unwrap_or(24) as u8;
+
+    // Load or create config
+    let mut config = if config_path.exists() {
+        load_config(config_path)
+    } else {
+        Config::default()
+    };
+
+    // Auto-assign next available IP in the subnet
+    let peer_addr: Ipv4Addr = peer_ip.parse().unwrap_or_else(|_| {
+        error!("Invalid peer IP in token: {}", peer_ip);
+        std::process::exit(1);
+    });
+    let octets = peer_addr.octets();
+    let mut my_last_octet = octets[3] + 1;
+
+    // Check existing peers to avoid conflicts
+    let used_ips: Vec<String> = config.peers.iter().map(|p| p.allowed_ip.clone()).collect();
+    loop {
+        let candidate = format!("{}.{}.{}.{}", octets[0], octets[1], octets[2], my_last_octet);
+        if candidate != peer_ip && !used_ips.contains(&candidate) && candidate != config.network.address {
+            config.network.address = candidate;
+            break;
+        }
+        my_last_octet += 1;
+        if my_last_octet > 254 {
+            error!("No available IPs in the subnet");
+            std::process::exit(1);
+        }
+    }
+    config.network.subnet = subnet;
+
+    // Add the inviting peer
+    // Check if peer already exists
+    let already_exists = config.peers.iter().any(|p| p.public_key == peer_pubkey);
+    if !already_exists {
+        config.peers.push(PeerConfig {
+            public_key: peer_pubkey.to_string(),
+            endpoint: Some(peer_endpoint.to_string()),
+            allowed_ip: peer_ip.to_string(),
+            name: Some("invited-peer".to_string()),
+        });
+    }
+
+    // Generate or load our keypair
+    let kp = KeyPair::load_or_generate(&config.security.private_key_file).unwrap_or_else(|e| {
+        error!("Key error: {}", e);
+        std::process::exit(1);
+    });
+
+    // Save config
+    config.save(config_path).unwrap_or_else(|e| {
+        error!("Failed to save config: {}", e);
+        std::process::exit(1);
+    });
+
+    // Generate reverse invite for the other side
+    let public_ip = detect_public_ip();
+    let my_endpoint = match &public_ip {
+        Some(ip) => format!("{}:{}", ip, config.network.listen_port),
+        None => format!("{}:{}", config.network.address, config.network.listen_port),
+    };
+    let reverse = serde_json::json!({
+        "pk": kp.public_key_base64(),
+        "ep": my_endpoint,
+        "ip": config.network.address,
+        "sn": subnet,
+        "pt": config.network.listen_port,
+    });
+    let reverse_token = base64::Engine::encode(
+        &base64::engine::general_purpose::STANDARD,
+        reverse.to_string().as_bytes(),
+    );
+
+    println!("╔══════════════════════════════════════════════════════════════╗");
+    println!("║              🐺  WolfNet — Joined!                          ║");
+    println!("╚══════════════════════════════════════════════════════════════╝");
+    println!();
+    println!("✓ Config saved to {:?}", config_path);
+    println!("✓ Your WolfNet IP: {}/{}", config.network.address, subnet);
+    println!("✓ Peer added: {} ({})", peer_ip, peer_endpoint);
+    println!();
+    println!("Now run this on the inviting node to complete the link:");
+    println!();
+    println!("  sudo wolfnet join --config /etc/wolfnet/config.toml {}", reverse_token);
+    println!();
+    println!("Then restart WolfNet on both nodes:");
+    println!("  sudo systemctl restart wolfnet");
 }
 
 fn load_config(path: &PathBuf) -> Config {
@@ -347,7 +541,37 @@ fn run_daemon(config_path: &PathBuf) {
                                     peer.decrypt(counter, ciphertext)
                                 });
                                 if let Some(Ok(plaintext)) = decrypted {
-                                    unsafe { libc::write(tun_fd, plaintext.as_ptr() as *const _, plaintext.len()) };
+                                    // Check if this packet is for us or needs relaying
+                                    if let Some(dest_ip) = tun::get_dest_ip(&plaintext) {
+                                        if dest_ip == wolfnet_ip {
+                                            // For us — write to TUN
+                                            unsafe { libc::write(tun_fd, plaintext.as_ptr() as *const _, plaintext.len()) };
+                                        } else {
+                                            // Relay: re-encrypt and forward to the destination peer
+                                            let forwarded = peer_manager.with_peer_by_ip(&dest_ip, |dest_peer| {
+                                                if let Some(endpoint) = dest_peer.endpoint {
+                                                    match dest_peer.encrypt(&plaintext) {
+                                                        Ok((ctr, ct)) => {
+                                                            let pkt = transport::build_data_packet(&keypair.my_peer_id(), ctr, &ct);
+                                                            let _ = socket.send_to(&pkt, endpoint);
+                                                            true
+                                                        }
+                                                        Err(_) => false,
+                                                    }
+                                                } else {
+                                                    false
+                                                }
+                                            });
+                                            if forwarded.unwrap_or(false) {
+                                                debug!("Relayed packet from {} to {}", peer_ip, dest_ip);
+                                            } else {
+                                                // Destination unknown or unreachable, write to TUN for kernel routing
+                                                unsafe { libc::write(tun_fd, plaintext.as_ptr() as *const _, plaintext.len()) };
+                                            }
+                                        }
+                                    } else {
+                                        unsafe { libc::write(tun_fd, plaintext.as_ptr() as *const _, plaintext.len()) };
+                                    }
                                 }
                             } else {
                                 debug!("Data from unknown endpoint: {}", src);
