@@ -14,35 +14,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
-        content="WolfScale - High-Availability Replication for MySQL based databases with Built-in Load Balancer. Works with MySQL, MariaDB, Percona, RDS. Simple setup, automatic failover, open source.">
+        content="WolfScale — An open source clustering solution from Wolf Software Systems Ltd. Database replication, distributed filesystems, private networking.">
     <meta name="keywords"
-        content="MySQL replication, MariaDB cluster, database high availability, load balancer, failover, open source, WolfScale">
+        content="server clustering, database replication, distributed filesystem, private network, VPN, MySQL, MariaDB, WolfScale, WolfDisk, WolfNet, WolfVPN">
     <meta name="author" content="Wolf Software Systems Ltd">
     <link rel="canonical" href="https://wolfscale.org/">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://wolfscale.org/">
-    <meta property="og:title" content="WolfScale - High-Availability Replication for MySQL Based Databases">
+    <meta property="og:title" content="WolfScale — An Open Source Clustering Solution">
     <meta property="og:description"
-        content="Database clustering without the pain. Built-in load balancer, automatic failover, zero config required. Works with MySQL, MariaDB, Percona, RDS.">
+        content="Open-source tools for database replication, disk sharing, private networking, and VPN. Built for sysadmins who want powerful infrastructure without the complexity.">
     <meta property="og:image" content="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://wolfscale.org/">
-    <meta property="twitter:title" content="WolfScale - High-Availability Replication for MySQL Based Databases">
+    <meta property="twitter:title" content="WolfScale — An Open Source Clustering Solution">
     <meta property="twitter:description"
-        content="Database clustering without the pain. Built-in load balancer, automatic failover, zero config required.">
+        content="Open-source tools for database replication, disk sharing, private networking, and VPN.">
 
-    <title>WolfScale - High-Availability Replication for MySQL Based Databases</title>
+    <title>WolfScale — An Open Source Clustering Solution</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="styles.css?v=7">
     <style>
         /* Hero Animations */
         @keyframes fadeInUp {
@@ -69,6 +69,16 @@
             }
         }
 
+        @keyframes shimmer {
+            0% {
+                background-position: -200% center;
+            }
+
+            100% {
+                background-position: 200% center;
+            }
+        }
+
         .animate-fade-in {
             animation: fadeInUp 0.8s ease-out both;
         }
@@ -89,42 +99,45 @@
             animation-delay: 0.4s;
         }
 
+        .animate-delay-5 {
+            animation-delay: 0.5s;
+        }
+
+        .animate-delay-6 {
+            animation-delay: 0.6s;
+        }
+
         /* Hero Section */
         .hero-section {
             text-align: center;
-            padding: 4rem 0 3rem;
+            padding: 3rem 0 2rem;
             position: relative;
-            min-height: 70vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
         }
 
         .hero-section::before {
             content: '';
             position: absolute;
-            top: -50%;
+            top: -40%;
             left: 50%;
             transform: translateX(-50%);
             width: 800px;
             height: 800px;
-            background: radial-gradient(circle, rgba(220, 38, 38, 0.15) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(220, 38, 38, 0.12) 0%, transparent 70%);
             pointer-events: none;
         }
 
         .hero-logo {
-            width: 350px;
-            height: 350px;
-            margin-bottom: 0;
+            width: 200px;
+            height: 200px;
+            margin-bottom: 0.5rem;
             animation: float 4s ease-in-out infinite;
             filter: drop-shadow(0 10px 40px rgba(220, 38, 38, 0.3));
         }
 
         .hero-title {
-            font-size: clamp(3rem, 6vw, 5rem);
+            font-size: clamp(2.5rem, 5vw, 4rem);
             font-weight: 800;
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
             background: linear-gradient(135deg, #fff 0%, #ff6b6b 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -132,11 +145,14 @@
         }
 
         .hero-tagline {
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             color: var(--text-secondary);
-            margin-bottom: 1rem;
+            margin-bottom: 0.5rem;
             font-weight: 400;
-            max-width: 600px;
+            max-width: 650px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
         }
 
         .hero-tagline strong {
@@ -145,76 +161,292 @@
         }
 
         .hero-subtitle {
-            font-size: 1.1rem;
-            color: var(--text-muted);
-            margin-bottom: 2.5rem;
-        }
-
-        .hero-cta {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-bottom: 3rem;
-        }
-
-        .btn-hero {
-            padding: 18px 40px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            border-radius: 12px;
-            transition: all 0.3s ease;
-        }
-
-        .btn-hero.primary {
-            background: var(--accent-gradient);
-            color: white;
-            border: none;
-            box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4);
-        }
-
-        .btn-hero.primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 30px rgba(220, 38, 38, 0.5);
-        }
-
-        .btn-hero.secondary {
-            background: transparent;
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
-        }
-
-        .btn-hero.secondary:hover {
-            border-color: var(--accent-primary);
-            background: var(--bg-tertiary);
-        }
-
-        /* Features List */
-        .features-list {
-            display: flex;
-            gap: 2rem;
-            justify-content: center;
-            flex-wrap: wrap;
-            color: var(--text-muted);
             font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
         }
 
-        .features-list li {
+        .hero-badges {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .hero-badge {
+            display: inline-block;
+            padding: 5px 14px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 100px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        /* Product Cards */
+        .products-section {
+            padding: 2rem 0;
+        }
+
+        .products-section-title {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .products-section-subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .product-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .product-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--accent-gradient);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .product-card:hover {
+            border-color: rgba(220, 38, 38, 0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .product-card:hover::before {
+            opacity: 1;
+        }
+
+        .product-card.coming-soon {
+            opacity: 0.6;
+        }
+
+        .product-card.coming-soon:hover {
+            transform: none;
+            border-color: var(--border-color);
+            box-shadow: none;
+        }
+
+        .product-card.coming-soon::before {
+            display: none;
+        }
+
+        .product-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .product-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .product-status {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 100px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.75rem;
+        }
+
+        .product-status.available {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .product-status.coming {
+            background: rgba(234, 179, 8, 0.15);
+            color: #eab308;
+            border: 1px solid rgba(234, 179, 8, 0.3);
+        }
+
+        .product-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.7;
+            margin-bottom: 1.25rem;
+        }
+
+        .product-features {
+            list-style: none;
+            margin-bottom: 1.5rem;
+        }
+
+        .product-features li {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            padding: 0.3rem 0;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
 
-        .features-list li::before {
+        .product-features li::before {
             content: '✓';
             color: var(--success);
             font-weight: bold;
+            font-size: 0.8rem;
+        }
+
+        .product-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 10px 20px;
+            background: var(--accent-gradient);
+            color: white;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 12px rgba(220, 38, 38, 0.3);
+        }
+
+        .product-cta:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4);
+            color: white;
+        }
+
+        .product-cta-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 10px 20px;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-left: 0.5rem;
+        }
+
+        /* Support Section */
+        .support-section {
+            padding: 2.5rem 0;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .support-section h2 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+
+        .support-section p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+            max-width: 550px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .support-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-support {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-patreon {
+            background: linear-gradient(135deg, #ff424d, #e8383f);
+            color: white;
+            box-shadow: 0 4px 16px rgba(255, 66, 77, 0.3);
+        }
+
+        .btn-patreon:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(255, 66, 77, 0.4);
+            color: white;
+        }
+
+        .btn-github {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-github:hover {
+            border-color: var(--border-glow);
+            transform: translateY(-2px);
+        }
+
+        .btn-discord {
+            background: linear-gradient(135deg, #5865F2, #4752C4);
+            color: white;
+            box-shadow: 0 4px 16px rgba(88, 101, 242, 0.3);
+        }
+
+        .btn-discord:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(88, 101, 242, 0.4);
+            color: white;
+        }
+
+        /* Video Section */
+        .video-section {
+            padding: 2rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .video-section h2 {
+            text-align: center;
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
         }
 
         /* Quick Links */
         .quick-links {
             padding: 2rem 0;
-            border-top: 1px solid var(--border-color);
         }
 
         .quick-links-title {
@@ -226,10 +458,11 @@
         }
 
         .quick-links-grid {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
             gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
+            max-width: 700px;
+            margin: 0 auto;
         }
 
         .quick-link {
@@ -239,7 +472,6 @@
             padding: 1rem 1.5rem;
             text-align: center;
             transition: all 0.3s ease;
-            min-width: 140px;
         }
 
         .quick-link:hover {
@@ -257,6 +489,23 @@
             font-size: 0.75rem;
             color: var(--text-muted);
         }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .products-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .hero-logo {
+                width: 150px;
+                height: 150px;
+            }
+
+            .support-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
     </style>
 </head>
 
@@ -264,8 +513,7 @@
     <div class="wiki-layout">
         <aside class="sidebar" id="sidebar">
             <a href="index.html" class="sidebar-logo"><img
-                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
-                    alt="Wolf"><span>WolfScale</span></a>
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"><span>Wolf</span></a>
             <nav class="sidebar-nav">
                 <div class="nav-section">
                     <div class="nav-section-title">WolfScale</div>
@@ -287,6 +535,7 @@
                 </div>
                 <div class="nav-section">
                     <div class="nav-section-title">Company</div>
+                    <a href="https://wolf.uk.com" target="_blank">Wolf Software</a>
                     <a href="about.html">About</a>
                     <a href="contact.html">Contact</a>
                 </div>
@@ -301,6 +550,7 @@
                 <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
                 <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
                 <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+                <a href="https://wolf.uk.com" target="_blank">wolf.uk.com</a>
             </div>
         </aside>
         <div class="sidebar-overlay" id="sidebar-overlay"></div>
@@ -309,262 +559,121 @@
             <div class="mobile-header">
                 <a href="index.html" class="nav-logo"><img
                         src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
-                        class="logo-img"><span>WolfScale</span></a>
+                        class="logo-img"><span>Wolf</span></a>
                 <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
             </div>
 
             <div class="wiki-content">
                 <!-- Hero Section -->
                 <section class="hero-section">
-                    <div class="hero-badge animate-fade-in">Open Source • MIT License</div>
+                    <div class="hero-badges animate-fade-in">
+                        <span class="hero-badge">Open Source</span>
+                        <span class="hero-badge">MIT License</span>
+                        <span class="hero-badge">Built with Rust</span>
+                    </div>
+
                     <img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf Logo"
                         class="hero-logo animate-fade-in animate-delay-1">
 
-                    <!-- WolfScale Product -->
-                    <div class="animate-fade-in animate-delay-2" style="margin-bottom: 3rem;">
-                        <h1 class="hero-title">WolfScale</h1>
-                        <p class="hero-tagline" style="font-size: 1.3rem; margin-bottom: 1rem;">
-                            Database replication, clustering and load balancing — <strong>the easy way</strong>
-                        </p>
-                        <p class="hero-subtitle" style="font-size: 0.9rem; margin-bottom: 1.5rem;">
-                            Works with MySQL, Percona, and Amazon RDS • <strong>MariaDB recommended</strong>
-                        </p>
-                        <div class="hero-cta">
-                            <a href="quickstart.html" class="btn-hero primary">Get Started - Database Replication →</a>
-                            <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank"
-                                class="btn-hero secondary">View on GitHub</a>
-                        </div>
-                    </div>
-
-                    <!-- WolfDisk Product -->
-                    <div class="animate-fade-in animate-delay-3"
-                        style="margin-bottom: 2rem; padding-top: 2rem; border-top: 1px solid var(--border-color);">
-                        <h2
-                            style="font-size: clamp(2rem, 4vw, 3rem); font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);">
-                            WolfDisk</h2>
-                        <p class="hero-tagline" style="font-size: 1.3rem; margin-bottom: 1rem;">
-                            Disk replication and sharing — <strong>the easy way</strong>
-                        </p>
-                        <p class="hero-subtitle" style="font-size: 0.9rem; margin-bottom: 1.5rem;">
-                            FUSE-based distributed filesystem • Automatic replication • POSIX compatible
-                        </p>
-                        <div class="hero-cta">
-                            <a href="wolfdisk.html" class="btn-hero primary">Get Started - Disk Replication & Sharing
-                                →</a>
-                            <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank"
-                                class="btn-hero secondary">View on GitHub</a>
-                        </div>
-                    </div>
-
-                    <p class="hero-subtitle animate-fade-in animate-delay-4">
-                        Simple setup • Automatic failover • Zero configuration complexity
+                    <h1 class="hero-title animate-fade-in animate-delay-2">WolfScale</h1>
+                    <p class="hero-tagline animate-fade-in animate-delay-2">
+                        from <a href="https://wolf.uk.com" target="_blank"
+                            style="color: var(--accent-primary); text-decoration: underline;">Wolf Software Systems
+                            Ltd</a>
+                    </p>
+                    <p class="hero-subtitle animate-fade-in animate-delay-3">
+                        An open source clustering solution
                     </p>
                 </section>
 
-                <!-- What It Does Section -->
-                <section class="content-section" style="padding: 2rem 0; border-bottom: 1px solid var(--border-color);">
-                    <h2 style="text-align: center; margin-bottom: 1.5rem; font-size: 1.5rem;">What It Does</h2>
-
-                    <div style="max-width: 700px; margin: 0 auto; line-height: 1.8;">
-                        <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 1rem;">
-                            <strong style="color: var(--text-primary);">Imagine your database is a single
-                                notebook.</strong>
-                            If someone spills coffee on it, all your data is gone. If too many people need to read it at
-                            once, they have to wait in line.
-                        </p>
-
-                        <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 1rem;">
-                            <strong style="color: var(--text-primary);">WolfScale creates multiple identical copies of
-                                that notebook</strong>
-                            across different servers. When you write something, it automatically updates all the copies.
-                            When you need to read,
-                            it spreads the requests across all copies so no single one gets overwhelmed.
-                        </p>
-
-                        <div
-                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 2rem;">
-                            <div
-                                style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem; text-align: center;">
-                                <div style="font-size: 2rem; margin-bottom: 0.5rem;">📝</div>
-                                <div style="font-weight: 600; margin-bottom: 0.25rem;">One Server Writes</div>
-                                <div style="font-size: 0.85rem; color: var(--text-muted);">Changes go to the leader
-                                </div>
-                            </div>
-                            <div
-                                style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem; text-align: center;">
-                                <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔄</div>
-                                <div style="font-weight: 600; margin-bottom: 0.25rem;">Copies Stay in Sync</div>
-                                <div style="font-size: 0.85rem; color: var(--text-muted);">Updates replicate instantly
-                                </div>
-                            </div>
-                            <div
-                                style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem; text-align: center;">
-                                <div style="font-size: 2rem; margin-bottom: 0.5rem;">📖</div>
-                                <div style="font-weight: 600; margin-bottom: 0.25rem;">All Servers Read</div>
-                                <div style="font-size: 0.85rem; color: var(--text-muted);">Load balanced automatically
-                                </div>
-                            </div>
-                        </div>
-
-                        <p
-                            style="color: var(--text-secondary); margin-top: 1.5rem; font-size: 1rem; text-align: center;">
-                            <strong style="color: var(--success);">Result:</strong> Your data is always safe, and your
-                            app stays fast even under heavy load.
-                        </p>
-                    </div>
-                </section>
-
-                <!-- Architecture Section -->
-                <section class="content-section" style="padding: 2rem 0; border-bottom: 1px solid var(--border-color);">
-                    <h2 style="text-align: center; margin-bottom: 1rem; font-size: 1.5rem;">How It's Installed</h2>
-                    <p
-                        style="text-align: center; color: var(--text-secondary); margin-bottom: 2rem; max-width: 600px; margin-left: auto; margin-right: auto;">
-                        WolfScale runs on <strong>1 to N nodes</strong> and can be <strong>distributed
-                            geographically</strong> across data centers, cloud regions, or on-premises servers.
+                <!-- Products Section -->
+                <section class="products-section">
+                    <h2 class="products-section-title animate-fade-in animate-delay-3">The Wolf Toolkit</h2>
+                    <p class="products-section-subtitle animate-fade-in animate-delay-3">
+                        Everything you need to build robust, clustered server infrastructure
                     </p>
 
-                    <div style="max-width: 800px; margin: 0 auto;">
-                        <!-- Architecture Diagram -->
-                        <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
-
-                            <!-- Load Balancer -->
-                            <div
-                                style="background: linear-gradient(135deg, var(--accent-red), #b91c1c); color: white; padding: 1rem 2rem; border-radius: 8px; text-align: center; font-weight: 600; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);">
-                                🐺 WolfScale Load Balancer
-                            </div>
-
-                            <!-- Arrow Down -->
-                            <div style="font-size: 1.5rem; color: var(--text-muted);">↓</div>
-
-                            <!-- Nodes Container -->
-                            <div
-                                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; width: 100%;">
-
-                                <!-- Node 1 -->
-                                <div
-                                    style="background: var(--bg-card); border: 2px solid var(--border-color); border-radius: 8px; overflow: hidden;">
-                                    <div
-                                        style="background: var(--bg-tertiary); padding: 0.75rem; text-align: center; font-weight: 600; border-bottom: 1px solid var(--border-color);">
-                                        🐺 WolfScale Node 1
-                                    </div>
-                                    <div style="padding: 1rem; text-align: center;">
-                                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🗄️</div>
-                                        <div style="font-size: 0.9rem; color: var(--text-secondary);">MariaDB or MySQL
-                                        </div>
-                                        <div style="font-size: 0.8rem; color: var(--text-muted);">Database</div>
-                                    </div>
-                                </div>
-
-                                <!-- Node 2 -->
-                                <div
-                                    style="background: var(--bg-card); border: 2px solid var(--border-color); border-radius: 8px; overflow: hidden;">
-                                    <div
-                                        style="background: var(--bg-tertiary); padding: 0.75rem; text-align: center; font-weight: 600; border-bottom: 1px solid var(--border-color);">
-                                        🐺 WolfScale Node 2
-                                    </div>
-                                    <div style="padding: 1rem; text-align: center;">
-                                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🗄️</div>
-                                        <div style="font-size: 0.9rem; color: var(--text-secondary);">MariaDB or MySQL
-                                        </div>
-                                        <div style="font-size: 0.8rem; color: var(--text-muted);">Database</div>
-                                    </div>
-                                </div>
-
-                                <!-- Node 3 -->
-                                <div
-                                    style="background: var(--bg-card); border: 2px solid var(--border-color); border-radius: 8px; overflow: hidden;">
-                                    <div
-                                        style="background: var(--bg-tertiary); padding: 0.75rem; text-align: center; font-weight: 600; border-bottom: 1px solid var(--border-color);">
-                                        🐺 WolfScale Node 3
-                                    </div>
-                                    <div style="padding: 1rem; text-align: center;">
-                                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🗄️</div>
-                                        <div style="font-size: 0.9rem; color: var(--text-secondary);">MariaDB or MySQL
-                                        </div>
-                                        <div style="font-size: 0.8rem; color: var(--text-muted);">Database</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Important Note -->
-                        <div
-                            style="margin-top: 1.5rem; padding: 1rem; background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 8px;">
-                            <p style="margin: 0; color: var(--text-secondary); font-size: 0.9rem;">
-                                <strong style="color: #eab308;">⚠️ Important:</strong>
-                                At installation time, all databases must be <strong>up to date and in sync</strong> with
-                                each other.
-                                WolfScale keeps them synchronized going forward, but it needs a consistent starting
-                                point.
+                    <div class="products-grid">
+                        <!-- WolfScale -->
+                        <div class="product-card animate-fade-in animate-delay-3">
+                            <div class="product-icon">🗄️</div>
+                            <div class="product-name">WolfScale</div>
+                            <span class="product-status available">Available Now</span>
+                            <p class="product-description">
+                                Database replication, clustering and load balancing — the easy way. WolfScale keeps your
+                                MariaDB and MySQL databases synchronised across any number of servers, with automatic
+                                failover and a built-in load balancer. One binary, one config file, done.
                             </p>
+                            <ul class="product-features">
+                                <li>MariaDB, MySQL, Percona & Amazon RDS support</li>
+                                <li>Built-in load balancer with read/write splitting</li>
+                                <li>Automatic node discovery & failover</li>
+                                <li>Run on 1 to N nodes, geographically distributed</li>
+                            </ul>
+                            <a href="quickstart.html" class="product-cta">Get Started →</a>
+                            <a href="features.html" class="product-cta-secondary">Learn More</a>
                         </div>
-                    </div>
-                </section>
 
-                <!-- Comparison Section -->
-                <section class="content-section" style="padding: 2rem 0; border-bottom: 1px solid var(--border-color);">
-                    <h2 style="text-align: center; margin-bottom: 1.5rem; font-size: 1.5rem;">Why WolfScale?</h2>
-                    <p style="text-align: center; color: var(--text-secondary); margin-bottom: 2rem;">Traditional
-                        database HA requires multiple complex tools. WolfScale is all-in-one.</p>
+                        <!-- WolfDisk -->
+                        <div class="product-card animate-fade-in animate-delay-4">
+                            <div class="product-icon">💾</div>
+                            <div class="product-name">WolfDisk</div>
+                            <span class="product-status available">Available Now</span>
+                            <p class="product-description">
+                                Distributed filesystem that shares and replicates files across your network. Mount a
+                                shared directory on any number of Linux machines and have your data automatically
+                                synchronised. Supports leader, follower and client modes for flexible deployments.
+                            </p>
+                            <ul class="product-features">
+                                <li>FUSE-based — works as a regular Linux directory</li>
+                                <li>Content-addressed deduplication with SHA256</li>
+                                <li>Client mode for thin mount-only access</li>
+                                <li>Multiple independent drives per node</li>
+                            </ul>
+                            <a href="wolfdisk.html" class="product-cta">Get Started →</a>
+                        </div>
 
-                    <div class="table-wrapper" style="max-width: 800px; margin: 0 auto;">
-                        <table class="comparison-table">
-                            <thead>
-                                <tr>
-                                    <th>Feature</th>
-                                    <th>Traditional Solutions</th>
-                                    <th>WolfScale</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Configuration</td>
-                                    <td>100+ lines across multiple files</td>
-                                    <td class="highlight">6 lines, single file</td>
-                                </tr>
-                                <tr>
-                                    <td>Components</td>
-                                    <td>Load balancer + replication + failover + monitoring</td>
-                                    <td class="highlight">Single binary</td>
-                                </tr>
-                                <tr>
-                                    <td>Node Discovery</td>
-                                    <td>Manual server lists</td>
-                                    <td class="highlight">Automatic</td>
-                                </tr>
-                                <tr>
-                                    <td>Read/Write Splitting</td>
-                                    <td>Complex regex rules</td>
-                                    <td class="highlight">Automatic</td>
-                                </tr>
-                                <tr>
-                                    <td>Session State</td>
-                                    <td>Often lost between queries</td>
-                                    <td class="highlight">Preserved</td>
-                                </tr>
-                                <tr>
-                                    <td>Failover</td>
-                                    <td>External tools (Pacemaker, etc.)</td>
-                                    <td class="highlight">Built-in, sub-2 second</td>
-                                </tr>
-                                <tr>
-                                    <td>Minimum Nodes</td>
-                                    <td>3 (for quorum)</td>
-                                    <td class="highlight">1</td>
-                                </tr>
-                                <tr>
-                                    <td>Learning Curve</td>
-                                    <td>Days/weeks</td>
-                                    <td class="highlight">Minutes</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <!-- WolfNet -->
+                        <div class="product-card coming-soon animate-fade-in animate-delay-5">
+                            <div class="product-icon">🌐</div>
+                            <div class="product-name">WolfNet</div>
+                            <span class="product-status coming">Coming Soon</span>
+                            <p class="product-description">
+                                Create a secure private network across the internet. Connect servers across data
+                                centres, cloud providers and on-premises infrastructure as if they were on the same
+                                local network. Encrypted, zero-trust, peer-to-peer.
+                            </p>
+                            <ul class="product-features">
+                                <li>Encrypted mesh networking</li>
+                                <li>Works across clouds and data centres</li>
+                                <li>Zero-config peer discovery</li>
+                                <li>NAT traversal built-in</li>
+                            </ul>
+                        </div>
+
+                        <!-- WolfVPN -->
+                        <div class="product-card coming-soon animate-fade-in animate-delay-6">
+                            <div class="product-icon">🔐</div>
+                            <div class="product-name">WolfVPN</div>
+                            <span class="product-status coming">Coming Soon</span>
+                            <p class="product-description">
+                                A plugin for WolfNet that provides secure remote access to your private network. Give
+                                developers, admins and remote workers access to internal services without exposing them
+                                to the public internet.
+                            </p>
+                            <ul class="product-features">
+                                <li>Plugin for WolfNet — seamless integration</li>
+                                <li>Secure remote access for teams</li>
+                                <li>Per-user access controls</li>
+                                <li>No public IP exposure required</li>
+                            </ul>
+                        </div>
                     </div>
                 </section>
 
                 <!-- Video Section -->
-                <section class="content-section" style="padding: 2rem 0; border-bottom: 1px solid var(--border-color);">
-                    <h2 style="text-align: center; margin-bottom: 1.5rem; font-size: 1.5rem;">See It In Action</h2>
+                <section class="video-section">
+                    <h2>See WolfScale In Action</h2>
                     <div style="max-width: 800px; margin: 0 auto;">
                         <div
                             style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 12px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);">
@@ -578,7 +687,26 @@
                     </div>
                 </section>
 
-                <!-- Quick Links -->
+                <!-- Support Section -->
+                <section class="support-section">
+                    <h2>🐺 Support the Pack</h2>
+                    <p>Wolf tools are free and open-source. Support development and get early access to new features.
+                    </p>
+                    <div class="support-buttons">
+                        <a href="https://www.patreon.com/15362110/join" target="_blank" class="btn-support btn-patreon">
+                            ❤️ Support on Patreon
+                        </a>
+                        <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank"
+                            class="btn-support btn-github">
+                            ⭐ Star on GitHub
+                        </a>
+                        <a href="https://discord.gg/q9qMjHjUQY" target="_blank" class="btn-support btn-discord">
+                            💬 Join Discord
+                        </a>
+                    </div>
+                </section>
+
+                <!-- Docs Quick Links -->
                 <section class="quick-links">
                     <h2 class="quick-links-title">Documentation</h2>
                     <div class="quick-links-grid">
@@ -594,6 +722,10 @@
                             <h4>Load Balancer</h4>
                             <p>Configuration</p>
                         </a>
+                        <a href="wolfdisk.html" class="quick-link">
+                            <h4>WolfDisk</h4>
+                            <p>Disk sharing</p>
+                        </a>
                         <a href="features.html" class="quick-link">
                             <h4>Features</h4>
                             <p>Full list</p>
@@ -603,7 +735,7 @@
 
                 <div class="page-nav">
                     <span></span>
-                    <a href="features.html" class="next">Features →</a>
+                    <a href="quickstart.html" class="next">Quick Start →</a>
                 </div>
             </div>
 
