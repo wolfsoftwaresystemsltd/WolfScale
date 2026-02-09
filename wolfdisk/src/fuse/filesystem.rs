@@ -1243,10 +1243,20 @@ impl Filesystem for WolfDiskFS {
             }
         };
 
-        // If we're a follower, forward to leader
+        // If we're a follower or client, forward to leader
         if !self.is_leader() {
             match self.forward_write_to_leader(&path.to_string_lossy(), offset as u64, data) {
                 Ok(written) => {
+                    // Update local index entry size so getattr returns correct size.
+                    // Without this, the client reports size=0 and the kernel never reads.
+                    let new_end = offset as u64 + written as u64;
+                    let mut file_index = self.file_index.write().unwrap();
+                    if let Some(entry) = file_index.get_mut(&path) {
+                        if new_end > entry.size {
+                            entry.size = new_end;
+                        }
+                        entry.modified = SystemTime::now();
+                    }
                     reply.written(written);
                 }
                 Err(errno) => {
