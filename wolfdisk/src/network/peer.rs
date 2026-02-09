@@ -229,6 +229,11 @@ impl PeerManager {
         Ok(conn)
     }
 
+    /// Remove cached connection to leader (used for reconnection on failure)
+    pub fn disconnect_leader(&self, leader_id: &str) {
+        self.connections.write().unwrap().remove(leader_id);
+    }
+
     /// Stop the peer manager
     pub fn stop(&self) {
         *self.running.write().unwrap() = false;

@@ -150,8 +150,10 @@ impl WolfDiskFS {
         }
     }
 
-    /// Forward a read to the leader (for client mode)
-    fn forward_read_to_leader(&self, path: &str, offset: u64, size: u32) -> std::result::Result<Vec<u8>, i32> {
+    /// Send a request to the leader with automatic reconnection on failure.
+    /// If the first attempt fails (e.g. stale connection after leader restart),
+    /// drops the cached connection, reconnects, and retries once.
+    fn request_leader(&self, msg: &Message) -> std::result::Result<Message, i32> {
         let (cluster, peer_manager) = match (&self.cluster, &self.peer_manager) {
             (Some(c), Some(p)) => (c, p),
             _ => return Err(libc::EIO),
@@ -160,18 +162,41 @@ impl WolfDiskFS {
         let leader_id = cluster.leader_id().ok_or(libc::ENOENT)?;
         let leader_addr = cluster.leader_address().ok_or(libc::ENOENT)?;
 
+        // First attempt
         let conn = peer_manager.get_or_connect_leader(&leader_id, &leader_addr)
             .map_err(|_| libc::EIO)?;
+        
+        match conn.request(msg) {
+            Ok(response) => return Ok(response),
+            Err(e) => {
+                tracing::warn!("Leader request failed (will reconnect): {}", e);
+                peer_manager.disconnect_leader(&leader_id);
+            }
+        }
 
+        // Retry with fresh connection
+        let conn = peer_manager.get_or_connect_leader(&leader_id, &leader_addr)
+            .map_err(|e| {
+                tracing::error!("Failed to reconnect to leader: {}", e);
+                libc::EIO
+            })?;
+        
+        conn.request(msg).map_err(|e| {
+            tracing::error!("Leader request failed after reconnect: {}", e);
+            peer_manager.disconnect_leader(&leader_id);
+            libc::EIO
+        })
+    }
+
+    /// Forward a read to the leader (for client mode)
+    fn forward_read_to_leader(&self, path: &str, offset: u64, size: u32) -> std::result::Result<Vec<u8>, i32> {
         let msg = Message::ReadRequest(ReadRequestMsg {
             path: path.to_string(),
             offset,
             size,
         });
 
-        let response = conn.request(&msg).map_err(|_| libc::EIO)?;
-
-        match response {
+        match self.request_leader(&msg)? {
             Message::ClientResponse(resp) if resp.success => {
                 Ok(resp.data.unwrap_or_default())
             }
@@ -185,20 +210,6 @@ impl WolfDiskFS {
 
     /// Forward a file creation to the leader
     fn forward_create_to_leader(&self, path: &str, mode: u32, uid: u32, gid: u32) -> std::result::Result<(), i32> {
-        let (cluster, peer_manager) = match (&self.cluster, &self.peer_manager) {
-            (Some(c), Some(p)) => (c, p),
-            _ => return Err(libc::EIO),
-        };
-
-        let leader_id = cluster.leader_id().ok_or(libc::ENOENT)?;
-        let leader_addr = cluster.leader_address().ok_or(libc::ENOENT)?;
-
-        let conn = peer_manager.get_or_connect_leader(&leader_id, &leader_addr)
-            .map_err(|e| {
-                warn!("Failed to connect to leader: {}", e);
-                libc::EIO
-            })?;
-
         let msg = Message::CreateFile(CreateFileMsg {
             path: path.to_string(),
             mode,
@@ -206,12 +217,7 @@ impl WolfDiskFS {
             gid,
         });
 
-        let response = conn.request(&msg).map_err(|e| {
-            warn!("Failed to send create request to leader: {}", e);
-            libc::EIO
-        })?;
-
-        match response {
+        match self.request_leader(&msg)? {
             Message::FileOpResponse(resp) if resp.success => Ok(()),
             Message::FileOpResponse(resp) => {
                 warn!("Leader rejected create: {:?}", resp.error);
@@ -223,22 +229,8 @@ impl WolfDiskFS {
     
     /// Forward a write operation to the leader
     fn forward_write_to_leader(&self, path: &str, offset: u64, data: &[u8]) -> std::result::Result<u32, i32> {
-        let (cluster, peer_manager) = match (&self.cluster, &self.peer_manager) {
-            (Some(c), Some(p)) => (c, p),
-            _ => return Err(libc::EIO),
-        };
-
-        let leader_id = cluster.leader_id().ok_or(libc::ENOENT)?;
-        let leader_addr = cluster.leader_address().ok_or(libc::ENOENT)?;
-
-        info!("Forwarding write to leader {} for path: {} (offset: {}, size: {})", 
-            leader_id, path, offset, data.len());
-
-        let conn = peer_manager.get_or_connect_leader(&leader_id, &leader_addr)
-            .map_err(|e| {
-                warn!("Failed to connect to leader: {}", e);
-                libc::EIO
-            })?;
+        info!("Forwarding write to leader for path: {} (offset: {}, size: {})", 
+            path, offset, data.len());
 
         let msg = Message::WriteRequest(WriteRequestMsg {
             path: path.to_string(),
@@ -246,14 +238,8 @@ impl WolfDiskFS {
             data: data.to_vec(),
         });
 
-        let response = conn.request(&msg).map_err(|e| {
-            warn!("Failed to send write request to leader: {}", e);
-            libc::EIO
-        })?;
-
-        match response {
+        match self.request_leader(&msg)? {
             Message::ClientResponse(resp) if resp.success => {
-                // Return bytes written (from data length or response)
                 Ok(data.len() as u32)
             }
             Message::ClientResponse(resp) => {
@@ -266,17 +252,6 @@ impl WolfDiskFS {
 
     /// Forward a directory creation to the leader
     fn forward_mkdir_to_leader(&self, path: &str, mode: u32, uid: u32, gid: u32) -> std::result::Result<(), i32> {
-        let (cluster, peer_manager) = match (&self.cluster, &self.peer_manager) {
-            (Some(c), Some(p)) => (c, p),
-            _ => return Err(libc::EIO),
-        };
-
-        let leader_id = cluster.leader_id().ok_or(libc::ENOENT)?;
-        let leader_addr = cluster.leader_address().ok_or(libc::ENOENT)?;
-
-        let conn = peer_manager.get_or_connect_leader(&leader_id, &leader_addr)
-            .map_err(|_| libc::EIO)?;
-
         let msg = Message::CreateDir(CreateDirMsg {
             path: path.to_string(),
             mode,
@@ -284,9 +259,7 @@ impl WolfDiskFS {
             gid,
         });
 
-        let response = conn.request(&msg).map_err(|_| libc::EIO)?;
-
-        match response {
+        match self.request_leader(&msg)? {
             Message::FileOpResponse(resp) if resp.success => Ok(()),
             _ => Err(libc::EIO),
         }
@@ -302,22 +275,7 @@ impl WolfDiskFS {
         gid: Option<u32>,
         modified_ms: Option<u64>,
     ) -> std::result::Result<(), i32> {
-        let (cluster, peer_manager) = match (&self.cluster, &self.peer_manager) {
-            (Some(c), Some(p)) => (c, p),
-            _ => return Err(libc::EIO),
-        };
-
-        let leader_id = cluster.leader_id().ok_or(libc::ENOENT)?;
-        let leader_addr = cluster.leader_address().ok_or(libc::ENOENT)?;
-
-        info!("Forwarding setattr to leader {} for path: {} (size={:?})", 
-            leader_id, path, size);
-
-        let conn = peer_manager.get_or_connect_leader(&leader_id, &leader_addr)
-            .map_err(|e| {
-                warn!("Failed to connect to leader: {}", e);
-                libc::EIO
-            })?;
+        info!("Forwarding setattr to leader for path: {} (size={:?})", path, size);
 
         let msg = Message::SetAttr(SetAttrMsg {
             path: path.to_string(),
@@ -328,12 +286,7 @@ impl WolfDiskFS {
             modified_ms,
         });
 
-        let response = conn.request(&msg).map_err(|e| {
-            warn!("Failed to send setattr to leader: {}", e);
-            libc::EIO
-        })?;
-
-        match response {
+        match self.request_leader(&msg)? {
             Message::FileOpResponse(resp) if resp.success => Ok(()),
             Message::FileOpResponse(resp) => {
                 warn!("Leader rejected setattr: {:?}", resp.error);
@@ -345,24 +298,11 @@ impl WolfDiskFS {
 
     /// Forward a file deletion to the leader
     fn forward_unlink_to_leader(&self, path: &str) -> std::result::Result<(), i32> {
-        let (cluster, peer_manager) = match (&self.cluster, &self.peer_manager) {
-            (Some(c), Some(p)) => (c, p),
-            _ => return Err(libc::EIO),
-        };
-
-        let leader_id = cluster.leader_id().ok_or(libc::ENOENT)?;
-        let leader_addr = cluster.leader_address().ok_or(libc::ENOENT)?;
-
-        let conn = peer_manager.get_or_connect_leader(&leader_id, &leader_addr)
-            .map_err(|_| libc::EIO)?;
-
         let msg = Message::DeleteFile(DeleteFileMsg {
             path: path.to_string(),
         });
 
-        let response = conn.request(&msg).map_err(|_| libc::EIO)?;
-
-        match response {
+        match self.request_leader(&msg)? {
             Message::FileOpResponse(resp) if resp.success => Ok(()),
             _ => Err(libc::EIO),
         }
@@ -535,24 +475,11 @@ impl WolfDiskFS {
 
     /// Forward a directory deletion to the leader
     fn forward_rmdir_to_leader(&self, path: &str) -> std::result::Result<(), i32> {
-        let (cluster, peer_manager) = match (&self.cluster, &self.peer_manager) {
-            (Some(c), Some(p)) => (c, p),
-            _ => return Err(libc::EIO),
-        };
-
-        let leader_id = cluster.leader_id().ok_or(libc::ENOENT)?;
-        let leader_addr = cluster.leader_address().ok_or(libc::ENOENT)?;
-
-        let conn = peer_manager.get_or_connect_leader(&leader_id, &leader_addr)
-            .map_err(|_| libc::EIO)?;
-
         let msg = Message::DeleteDir(DeleteDirMsg {
             path: path.to_string(),
         });
 
-        let response = conn.request(&msg).map_err(|_| libc::EIO)?;
-
-        match response {
+        match self.request_leader(&msg)? {
             Message::FileOpResponse(resp) if resp.success => Ok(()),
             _ => Err(libc::EIO),
         }
@@ -560,25 +487,12 @@ impl WolfDiskFS {
 
     /// Forward a file rename to the leader
     fn forward_rename_to_leader(&self, from_path: &str, to_path: &str) -> std::result::Result<(), i32> {
-        let (cluster, peer_manager) = match (&self.cluster, &self.peer_manager) {
-            (Some(c), Some(p)) => (c, p),
-            _ => return Err(libc::EIO),
-        };
-
-        let leader_id = cluster.leader_id().ok_or(libc::ENOENT)?;
-        let leader_addr = cluster.leader_address().ok_or(libc::ENOENT)?;
-
-        let conn = peer_manager.get_or_connect_leader(&leader_id, &leader_addr)
-            .map_err(|_| libc::EIO)?;
-
         let msg = Message::RenameFile(RenameFileMsg {
             from_path: from_path.to_string(),
             to_path: to_path.to_string(),
         });
 
-        let response = conn.request(&msg).map_err(|_| libc::EIO)?;
-
-        match response {
+        match self.request_leader(&msg)? {
             Message::FileOpResponse(resp) if resp.success => Ok(()),
             _ => Err(libc::EIO),
         }
@@ -586,25 +500,12 @@ impl WolfDiskFS {
 
     /// Forward a symlink creation to the leader
     fn forward_symlink_to_leader(&self, link_path: &str, target: &str) -> std::result::Result<(), i32> {
-        let (cluster, peer_manager) = match (&self.cluster, &self.peer_manager) {
-            (Some(c), Some(p)) => (c, p),
-            _ => return Err(libc::EIO),
-        };
-
-        let leader_id = cluster.leader_id().ok_or(libc::ENOENT)?;
-        let leader_addr = cluster.leader_address().ok_or(libc::ENOENT)?;
-
-        let conn = peer_manager.get_or_connect_leader(&leader_id, &leader_addr)
-            .map_err(|_| libc::EIO)?;
-
         let msg = Message::CreateSymlink(CreateSymlinkMsg {
             link_path: link_path.to_string(),
             target: target.to_string(),
         });
 
-        let response = conn.request(&msg).map_err(|_| libc::EIO)?;
-
-        match response {
+        match self.request_leader(&msg)? {
             Message::FileOpResponse(resp) if resp.success => Ok(()),
             _ => Err(libc::EIO),
         }
@@ -1210,28 +1111,22 @@ impl Filesystem for WolfDiskFS {
                 // If chunk is missing locally, fetch from leader
                 if !self.chunk_store.exists(&chunk.hash) {
                     debug!("Chunk {} missing locally, fetching from leader", hex::encode(&chunk.hash));
-                    if let (Some(cluster), Some(peer_manager)) = (&self.cluster, &self.peer_manager) {
-                        if let (Some(leader_id), Some(leader_addr)) = (cluster.leader_id(), cluster.leader_address()) {
-                            let msg = crate::network::protocol::Message::GetChunk(
-                                crate::network::protocol::GetChunkMsg { hash: chunk.hash }
-                            );
-                            if let Ok(conn) = peer_manager.get_or_connect_leader(&leader_id, &leader_addr) {
-                                match conn.request(&msg) {
-                                    Ok(crate::network::protocol::Message::ChunkData(resp)) => {
-                                        if let Some(data) = resp.data {
-                                            if let Err(e) = self.chunk_store.store_with_hash(&chunk.hash, &data) {
-                                                warn!("Failed to cache fetched chunk: {}", e);
-                                            } else {
-                                                debug!("Fetched and cached chunk {} from leader ({} bytes)", 
-                                                    hex::encode(&chunk.hash), data.len());
-                                            }
-                                        }
-                                    }
-                                    Ok(_) => { warn!("Unexpected response fetching chunk from leader"); }
-                                    Err(e) => { warn!("Failed to fetch chunk from leader: {}", e); }
+                    let msg = crate::network::protocol::Message::GetChunk(
+                        crate::network::protocol::GetChunkMsg { hash: chunk.hash }
+                    );
+                    match self.request_leader(&msg) {
+                        Ok(crate::network::protocol::Message::ChunkData(resp)) => {
+                            if let Some(data) = resp.data {
+                                if let Err(e) = self.chunk_store.store_with_hash(&chunk.hash, &data) {
+                                    warn!("Failed to cache fetched chunk: {}", e);
+                                } else {
+                                    debug!("Fetched and cached chunk {} from leader ({} bytes)", 
+                                        hex::encode(&chunk.hash), data.len());
                                 }
                             }
                         }
+                        Ok(_) => { warn!("Unexpected response fetching chunk from leader"); }
+                        Err(e) => { warn!("Failed to fetch chunk from leader: errno {}", e); }
                     }
                 }
             }
