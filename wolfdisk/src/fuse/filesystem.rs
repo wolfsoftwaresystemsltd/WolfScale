@@ -1924,17 +1924,43 @@ impl Filesystem for WolfDiskFS {
             }
         };
 
-        // Check destination doesn't exist
-        if file_index.contains(&to_path) {
-            reply.error(libc::EEXIST);
-            return;
+        // Check destination and handle overwrite
+        if let Some(target_entry) = file_index.get(&to_path) {
+            if target_entry.is_dir {
+                // Check if directory is empty
+                let has_children = file_index.paths().any(|p| {
+                     if let Some(parent) = p.parent() {
+                         parent == to_path
+                     } else {
+                         false
+                     }
+                });
+                
+                if has_children {
+                    reply.error(libc::ENOTEMPTY);
+                    return;
+                }
+            }
+            
+            // Delete target chunks
+            for chunk in &target_entry.chunks {
+                let _ = self.chunk_store.delete(&chunk.hash);
+            }
+            
+            // Remove target from inode table
+            if let Some(target_ino) = inode_table.get_inode(&to_path) {
+                inode_table.remove_inode(target_ino);
+            }
+            
+            // Remove target from index
+            file_index.remove(&to_path);
         }
 
         // Move entry
         file_index.remove(&from_path);
         file_index.insert(to_path.clone(), entry);
 
-        // Update inode table
+        // Update inode table for source
         if let Some(ino) = inode_table.get_inode(&from_path) {
             let ino = ino;
             inode_table.remove_path(&from_path);

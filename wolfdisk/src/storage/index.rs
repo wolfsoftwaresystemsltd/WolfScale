@@ -133,8 +133,8 @@ impl FileIndex {
     }
 
     /// Insert or update an entry
-    pub fn insert(&mut self, path: PathBuf, entry: FileEntry) {
-        self.entries.insert(path, entry);
+    pub fn insert(&mut self, path: PathBuf, entry: FileEntry) -> Option<FileEntry> {
+        self.entries.insert(path, entry)
     }
 
     /// Remove an entry

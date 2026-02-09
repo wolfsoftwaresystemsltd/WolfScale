@@ -177,107 +177,120 @@ fn main() {
                             Message::IndexUpdate(update) => {
                                 info!("Received IndexUpdate from {}: {:?}", peer_id, update.operation);
                                 
-                                // Apply the update to our local index
-                                // IMPORTANT: We must drop file_index lock before acquiring inode_table lock
-                                // because readdir acquires them in reverse order (inode_table then file_index).
-                                // Holding both simultaneously causes ABBA deadlock.
-                                enum InodeOp {
-                                    Add(std::path::PathBuf),
-                                    Remove(std::path::PathBuf),
-                                    Rename(std::path::PathBuf, std::path::PathBuf),
-                                }
-                                let inode_op: Option<InodeOp> = {
-                                    let mut index = file_index_for_handler.write().unwrap();
-                                    match update.operation {
-                                        IndexOperation::Delete { path } => {
-                                            info!("Replicating delete: {}", path);
-                                            let del_path = std::path::PathBuf::from(&path);
-                                            if let Some(entry) = index.remove(&del_path) {
-                                                if !is_client_role {
-                                                    for chunk in &entry.chunks {
-                                                        let _ = chunk_store_for_handler.delete(&chunk.hash);
-                                                    }
-                                                }
-                                                info!("Deleted file and {} chunks from follower: {}", entry.chunks.len(), path);
-                                                Some(InodeOp::Remove(del_path))
-                                            } else {
-                                                None
+                                // Acquire locks in correct order (Inode -> Index) to match readdir and avoid deadlocks/races
+                                let mut inode_tbl = inode_table_for_handler.write().unwrap();
+                                let mut index = file_index_for_handler.write().unwrap();
+                                
+                                // Track chunks to delete after dropping locks
+                                let mut chunks_to_delete = Vec::new();
+
+                                match update.operation {
+                                    IndexOperation::Delete { path } => {
+                                        info!("Replicating delete: {}", path);
+                                        let del_path = std::path::PathBuf::from(&path);
+                                        
+                                        // Update index
+                                        if let Some(entry) = index.remove(&del_path) {
+                                            if !is_client_role {
+                                                chunks_to_delete = entry.chunks;
+                                            }
+                                            info!("Deleted file from follower: {}", path);
+                                        }
+                                        
+                                        // Update inode table (atomic with index update)
+                                        inode_tbl.remove_path(&del_path);
+                                    }
+                                    IndexOperation::Upsert { path, size, modified_ms, permissions, chunks } => {
+                                        info!("Replicating upsert: {} ({} bytes)", path, size);
+                                        let chunk_refs: Vec<ChunkRef> = chunks.iter()
+                                            .map(|c| ChunkRef {
+                                                hash: c.hash,
+                                                offset: c.offset,
+                                                size: c.size,
+                                            })
+                                            .collect();
+                                        let now = std::time::SystemTime::now();
+                                        let file_path = std::path::PathBuf::from(&path);
+                                        
+                                        // Update index
+                                        let old_entry = index.insert(file_path.clone(), FileEntry {
+                                            size,
+                                            modified: std::time::UNIX_EPOCH + std::time::Duration::from_millis(modified_ms),
+                                            permissions,
+                                            is_dir: false,
+                                            chunks: chunk_refs,
+                                            uid: 0,
+                                            gid: 0,
+                                            created: now,
+                                            accessed: now,
+                                            symlink_target: None,
+                                        });
+
+                                        // If we overwrote an existing file, clean up its chunks
+                                        if let Some(entry) = old_entry {
+                                            if !entry.is_dir && !is_client_role {
+                                                // We can't delete immediately if we are holding locks? 
+                                                // Actually we can, chunk_store doesn't use these locks.
+                                                // But for safety/consistency we'll collect them to delete later.
+                                                chunks_to_delete.extend(entry.chunks);
                                             }
                                         }
-                                        IndexOperation::Upsert { path, size, modified_ms, permissions, chunks } => {
-                                            info!("Replicating upsert: {} ({} bytes)", path, size);
-                                            let chunk_refs: Vec<ChunkRef> = chunks.iter()
-                                                .map(|c| ChunkRef {
-                                                    hash: c.hash,
-                                                    offset: c.offset,
-                                                    size: c.size,
-                                                })
-                                                .collect();
-                                            let now = std::time::SystemTime::now();
-                                            let file_path = std::path::PathBuf::from(&path);
-                                            index.insert(file_path.clone(), FileEntry {
-                                                size,
-                                                modified: std::time::UNIX_EPOCH + std::time::Duration::from_millis(modified_ms),
-                                                permissions,
-                                                is_dir: false,
-                                                chunks: chunk_refs,
-                                                uid: 0,
-                                                gid: 0,
-                                                created: now,
-                                                accessed: now,
-                                                symlink_target: None,
-                                            });
-                                            Some(InodeOp::Add(file_path))
-                                        }
-                                        IndexOperation::Mkdir { path, permissions } => {
-                                            info!("Replicating mkdir: {}", path);
-                                            let now = std::time::SystemTime::now();
-                                            let dir_path = std::path::PathBuf::from(&path);
-                                            index.insert(dir_path.clone(), FileEntry {
-                                                size: 0,
-                                                modified: now,
-                                                permissions,
-                                                is_dir: true,
-                                                chunks: vec![],
-                                                uid: 0,
-                                                gid: 0,
-                                                created: now,
-                                                accessed: now,
-                                                symlink_target: None,
-                                            });
-                                            Some(InodeOp::Add(dir_path))
-                                        }
-                                        IndexOperation::Rename { from_path, to_path } => {
-                                            info!("Replicating rename: {} -> {}", from_path, to_path);
-                                            let from = std::path::PathBuf::from(&from_path);
-                                            let to = std::path::PathBuf::from(&to_path);
-                                            if let Some(entry) = index.remove(&from) {
-                                                index.insert(to.clone(), entry);
-                                                Some(InodeOp::Rename(from, to))
-                                            } else {
-                                                None
-                                            }
+
+                                        // Update inode table if needed (atomic with index update)
+                                        if inode_tbl.get_inode(&file_path).is_none() {
+                                            let mut next_ino = next_inode_for_handler.write().unwrap();
+                                            let ino = *next_ino;
+                                            *next_ino += 1;
+                                            inode_tbl.insert(ino, file_path);
                                         }
                                     }
-                                    // file_index write lock DROPPED here
-                                };
-                                
-                                // Now safely acquire inode_table lock (no deadlock risk)
-                                if let Some(op) = inode_op {
-                                    let mut inode_tbl = inode_table_for_handler.write().unwrap();
-                                    match op {
-                                        InodeOp::Add(path) => {
-                                            if inode_tbl.get_inode(&path).is_none() {
-                                                let mut next_ino = next_inode_for_handler.write().unwrap();
-                                                let ino = *next_ino;
-                                                *next_ino += 1;
-                                                inode_tbl.insert(ino, path);
-                                            }
+                                    IndexOperation::Mkdir { path, permissions } => {
+                                        info!("Replicating mkdir: {}", path);
+                                        let now = std::time::SystemTime::now();
+                                        let dir_path = std::path::PathBuf::from(&path);
+                                        
+                                        // Update index
+                                        index.insert(dir_path.clone(), FileEntry {
+                                            size: 0,
+                                            modified: now,
+                                            permissions,
+                                            is_dir: true,
+                                            chunks: vec![],
+                                            uid: 0,
+                                            gid: 0,
+                                            created: now,
+                                            accessed: now,
+                                            symlink_target: None,
+                                        });
+
+                                        // Update inode table if needed
+                                        if inode_tbl.get_inode(&dir_path).is_none() {
+                                            let mut next_ino = next_inode_for_handler.write().unwrap();
+                                            let ino = *next_ino;
+                                            *next_ino += 1;
+                                            inode_tbl.insert(ino, dir_path);
                                         }
-                                        InodeOp::Remove(path) => {
-                                            inode_tbl.remove_path(&path);
+                                    }
+                                    IndexOperation::Rename { from_path, to_path } => {
+                                        info!("Replicating rename: {} -> {}", from_path, to_path);
+                                        let from = std::path::PathBuf::from(&from_path);
+                                        let to = std::path::PathBuf::from(&to_path);
+                                        
+                                        // Handle overwrite at destination
+                                        if let Some(target_entry) = index.remove(&to) {
+                                             if !target_entry.is_dir && !is_client_role {
+                                                 chunks_to_delete.extend(target_entry.chunks);
+                                             }
+                                             // Also remove from inode table
+                                             // Note: inode_table.remove_path deletes by path, effectively removing the target inode mapping.
+                                             inode_tbl.remove_path(&to);
                                         }
-                                        InodeOp::Rename(from, to) => {
+                                        
+                                        // Move entry
+                                        if let Some(entry) = index.remove(&from) {
+                                            index.insert(to.clone(), entry);
+                                            
+                                            // Update inode table
                                             inode_tbl.remove_path(&from);
                                             let mut next_ino = next_inode_for_handler.write().unwrap();
                                             let ino = *next_ino;
@@ -285,6 +298,15 @@ fn main() {
                                             inode_tbl.insert(ino, to);
                                         }
                                     }
+                                }
+                                
+                                // Drop locks before doing IO (deleting chunks)
+                                drop(index);
+                                drop(inode_tbl);
+
+                                // Delete chunks if any
+                                for chunk in chunks_to_delete {
+                                    let _ = chunk_store_for_handler.delete(&chunk.hash);
                                 }
                                 
                                 None // No response needed for replication
@@ -295,24 +317,25 @@ fn main() {
                                     info!("Received FileDelete from {}: {}", peer_id, sync.path);
                                     
                                     let path = std::path::PathBuf::from(&sync.path);
-                                    let removed = {
-                                        let mut index = file_index_for_handler.write().unwrap();
-                                        if let Some(entry) = index.remove(&path) {
-                                            // Delete chunks
-                                            for chunk in &entry.chunks {
-                                                let _ = chunk_store_for_handler.delete(&chunk.hash);
-                                            }
-                                            info!("Deleted file from follower: {}", sync.path);
-                                            true
-                                        } else {
-                                            false
-                                        }
-                                        // file_index lock DROPPED here
+                                    
+                                    // Lock ordering: Inode -> Index
+                                    let mut inode_tbl = inode_table_for_handler.write().unwrap();
+                                    let mut index = file_index_for_handler.write().unwrap();
+                                    
+                                    let chunks_to_delete = if let Some(entry) = index.remove(&path) {
+                                        info!("Deleted file from follower: {}", sync.path);
+                                        inode_tbl.remove_path(&path);
+                                        entry.chunks
+                                    } else {
+                                        Vec::new()
                                     };
                                     
-                                    if removed {
-                                        let mut inode_tbl = inode_table_for_handler.write().unwrap();
-                                        inode_tbl.remove_path(&path);
+                                    drop(index);
+                                    drop(inode_tbl);
+                                    
+                                    // Delete chunks
+                                    for chunk in chunks_to_delete {
+                                        let _ = chunk_store_for_handler.delete(&chunk.hash);
                                     }
                                     return None;
                                 }
@@ -329,8 +352,10 @@ fn main() {
                                     }
                                 }
                                 
-                                // Update index
+                                // Lock ordering: Inode -> Index
+                                let mut inode_tbl = inode_table_for_handler.write().unwrap();
                                 let mut index = file_index_for_handler.write().unwrap();
+                                
                                 let path = std::path::PathBuf::from(&sync.path);
                                 
                                 // If the incoming message has chunk_refs, use them (authoritative metadata).
@@ -401,11 +426,7 @@ fn main() {
                                     }
                                 }
                                 
-                                // Drop index lock before inode table to reduce contention
-                                drop(index);
-                                
-                                // Also update inode table so the file can be looked up
-                                let mut inode_tbl = inode_table_for_handler.write().unwrap();
+                                // Update inode table
                                 if inode_tbl.get_inode(&path).is_none() {
                                     let mut next_ino = next_inode_for_handler.write().unwrap();
                                     let ino = *next_ino;
@@ -413,6 +434,9 @@ fn main() {
                                     inode_tbl.insert(ino, path.clone());
                                     info!("Added inode {} for replicated path: {}", ino, sync.path);
                                 }
+                                
+                                drop(index);
+                                drop(inode_tbl);
                                 
                                 info!("FileSync complete for {}", sync.path);
                                 None
@@ -495,6 +519,9 @@ fn main() {
                                     peer_id, create_req.path, create_req.mode);
                                 
                                 let path = std::path::PathBuf::from(&create_req.path);
+                                
+                                // Lock ordering: Inode -> Index
+                                let mut inode_tbl = inode_table_for_handler.write().unwrap();
                                 let mut index = file_index_for_handler.write().unwrap();
                                 
                                 if index.get(&path).is_some() {
@@ -518,10 +545,10 @@ fn main() {
                                         symlink_target: None,
                                     };
                                     
+                                    // Update index
                                     index.insert(path.clone(), entry);
                                     
-                                    // Also update inode table
-                                    let mut inode_tbl = inode_table_for_handler.write().unwrap();
+                                    // Update inode table
                                     let mut next_ino = next_inode_for_handler.write().unwrap();
                                     let ino = *next_ino;
                                     *next_ino += 1;
@@ -532,9 +559,7 @@ fn main() {
                                     // Queue broadcast to followers
                                     cluster_for_handler.increment_index_version(path.clone());
                                     let entry_for_broadcast = index.get(&path).unwrap().clone();
-                                    drop(index);
-                                    drop(inode_tbl);
-                                    drop(next_ino);
+                                    
                                     broadcast_queue_for_handler.lock().unwrap().push((path, entry_for_broadcast));
                                     
                                     Some(Message::FileOpResponse(FileOpResponseMsg {
@@ -548,22 +573,23 @@ fn main() {
                                 info!("Received DeleteFile: {}", del.path);
                                 
                                 let path = std::path::PathBuf::from(&del.path);
+                                
+                                // Lock ordering: Inode -> Index
+                                let mut inode_tbl = inode_table_for_handler.write().unwrap();
                                 let mut index = file_index_for_handler.write().unwrap();
                                 
                                 if let Some(entry) = index.remove(&path) {
-                                    // Delete chunks
-                                    for chunk in &entry.chunks {
-                                        let _ = chunk_store_for_handler.delete(&chunk.hash);
-                                    }
+                                    // Delete chunks (can do this after dropping locks, or here?)
+                                    // For now collect them to delete later or just delete (fast enough usually)
+                                    // Or better: drop locks then delete. But we need index lock to remove entry.
+                                    let chunks_to_delete = entry.chunks;
                                     
                                     // Remove from inode table
-                                    let mut inode_tbl = inode_table_for_handler.write().unwrap();
                                     inode_tbl.remove_path(&path);
                                     
                                     info!("Leader deleted file: {}", del.path);
                                     
                                     // Queue delete broadcast to followers
-                                    // We use a special entry with size u64::MAX to signal deletion
                                     let delete_marker = wolfdisk::storage::FileEntry {
                                         size: u64::MAX, // Signals deletion
                                         is_dir: false,
@@ -576,8 +602,16 @@ fn main() {
                                         chunks: Vec::new(),
                                         symlink_target: None,
                                     };
+                                    
+                                    // Drop locks before IO
                                     drop(index);
                                     drop(inode_tbl);
+                                    
+                                    // Delete chunks
+                                    for chunk in chunks_to_delete {
+                                        let _ = chunk_store_for_handler.delete(&chunk.hash);
+                                    }
+                                    
                                     cluster_for_handler.record_deletion(path.clone());
                                     broadcast_queue_for_handler.lock().unwrap().push((path, delete_marker));
                                     
@@ -597,6 +631,9 @@ fn main() {
                                 info!("Received CreateDir: {}", dir_req.path);
                                 
                                 let path = std::path::PathBuf::from(&dir_req.path);
+                                
+                                // Lock ordering: Inode -> Index
+                                let mut inode_tbl = inode_table_for_handler.write().unwrap();
                                 let mut index = file_index_for_handler.write().unwrap();
                                 
                                 if index.get(&path).is_some() {
@@ -620,10 +657,10 @@ fn main() {
                                         symlink_target: None,
                                     };
                                     
+                                    // Update index
                                     index.insert(path.clone(), entry.clone());
                                     
-                                    // Also update inode table
-                                    let mut inode_tbl = inode_table_for_handler.write().unwrap();
+                                    // Update inode table
                                     let mut next_ino = next_inode_for_handler.write().unwrap();
                                     let ino = *next_ino;
                                     *next_ino += 1;
@@ -648,6 +685,9 @@ fn main() {
                                 info!("Received DeleteDir: {}", del.path);
                                 
                                 let path = std::path::PathBuf::from(&del.path);
+                                
+                                // Lock ordering: Inode -> Index
+                                let mut inode_tbl = inode_table_for_handler.write().unwrap();
                                 let mut index = file_index_for_handler.write().unwrap();
                                 
                                 match index.get(&path) {
@@ -664,7 +704,8 @@ fn main() {
                                         }))
                                     }
                                     _ => {
-                                        // Check directory is empty
+                                        // Check directory is empty (requires checking all paths in index)
+                                        // This is a bit slow while holding write lock, but necessary for consistency
                                         let has_children = index.paths().any(|p| {
                                             if let Some(parent) = p.parent() {
                                                 parent == path
@@ -681,9 +722,6 @@ fn main() {
                                         }
                                         
                                         index.remove(&path);
-                                        
-                                        // Remove from inode table
-                                        let mut inode_tbl = inode_table_for_handler.write().unwrap();
                                         inode_tbl.remove_path(&path);
                                         
                                         info!("Leader deleted directory: {}", del.path);
@@ -703,6 +741,7 @@ fn main() {
                                         };
                                         drop(index);
                                         drop(inode_tbl);
+                                        
                                         cluster_for_handler.record_deletion(path.clone());
                                         broadcast_queue_for_handler.lock().unwrap().push((path, delete_marker));
                                         
@@ -719,6 +758,9 @@ fn main() {
                                 
                                 let from_path = std::path::PathBuf::from(&rename_req.from_path);
                                 let to_path = std::path::PathBuf::from(&rename_req.to_path);
+                                
+                                // Lock ordering: Inode -> Index
+                                let mut inode_tbl = inode_table_for_handler.write().unwrap();
                                 let mut index = file_index_for_handler.write().unwrap();
                                 
                                 // Check source exists
@@ -732,12 +774,27 @@ fn main() {
                                     }
                                 };
                                 
-                                // Check dest doesn't exist
-                                if index.contains(&to_path) {
-                                    return Some(Message::FileOpResponse(FileOpResponseMsg {
-                                        success: false,
-                                        error: Some("Destination already exists".to_string()),
-                                    }));
+                                // Handle overwrite
+                                if let Some(target_entry) = index.get(&to_path) {
+                                     // Check if directory is empty
+                                     if target_entry.is_dir {
+                                         let has_children = index.paths().any(|p| p.parent() == Some(&to_path));
+                                         if has_children {
+                                              return Some(Message::FileOpResponse(FileOpResponseMsg {
+                                                  success: false,
+                                                  error: Some("Destination directory not empty".to_string()),
+                                              }));
+                                         }
+                                     }
+                                     
+                                     // Delete chunks of target
+                                     for chunk in &target_entry.chunks {
+                                          let _ = chunk_store_for_handler.delete(&chunk.hash);
+                                     }
+                                     
+                                     // Remove target from index/inode
+                                     index.remove(&to_path);
+                                     inode_tbl.remove_path(&to_path);
                                 }
                                 
                                 // Move entry in index
@@ -745,7 +802,7 @@ fn main() {
                                 index.insert(to_path.clone(), entry.clone());
                                 
                                 // Update inode table
-                                let mut inode_tbl = inode_table_for_handler.write().unwrap();
+                                // Here we can try to preserve inode if we want, or just re-map
                                 if let Some(ino) = inode_tbl.get_inode(&from_path) {
                                     let ino = ino;
                                     inode_tbl.remove_path(&from_path);
@@ -785,6 +842,9 @@ fn main() {
                                 info!("Received CreateSymlink: {} -> {}", symlink_req.link_path, symlink_req.target);
                                 
                                 let link_path = std::path::PathBuf::from(&symlink_req.link_path);
+                                
+                                // Lock ordering: Inode -> Index
+                                let mut inode_tbl = inode_table_for_handler.write().unwrap();
                                 let mut index = file_index_for_handler.write().unwrap();
                                 
                                 // Check link doesn't exist
@@ -813,9 +873,9 @@ fn main() {
                                 index.insert(link_path.clone(), entry.clone());
                                 
                                 // Add to inode table
-                                let mut inode_tbl = inode_table_for_handler.write().unwrap();
-                                let inode = *next_inode_for_handler.read().unwrap();
-                                *next_inode_for_handler.write().unwrap() += 1;
+                                let mut next_ino = next_inode_for_handler.write().unwrap();
+                                let inode = *next_ino;
+                                *next_ino += 1;
                                 inode_tbl.insert(inode, link_path.clone());
                                 
                                 info!("Leader created symlink: {} -> {}", symlink_req.link_path, symlink_req.target);
@@ -823,6 +883,7 @@ fn main() {
                                 // Queue broadcast
                                 drop(index);
                                 drop(inode_tbl);
+                                drop(next_ino);
                                 broadcast_queue_for_handler.lock().unwrap().push((link_path, entry));
                                 
                                 Some(Message::FileOpResponse(FileOpResponseMsg {
