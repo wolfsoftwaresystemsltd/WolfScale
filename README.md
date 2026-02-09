@@ -22,7 +22,7 @@ Wolf started as a database replication tool and has grown into a suite of server
 |------|-------------|--------|
 | **[WolfScale](#wolfscale--database-replication)** | MariaDB/MySQL replication, clustering & load balancing | ✅ Available |
 | **[WolfDisk](#wolfdisk--distributed-filesystem)** | Disk sharing & replication across networks | ✅ Available |
-| **[WolfNet](#wolfnet--private-networking)** | Secure private networking across the internet | 🔜 Coming Soon |
+| **[WolfNet](#wolfnet--private-networking)** | Secure private networking across the internet | 🧪 Beta |
 | **[WolfVPN](#wolfvpn--remote-access)** | Remote access plugin for WolfNet | 🔜 Coming Soon |
 
 ---
@@ -135,14 +135,89 @@ See [`wolfdisk/README.md`](wolfdisk/README.md) for full documentation.
 
 ## WolfNet — Private Networking
 
-> 🔜 **Coming Soon**
+> 🧪 **Beta** — Core networking and encryption are implemented. Not yet extensively tested in production.
 
-Create a secure private network across the internet. Connect servers across data centres, cloud providers, and on-premises infrastructure as if they were on the same local network.
+WolfNet creates a secure, encrypted private network between your machines over the internet. Machines on WolfNet can see each other as if they were on the same LAN, but all traffic is encrypted with modern cryptography (X25519 + ChaCha20-Poly1305 — the same crypto as WireGuard).
 
-- **Encrypted mesh networking** — peer-to-peer, zero-trust
-- **Works across clouds and data centres** — AWS, GCP, Azure, on-prem
-- **Zero-config peer discovery** — uses the same auto-discovery as WolfScale
-- **NAT traversal built-in** — works behind firewalls without port forwarding
+### Why WolfNet?
+
+| Feature | Benefit |
+|---------|---------|
+| **WireGuard-Class Crypto** | X25519 key exchange + ChaCha20-Poly1305 AEAD encryption |
+| **Mesh Networking** | Every node can reach every other node directly — no single point of failure |
+| **Gateway Mode** | Route internet traffic through a gateway node with NAT masquerading |
+| **LAN Auto-Discovery** | Nodes find each other automatically on the same network |
+| **TUN-Based** | Uses kernel TUN interfaces for near-native performance |
+| **Single Binary** | No dependencies — just `wolfnet` and `wolfnetctl` |
+| **Systemd Service** | Runs as a background service with automatic startup |
+
+### Quick Start
+
+```bash
+# Interactive installer — downloads binary, generates keys, creates systemd service
+curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/wolfnet/setup.sh | sudo bash
+```
+
+The installer will:
+- Check for `/dev/net/tun` (with Proxmox/LXC guidance if missing)
+- Download and install `wolfnet` and `wolfnetctl`
+- Generate an X25519 keypair
+- Prompt for WolfNet IP address, port, and gateway mode
+- Create a systemd service for automatic startup
+
+### Architecture
+
+```
+Machine A (10.0.10.1)          Machine B (10.0.10.2)
+┌─────────────────┐            ┌─────────────────┐
+│  wolfnet0 (TUN) │◄──────────►│  wolfnet0 (TUN) │
+│  10.0.10.1/24   │  Encrypted │  10.0.10.2/24   │
+│  ChaCha20-Poly  │  UDP/9600  │  ChaCha20-Poly  │
+└─────────────────┘            └─────────────────┘
+         ▲                              ▲
+         │       Encrypted UDP          │
+         └──────────┬───────────────────┘
+                    │
+           ┌────────▼────────┐
+           │  Machine C      │
+           │  (Gateway)      │
+           │  10.0.10.3/24   │
+           │  NAT → Internet │
+           └─────────────────┘
+```
+
+### CLI Reference
+
+```bash
+# Daemon
+wolfnet                          # Start the daemon (usually via systemd)
+wolfnet init --address 10.0.10.1 # Generate config and keypair
+wolfnet genkey                   # Generate a new X25519 keypair
+wolfnet pubkey                   # Show this node's public key
+wolfnet token                    # Show join token for sharing
+
+# Control utility
+wolfnetctl status                # Show node status, IP, uptime
+wolfnetctl peers                 # List peers with connection status
+wolfnetctl info                  # Combined status and peer list
+
+# Service management
+sudo systemctl start wolfnet     # Start service
+sudo systemctl status wolfnet    # Check status
+sudo journalctl -u wolfnet -f    # View logs
+```
+
+### Security
+
+| Layer | Technology |
+|-------|------------|
+| Key Exchange | **X25519** (Curve25519 Diffie-Hellman) |
+| Encryption | **ChaCha20-Poly1305** AEAD (256-bit) |
+| Replay Protection | Counter-based nonces with monotonic validation |
+| Network Isolation | iptables firewall blocks all external inbound traffic |
+| Key Storage | Private keys stored with 0600 permissions |
+
+> ⚠️ **Proxmox/LXC Users:** The TUN device (`/dev/net/tun`) is blocked by default in LXC containers. See [wolfscale.org/wolfnet.html](https://wolfscale.org/wolfnet.html) for setup instructions.
 
 ---
 
@@ -189,6 +264,7 @@ A plugin for WolfNet that provides secure remote access to your private network.
 - **Website:** [wolfscale.org](https://wolfscale.org)
 - **Full Docs:** [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md)
 - **WolfDisk Docs:** [wolfdisk/README.md](wolfdisk/README.md)
+- **WolfNet Docs:** [wolfscale.org/wolfnet.html](https://wolfscale.org/wolfnet.html)
 
 ---
 
