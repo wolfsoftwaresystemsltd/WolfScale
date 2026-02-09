@@ -12,7 +12,7 @@ use wolfdisk::{Config, fuse::WolfDiskFS, storage::{FileIndex, FileEntry, ChunkRe
 #[derive(Parser)]
 #[command(name = "wolfdisk")]
 #[command(author = "Wolf Software Systems Ltd")]
-#[command(version = "2.2.1")]
+#[command(version = "2.2.2")]
 #[command(about = "Distributed file system with replicated and shared storage", long_about = None)]
 struct Cli {
     #[command(subcommand)]
@@ -181,7 +181,19 @@ fn main() {
                                 match update.operation {
                                     IndexOperation::Delete { path } => {
                                         info!("Replicating delete: {}", path);
-                                        index.remove(&std::path::PathBuf::from(&path));
+                                        let del_path = std::path::PathBuf::from(&path);
+                                        if let Some(entry) = index.remove(&del_path) {
+                                            // Delete chunks from disk
+                                            if !is_client_role {
+                                                for chunk in &entry.chunks {
+                                                    let _ = chunk_store_for_handler.delete(&chunk.hash);
+                                                }
+                                            }
+                                            // Remove from inode table
+                                            let mut inode_tbl = inode_table_for_handler.write().unwrap();
+                                            inode_tbl.remove_path(&del_path);
+                                            info!("Deleted file and {} chunks from follower: {}", entry.chunks.len(), path);
+                                        }
                                     }
                                     IndexOperation::Upsert { path, size, modified_ms, permissions, chunks } => {
                                         info!("Replicating upsert: {} ({} bytes)", path, size);
@@ -255,8 +267,8 @@ fn main() {
                                     return None;
                                 }
                                 
-                                info!("Received FileSync from {}: {} ({} bytes, {} chunks)", 
-                                    peer_id, sync.path, sync.size, sync.chunk_data.len());
+                                info!("Received FileSync from {}: {} ({} bytes, {} chunk_refs, {} chunk_data)", 
+                                    peer_id, sync.path, sync.size, sync.chunks.len(), sync.chunk_data.len());
                                 
                                 // Store chunks locally (skip for client nodes - they read from leader)
                                 if !is_client_role {
@@ -269,27 +281,70 @@ fn main() {
                                 
                                 // Update index
                                 let mut index = file_index_for_handler.write().unwrap();
-                                let chunk_refs: Vec<ChunkRef> = sync.chunks.iter()
-                                    .map(|c| ChunkRef {
-                                        hash: c.hash,
-                                        offset: c.offset,
-                                        size: c.size,
-                                    })
-                                    .collect();
-                                
                                 let path = std::path::PathBuf::from(&sync.path);
-                                index.insert(path.clone(), FileEntry {
-                                    size: sync.size,
-                                    is_dir: sync.is_dir,
-                                    permissions: sync.permissions,
-                                    uid: sync.uid,
-                                    gid: sync.gid,
-                                    modified: std::time::UNIX_EPOCH + std::time::Duration::from_millis(sync.modified_ms),
-                                    created: std::time::UNIX_EPOCH + std::time::Duration::from_millis(sync.modified_ms),
-                                    accessed: std::time::SystemTime::now(),
-                                    chunks: chunk_refs,
-                                    symlink_target: None,
-                                });
+                                
+                                // If the incoming message has chunk_refs, use them (authoritative metadata).
+                                // If chunk_refs is empty but we have chunk_data, this is a subsequent batch
+                                // of a multi-batch transfer — only store the chunks, keep existing entry.
+                                if !sync.chunks.is_empty() {
+                                    // Authoritative update: replace the full file entry
+                                    let chunk_refs: Vec<ChunkRef> = sync.chunks.iter()
+                                        .map(|c| ChunkRef {
+                                            hash: c.hash,
+                                            offset: c.offset,
+                                            size: c.size,
+                                        })
+                                        .collect();
+                                    
+                                    index.insert(path.clone(), FileEntry {
+                                        size: sync.size,
+                                        is_dir: sync.is_dir,
+                                        permissions: sync.permissions,
+                                        uid: sync.uid,
+                                        gid: sync.gid,
+                                        modified: std::time::UNIX_EPOCH + std::time::Duration::from_millis(sync.modified_ms),
+                                        created: std::time::UNIX_EPOCH + std::time::Duration::from_millis(sync.modified_ms),
+                                        accessed: std::time::SystemTime::now(),
+                                        chunks: chunk_refs,
+                                        symlink_target: None,
+                                    });
+                                } else if !sync.chunk_data.is_empty() {
+                                    // Subsequent batch: only storing chunk data, keep existing index entry.
+                                    // Update size if it has grown.
+                                    if let Some(entry) = index.get_mut(&path) {
+                                        if sync.size > entry.size {
+                                            entry.size = sync.size;
+                                        }
+                                        entry.modified = std::time::UNIX_EPOCH + std::time::Duration::from_millis(sync.modified_ms);
+                                    }
+                                    info!("Stored {} additional chunks for {} (batch continuation)", sync.chunk_data.len(), sync.path);
+                                } else {
+                                    // Metadata-only update (streaming replication final sync)
+                                    // The chunks were already streamed via StoreChunk messages.
+                                    // Update the index entry with final metadata + chunk refs.
+                                    let chunk_refs: Vec<ChunkRef> = Vec::new();
+                                    // If we already have an entry, update it; otherwise create new.
+                                    if let Some(entry) = index.get_mut(&path) {
+                                        entry.size = sync.size;
+                                        entry.permissions = sync.permissions;
+                                        entry.uid = sync.uid;
+                                        entry.gid = sync.gid;
+                                        entry.modified = std::time::UNIX_EPOCH + std::time::Duration::from_millis(sync.modified_ms);
+                                    } else {
+                                        index.insert(path.clone(), FileEntry {
+                                            size: sync.size,
+                                            is_dir: sync.is_dir,
+                                            permissions: sync.permissions,
+                                            uid: sync.uid,
+                                            gid: sync.gid,
+                                            modified: std::time::UNIX_EPOCH + std::time::Duration::from_millis(sync.modified_ms),
+                                            created: std::time::UNIX_EPOCH + std::time::Duration::from_millis(sync.modified_ms),
+                                            accessed: std::time::SystemTime::now(),
+                                            chunks: chunk_refs,
+                                            symlink_target: None,
+                                        });
+                                    }
+                                }
                                 
                                 // Also update inode table so the file can be looked up
                                 let mut inode_tbl = inode_table_for_handler.write().unwrap();

@@ -1697,6 +1697,16 @@ impl Filesystem for WolfDiskFS {
             _ => {}
         }
 
+        // Look up the inode for this file BEFORE removing it (needed to clear write buffers)
+        let file_ino = inode_table.get_inode(&file_path);
+        
+        // Clear any pending write buffers and dirty flags for the deleted inode
+        // (prevents stale streaming replication data from being sent after delete)
+        if let Some(ino) = file_ino {
+            self.write_buffers.write().unwrap().remove(&ino);
+            self.dirty_inodes.write().unwrap().remove(&ino);
+        }
+        
         // Remove from index and inode table
         if let Some(entry) = file_index.remove(&file_path) {
             // Delete chunks
@@ -1710,9 +1720,24 @@ impl Filesystem for WolfDiskFS {
         drop(file_index);
         drop(inode_table);
 
-        // Broadcast delete to followers
+        // Broadcast delete to followers via IndexUpdate
         self.broadcast_index_update(IndexOperation::Delete {
             path: file_path.to_string_lossy().to_string(),
+        });
+        
+        // Also broadcast FileSync delete signal (size=u64::MAX) to ensure
+        // followers clean up even if stale streaming data arrives out of order
+        self.broadcast_file_sync(&file_path, &FileEntry {
+            size: u64::MAX,
+            is_dir: false,
+            permissions: 0,
+            uid: 0,
+            gid: 0,
+            modified: SystemTime::now(),
+            created: SystemTime::now(),
+            accessed: SystemTime::now(),
+            chunks: Vec::new(),
+            symlink_target: None,
         });
 
         reply.ok();
