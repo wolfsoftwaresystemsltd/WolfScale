@@ -3,7 +3,7 @@
 # WolfNet Quick Install Script
 # Installs WolfNet on Ubuntu/Debian (apt) or Fedora/RHEL (dnf)
 #
-# Usage: curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/wolfnet/setup.sh | bash
+# Usage: curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/wolfnet/setup.sh | sudo bash
 #
 
 set -e
@@ -13,6 +13,18 @@ echo "║              🐺  WolfNet Installer                          ║"
 echo "║          Secure Private Mesh Networking                     ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo ""
+
+# ─── Must run as root ────────────────────────────────────────────────────────
+if [ "$(id -u)" -ne 0 ]; then
+    echo "✗ This script must be run as root."
+    echo "  Usage: sudo bash setup.sh"
+    echo "     or: curl -sSL <url> | sudo bash"
+    exit 1
+fi
+
+# Detect the real user (for Rust install) when running under sudo
+REAL_USER="${SUDO_USER:-root}"
+REAL_HOME=$(eval echo "~$REAL_USER")
 
 # ─── Check for /dev/net/tun ─────────────────────────────────────────────────
 echo "Checking system requirements..."
@@ -73,29 +85,44 @@ echo ""
 echo "Installing system dependencies..."
 
 if [ "$PKG_MANAGER" = "apt" ]; then
-    sudo apt update
-    sudo apt install -y git curl build-essential pkg-config libssl-dev
+    apt update
+    apt install -y git curl build-essential pkg-config libssl-dev
 elif [ "$PKG_MANAGER" = "dnf" ]; then
-    sudo dnf install -y git curl gcc gcc-c++ make openssl-devel pkg-config
+    dnf install -y git curl gcc gcc-c++ make openssl-devel pkg-config
 elif [ "$PKG_MANAGER" = "yum" ]; then
-    sudo yum install -y git curl gcc gcc-c++ make openssl-devel pkgconfig
+    yum install -y git curl gcc gcc-c++ make openssl-devel pkgconfig
 fi
 
 echo "✓ System dependencies installed"
 
-# Install Rust if not present
-if ! command -v rustc &> /dev/null; then
-    echo ""
-    echo "Installing Rust..."
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-    source "$HOME/.cargo/env"
-    echo "✓ Rust installed"
+# Install Rust if not present (install as the real user, not root)
+CARGO_BIN="$REAL_HOME/.cargo/bin/cargo"
+
+if [ -f "$CARGO_BIN" ]; then
+    echo "✓ Rust already installed"
+elif command -v cargo &> /dev/null; then
+    CARGO_BIN="$(command -v cargo)"
+    echo "✓ Rust already installed (system-wide)"
 else
-    echo "✓ Rust already installed ($(rustc --version))"
+    echo ""
+    echo "Installing Rust for user '$REAL_USER'..."
+    if [ "$REAL_USER" = "root" ]; then
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    else
+        su - "$REAL_USER" -c "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
+    fi
+    echo "✓ Rust installed"
 fi
 
-# Ensure cargo is in PATH
-export PATH="$HOME/.cargo/bin:$PATH"
+# Ensure cargo is found
+export PATH="$REAL_HOME/.cargo/bin:/usr/local/bin:/usr/bin:$PATH"
+
+if ! command -v cargo &> /dev/null; then
+    echo "✗ cargo not found after installation. Check Rust install."
+    exit 1
+fi
+
+echo "✓ Using cargo: $(command -v cargo)"
 
 # Clone or update repository
 INSTALL_DIR="/opt/wolfscale-src"
@@ -105,28 +132,35 @@ echo "Cloning WolfScale repository..."
 if [ -d "$INSTALL_DIR" ]; then
     echo "  Updating existing installation..."
     cd "$INSTALL_DIR"
-    sudo git fetch origin
-    sudo git reset --hard origin/main
+    git fetch origin
+    git reset --hard origin/main
 else
-    sudo git clone https://github.com/wolfsoftwaresystemsltd/WolfScale.git "$INSTALL_DIR"
+    git clone https://github.com/wolfsoftwaresystemsltd/WolfScale.git "$INSTALL_DIR"
     cd "$INSTALL_DIR"
 fi
 
-sudo chown -R "$USER:$USER" "$INSTALL_DIR"
 echo "✓ Repository cloned to $INSTALL_DIR"
 
-# Build WolfNet
+# Build WolfNet (as the real user if possible, to use their cargo)
 echo ""
 echo "Building WolfNet (this may take a few minutes)..."
 cd "$INSTALL_DIR/wolfnet"
-cargo build --release
+
+if [ "$REAL_USER" != "root" ] && [ -f "$REAL_HOME/.cargo/bin/cargo" ]; then
+    # Build as the real user so cargo uses their toolchain
+    chown -R "$REAL_USER:$REAL_USER" "$INSTALL_DIR"
+    su - "$REAL_USER" -c "cd $INSTALL_DIR/wolfnet && $REAL_HOME/.cargo/bin/cargo build --release"
+else
+    cargo build --release
+fi
+
 echo "✓ Build complete"
 
 # Stop service if running (for upgrades)
 if systemctl is-active --quiet wolfnet 2>/dev/null; then
     echo ""
     echo "Stopping WolfNet service for upgrade..."
-    sudo systemctl stop wolfnet
+    systemctl stop wolfnet
     sleep 2
     echo "✓ Service stopped"
     RESTART_SERVICE=true
@@ -138,26 +172,26 @@ fi
 echo ""
 if [ -f "/usr/local/bin/wolfnet" ]; then
     echo "Upgrading WolfNet..."
-    sudo rm -f /usr/local/bin/wolfnet
+    rm -f /usr/local/bin/wolfnet
 else
     echo "Installing WolfNet..."
 fi
-sudo cp "$INSTALL_DIR/wolfnet/target/release/wolfnet" /usr/local/bin/wolfnet
-sudo chmod +x /usr/local/bin/wolfnet
+cp "$INSTALL_DIR/wolfnet/target/release/wolfnet" /usr/local/bin/wolfnet
+chmod +x /usr/local/bin/wolfnet
 echo "✓ wolfnet installed to /usr/local/bin/wolfnet"
 
 # Install wolfnetctl if it exists
 if [ -f "$INSTALL_DIR/wolfnet/target/release/wolfnetctl" ]; then
-    sudo cp "$INSTALL_DIR/wolfnet/target/release/wolfnetctl" /usr/local/bin/wolfnetctl
-    sudo chmod +x /usr/local/bin/wolfnetctl
+    cp "$INSTALL_DIR/wolfnet/target/release/wolfnetctl" /usr/local/bin/wolfnetctl
+    chmod +x /usr/local/bin/wolfnetctl
     echo "✓ wolfnetctl installed to /usr/local/bin/wolfnetctl"
 fi
 
 # Create directories
 echo ""
 echo "Creating directories..."
-sudo mkdir -p /etc/wolfnet
-sudo mkdir -p /var/run/wolfnet
+mkdir -p /etc/wolfnet
+mkdir -p /var/run/wolfnet
 echo "✓ Directories created"
 
 # Create config if not exists - with interactive prompts
@@ -233,7 +267,7 @@ if [ ! -f "/etc/wolfnet/config.toml" ]; then
     # Write config
     echo ""
     echo "Creating configuration..."
-    cat <<EOF | sudo tee /etc/wolfnet/config.toml > /dev/null
+    cat <<EOF > /etc/wolfnet/config.toml
 # WolfNet Configuration
 # Generated by setup.sh
 
@@ -277,7 +311,7 @@ if [ ! -f "/etc/systemd/system/wolfnet.service" ]; then
     echo "═══════════════════════════════════════════════════════════════"
     echo ""
 
-    sudo tee /etc/systemd/system/wolfnet.service > /dev/null <<EOF
+    cat > /etc/systemd/system/wolfnet.service <<EOF
 [Unit]
 Description=WolfNet - Secure Private Mesh Networking
 After=network-online.target
@@ -306,7 +340,7 @@ RuntimeDirectoryMode=0755
 WantedBy=multi-user.target
 EOF
 
-    sudo systemctl daemon-reload
+    systemctl daemon-reload
     echo "✓ Systemd service created"
 
     # Enable and optionally start
@@ -314,8 +348,8 @@ EOF
     echo -n "Start WolfNet now? [Y/n]: "
     read start_now < /dev/tty
     if [ "$start_now" != "n" ] && [ "$start_now" != "N" ]; then
-        sudo systemctl enable wolfnet
-        sudo systemctl start wolfnet
+        systemctl enable wolfnet
+        systemctl start wolfnet
         sleep 2
         if systemctl is-active --quiet wolfnet; then
             echo "✓ WolfNet is running!"
@@ -323,20 +357,20 @@ EOF
             echo "⚠ WolfNet may have failed to start. Check: journalctl -u wolfnet -n 20"
         fi
     else
-        sudo systemctl enable wolfnet
+        systemctl enable wolfnet
         echo "✓ WolfNet enabled (will start on boot)"
     fi
 else
     echo ""
     echo "✓ Service already installed - reloading systemd"
-    sudo systemctl daemon-reload
+    systemctl daemon-reload
 fi
 
 # Restart service if it was running before upgrade
 if [ "$RESTART_SERVICE" = "true" ]; then
     echo ""
     echo "Restarting WolfNet service..."
-    sudo systemctl start wolfnet
+    systemctl start wolfnet
     echo "✓ Service restarted"
 fi
 
