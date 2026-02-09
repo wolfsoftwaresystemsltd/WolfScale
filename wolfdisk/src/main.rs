@@ -1250,28 +1250,27 @@ fn main() {
                     for _ in 0..60 {
                         std::thread::sleep(std::time::Duration::from_millis(500));
                         
-                        // If we became leader ourselves, abort sync (we ARE the source of truth)
-                        if sync_cluster.is_leader() {
-                            info!("We became leader - skipping initial sync (we are the source of truth)");
-                            return;
-                        }
-                        
-                        if sync_cluster.leader_id().is_some() {
-                            leader_found = true;
-                            break;
+                        if let Some(lid) = sync_cluster.leader_id() {
+                            // Don't try to sync from ourselves
+                            if lid != sync_node_id {
+                                leader_found = true;
+                                break;
+                            }
                         }
                     }
                     
                     if !leader_found {
-                        warn!("No leader found after 30s - skipping initial sync");
+                        info!("No leader found after 30s - marking sync complete (sole node)");
+                        sync_cluster.set_sync_complete();
                         return;
                     }
                     
                     let leader_id = sync_cluster.leader_id().unwrap();
                     
-                    // Don't sync from ourselves!
+                    // Don't sync from ourselves
                     if leader_id == sync_node_id {
-                        info!("We are the leader - skipping initial sync");
+                        info!("We are the leader - marking sync complete");
+                        sync_cluster.set_sync_complete();
                         return;
                     }
                     
@@ -1279,6 +1278,7 @@ fn main() {
                         Some(addr) => addr,
                         None => {
                             warn!("Leader found but no address available");
+                            sync_cluster.set_sync_complete();
                             return;
                         }
                     };
@@ -1359,6 +1359,9 @@ fn main() {
                             warn!("Failed to connect to leader for initial sync: {}", e);
                         }
                     }
+                    
+                    // Mark sync complete regardless of outcome so election can proceed
+                    sync_cluster.set_sync_complete();
                 });
             }
             

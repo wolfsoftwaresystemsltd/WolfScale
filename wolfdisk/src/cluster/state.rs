@@ -49,6 +49,9 @@ pub struct ClusterManager {
     last_leader_heartbeat: Arc<RwLock<Instant>>,
     /// Current index version (for sync)
     index_version: Arc<RwLock<u64>>,
+    /// Whether initial sync from leader has completed
+    /// Election monitor waits for this before allowing leader promotion
+    initial_sync_complete: Arc<RwLock<bool>>,
 }
 
 impl ClusterManager {
@@ -71,6 +74,7 @@ impl ClusterManager {
             running: Arc::new(RwLock::new(false)),
             last_leader_heartbeat: Arc::new(RwLock::new(Instant::now())),
             index_version: Arc::new(RwLock::new(0)),
+            initial_sync_complete: Arc::new(RwLock::new(false)),
         }
     }
 
@@ -121,6 +125,17 @@ impl ClusterManager {
     /// Set the index version (used during sync)
     pub fn set_index_version(&self, version: u64) {
         *self.index_version.write().unwrap() = version;
+    }
+
+    /// Mark initial sync as complete (allows election monitor to promote to leader)
+    pub fn set_sync_complete(&self) {
+        *self.initial_sync_complete.write().unwrap() = true;
+        info!("Initial sync complete - node eligible for leader election");
+    }
+
+    /// Check if initial sync has completed
+    pub fn is_sync_complete(&self) -> bool {
+        *self.initial_sync_complete.read().unwrap()
     }
 
     /// Record that we received a heartbeat from the leader
@@ -236,6 +251,7 @@ impl ClusterManager {
         // Give discovery enough time to find all peers before electing
         let discovery_delay = Duration::from_secs(5);
         let peer_stale_threshold = Duration::from_secs(4);
+        let initial_sync_complete = Arc::clone(&self.initial_sync_complete);
 
         thread::spawn(move || {
             info!("Election monitor started for node {} - waiting for discovery", node_id);
@@ -291,11 +307,17 @@ impl ClusterManager {
                                 *state.write().unwrap() = ClusterState::Leading;
                             }
                         } else if i_am_lowest && config_role != NodeRole::Follower {
-                            // No leader and I'm the lowest ID - become leader
-                            info!("Becoming leader (term {}) - I have the lowest node ID", *term.read().unwrap());
-                            *term.write().unwrap() += 1;
-                            *leader_id.write().unwrap() = Some(node_id.clone());
-                            *state.write().unwrap() = ClusterState::Leading;
+                            // I have the lowest ID, but wait for initial sync before
+                            // taking leadership. This ensures a restarting node first
+                            // gets the latest data from the current leader.
+                            if *initial_sync_complete.read().unwrap() || active_peers.is_empty() {
+                                info!("Becoming leader (term {}) - I have the lowest node ID", *term.read().unwrap());
+                                *term.write().unwrap() += 1;
+                                *leader_id.write().unwrap() = Some(node_id.clone());
+                                *state.write().unwrap() = ClusterState::Leading;
+                            } else {
+                                debug!("Deferring leadership: waiting for initial sync to complete");
+                            }
                         } else {
                             // Not lowest ID, stay as follower and wait
                             debug!("Not becoming leader: i_am_lowest={}, config_role={:?}", i_am_lowest, config_role);
