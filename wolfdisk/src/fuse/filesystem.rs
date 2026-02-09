@@ -18,7 +18,7 @@ use crate::cluster::ClusterManager;
 use crate::config::Config;
 use crate::error::Result;
 use crate::network::peer::PeerManager;
-use crate::network::protocol::{Message, CreateFileMsg, CreateDirMsg, DeleteFileMsg, DeleteDirMsg, IndexUpdateMsg, IndexOperation, ChunkRefMsg, FileSyncMsg, ChunkWithData, WriteRequestMsg, RenameFileMsg, CreateSymlinkMsg, ReadRequestMsg, SetAttrMsg};
+use crate::network::protocol::{Message, CreateFileMsg, CreateDirMsg, DeleteFileMsg, DeleteDirMsg, IndexUpdateMsg, IndexOperation, ChunkRefMsg, FileSyncMsg, WriteRequestMsg, RenameFileMsg, CreateSymlinkMsg, ReadRequestMsg, SetAttrMsg};
 use crate::storage::{ChunkStore, FileIndex, FileEntry, InodeTable};
 
 /// Messages for the async replication queue
@@ -380,96 +380,6 @@ impl WolfDiskFS {
             // Queue for async broadcast
             if let Some(ref tx) = self.replication_tx {
                 let _ = tx.send(ReplicationMsg::Broadcast(msg));
-            }
-        }
-    }
-    
-    /// Broadcast a complete file with chunk data to followers (for writes)
-    fn broadcast_file_sync(&self, path: &std::path::Path, entry: &FileEntry) {
-        if !self.is_leader() {
-            return;
-        }
-        
-        if let (Some(cluster), Some(peer_manager)) = (&self.cluster, &self.peer_manager) {
-            // First, ensure we're connected to all discovered peers
-            let peers = cluster.peers();
-            for peer in &peers {
-                if peer_manager.get(&peer.node_id).is_none() {
-                    info!("Connecting to follower {} at {}", peer.node_id, peer.address);
-                    if let Err(e) = peer_manager.connect(&peer.node_id, &peer.address) {
-                        warn!("Failed to connect to {}: {}", peer.node_id, e);
-                    }
-                }
-            }
-            
-            let modified_ms = entry.modified
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_millis() as u64;
-
-            let chunk_refs: Vec<_> = entry.chunks.iter().map(|c| ChunkRefMsg {
-                hash: c.hash,
-                offset: c.offset,
-                size: c.size,
-            }).collect();
-
-            let total_chunks = entry.chunks.len();
-            const BATCH_SIZE: usize = 4; // ~16MB per batch at 4MB chunks
-
-            if total_chunks == 0 {
-                // Directory or empty file
-                let msg = Message::FileSync(FileSyncMsg {
-                    path: path.to_string_lossy().to_string(),
-                    is_dir: entry.is_dir,
-                    size: entry.size,
-                    permissions: entry.permissions,
-                    uid: entry.uid,
-                    gid: entry.gid,
-                    modified_ms,
-                    chunks: chunk_refs,
-                    chunk_data: Vec::new(),
-                });
-                info!("Broadcasting FileSync for {} (metadata only) to {} followers", 
-                    path.display(), peers.len());
-                peer_manager.broadcast(&msg);
-            } else {
-                // Send chunks in batches to avoid loading entire file into RAM
-                for (batch_idx, chunk_batch) in entry.chunks.chunks(BATCH_SIZE).enumerate() {
-                    let mut chunk_data = Vec::with_capacity(chunk_batch.len());
-                    for chunk in chunk_batch {
-                        match self.chunk_store.get(&chunk.hash) {
-                            Ok(data) => {
-                                chunk_data.push(ChunkWithData {
-                                    hash: chunk.hash,
-                                    data,
-                                });
-                            }
-                            Err(e) => {
-                                warn!("Failed to read chunk for sync: {}", e);
-                            }
-                        }
-                    }
-
-                    let msg = Message::FileSync(FileSyncMsg {
-                        path: path.to_string_lossy().to_string(),
-                        is_dir: entry.is_dir,
-                        size: entry.size,
-                        permissions: entry.permissions,
-                        uid: entry.uid,
-                        gid: entry.gid,
-                        modified_ms,
-                        chunks: if batch_idx == 0 { chunk_refs.clone() } else { Vec::new() },
-                        chunk_data,
-                    });
-
-                    if batch_idx == 0 {
-                        info!("Broadcasting FileSync for {} ({} bytes, {} chunks in {} batches) to {} followers", 
-                            path.display(), entry.size, total_chunks,
-                            (total_chunks + BATCH_SIZE - 1) / BATCH_SIZE,
-                            peers.len());
-                    }
-                    peer_manager.broadcast(&msg);
-                }
             }
         }
     }
@@ -1046,13 +956,13 @@ impl Filesystem for WolfDiskFS {
 
         *self.index_dirty.write().unwrap() = true;
 
-        // Broadcast truncation to followers
+        // Broadcast truncation to followers (non-blocking via replication queue)
         if size.is_some() {
             let file_index = self.file_index.read().unwrap();
             if let Some(entry) = file_index.get(&path) {
                 let entry_clone = entry.clone();
                 drop(file_index);
-                self.broadcast_file_sync(&path, &entry_clone);
+                self.broadcast_file_sync_final(&path, &entry_clone);
             }
         }
 
@@ -1742,7 +1652,8 @@ impl Filesystem for WolfDiskFS {
         
         // Also broadcast FileSync delete signal (size=u64::MAX) to ensure
         // followers clean up even if stale streaming data arrives out of order
-        self.broadcast_file_sync(&file_path, &FileEntry {
+        // (non-blocking via replication queue)
+        self.broadcast_file_sync_final(&file_path, &FileEntry {
             size: u64::MAX,
             is_dir: false,
             permissions: 0,
