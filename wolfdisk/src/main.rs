@@ -1266,12 +1266,30 @@ fn main() {
                     // Check queues every 50ms
                     std::thread::sleep(std::time::Duration::from_millis(50));
                     
+                    // Safety valve: Clear queues if they get too large (e.g. after a massive cancelled copy)
+                    // This prevents the broadcast thread from stalling for minutes/hours trying to drain million-item queues
+                    {
+                        let mut q = chunk_stream_queue_for_thread.lock().unwrap();
+                        if q.len() > 5000 {
+                            tracing::error!("Chunk stream queue overflow ({} items) - clearing to prevent stall", q.len());
+                            q.clear();
+                        }
+                    }
+                    {
+                        let mut q = broadcast_queue_for_thread.lock().unwrap();
+                        if q.len() > 5000 {
+                            tracing::error!("Broadcast queue overflow ({} items) - clearing to prevent stall", q.len());
+                            q.clear();
+                        }
+                    }
+
                     // Ensure we have outbound connections to all known peers
                     // (clients need metadata updates; followers need chunks + metadata)
                     let peers = cluster_for_broadcast.peers();
                     for peer in &peers {
                         if peer_manager_for_broadcast.get(&peer.node_id).is_none() {
-                            info!("Broadcast thread: connecting to peer {} at {}", peer.node_id, peer.address);
+                            info!("Broadcast thread: connecting to peer {} at {} (role: {})", 
+                                peer.node_id, peer.address, if peer.is_client { "client" } else { "follower" });
                             if let Err(e) = peer_manager_for_broadcast.connect(&peer.node_id, &peer.address) {
                                 tracing::warn!("Broadcast thread: failed to connect to {} at {}: {}", peer.node_id, peer.address, e);
                             } else {
@@ -1287,17 +1305,25 @@ fn main() {
                         queue.drain(..).collect()
                     };
                     
-                    for (hash, data) in &pending_chunks {
-                        let msg = Message::StoreChunk(StoreChunkMsg {
-                            hash: *hash,
-                            data: data.clone(),
-                        });
-                        peer_manager_for_broadcast.broadcast(&msg);
-                    }
                     if !pending_chunks.is_empty() {
-                        let num_conns = peer_manager_for_broadcast.connection_count();
-                        info!("Streamed {} chunks to {} followers (peers known: {})", 
-                            pending_chunks.len(), num_conns, peers.len());
+                        let total_bytes: usize = pending_chunks.iter().map(|(_, d)| d.len()).sum();
+                        debug!("Broadcasting {} chunks ({} bytes)", pending_chunks.len(), total_bytes);
+
+                        for (hash, data) in &pending_chunks {
+                            let msg = Message::StoreChunk(StoreChunkMsg {
+                                hash: *hash,
+                                data: data.clone(),
+                            });
+                            
+                            // Optimization: Only send chunks to followers (storage nodes).
+                            // Clients don't store chunks locally, so sending them data is a waste of bandwidth.
+                            for peer in &peers {
+                                if peer.is_client {
+                                    continue;
+                                }
+                                let _ = peer_manager_for_broadcast.send_to(&peer.node_id, &msg);
+                            }
+                        }
                     }
                     
                     // Second, send metadata-only updates (file growing during writes)
@@ -1330,9 +1356,7 @@ fn main() {
                             chunk_data: Vec::new(), // Metadata only — chunks already streamed
                         });
                         
-                        info!("Broadcasting metadata update for {} ({} bytes, {} chunks) to {} connections", 
-                            path.display(), entry.size, entry.chunks.len(),
-                            peer_manager_for_broadcast.connection_count());
+                        // Metadata updates go to everyone (Clients need size/mtime updates)
                         peer_manager_for_broadcast.broadcast(&msg);
                     }
                     
@@ -1344,8 +1368,6 @@ fn main() {
                     
                     for (path, mut entry) in pending {
                         // Re-read the entry from the current index to get the latest state.
-                        // The broadcast_queue entry may be a stale clone (e.g., from CreateFile
-                        // with size=0 while WriteRequest already updated the entry with data).
                         {
                             let current_index = file_index_for_broadcast.read().unwrap();
                             if let Some(current_entry) = current_index.get(&path) {
@@ -1372,8 +1394,7 @@ fn main() {
                             continue;
                         }
                         
-                        // Normal file sync - send chunks in batches to avoid loading
-                        // entire large files into memory at once
+                        // Normal file sync
                         let modified_ms = entry.modified
                             .duration_since(std::time::UNIX_EPOCH)
                             .map(|d| d.as_millis() as u64)
@@ -1389,7 +1410,7 @@ fn main() {
                         const BATCH_SIZE: usize = 4; // ~16MB per batch at 4MB chunks
 
                         if total_chunks == 0 {
-                            // Directory or empty file - send metadata only
+                            // Directory or empty file - send metadata only to everyone
                             let msg = Message::FileSync(FileSyncMsg {
                                 path: path.to_string_lossy().to_string(),
                                 size: entry.size,
@@ -1401,10 +1422,9 @@ fn main() {
                                 chunks: chunk_refs,
                                 chunk_data: Vec::new(),
                             });
-                            info!("Broadcasting FileSync for {} (metadata only)", path.display());
                             peer_manager_for_broadcast.broadcast(&msg);
                         } else {
-                            // Send chunks in batches to bound memory usage
+                            // Send chunks in batches
                             for (batch_idx, chunk_batch) in entry.chunks.chunks(BATCH_SIZE).enumerate() {
                                 let mut chunks_with_data = Vec::with_capacity(chunk_batch.len());
                                 for chunk_ref in chunk_batch {
@@ -1416,9 +1436,8 @@ fn main() {
                                     }
                                 }
 
-                                // First batch includes full metadata + chunk refs;
-                                // subsequent batches just carry chunk data
-                                let msg = Message::FileSync(FileSyncMsg {
+                                // Create two messages: one with data (for followers), one without (for clients)
+                                let msg_full = Message::FileSync(FileSyncMsg {
                                     path: path.to_string_lossy().to_string(),
                                     size: entry.size,
                                     is_dir: entry.is_dir,
@@ -1427,15 +1446,35 @@ fn main() {
                                     gid: entry.gid,
                                     modified_ms,
                                     chunks: if batch_idx == 0 { chunk_refs.clone() } else { Vec::new() },
-                                    chunk_data: chunks_with_data,
+                                    chunk_data: chunks_with_data, // Has Data
+                                });
+
+                                let msg_meta = Message::FileSync(FileSyncMsg {
+                                    path: path.to_string_lossy().to_string(),
+                                    size: entry.size,
+                                    is_dir: entry.is_dir,
+                                    permissions: entry.permissions,
+                                    uid: entry.uid,
+                                    gid: entry.gid,
+                                    modified_ms,
+                                    chunks: if batch_idx == 0 { chunk_refs.clone() } else { Vec::new() },
+                                    chunk_data: Vec::new(), // No Data
                                 });
 
                                 if batch_idx == 0 {
-                                    info!("Broadcasting FileSync for {} ({} bytes, {} chunks in {} batches)", 
-                                        path.display(), entry.size, total_chunks,
-                                        (total_chunks + BATCH_SIZE - 1) / BATCH_SIZE);
+                                    info!("Broadcasting FileSync for {} ({} bytes)", path.display(), entry.size);
                                 }
-                                peer_manager_for_broadcast.broadcast(&msg);
+
+                                // Splitted broadcast
+                                for peer in &peers {
+                                    if peer.is_client {
+                                        // Clients get lightweight metadata msg (avoids flooding them with data they don't store)
+                                        let _ = peer_manager_for_broadcast.send_to(&peer.node_id, &msg_meta);
+                                    } else {
+                                        // Followers get full data
+                                        let _ = peer_manager_for_broadcast.send_to(&peer.node_id, &msg_full);
+                                    }
+                                }
                             }
                         }
                     }

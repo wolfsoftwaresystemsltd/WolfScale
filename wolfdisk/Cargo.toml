@@ -1,6 +1,6 @@
 [package]
 name = "wolfdisk"
-version = "2.4.8"
+version = "2.4.9"
 edition = "2021"
 authors = ["Wolf Software Systems Ltd"]
 description = "Distributed file system with replicated and shared storage modes"

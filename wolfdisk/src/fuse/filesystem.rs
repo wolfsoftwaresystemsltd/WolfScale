@@ -150,7 +150,24 @@ impl WolfDiskFS {
                         }
                         match msg {
                             ReplicationMsg::Broadcast(m) => {
-                                pm_clone.broadcast(&m);
+                                // Optimization: Don't send heavy chunks to clients (they don't store them)
+                                match m {
+                                    crate::network::protocol::Message::StoreChunk(_) => {
+                                        if let Some(ref cluster) = cluster_clone {
+                                            for peer in cluster.peers() {
+                                                if !peer.is_client {
+                                                    let _ = pm_clone.send_to(&peer.node_id, &m);
+                                                }
+                                            }
+                                        } else {
+                                            // Fallback if no cluster info (unlikely)
+                                            pm_clone.broadcast(&m);
+                                        }
+                                    }
+                                    _ => {
+                                        pm_clone.broadcast(&m);
+                                    }
+                                }
                             }
                         }
                     }
