@@ -682,10 +682,11 @@ fn run_daemon(config_path: &PathBuf) {
                             let endpoint = src;
                             peer_manager.update_from_discovery(&pub_key, endpoint, peer_ip, &peer_hostname, is_gw);
                             peer_manager.with_peer_by_ip(&peer_ip, |peer| {
-                                // Always re-establish session on handshake — the peer
-                                // may have restarted and reset their send counter,
-                                // so our old recv_counter would reject their packets
-                                peer.establish_session(&keypair.secret, &keypair.public);
+                                if !peer.is_connected() {
+                                    // New or reconnecting peer — establish session
+                                    peer.establish_session(&keypair.secret, &keypair.public);
+                                }
+                                // Always update last_seen on handshake
                                 peer.last_seen = Some(Instant::now());
                             });
                             // Send handshake back
