@@ -284,12 +284,17 @@ else
     systemctl daemon-reload
 fi
 
-# Restart service if it was running before upgrade
+# Start/restart service
+echo ""
 if [ "$RESTART_SERVICE" = "true" ]; then
-    echo ""
     echo "  Restarting WolfDisk service..."
     systemctl start wolfdisk
     echo "  ✓ Service restarted"
+else
+    echo "  Starting WolfDisk service..."
+    systemctl enable wolfdisk
+    systemctl start wolfdisk
+    echo "  ✓ Service started and enabled"
 fi
 
 echo ""
