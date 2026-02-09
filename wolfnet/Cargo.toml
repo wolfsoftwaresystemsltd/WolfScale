@@ -1,0 +1,30 @@
+[package]
+name = "wolfnet"
+version = "0.1.0"
+edition = "2021"
+authors = ["Wolf Software Systems Ltd"]
+description = "Secure private mesh networking over the internet"
+
+[[bin]]
+name = "wolfnet"
+path = "src/main.rs"
+
+[[bin]]
+name = "wolfnetctl"
+path = "src/ctl/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+x25519-dalek = { version = "2", features = ["static_secrets"] }
+chacha20poly1305 = "0.10"
+rand = "0.8"
+base64 = "0.22"
+libc = "0.2"
+hostname = "0.4"
+hex = "0.4"
+sha2 = "0.10"
