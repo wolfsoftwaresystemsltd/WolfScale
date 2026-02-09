@@ -275,11 +275,10 @@ pub fn run_discovery_listener(
                         let endpoint = SocketAddr::new(src.ip(), listen_port);
                         peer_manager.update_from_discovery(&pub_key, endpoint, wolfnet_ip, &hostname, is_gateway);
 
-                        // Establish session if not already done
+                        // Always re-establish session on discovery — handles counter
+                        // reset if the peer restarted
                         peer_manager.with_peer_by_ip(&wolfnet_ip, |peer| {
-                            if peer.cipher.is_none() {
-                                peer.establish_session(&keypair.secret, &keypair.public);
-                            }
+                            peer.establish_session(&keypair.secret, &keypair.public);
                         });
                     }
                 }

@@ -615,9 +615,10 @@ fn run_daemon(config_path: &PathBuf) {
                             let endpoint = SocketAddr::new(src.ip(), peer_port);
                             peer_manager.update_from_discovery(&pub_key, endpoint, peer_ip, &peer_hostname, is_gw);
                             peer_manager.with_peer_by_ip(&peer_ip, |peer| {
-                                if peer.cipher.is_none() {
-                                    peer.establish_session(&keypair.secret, &keypair.public);
-                                }
+                                // Always re-establish session on handshake — the peer
+                                // may have restarted and reset their send counter,
+                                // so our old recv_counter would reject their packets
+                                peer.establish_session(&keypair.secret, &keypair.public);
                                 peer.last_seen = Some(Instant::now());
                             });
                             // Send handshake back
