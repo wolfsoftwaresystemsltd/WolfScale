@@ -430,11 +430,19 @@ fn run_daemon(config_path: &PathBuf) {
         }
     }
 
-    // Enable gateway if configured
-    if config.network.gateway {
+    // Auto-detect gateway mode: if this node has configured peers it acts as a hub/relay
+    // between its LAN-discovered peers and remote peers — advertise as gateway automatically
+    let has_configured_peers = !config.peers.is_empty();
+    let is_gateway = config.network.gateway || has_configured_peers;
+
+    // Enable gateway (IP forwarding + NAT) if configured or auto-detected
+    if is_gateway {
         let subnet = config.cidr();
         if let Err(e) = wolfnet::gateway::enable_gateway(tun.name(), &subnet) {
             warn!("Gateway setup failed: {}", e);
+        }
+        if has_configured_peers && !config.network.gateway {
+            info!("Auto-gateway enabled: this node has configured peers and will relay traffic");
         }
     }
 
@@ -451,7 +459,7 @@ fn run_daemon(config_path: &PathBuf) {
         let r = running.clone();
         let pk = keypair.public;
         let h = hostname.clone();
-        let gw = config.network.gateway;
+        let gw = is_gateway;
         let lp = config.network.listen_port;
         std::thread::spawn(move || {
             transport::run_discovery_broadcaster(wolfnet_ip, pk, lp, h, gw, r);
@@ -474,7 +482,7 @@ fn run_daemon(config_path: &PathBuf) {
         let addr = config.network.address.clone();
         let pk = keypair.public_key_base64();
         let lp = config.network.listen_port;
-        let gw = config.network.gateway;
+        let gw = is_gateway;
         let iface = config.network.interface.clone();
         std::thread::spawn(move || {
             let status_path = PathBuf::from("/var/run/wolfnet/status.json");
@@ -613,7 +621,7 @@ fn run_daemon(config_path: &PathBuf) {
                                 peer.last_seen = Some(Instant::now());
                             });
                             // Send handshake back
-                            let reply = transport::build_handshake(&keypair, wolfnet_ip, config.network.listen_port, &hostname, config.network.gateway);
+                            let reply = transport::build_handshake(&keypair, wolfnet_ip, config.network.listen_port, &hostname, is_gateway);
                             let _ = socket.send_to(&reply, src);
                         }
                     }
@@ -705,7 +713,7 @@ fn run_daemon(config_path: &PathBuf) {
 
         // 3. Periodic handshakes (every 10s)
         if last_handshake.elapsed() > Duration::from_secs(10) {
-            transport::send_handshakes(&socket, &keypair, &peer_manager, wolfnet_ip, config.network.listen_port, &hostname, config.network.gateway);
+            transport::send_handshakes(&socket, &keypair, &peer_manager, wolfnet_ip, config.network.listen_port, &hostname, is_gateway);
             last_handshake = Instant::now();
         }
 
@@ -724,7 +732,7 @@ fn run_daemon(config_path: &PathBuf) {
 
     // Cleanup
     info!("Shutting down WolfNet...");
-    if config.network.gateway {
+    if is_gateway {
         wolfnet::gateway::disable_gateway(tun.name(), &config.cidr());
     }
     let _ = std::fs::remove_file("/var/run/wolfnet/status.json");
