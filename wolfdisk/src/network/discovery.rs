@@ -182,9 +182,25 @@ fn run_broadcaster(
     let socket = UdpSocket::bind("0.0.0.0:0")?;
     socket.set_broadcast(true)?;
     
-    let broadcast_addr: SocketAddr = format!("255.255.255.255:{}", DISCOVERY_PORT)
-        .parse()
-        .unwrap();
+    // Broadcast destinations: 255.255.255.255 for LAN, plus subnet broadcast for WolfNet
+    let mut broadcast_addrs: Vec<SocketAddr> = vec![
+        format!("255.255.255.255:{}", DISCOVERY_PORT).parse().unwrap(),
+    ];
+    
+    // If bind address is on a specific IP (not 0.0.0.0), also broadcast to its /24 subnet
+    // e.g. bind 10.10.10.3:9500 → broadcast to 10.10.10.255:9501
+    if let Ok(bind_sock) = bind_address.parse::<SocketAddr>() {
+        let ip = bind_sock.ip();
+        if let std::net::IpAddr::V4(v4) = ip {
+            let octets = v4.octets();
+            if octets[0] != 0 {
+                let subnet_bcast = format!("{}.{}.{}.255:{}", octets[0], octets[1], octets[2], DISCOVERY_PORT);
+                if let Ok(addr) = subnet_bcast.parse::<SocketAddr>() {
+                    broadcast_addrs.push(addr);
+                }
+            }
+        }
+    }
 
     info!("Discovery broadcaster started for node {}", node_id);
 
@@ -194,9 +210,11 @@ fn run_broadcaster(
         
         let message = format_message(&node_id, &bind_address, is_server, leader);
 
-        match socket.send_to(message.as_bytes(), broadcast_addr) {
-            Ok(_) => debug!("Discovery broadcast sent: {}", message),
-            Err(e) => debug!("Broadcast send failed: {}", e),
+        for addr in &broadcast_addrs {
+            match socket.send_to(message.as_bytes(), addr) {
+                Ok(_) => debug!("Discovery broadcast sent to {}", addr),
+                Err(e) => debug!("Broadcast send to {} failed: {}", addr, e),
+            }
         }
 
         thread::sleep(Duration::from_secs(2));
