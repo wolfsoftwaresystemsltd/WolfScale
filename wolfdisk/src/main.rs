@@ -325,7 +325,12 @@ fn main() {
                                     let chunk_refs: Vec<ChunkRef> = Vec::new();
                                     // If we already have an entry, update it; otherwise create new.
                                     if let Some(entry) = index.get_mut(&path) {
-                                        entry.size = sync.size;
+                                        // Only increase size, never decrease — prevents out-of-order
+                                        // CreateFile broadcasts (size=0) from overwriting WriteRequest
+                                        // metadata (correct size) that arrived first.
+                                        if sync.size > entry.size {
+                                            entry.size = sync.size;
+                                        }
                                         entry.permissions = sync.permissions;
                                         entry.uid = sync.uid;
                                         entry.gid = sync.gid;
@@ -1032,6 +1037,7 @@ fn main() {
             let chunk_stream_queue_for_thread = chunk_stream_queue.clone();
             let metadata_update_queue_for_thread = metadata_update_queue.clone();
             let cluster_for_broadcast = cluster.clone();
+            let file_index_for_broadcast = file_index.clone();
             std::thread::spawn(move || {
                 use wolfdisk::network::protocol::{Message, FileSyncMsg, ChunkWithData, StoreChunkMsg, ChunkRefMsg};
                 loop {
@@ -1114,7 +1120,16 @@ fn main() {
                         queue.drain(..).collect()
                     };
                     
-                    for (path, entry) in pending {
+                    for (path, mut entry) in pending {
+                        // Re-read the entry from the current index to get the latest state.
+                        // The broadcast_queue entry may be a stale clone (e.g., from CreateFile
+                        // with size=0 while WriteRequest already updated the entry with data).
+                        {
+                            let current_index = file_index_for_broadcast.read().unwrap();
+                            if let Some(current_entry) = current_index.get(&path) {
+                                entry = current_entry.clone();
+                            }
+                        }
                         // Check if this is a deletion (size == u64::MAX)
                         if entry.size == u64::MAX {
                             // Broadcast deletion
@@ -1342,6 +1357,124 @@ fn main() {
                         }
                         Err(e) => {
                             warn!("Failed to connect to leader for initial sync: {}", e);
+                        }
+                    }
+                });
+            }
+            
+            // Periodic re-sync thread: workers pull from leader every 30s
+            // This catches any missed broadcasts (e.g., worker was offline)
+            if should_sync || is_auto_role {
+                let resync_cluster = cluster.clone();
+                let resync_peer_manager = peer_manager.clone();
+                let resync_file_index = file_index.clone();
+                let resync_inode_table = inode_table.clone();
+                let resync_next_inode = next_inode.clone();
+                let resync_node_id = config.node.id.clone();
+                
+                std::thread::spawn(move || {
+                    use wolfdisk::network::protocol::*;
+                    use wolfdisk::storage::{ChunkRef, FileEntry};
+                    use tracing::{info, warn, debug};
+                    
+                    // Wait for initial sync to complete first
+                    std::thread::sleep(std::time::Duration::from_secs(15));
+                    
+                    loop {
+                        std::thread::sleep(std::time::Duration::from_secs(30));
+                        
+                        // Skip if we're the leader
+                        if resync_cluster.is_leader() {
+                            continue;
+                        }
+                        
+                        let leader_id = match resync_cluster.leader_id() {
+                            Some(id) if id != resync_node_id => id,
+                            _ => continue,
+                        };
+                        
+                        let leader_addr = match resync_cluster.leader_address() {
+                            Some(addr) => addr,
+                            None => continue,
+                        };
+                        
+                        debug!("Periodic re-sync: requesting index from leader {}", leader_id);
+                        
+                        let conn = match resync_peer_manager.get_or_connect_leader(&leader_id, &leader_addr) {
+                            Ok(c) => c,
+                            Err(e) => {
+                                debug!("Re-sync: failed to connect to leader: {}", e);
+                                continue;
+                            }
+                        };
+                        
+                        let msg = Message::SyncRequest(SyncRequestMsg { from_version: 0 });
+                        match conn.request(&msg) {
+                            Ok(Message::SyncResponse(response)) => {
+                                let mut index = resync_file_index.write().unwrap();
+                                let mut inode_tbl = resync_inode_table.write().unwrap();
+                                let mut next_ino = resync_next_inode.write().unwrap();
+                                let mut added = 0;
+                                let mut updated = 0;
+                                
+                                for entry_msg in &response.entries {
+                                    let path = std::path::PathBuf::from(&entry_msg.path);
+                                    
+                                    let chunk_refs: Vec<ChunkRef> = entry_msg.chunks.iter()
+                                        .map(|c| ChunkRef {
+                                            hash: c.hash,
+                                            offset: c.offset,
+                                            size: c.size,
+                                        })
+                                        .collect();
+                                    
+                                    let new_entry = FileEntry {
+                                        size: entry_msg.size,
+                                        is_dir: entry_msg.is_dir,
+                                        permissions: entry_msg.permissions,
+                                        uid: 0,
+                                        gid: 0,
+                                        modified: std::time::UNIX_EPOCH + std::time::Duration::from_millis(entry_msg.modified_ms),
+                                        created: std::time::SystemTime::now(),
+                                        accessed: std::time::SystemTime::now(),
+                                        chunks: chunk_refs,
+                                        symlink_target: None,
+                                    };
+                                    
+                                    // Only update if missing or if leader has newer/different data
+                                    match index.get(&path) {
+                                        None => {
+                                            index.insert(path.clone(), new_entry);
+                                            let ino = *next_ino;
+                                            *next_ino += 1;
+                                            inode_tbl.insert(ino, path.clone());
+                                            added += 1;
+                                        }
+                                        Some(existing) if existing.size != entry_msg.size 
+                                            || existing.chunks.len() != entry_msg.chunks.len() => {
+                                            index.insert(path.clone(), new_entry);
+                                            // Ensure inode exists
+                                            if inode_tbl.get_inode(&path).is_none() {
+                                                let ino = *next_ino;
+                                                *next_ino += 1;
+                                                inode_tbl.insert(ino, path.clone());
+                                            }
+                                            updated += 1;
+                                        }
+                                        _ => {} // Already in sync
+                                    }
+                                }
+                                
+                                if added > 0 || updated > 0 {
+                                    info!("Periodic re-sync: added {} files, updated {} files", added, updated);
+                                } else {
+                                    debug!("Periodic re-sync: index is up to date ({} entries)", response.entries.len());
+                                }
+                            }
+                            Ok(_) => {}
+                            Err(e) => {
+                                debug!("Re-sync failed: {}", e);
+                            }
                         }
                     }
                 });
