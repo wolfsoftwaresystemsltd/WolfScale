@@ -988,6 +988,27 @@ fn main() {
                                     entries,
                                 }))
                             }
+                            Message::GetChunk(get_chunk) => {
+                                // Handle chunk fetch request from follower
+                                debug!("Received GetChunk request from {} for {}", peer_id, hex::encode(&get_chunk.hash));
+                                match chunk_store_for_handler.get(&get_chunk.hash) {
+                                    Ok(data) => {
+                                        Some(Message::ChunkData(ChunkDataMsg {
+                                            hash: get_chunk.hash,
+                                            data: Some(data),
+                                            error: None,
+                                        }))
+                                    }
+                                    Err(e) => {
+                                        tracing::warn!("Chunk {} not found on leader: {}", hex::encode(&get_chunk.hash), e);
+                                        Some(Message::ChunkData(ChunkDataMsg {
+                                            hash: get_chunk.hash,
+                                            data: None,
+                                            error: Some(format!("Chunk not found: {}", e)),
+                                        }))
+                                    }
+                                }
+                            }
                             _ => {
                                 debug!("Unhandled message from {}: {:?}", peer_id, msg);
                                 None

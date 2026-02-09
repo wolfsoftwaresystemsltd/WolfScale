@@ -1135,6 +1135,47 @@ impl Filesystem for WolfDiskFS {
             }
         };
 
+        // For followers: ensure all chunks needed for this read exist locally.
+        // The initial sync only transfers the file index (metadata + chunk refs),
+        // not the actual chunk data. Fetch any missing chunks from the leader on demand.
+        if !self.is_leader() {
+            let end_offset = offset as u64 + size as u64;
+            for chunk in &entry.chunks {
+                let chunk_end = chunk.offset + chunk.size as u64;
+                // Skip chunks outside our read range
+                if chunk_end <= offset as u64 || chunk.offset >= end_offset {
+                    continue;
+                }
+                // If chunk is missing locally, fetch from leader
+                if !self.chunk_store.exists(&chunk.hash) {
+                    debug!("Chunk {} missing locally, fetching from leader", hex::encode(&chunk.hash));
+                    if let (Some(cluster), Some(peer_manager)) = (&self.cluster, &self.peer_manager) {
+                        if let (Some(leader_id), Some(leader_addr)) = (cluster.leader_id(), cluster.leader_address()) {
+                            let msg = crate::network::protocol::Message::GetChunk(
+                                crate::network::protocol::GetChunkMsg { hash: chunk.hash }
+                            );
+                            if let Ok(conn) = peer_manager.get_or_connect_leader(&leader_id, &leader_addr) {
+                                match conn.request(&msg) {
+                                    Ok(crate::network::protocol::Message::ChunkData(resp)) => {
+                                        if let Some(data) = resp.data {
+                                            if let Err(e) = self.chunk_store.store_with_hash(&chunk.hash, &data) {
+                                                warn!("Failed to cache fetched chunk: {}", e);
+                                            } else {
+                                                debug!("Fetched and cached chunk {} from leader ({} bytes)", 
+                                                    hex::encode(&chunk.hash), data.len());
+                                            }
+                                        }
+                                    }
+                                    Ok(_) => { warn!("Unexpected response fetching chunk from leader"); }
+                                    Err(e) => { warn!("Failed to fetch chunk from leader: {}", e); }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Read data from chunks
         match self.chunk_store.read(&entry.chunks, offset as u64, size as usize) {
             Ok(mut data) => {
