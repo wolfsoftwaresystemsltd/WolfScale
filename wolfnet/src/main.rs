@@ -205,10 +205,9 @@ fn cmd_invite(config_path: &PathBuf) {
         invite.to_string().as_bytes(),
     );
 
-    println!("╔══════════════════════════════════════════════════════════════╗");
-    println!("║              🐺  WolfNet Invite Token                       ║");
-    println!("╚══════════════════════════════════════════════════════════════╝");
     println!();
+    println!("  🐺 WolfNet Invite Token");
+    println!("  ─────────────────────────────────────");
     println!("Your network: {}/{}", config.network.address, config.network.subnet);
     println!("Public endpoint: {}", endpoint);
     println!();
@@ -317,9 +316,9 @@ fn cmd_join(config_path: &PathBuf, token: &str) {
         reverse.to_string().as_bytes(),
     );
 
-    println!("╔══════════════════════════════════════════════════════════════╗");
-    println!("║              🐺  WolfNet — Joined!                          ║");
-    println!("╚══════════════════════════════════════════════════════════════╝");
+    println!();
+    println!("  🐺 WolfNet — Joined!");
+    println!("  ─────────────────────────────────────");
     println!();
     println!("✓ Config saved to {:?}", config_path);
     println!("✓ Your WolfNet IP: {}/{}", config.network.address, subnet);
