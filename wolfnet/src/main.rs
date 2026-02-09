@@ -250,40 +250,64 @@ fn cmd_join(config_path: &PathBuf, token: &str) {
         Config::default()
     };
 
-    // Auto-assign next available IP in the subnet
-    let peer_addr: Ipv4Addr = peer_ip.parse().unwrap_or_else(|_| {
-        error!("Invalid peer IP in token: {}", peer_ip);
-        std::process::exit(1);
-    });
-    let octets = peer_addr.octets();
-    let mut my_last_octet = octets[3] + 1;
+    // Determine if this node already has a configured address
+    // (i.e., not a fresh/default config). If so, preserve it.
+    let default_addresses = ["10.0.10.1", "0.0.0.0"];
+    let has_existing_address = config_path.exists()
+        && !default_addresses.contains(&config.network.address.as_str());
 
-    // Check existing peers to avoid conflicts
-    let used_ips: Vec<String> = config.peers.iter().map(|p| p.allowed_ip.clone()).collect();
-    loop {
-        let candidate = format!("{}.{}.{}.{}", octets[0], octets[1], octets[2], my_last_octet);
-        if candidate != peer_ip && !used_ips.contains(&candidate) && candidate != config.network.address {
-            config.network.address = candidate;
-            break;
-        }
-        my_last_octet += 1;
-        if my_last_octet > 254 {
-            error!("No available IPs in the subnet");
+    if has_existing_address {
+        // Preserve existing address — this node is already part of a network
+        info!("Preserving existing WolfNet address: {}", config.network.address);
+    } else {
+        // Auto-assign next available IP in the subnet
+        let peer_addr: Ipv4Addr = peer_ip.parse().unwrap_or_else(|_| {
+            error!("Invalid peer IP in token: {}", peer_ip);
             std::process::exit(1);
+        });
+        let octets = peer_addr.octets();
+        let mut my_last_octet = octets[3] + 1;
+
+        // Check existing peers to avoid conflicts
+        let used_ips: Vec<String> = config.peers.iter().map(|p| p.allowed_ip.clone()).collect();
+        loop {
+            let candidate = format!("{}.{}.{}.{}", octets[0], octets[1], octets[2], my_last_octet);
+            if candidate != peer_ip && !used_ips.contains(&candidate) && candidate != config.network.address {
+                config.network.address = candidate;
+                break;
+            }
+            my_last_octet += 1;
+            if my_last_octet > 254 {
+                error!("No available IPs in the subnet");
+                std::process::exit(1);
+            }
         }
     }
     config.network.subnet = subnet;
 
-    // Add the inviting peer
-    // Check if peer already exists
-    let already_exists = config.peers.iter().any(|p| p.public_key == peer_pubkey);
-    if !already_exists {
-        config.peers.push(PeerConfig {
-            public_key: peer_pubkey.to_string(),
-            endpoint: Some(peer_endpoint.to_string()),
-            allowed_ip: peer_ip.to_string(),
-            name: Some("invited-peer".to_string()),
-        });
+    // Add the inviting peer (merge, don't replace)
+    // Update existing peer if public key matches, otherwise add new
+    let existing_idx = config.peers.iter().position(|p| p.public_key == peer_pubkey);
+    match existing_idx {
+        Some(idx) => {
+            // Update endpoint but preserve name if already set
+            let existing_name = config.peers[idx].name.clone();
+            config.peers[idx].endpoint = Some(peer_endpoint.to_string());
+            config.peers[idx].allowed_ip = peer_ip.to_string();
+            if config.peers[idx].name.is_none() {
+                config.peers[idx].name = Some("invited-peer".to_string());
+            }
+            info!("Updated existing peer: {} ({})", 
+                existing_name.unwrap_or_else(|| "unnamed".into()), peer_ip);
+        }
+        None => {
+            config.peers.push(PeerConfig {
+                public_key: peer_pubkey.to_string(),
+                endpoint: Some(peer_endpoint.to_string()),
+                allowed_ip: peer_ip.to_string(),
+                name: Some("invited-peer".to_string()),
+            });
+        }
     }
 
     // Generate or load our keypair
