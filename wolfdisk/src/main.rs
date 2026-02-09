@@ -1479,7 +1479,7 @@ fn main() {
                 std::thread::spawn(move || {
                     use wolfdisk::network::protocol::*;
                     use wolfdisk::storage::{ChunkRef, FileEntry};
-                    use tracing::{info, warn, debug};
+                    use tracing::{info, debug};
                     
                     // Wait for initial sync to complete first
                     std::thread::sleep(std::time::Duration::from_secs(15));
