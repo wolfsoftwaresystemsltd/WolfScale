@@ -1,181 +1,239 @@
 #!/bin/bash
-# WolfNet Setup Script
-# Installs WolfNet as a systemd service with interactive configuration
+#
+# WolfNet Quick Install Script
+# Installs WolfNet on Ubuntu/Debian (apt) or Fedora/RHEL (dnf)
 #
 # Usage: curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/wolfnet/setup.sh | bash
+#
 
 set -e
 
-REPO="wolfsoftwaresystemsltd/WolfScale"
-INSTALL_DIR="/usr/local/bin"
-CONFIG_DIR="/etc/wolfnet"
-CONFIG_FILE="$CONFIG_DIR/config.toml"
-KEY_FILE="$CONFIG_DIR/private.key"
-SERVICE_FILE="/etc/systemd/system/wolfnet.service"
-STATUS_DIR="/var/run/wolfnet"
-
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
-NC='\033[0m'
-
-echo -e "${CYAN}"
-echo "  ╔═══════════════════════════════════════╗"
-echo "  ║     🐺 WolfNet Installer              ║"
-echo "  ║     Secure Private Mesh Networking     ║"
-echo "  ╚═══════════════════════════════════════╝"
-echo -e "${NC}"
-
-# Ensure running as root
-if [ "$EUID" -ne 0 ]; then
-    echo -e "${RED}Error: Please run as root (sudo)${NC}"
-    echo "  curl -sSL ... | sudo bash"
-    exit 1
-fi
-
-# Reopen stdin for interactive prompts (needed when piped via curl | bash)
-exec 3</dev/tty || exec 3<&0
-
-prompt() {
-    local var_name="$1" prompt_text="$2" default="$3"
-    echo -ne "${CYAN}$prompt_text ${YELLOW}[$default]${NC}: "
-    read -r input <&3
-    eval "$var_name=\"${input:-$default}\""
-}
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║              🐺  WolfNet Installer                          ║"
+echo "║          Secure Private Mesh Networking                     ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
 
 # ─── Check for /dev/net/tun ─────────────────────────────────────────────────
-echo -e "${CYAN}Checking system requirements...${NC}"
+echo "Checking system requirements..."
 
 if [ ! -e /dev/net/tun ]; then
     echo ""
-    echo -e "${RED}╔══════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${RED}║  ⚠️  /dev/net/tun is NOT available!                     ║${NC}"
-    echo -e "${RED}╚══════════════════════════════════════════════════════════╝${NC}"
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║  ⚠️   /dev/net/tun is NOT available!                        ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
     echo ""
-    echo -e "${YELLOW}This is common in Proxmox LXC containers.${NC}"
+    echo "This is common in Proxmox LXC containers."
     echo ""
     echo "To fix this, run the following on the Proxmox HOST (not inside the container):"
     echo ""
-    echo -e "  ${GREEN}1. Edit the container config:${NC}"
-    echo -e "     nano /etc/pve/lxc/<CTID>.conf"
+    echo "  1. Edit the container config:"
+    echo "     nano /etc/pve/lxc/<CTID>.conf"
     echo ""
-    echo -e "  ${GREEN}2. Add these lines:${NC}"
-    echo -e "     lxc.cgroup2.devices.allow: c 10:200 rwm"
-    echo -e "     lxc.mount.entry: /dev/net dev/net none bind,create=dir"
+    echo "  2. Add these lines:"
+    echo "     lxc.cgroup2.devices.allow: c 10:200 rwm"
+    echo "     lxc.mount.entry: /dev/net dev/net none bind,create=dir"
     echo ""
-    echo -e "  ${GREEN}3. Restart the container:${NC}"
-    echo -e "     pct restart <CTID>"
+    echo "  3. Restart the container:"
+    echo "     pct restart <CTID>"
     echo ""
-    echo -e "  ${GREEN}4. Inside the container, create the device if needed:${NC}"
-    echo -e "     mkdir -p /dev/net"
-    echo -e "     mknod /dev/net/tun c 10 200"
-    echo -e "     chmod 666 /dev/net/tun"
+    echo "  4. Inside the container, create the device if needed:"
+    echo "     mkdir -p /dev/net"
+    echo "     mknod /dev/net/tun c 10 200"
+    echo "     chmod 666 /dev/net/tun"
     echo ""
-    echo -ne "Continue anyway? (y/N): "
-    read -r cont <&3
+    echo -n "Continue anyway? (y/N): "
+    read cont < /dev/tty
     if [ "$cont" != "y" ] && [ "$cont" != "Y" ]; then
         echo "Aborted. Fix /dev/net/tun and try again."
         exit 1
     fi
 else
-    echo -e "  ${GREEN}✓${NC} /dev/net/tun available"
+    echo "✓ /dev/net/tun available"
 fi
 
-echo -e "  ${GREEN}✓${NC} Running as root"
-
-# ─── Detect architecture and download ───────────────────────────────────────
-ARCH=$(uname -m)
-case "$ARCH" in
-    x86_64)  ARCH_LABEL="x86_64" ;;
-    aarch64) ARCH_LABEL="aarch64" ;;
-    *)       echo -e "${RED}Unsupported architecture: $ARCH${NC}"; exit 1 ;;
-esac
-echo -e "  ${GREEN}✓${NC} Architecture: $ARCH_LABEL"
-
-# Download latest release
-echo ""
-echo -e "${CYAN}Downloading WolfNet...${NC}"
-LATEST_URL="https://api.github.com/repos/$REPO/releases/latest"
-RELEASE_INFO=$(curl -s "$LATEST_URL" 2>/dev/null || echo "")
-
-if echo "$RELEASE_INFO" | grep -q "wolfnet"; then
-    DOWNLOAD_URL=$(echo "$RELEASE_INFO" | grep -o "https://.*wolfnet.*linux.*$ARCH_LABEL[^\"]*" | head -1)
-    if [ -n "$DOWNLOAD_URL" ]; then
-        curl -sSL "$DOWNLOAD_URL" -o /tmp/wolfnet
-        curl -sSL "${DOWNLOAD_URL/wolfnet/wolfnetctl}" -o /tmp/wolfnetctl 2>/dev/null || true
-    fi
-fi
-
-# If no release found, try building from source or use local binary
-if [ ! -f /tmp/wolfnet ]; then
-    echo -e "${YELLOW}No pre-built binary found. Checking for local build...${NC}"
-    # Try to find a local build
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
-    if [ -f "$SCRIPT_DIR/target/release/wolfnet" ]; then
-        cp "$SCRIPT_DIR/target/release/wolfnet" /tmp/wolfnet
-        cp "$SCRIPT_DIR/target/release/wolfnetctl" /tmp/wolfnetctl 2>/dev/null || true
-    else
-        echo -e "${RED}Could not find WolfNet binary.${NC}"
-        echo "Please build from source: cd wolfnet && cargo build --release"
-        exit 1
-    fi
-fi
-
-# Install binaries
-echo -e "${CYAN}Installing binaries...${NC}"
-install -m 0755 /tmp/wolfnet "$INSTALL_DIR/wolfnet"
-echo -e "  ${GREEN}✓${NC} Installed wolfnet to $INSTALL_DIR/wolfnet"
-
-if [ -f /tmp/wolfnetctl ]; then
-    install -m 0755 /tmp/wolfnetctl "$INSTALL_DIR/wolfnetctl"
-    echo -e "  ${GREEN}✓${NC} Installed wolfnetctl to $INSTALL_DIR/wolfnetctl"
-fi
-
-rm -f /tmp/wolfnet /tmp/wolfnetctl
-
-# ─── Interactive Configuration ──────────────────────────────────────────────
-echo ""
-echo -e "${CYAN}Configuration${NC}"
-echo "─────────────────────────────────────────"
-
-# Detect hostname and IP
-DEFAULT_HOSTNAME=$(hostname -s)
-DEFAULT_IP=$(ip -4 route get 8.8.8.8 2>/dev/null | grep -oP 'src \K\S+' || echo "10.0.10.1")
-
-prompt NODE_ADDRESS "WolfNet IP address for this node" "10.0.10.1"
-prompt SUBNET "Subnet mask (CIDR)" "24"
-prompt LISTEN_PORT "UDP listen port" "9600"
-prompt GATEWAY_MODE "Enable gateway mode (NAT internet for network)" "no"
-prompt DISCOVERY "Enable LAN auto-discovery" "yes"
-
-IS_GATEWAY="false"
-[ "$GATEWAY_MODE" = "yes" ] || [ "$GATEWAY_MODE" = "y" ] && IS_GATEWAY="true"
-
-DISC_ENABLED="true"
-[ "$DISCOVERY" = "no" ] || [ "$DISCOVERY" = "n" ] && DISC_ENABLED="false"
-
-# ─── Generate Keys ──────────────────────────────────────────────────────────
-echo ""
-echo -e "${CYAN}Setting up encryption keys...${NC}"
-mkdir -p "$CONFIG_DIR"
-
-if [ ! -f "$KEY_FILE" ]; then
-    "$INSTALL_DIR/wolfnet" genkey --output "$KEY_FILE"
-    echo -e "  ${GREEN}✓${NC} Generated new keypair"
+# Detect package manager
+if command -v apt &> /dev/null; then
+    PKG_MANAGER="apt"
+    echo "✓ Detected Debian/Ubuntu (apt)"
+elif command -v dnf &> /dev/null; then
+    PKG_MANAGER="dnf"
+    echo "✓ Detected Fedora/RHEL (dnf)"
+elif command -v yum &> /dev/null; then
+    PKG_MANAGER="yum"
+    echo "✓ Detected RHEL/CentOS (yum)"
 else
-    echo -e "  ${GREEN}✓${NC} Using existing private key"
+    echo "✗ Could not detect package manager (apt/dnf/yum)"
+    echo "  Please install dependencies manually."
+    exit 1
 fi
 
-PUBLIC_KEY=$("$INSTALL_DIR/wolfnet" pubkey --config "$CONFIG_FILE" 2>/dev/null || "$INSTALL_DIR/wolfnet" pubkey 2>/dev/null || echo "unknown")
-
-# ─── Write Config ───────────────────────────────────────────────────────────
+# Install dependencies
 echo ""
-echo -e "${CYAN}Writing configuration...${NC}"
-mkdir -p "$CONFIG_DIR"
+echo "Installing system dependencies..."
 
-cat > "$CONFIG_FILE" << EOF
+if [ "$PKG_MANAGER" = "apt" ]; then
+    sudo apt update
+    sudo apt install -y git curl build-essential pkg-config libssl-dev
+elif [ "$PKG_MANAGER" = "dnf" ]; then
+    sudo dnf install -y git curl gcc gcc-c++ make openssl-devel pkg-config
+elif [ "$PKG_MANAGER" = "yum" ]; then
+    sudo yum install -y git curl gcc gcc-c++ make openssl-devel pkgconfig
+fi
+
+echo "✓ System dependencies installed"
+
+# Install Rust if not present
+if ! command -v rustc &> /dev/null; then
+    echo ""
+    echo "Installing Rust..."
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    source "$HOME/.cargo/env"
+    echo "✓ Rust installed"
+else
+    echo "✓ Rust already installed ($(rustc --version))"
+fi
+
+# Ensure cargo is in PATH
+export PATH="$HOME/.cargo/bin:$PATH"
+
+# Clone or update repository
+INSTALL_DIR="/opt/wolfscale-src"
+echo ""
+echo "Cloning WolfScale repository..."
+
+if [ -d "$INSTALL_DIR" ]; then
+    echo "  Updating existing installation..."
+    cd "$INSTALL_DIR"
+    sudo git fetch origin
+    sudo git reset --hard origin/main
+else
+    sudo git clone https://github.com/wolfsoftwaresystemsltd/WolfScale.git "$INSTALL_DIR"
+    cd "$INSTALL_DIR"
+fi
+
+sudo chown -R "$USER:$USER" "$INSTALL_DIR"
+echo "✓ Repository cloned to $INSTALL_DIR"
+
+# Build WolfNet
+echo ""
+echo "Building WolfNet (this may take a few minutes)..."
+cd "$INSTALL_DIR/wolfnet"
+cargo build --release
+echo "✓ Build complete"
+
+# Stop service if running (for upgrades)
+if systemctl is-active --quiet wolfnet 2>/dev/null; then
+    echo ""
+    echo "Stopping WolfNet service for upgrade..."
+    sudo systemctl stop wolfnet
+    sleep 2
+    echo "✓ Service stopped"
+    RESTART_SERVICE=true
+else
+    RESTART_SERVICE=false
+fi
+
+# Install binary
+echo ""
+if [ -f "/usr/local/bin/wolfnet" ]; then
+    echo "Upgrading WolfNet..."
+    sudo rm -f /usr/local/bin/wolfnet
+else
+    echo "Installing WolfNet..."
+fi
+sudo cp "$INSTALL_DIR/wolfnet/target/release/wolfnet" /usr/local/bin/wolfnet
+sudo chmod +x /usr/local/bin/wolfnet
+echo "✓ wolfnet installed to /usr/local/bin/wolfnet"
+
+# Install wolfnetctl if it exists
+if [ -f "$INSTALL_DIR/wolfnet/target/release/wolfnetctl" ]; then
+    sudo cp "$INSTALL_DIR/wolfnet/target/release/wolfnetctl" /usr/local/bin/wolfnetctl
+    sudo chmod +x /usr/local/bin/wolfnetctl
+    echo "✓ wolfnetctl installed to /usr/local/bin/wolfnetctl"
+fi
+
+# Create directories
+echo ""
+echo "Creating directories..."
+sudo mkdir -p /etc/wolfnet
+sudo mkdir -p /var/run/wolfnet
+echo "✓ Directories created"
+
+# Create config if not exists - with interactive prompts
+# Use /dev/tty to read from terminal even when script is piped
+if [ ! -f "/etc/wolfnet/config.toml" ]; then
+    echo ""
+    echo "═══════════════════════════════════════════════════════════════"
+    echo "                   WolfNet Configuration"
+    echo "═══════════════════════════════════════════════════════════════"
+    echo ""
+
+    # Detect default IP
+    DEFAULT_IP=$(hostname -I | awk '{print $1}')
+    DEFAULT_IP=${DEFAULT_IP:-"0.0.0.0"}
+
+    # Prompt for WolfNet IP address
+    echo -n "WolfNet IP address for this node [10.0.10.1]: "
+    read NODE_ADDRESS < /dev/tty
+    NODE_ADDRESS=${NODE_ADDRESS:-10.0.10.1}
+
+    # Prompt for subnet
+    echo -n "Subnet mask (CIDR) [24]: "
+    read SUBNET < /dev/tty
+    SUBNET=${SUBNET:-24}
+
+    # Prompt for listen port
+    echo -n "UDP listen port [9600]: "
+    read LISTEN_PORT < /dev/tty
+    LISTEN_PORT=${LISTEN_PORT:-9600}
+
+    # Prompt for gateway mode
+    echo ""
+    echo "Gateway mode enables NAT so other WolfNet nodes can access"
+    echo "the internet through this node."
+    echo -n "Enable gateway mode? [y/N]: "
+    read GATEWAY_MODE < /dev/tty
+    IS_GATEWAY="false"
+    if [ "$GATEWAY_MODE" = "y" ] || [ "$GATEWAY_MODE" = "Y" ] || [ "$GATEWAY_MODE" = "yes" ]; then
+        IS_GATEWAY="true"
+    fi
+
+    # Prompt for discovery
+    echo ""
+    echo -n "Enable LAN auto-discovery? [Y/n]: "
+    read DISCOVERY < /dev/tty
+    DISC_ENABLED="true"
+    if [ "$DISCOVERY" = "n" ] || [ "$DISCOVERY" = "N" ] || [ "$DISCOVERY" = "no" ]; then
+        DISC_ENABLED="false"
+    fi
+
+    # Generate keys
+    echo ""
+    echo "Generating encryption keys..."
+    KEY_FILE="/etc/wolfnet/private.key"
+    if [ ! -f "$KEY_FILE" ]; then
+        /usr/local/bin/wolfnet genkey --output "$KEY_FILE" 2>/dev/null || {
+            # If genkey fails, create a placeholder
+            echo "Note: Key generation via CLI not available."
+            echo "  You may need to generate keys manually."
+            KEY_FILE="/etc/wolfnet/private.key"
+        }
+        if [ -f "$KEY_FILE" ]; then
+            echo "✓ Generated new keypair"
+        fi
+    else
+        echo "✓ Using existing private key"
+    fi
+
+    # Get public key
+    PUBLIC_KEY=$(/usr/local/bin/wolfnet pubkey --config /etc/wolfnet/config.toml 2>/dev/null || \
+                 /usr/local/bin/wolfnet pubkey 2>/dev/null || echo "unknown")
+
+    # Write config
+    echo ""
+    echo "Creating configuration..."
+    cat <<EOF | sudo tee /etc/wolfnet/config.toml > /dev/null
 # WolfNet Configuration
 # Generated by setup.sh
 
@@ -198,14 +256,28 @@ private_key_file = "$KEY_FILE"
 # allowed_ip = "10.0.10.2"
 # name = "server2"
 EOF
+    echo "✓ Config created at /etc/wolfnet/config.toml"
+    echo ""
+    echo "Configuration Summary:"
+    echo "  WolfNet IP: $NODE_ADDRESS/$SUBNET"
+    echo "  Listen:     $LISTEN_PORT/udp"
+    echo "  Gateway:    $IS_GATEWAY"
+    echo "  Discovery:  $DISC_ENABLED"
+else
+    echo ""
+    echo "✓ Config already exists at /etc/wolfnet/config.toml"
+    echo "  (Upgrade mode - skipping configuration prompts)"
+fi
 
-echo -e "  ${GREEN}✓${NC} Config written to $CONFIG_FILE"
+# Create systemd service if not exists
+if [ ! -f "/etc/systemd/system/wolfnet.service" ]; then
+    echo ""
+    echo "═══════════════════════════════════════════════════════════════"
+    echo "Creating systemd service..."
+    echo "═══════════════════════════════════════════════════════════════"
+    echo ""
 
-# ─── Create Systemd Service ────────────────────────────────────────────────
-echo ""
-echo -e "${CYAN}Creating systemd service...${NC}"
-
-cat > "$SERVICE_FILE" << EOF
+    sudo tee /etc/systemd/system/wolfnet.service > /dev/null <<EOF
 [Unit]
 Description=WolfNet - Secure Private Mesh Networking
 After=network-online.target
@@ -213,7 +285,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=$INSTALL_DIR/wolfnet --config $CONFIG_FILE
+ExecStart=/usr/local/bin/wolfnet --config /etc/wolfnet/config.toml
 Restart=on-failure
 RestartSec=5
 LimitNOFILE=65535
@@ -234,50 +306,45 @@ RuntimeDirectoryMode=0755
 WantedBy=multi-user.target
 EOF
 
-systemctl daemon-reload
-echo -e "  ${GREEN}✓${NC} Systemd service created"
+    sudo systemctl daemon-reload
+    echo "✓ Systemd service created"
 
-# Create status directory
-mkdir -p "$STATUS_DIR"
-
-# ─── Enable and Start ──────────────────────────────────────────────────────
-echo ""
-echo -ne "${CYAN}Start WolfNet now? ${YELLOW}[Y/n]${NC}: "
-read -r start_now <&3
-if [ "$start_now" != "n" ] && [ "$start_now" != "N" ]; then
-    systemctl enable wolfnet
-    systemctl start wolfnet
-    sleep 1
-    if systemctl is-active --quiet wolfnet; then
-        echo -e "  ${GREEN}✓${NC} WolfNet is running!"
+    # Enable and optionally start
+    echo ""
+    echo -n "Start WolfNet now? [Y/n]: "
+    read start_now < /dev/tty
+    if [ "$start_now" != "n" ] && [ "$start_now" != "N" ]; then
+        sudo systemctl enable wolfnet
+        sudo systemctl start wolfnet
+        sleep 2
+        if systemctl is-active --quiet wolfnet; then
+            echo "✓ WolfNet is running!"
+        else
+            echo "⚠ WolfNet may have failed to start. Check: journalctl -u wolfnet -n 20"
+        fi
     else
-        echo -e "  ${YELLOW}⚠${NC} WolfNet may have failed to start. Check: journalctl -u wolfnet -n 20"
+        sudo systemctl enable wolfnet
+        echo "✓ WolfNet enabled (will start on boot)"
     fi
 else
-    systemctl enable wolfnet
-    echo -e "  ${GREEN}✓${NC} WolfNet enabled (will start on boot)"
+    echo ""
+    echo "✓ Service already installed - reloading systemd"
+    sudo systemctl daemon-reload
 fi
 
-# ─── Summary ────────────────────────────────────────────────────────────────
-echo ""
-echo -e "${GREEN}╔══════════════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║  ✅  WolfNet Installation Complete!                      ║${NC}"
-echo -e "${GREEN}╚══════════════════════════════════════════════════════════╝${NC}"
-echo ""
-echo -e "  WolfNet IP:    ${CYAN}$NODE_ADDRESS/$SUBNET${NC}"
-echo -e "  Listen Port:   ${CYAN}$LISTEN_PORT${NC}"
-echo -e "  Gateway:       ${CYAN}$IS_GATEWAY${NC}"
-echo -e "  Config:        ${CYAN}$CONFIG_FILE${NC}"
-echo -e "  Public Key:    ${CYAN}$PUBLIC_KEY${NC}"
-echo ""
-echo "  Useful commands:"
-echo -e "    ${YELLOW}wolfnetctl status${NC}      — Show node status"
-echo -e "    ${YELLOW}wolfnetctl peers${NC}       — List network peers"
-echo -e "    ${YELLOW}systemctl status wolfnet${NC} — Service status"
-echo -e "    ${YELLOW}journalctl -u wolfnet -f${NC} — Live logs"
-echo ""
-echo -e "  To add a peer on another machine, share your public key:"
-echo -e "    ${CYAN}$PUBLIC_KEY${NC}"
-echo ""
+# Restart service if it was running before upgrade
+if [ "$RESTART_SERVICE" = "true" ]; then
+    echo ""
+    echo "Restarting WolfNet service..."
+    sudo systemctl start wolfnet
+    echo "✓ Service restarted"
+fi
 
-exec 3<&-
+echo ""
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║              Installation Complete!                         ║"
+echo "╠══════════════════════════════════════════════════════════════╣"
+echo "║  Status:   sudo systemctl status wolfnet                    ║"
+echo "║  Logs:     sudo journalctl -u wolfnet -f                    ║"
+echo "║  Config:   /etc/wolfnet/config.toml                         ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
