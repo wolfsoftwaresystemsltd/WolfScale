@@ -15,7 +15,15 @@ if [ "$EUID" -ne 0 ]; then
     echo "  ─────────────────────────────────────"
     echo "  Re-running with sudo..."
     echo ""
-    exec sudo bash "$0" "$@"
+    if [ -f "$0" ] && [ "$0" != "bash" ] && [ "$0" != "/bin/bash" ] && [ "$0" != "/usr/bin/bash" ]; then
+        # Script is a real file — re-exec directly
+        exec sudo bash "$0" "$@"
+    else
+        # Piped execution (curl | bash) — re-download and run as root
+        SETUP_URL="https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/wolfdisk/setup.sh"
+        curl -sSL "$SETUP_URL" | sudo bash
+        exit $?
+    fi
 fi
 
 echo ""
