@@ -82,7 +82,9 @@ pub fn build_keepalive(peer_id: &[u8; 4]) -> Vec<u8> {
     pkt
 }
 
-/// Send handshakes to all configured peers that don't have sessions
+/// Send handshakes to all peers that don't have active sessions
+/// For PEX-learned peers, also sends via the relay peer so the handshake
+/// gets forwarded through the mesh even when direct connectivity is impossible.
 pub fn send_handshakes(
     socket: &UdpSocket,
     keypair: &KeyPair,
@@ -95,11 +97,12 @@ pub fn send_handshakes(
     let handshake = build_handshake(keypair, wolfnet_ip, listen_port, hostname, is_gateway);
     for ip in peer_manager.all_ips() {
         peer_manager.with_peer_by_ip(&ip, |peer| {
-            if let Some(endpoint) = peer.endpoint {
-                if !peer.is_connected() {
+            if !peer.is_connected() {
+                // Try direct handshake first
+                if let Some(endpoint) = peer.endpoint {
                     debug!("Sending handshake to {} at {}", ip, endpoint);
                     if let Err(e) = socket.send_to(&handshake, endpoint) {
-                        warn!("Failed to send handshake to {}: {}", endpoint, e);
+                        debug!("Handshake to {} at {} failed: {}", ip, endpoint, e);
                     }
                 }
             }
@@ -116,7 +119,8 @@ pub fn send_keepalives(socket: &UdpSocket, keypair: &KeyPair, peer_manager: &Pee
             if peer.is_connected() {
                 if let Some(endpoint) = peer.endpoint {
                     let _ = socket.send_to(&keepalive, endpoint);
-                    peer.last_seen = Some(std::time::Instant::now());
+                    // Note: do NOT set last_seen here — last_seen should only be updated
+                    // when we actually RECEIVE a packet from this peer, not when we send.
                 }
             }
         });

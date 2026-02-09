@@ -547,7 +547,7 @@ fn run_daemon(config_path: &PathBuf) {
         // 1. Process packets from TUN (outbound: encrypt and send via UDP)
         while let Ok(packet) = tun_rx.try_recv() {
             if let Some(dest_ip) = tun::get_dest_ip(&packet) {
-                // Handle subnet broadcast — send to ALL connected peers
+                // Handle subnet broadcast — send to ALL peers (direct + relayed)
                 // This enables services like WolfDisk autodiscovery across the tunnel
                 let subnet_broadcast = Ipv4Addr::new(
                     wolfnet_ip.octets()[0],
@@ -556,18 +556,54 @@ fn run_daemon(config_path: &PathBuf) {
                     255,
                 );
                 if dest_ip == subnet_broadcast || dest_ip == Ipv4Addr::BROADCAST {
+                    // Collect relay info first (to avoid holding locks while sending)
+                    let mut relay_targets: Vec<(Ipv4Addr, Option<Ipv4Addr>)> = Vec::new();
                     for ip in peer_manager.all_ips() {
                         if ip == wolfnet_ip { continue; }
-                        peer_manager.with_peer_by_ip(&ip, |peer| {
-                            if peer.is_connected() {
-                                if let Some(endpoint) = peer.endpoint {
-                                    if let Ok((counter, ciphertext)) = peer.encrypt(&packet) {
-                                        let pkt = transport::build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
-                                        let _ = socket.send_to(&pkt, endpoint);
+                        let info = peer_manager.with_peer_by_ip(&ip, |peer| {
+                            (peer.is_connected(), peer.relay_via)
+                        });
+                        if let Some((connected, relay_via)) = info {
+                            if connected {
+                                relay_targets.push((ip, None)); // direct
+                            } else if let Some(relay) = relay_via {
+                                relay_targets.push((ip, Some(relay))); // via relay
+                            }
+                        }
+                    }
+                    // Send to each peer (directly or via relay)
+                    let mut relayed_via: std::collections::HashSet<Ipv4Addr> = std::collections::HashSet::new();
+                    for (ip, relay) in &relay_targets {
+                        match relay {
+                            None => {
+                                // Direct send
+                                peer_manager.with_peer_by_ip(ip, |peer| {
+                                    if let Some(endpoint) = peer.endpoint {
+                                        if let Ok((counter, ciphertext)) = peer.encrypt(&packet) {
+                                            let pkt = transport::build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
+                                            let _ = socket.send_to(&pkt, endpoint);
+                                        }
                                     }
+                                });
+                            }
+                            Some(relay_ip) => {
+                                // Send via relay — but only once per relay peer
+                                // The relay will re-broadcast to its connected peers
+                                if relayed_via.insert(*relay_ip) {
+                                    peer_manager.with_peer_by_ip(relay_ip, |relay_peer| {
+                                        if relay_peer.is_connected() {
+                                            if let Some(endpoint) = relay_peer.endpoint {
+                                                if let Ok((counter, ciphertext)) = relay_peer.encrypt(&packet) {
+                                                    let pkt = transport::build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
+                                                    let _ = socket.send_to(&pkt, endpoint);
+                                                    debug!("Broadcast relayed via {} for relay-only peers", relay_ip);
+                                                }
+                                            }
+                                        }
+                                    });
                                 }
                             }
-                        });
+                        }
                     }
                     continue;
                 }
