@@ -545,13 +545,26 @@ fn run_daemon(config_path: &PathBuf) {
                         }
                     }
                     transport::PKT_DATA => {
-                        if let Some((_peer_id, counter, ciphertext)) = transport::parse_data_packet(data) {
-                            // Find peer by source address
-                            if let Some(peer_ip) = peer_manager.find_ip_by_endpoint(&src) {
+                        if let Some((peer_id_bytes, counter, ciphertext)) = transport::parse_data_packet(data) {
+                            // Find peer by source address, or fall back to peer_id (endpoint roaming)
+                            let peer_ip = peer_manager.find_ip_by_endpoint(&src)
+                                .or_else(|| {
+                                    // Peer's IP may have changed — try to find by peer_id
+                                    peer_manager.find_ip_by_id(&peer_id_bytes)
+                                });
+
+                            if let Some(peer_ip) = peer_ip {
                                 let decrypted = peer_manager.with_peer_by_ip(&peer_ip, |peer| {
                                     peer.decrypt(counter, ciphertext)
                                 });
                                 if let Some(Ok(plaintext)) = decrypted {
+                                    // Update endpoint if it changed (roaming)
+                                    let known_endpoint = peer_manager.with_peer_by_ip(&peer_ip, |peer| peer.endpoint);
+                                    if known_endpoint != Some(Some(src)) {
+                                        info!("Peer {} roamed to new endpoint: {}", peer_ip, src);
+                                        peer_manager.update_endpoint(&peer_ip, src);
+                                    }
+
                                     // Check if this packet is for us or needs relaying
                                     if let Some(dest_ip) = tun::get_dest_ip(&plaintext) {
                                         if dest_ip == wolfnet_ip {
