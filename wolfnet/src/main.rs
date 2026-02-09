@@ -214,7 +214,7 @@ fn cmd_invite(config_path: &PathBuf) {
     println!();
     println!("Share this token with the peer you want to invite:");
     println!();
-    println!("  sudo wolfnet join --config /etc/wolfnet/config.toml {}", token);
+    println!("  sudo wolfnet --config /etc/wolfnet/config.toml join {}", token);
     println!();
     println!("After they join, they'll get a reverse token for you to run.");
 }
@@ -327,7 +327,7 @@ fn cmd_join(config_path: &PathBuf, token: &str) {
     println!();
     println!("Now run this on the inviting node to complete the link:");
     println!();
-    println!("  sudo wolfnet join --config /etc/wolfnet/config.toml {}", reverse_token);
+    println!("  sudo wolfnet --config /etc/wolfnet/config.toml join {}", reverse_token);
     println!();
     println!("Then restart WolfNet on both nodes:");
     println!("  sudo systemctl restart wolfnet");
