@@ -430,10 +430,9 @@ fn run_daemon(config_path: &PathBuf) {
         }
     }
 
-    // Auto-detect gateway mode: if this node has configured peers it acts as a hub/relay
-    // between its LAN-discovered peers and remote peers — advertise as gateway automatically
-    let has_configured_peers = !config.peers.is_empty();
-    let is_gateway = config.network.gateway || has_configured_peers;
+    // Gateway mode is only enabled explicitly in config — a gateway is a node
+    // that bridges networks and relays traffic between peers that can't see each other
+    let is_gateway = config.network.gateway;
 
     // Full gateway setup (iptables NAT rules) only when explicitly configured
     // Auto-gateway just enables IP forwarding for relay — no iptables changes
@@ -442,12 +441,13 @@ fn run_daemon(config_path: &PathBuf) {
         if let Err(e) = wolfnet::gateway::enable_gateway(tun.name(), &subnet) {
             warn!("Gateway setup failed: {}", e);
         }
-    } else if has_configured_peers {
-        // Auto-gateway: just enable IP forwarding so we can relay packets
+    } else if !config.peers.is_empty() {
+        // Not a gateway, but has configured peers — enable IP forwarding
+        // so we can relay packets between LAN-discovered and remote peers
         if let Err(e) = std::fs::write("/proc/sys/net/ipv4/ip_forward", "1") {
             warn!("Failed to enable IP forwarding: {}", e);
         } else {
-            info!("Auto-relay enabled: IP forwarding on (this node has configured peers)");
+            info!("IP forwarding enabled for relay");
         }
     }
 
