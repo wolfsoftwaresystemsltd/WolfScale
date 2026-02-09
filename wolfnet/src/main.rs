@@ -547,6 +547,31 @@ fn run_daemon(config_path: &PathBuf) {
         // 1. Process packets from TUN (outbound: encrypt and send via UDP)
         while let Ok(packet) = tun_rx.try_recv() {
             if let Some(dest_ip) = tun::get_dest_ip(&packet) {
+                // Handle subnet broadcast — send to ALL connected peers
+                // This enables services like WolfDisk autodiscovery across the tunnel
+                let subnet_broadcast = Ipv4Addr::new(
+                    wolfnet_ip.octets()[0],
+                    wolfnet_ip.octets()[1],
+                    wolfnet_ip.octets()[2],
+                    255,
+                );
+                if dest_ip == subnet_broadcast || dest_ip == Ipv4Addr::BROADCAST {
+                    for ip in peer_manager.all_ips() {
+                        if ip == wolfnet_ip { continue; }
+                        peer_manager.with_peer_by_ip(&ip, |peer| {
+                            if peer.is_connected() {
+                                if let Some(endpoint) = peer.endpoint {
+                                    if let Ok((counter, ciphertext)) = peer.encrypt(&packet) {
+                                        let pkt = transport::build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
+                                        let _ = socket.send_to(&pkt, endpoint);
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    continue;
+                }
+
                 // Try direct peer first
                 let sent = peer_manager.with_peer_by_ip(&dest_ip, |peer| {
                     if let Some(endpoint) = peer.endpoint {
@@ -668,9 +693,33 @@ fn run_daemon(config_path: &PathBuf) {
 
                                     // Check if this packet is for us or needs relaying
                                     if let Some(dest_ip) = tun::get_dest_ip(&plaintext) {
+                                        // Compute subnet broadcast address
+                                        let subnet_bcast = Ipv4Addr::new(
+                                            wolfnet_ip.octets()[0],
+                                            wolfnet_ip.octets()[1],
+                                            wolfnet_ip.octets()[2],
+                                            255,
+                                        );
+
                                         if dest_ip == wolfnet_ip {
                                             // For us — write to TUN
                                             unsafe { libc::write(tun_fd, plaintext.as_ptr() as *const _, plaintext.len()) };
+                                        } else if dest_ip == subnet_bcast || dest_ip == Ipv4Addr::BROADCAST {
+                                            // Broadcast: write to our TUN AND relay to all other peers
+                                            unsafe { libc::write(tun_fd, plaintext.as_ptr() as *const _, plaintext.len()) };
+                                            for relay_target in peer_manager.all_ips() {
+                                                if relay_target == wolfnet_ip || relay_target == peer_ip { continue; }
+                                                peer_manager.with_peer_by_ip(&relay_target, |dest_peer| {
+                                                    if dest_peer.is_connected() {
+                                                        if let Some(endpoint) = dest_peer.endpoint {
+                                                            if let Ok((ctr, ct)) = dest_peer.encrypt(&plaintext) {
+                                                                let pkt = transport::build_data_packet(&keypair.my_peer_id(), ctr, &ct);
+                                                                let _ = socket.send_to(&pkt, endpoint);
+                                                            }
+                                                        }
+                                                    }
+                                                });
+                                            }
                                         } else {
                                             // Relay: re-encrypt and forward to the destination peer
                                             let forwarded = peer_manager.with_peer_by_ip(&dest_ip, |dest_peer| {
