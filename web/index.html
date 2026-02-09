@@ -110,7 +110,7 @@
         /* Hero Section */
         .hero-section {
             text-align: center;
-            padding: 3rem 0 2rem;
+            padding: 1.5rem 0 1rem;
             position: relative;
         }
 
@@ -120,24 +120,24 @@
             top: -40%;
             left: 50%;
             transform: translateX(-50%);
-            width: 800px;
-            height: 800px;
+            width: 600px;
+            height: 600px;
             background: radial-gradient(circle, rgba(220, 38, 38, 0.12) 0%, transparent 70%);
             pointer-events: none;
         }
 
         .hero-logo {
-            width: 200px;
-            height: 200px;
+            width: 100px;
+            height: 100px;
             margin-bottom: 0.5rem;
             animation: float 4s ease-in-out infinite;
             filter: drop-shadow(0 10px 40px rgba(220, 38, 38, 0.3));
         }
 
         .hero-title {
-            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
             font-weight: 800;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.25rem;
             background: linear-gradient(135deg, #fff 0%, #ff6b6b 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -145,9 +145,9 @@
         }
 
         .hero-tagline {
-            font-size: 1.25rem;
+            font-size: 1rem;
             color: var(--text-secondary);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
             font-weight: 400;
             max-width: 650px;
             margin-left: auto;
@@ -161,9 +161,9 @@
         }
 
         .hero-subtitle {
-            font-size: 0.95rem;
+            font-size: 0.85rem;
             color: var(--text-muted);
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
         }
 
         .hero-badges {
@@ -208,7 +208,7 @@
 
         .products-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 1.5rem;
             margin-bottom: 1.5rem;
         }
@@ -491,14 +491,25 @@
         }
 
         /* Responsive */
+        /* Sidebar nav descriptions */
+        .nav-desc {
+            display: block;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: 400;
+            margin-top: 1px;
+            line-height: 1.3;
+            opacity: 0.7;
+        }
+
         @media (max-width: 768px) {
             .products-grid {
                 grid-template-columns: 1fr;
             }
 
             .hero-logo {
-                width: 150px;
-                height: 150px;
+                width: 80px;
+                height: 80px;
             }
 
             .support-buttons {
@@ -516,7 +527,8 @@
                     src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"><span>Wolf</span></a>
             <nav class="sidebar-nav">
                 <div class="nav-section">
-                    <div class="nav-section-title">WolfScale</div>
+                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load
+                            Balancer</span></div>
                     <a href="quickstart.html">Quick Start</a>
                     <a href="features.html">Features</a>
                     <a href="architecture.html">Architecture</a>
@@ -530,19 +542,22 @@
                     <a href="troubleshooting.html">Troubleshooting</a>
                 </div>
                 <div class="nav-section">
-                    <div class="nav-section-title">WolfDisk</div>
+                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication & Sharing</span>
+                    </div>
                     <a href="wolfdisk.html">Overview & Quick Start</a>
                 </div>
                 <div class="nav-section">
-                    <div class="nav-section-title">WolfNet</div>
+                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
                     <a href="wolfnet.html">Overview & Quick Start</a>
                 </div>
                 <div class="nav-section">
-                    <div class="nav-section-title">WolfProxy</div>
+                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
+                            Firewall</span></div>
                     <a href="wolfproxy.html">Overview & Quick Start</a>
                 </div>
                 <div class="nav-section">
-                    <div class="nav-section-title">WolfServe</div>
+                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
+                    </div>
                     <a href="wolfserve.html">Overview & Quick Start</a>
                 </div>
                 <div class="nav-section">
@@ -594,11 +609,11 @@
                             Ltd</a>
                     </p>
                     <p class="hero-subtitle animate-fade-in animate-delay-3">
-                        An open source clustering solution
+                        Open source infrastructure tools built with Rust
                     </p>
                     <a href="https://www.patreon.com/15362110/join" target="_blank"
                         class="animate-fade-in animate-delay-4"
-                        style="display: inline-flex; align-items: center; gap: 0.5rem; margin-top: 1.5rem; padding: 0.75rem 2rem; background: linear-gradient(135deg, #f96854, #e8453c); color: #fff; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 1rem; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(249, 104, 84, 0.4);"
+                        style="display: inline-flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; padding: 0.6rem 1.5rem; background: linear-gradient(135deg, #f96854, #e8453c); color: #fff; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 0.85rem; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(249, 104, 84, 0.4);"
                         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 25px rgba(249, 104, 84, 0.5)'"
                         onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(249, 104, 84, 0.4)'">❤️
                         Support us on Patreon</a>
@@ -670,6 +685,43 @@
                             <a href="wolfnet.html" class="product-cta">Get Started →</a>
                         </div>
 
+                        <!-- WolfProxy -->
+                        <div class="product-card animate-fade-in animate-delay-5">
+                            <div class="product-icon">🔀</div>
+                            <div class="product-name">WolfProxy</div>
+                            <span class="product-status available">Available Now</span>
+                            <p class="product-description">
+                                NGINX-compatible reverse proxy with a built-in firewall. Reads your existing nginx
+                                configuration directly — just stop nginx, start WolfProxy. Auto-bans malicious IPs,
+                                supports load balancing, health checking, and a monitoring dashboard.
+                            </p>
+                            <ul class="product-features">
+                                <li>Drop-in nginx replacement — reads sites-enabled</li>
+                                <li>Built-in firewall with auto-ban</li>
+                                <li>5 load balancing algorithms</li>
+                                <li>Real-time monitoring dashboard</li>
+                            </ul>
+                            <a href="wolfproxy.html" class="product-cta">Get Started →</a>
+                        </div>
+
+                        <!-- WolfServe -->
+                        <div class="product-card animate-fade-in animate-delay-6">
+                            <div class="product-icon">🌐</div>
+                            <div class="product-name">WolfServe</div>
+                            <span class="product-status available">Available Now</span>
+                            <p class="product-description">
+                                Apache2-compatible web server that serves PHP via FastCGI. Reads your existing Apache
+                                vhost configs directly. Includes a PHP FFI bridge to call Rust from PHP, multi-server
+                                session sharing, and an admin dashboard.
+                            </p>
+                            <ul class="product-features">
+                                <li>Drop-in Apache2 replacement — reads vhosts</li>
+                                <li>PHP via FastCGI (php-fpm)</li>
+                                <li>Rust FFI bridge for PHP</li>
+                                <li>Shared sessions across servers</li>
+                            </ul>
+                            <a href="wolfserve.html" class="product-cta">Get Started →</a>
+                        </div>
 
                     </div>
                 </section>
