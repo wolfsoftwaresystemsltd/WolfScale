@@ -77,10 +77,9 @@ fn load_status() -> NodeStatus {
 }
 
 fn cmd_status(status: &NodeStatus) {
-    println!("╔══════════════════════════════════════════════════════╗");
-    println!("║              🐺  WolfNet Status                     ║");
-    println!("╚══════════════════════════════════════════════════════╝");
     println!();
+    println!("  🐺 WolfNet Status");
+    println!("  ─────────────────────────────────────");
     println!("  Hostname:    {}", status.hostname);
     println!("  WolfNet IP:  {}", status.address);
     println!("  Interface:   {}", status.interface);
@@ -102,24 +101,25 @@ fn cmd_peers(status: &NodeStatus) {
         return;
     }
 
-    println!("╔══════════════════════════════════════════════════════════════════════════╗");
-    println!("║  🐺  WolfNet Peers                                                      ║");
-    println!("╠══════════════════════════════════════════════════════════════════════════╣");
-    println!("║  {:<15} {:<15} {:<22} {:<8} {:<10} ║", "HOSTNAME", "WOLFNET IP", "ENDPOINT", "STATUS", "LAST SEEN");
-    println!("╠══════════════════════════════════════════════════════════════════════════╣");
+    println!();
+    println!("  🐺 WolfNet Peers");
+    println!("  ─────────────────────────────────────────────────────────────────────");
+    println!("  {:<16} {:<16} {:<24} {:<10} {}",
+        "HOSTNAME", "WOLFNET IP", "ENDPOINT", "STATUS", "LAST SEEN");
+    println!("  ─────────────────────────────────────────────────────────────────────");
 
     for peer in &status.peers {
-        let status_str = if peer.connected { "🟢 online" } else { "🔴 offline" };
+        let status_str = if peer.connected { "online" } else { "offline" };
+        let status_icon = if peer.connected { "●" } else { "○" };
         let last_seen = if peer.last_seen_secs == u64::MAX {
             "never".to_string()
         } else {
             format_duration(peer.last_seen_secs)
         };
         let host = if peer.hostname.is_empty() { "-" } else { &peer.hostname };
-        println!("║  {:<15} {:<15} {:<22} {:<8} {:<10} ║",
-            host, peer.address, peer.endpoint, status_str, last_seen);
+        println!("  {:<16} {:<16} {:<24} {} {:<8} {}",
+            host, peer.address, peer.endpoint, status_icon, status_str, last_seen);
     }
-    println!("╚══════════════════════════════════════════════════════════════════════════╝");
 
     // Traffic summary
     let total_rx: u64 = status.peers.iter().map(|p| p.rx_bytes).sum();
