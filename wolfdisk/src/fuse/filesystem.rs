@@ -874,6 +874,51 @@ impl WolfDiskFS {
 }
 
 impl Filesystem for WolfDiskFS {
+    fn statfs(&mut self, _req: &Request, _ino: u64, reply: fuser::ReplyStatfs) {
+        // Report disk space from the underlying storage partition
+        let path = self.config.chunks_dir();
+        let c_path = match std::ffi::CString::new(path.to_string_lossy().as_bytes()) {
+            Ok(p) => p,
+            Err(_) => {
+                // Fallback: report large virtual filesystem
+                reply.statfs(
+                    1 << 30, // blocks
+                    1 << 30, // bfree
+                    1 << 30, // bavail
+                    0,       // files
+                    1 << 20, // ffree
+                    4096,    // bsize
+                    255,     // namelen
+                    4096,    // frsize
+                );
+                return;
+            }
+        };
+        
+        let mut stat: libc::statvfs = unsafe { std::mem::zeroed() };
+        let ret = unsafe { libc::statvfs(c_path.as_ptr(), &mut stat) };
+        
+        if ret == 0 {
+            reply.statfs(
+                stat.f_blocks,   // total blocks
+                stat.f_bfree,    // free blocks
+                stat.f_bavail,   // available blocks (non-root)
+                stat.f_files,    // total inodes
+                stat.f_ffree,    // free inodes
+                stat.f_bsize as u32,  // block size
+                stat.f_namemax as u32, // max name length
+                stat.f_frsize as u32, // fragment size
+            );
+        } else {
+            // Fallback: report large virtual filesystem
+            reply.statfs(
+                1 << 30, 1 << 30, 1 << 30,
+                0, 1 << 20,
+                4096, 255, 4096,
+            );
+        }
+    }
+
     fn lookup(&mut self, _req: &Request, parent: u64, name: &OsStr, reply: ReplyEntry) {
         let name_str = name.to_string_lossy();
         debug!("lookup: parent={}, name={}", parent, name_str);
