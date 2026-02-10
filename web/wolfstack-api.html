@@ -137,6 +137,20 @@
                             hours</strong>.
                     </p>
 
+                    <h3 style="margin-top: 2rem;">WebSocket Console</h3>
+                    <p>Interactive terminal access via WebSocket:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">url</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code>ws://localhost:8553/ws/console/{type}/{name}</code></pre>
+                    </div>
+                    <ul>
+                        <li><strong>type</strong>: <code>docker</code>, <code>lxc</code>, or <code>host</code></li>
+                        <li><strong>name</strong>: Container name (for docker/lxc) or ignored (for host)</li>
+                    </ul>
+
                     <div class="code-block">
                         <div class="code-header">
                             <span class="code-lang">bash</span>
@@ -527,6 +541,11 @@ curl -b cookies.txt http://localhost:8553/api/metrics</code></pre>
                                     <td><code>POST</code></td>
                                     <td><code>/api/containers/docker/pull</code></td>
                                     <td>Pull an image from Docker Hub</td>
+                                </tr>
+                                <tr>
+                                    <td><code>DELETE</code></td>
+                                    <td><code>/api/containers/docker/images/{id}</code></td>
+                                    <td>Delete a Docker image</td>
                                 </tr>
                                 <tr>
                                     <td><code>POST</code></td>

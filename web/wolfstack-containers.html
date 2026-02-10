@@ -248,11 +248,25 @@ Memory:     256m
 CPUs:       0.5</code></pre>
                     </div>
 
-                    <h3 style="margin-top: 2rem;">Docker Images</h3>
+                    <h3 style="margin-top: 2rem;">Image Management</h3>
                     <p>
-                        The Images tab shows all locally available Docker images with their size and creation date.
-                        You can pull new images from Docker Hub directly from the dashboard.
+                        WolfStack lists all locally available Docker images. Each image row includes:
                     </p>
+                    <ul>
+                        <li><strong>Repository & Tag:</strong> Image name and version</li>
+                        <li><strong>Size:</strong> Disk usage</li>
+                        <li><strong>Created:</strong> Creation date</li>
+                        <li><strong>Actions:</strong>
+                            <ul>
+                                <li><strong>▶ Use:</strong> Click to immediately start creating a new container from
+                                    this image.
+                                    Pre-fills the Create Container form.</li>
+                                <li><strong>🗑 Delete:</strong>Remove the image from the local system
+                                    (<code>docker rmi</code>).
+                                    Only possible if no containers are using it.</li>
+                            </ul>
+                        </li>
+                    </ul>
                 </section>
 
                 <!-- LXC Management -->
