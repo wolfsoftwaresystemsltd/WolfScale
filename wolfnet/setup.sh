@@ -365,12 +365,28 @@ else
     systemctl daemon-reload
 fi
 
-# Restart service if it was running before upgrade
+# On upgrade: always restart the service so the new binary takes effect.
+# If it was running before, we stopped it earlier. If it wasn't, start it now.
 if [ "$RESTART_SERVICE" = "true" ]; then
     echo ""
     echo "Restarting WolfNet service..."
     systemctl start wolfnet
-    echo "✓ Service restarted"
+    sleep 2
+    if systemctl is-active --quiet wolfnet; then
+        echo "✓ Service restarted with new binary"
+    else
+        echo "⚠ WolfNet may have failed to start. Check: journalctl -u wolfnet -n 20"
+    fi
+elif systemctl is-enabled --quiet wolfnet 2>/dev/null; then
+    echo ""
+    echo "Starting WolfNet service..."
+    systemctl start wolfnet
+    sleep 2
+    if systemctl is-active --quiet wolfnet; then
+        echo "✓ Service started with new binary"
+    else
+        echo "⚠ WolfNet may have failed to start. Check: journalctl -u wolfnet -n 20"
+    fi
 fi
 
 echo ""
