@@ -710,11 +710,13 @@ fn run_daemon(config_path: &PathBuf) {
                             let endpoint = src;
                             peer_manager.update_from_discovery(&pub_key, endpoint, peer_ip, &peer_hostname, is_gw);
                             peer_manager.with_peer_by_ip(&peer_ip, |peer| {
-                                if !peer.is_connected() {
-                                    // New or reconnecting peer — establish session
-                                    peer.establish_session(&keypair.secret, &keypair.public);
-                                }
-                                // Always update last_seen on handshake
+                                // Always re-establish session on handshake.
+                                // A handshake means the peer is (re)connecting — their send
+                                // counter resets to 0, so we must reset our recv counter too.
+                                // Without this, a peer restart causes all their new packets
+                                // to be rejected as "replay" because the old recv_counter
+                                // is higher than their new send counter.
+                                peer.establish_session(&keypair.secret, &keypair.public);
                                 peer.last_seen = Some(Instant::now());
                             });
                             // Send handshake back

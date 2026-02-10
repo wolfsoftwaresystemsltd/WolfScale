@@ -134,9 +134,9 @@ impl SessionCipher {
     pub fn decrypt(&mut self, counter: u64, ciphertext: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
         // Replay protection with restart tolerance:
         // - Accept if counter > last seen (normal forward progress)
-        // - Accept if counter < 100 and recv_counter > 1000 (peer likely restarted)
+        // - Accept if counter < 100 and recv_counter is significantly higher (peer likely restarted)
         // - Reject if counter <= recv_counter (replay) unless it's a restart
-        let is_likely_restart = counter < 100 && self.recv_counter > 1000;
+        let is_likely_restart = counter < 100 && self.recv_counter > 100;
         if counter <= self.recv_counter && self.recv_counter > 0 && !is_likely_restart {
             // Allow a small reorder window of 32 packets
             if self.recv_counter - counter > 32 {
