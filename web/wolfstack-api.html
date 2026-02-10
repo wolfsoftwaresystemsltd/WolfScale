@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-KK9NEE1S54');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="WolfStack API Reference - Complete documentation for all REST API and WebSocket endpoints covering authentication, metrics, containers, components, services, clustering, and migration.">
+    <meta name="keywords"
+        content="WolfStack API, REST API, WebSocket, Docker API, LXC API, server management API, WolfStack endpoints">
+    <meta name="author" content="Wolf Software Systems Ltd">
+    <link rel="canonical" href="https://wolfscale.org/wolfstack-api.html">
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://wolfscale.org/wolfstack-api.html">
+    <meta property="og:title" content="WolfStack API Reference">
+    <meta property="og:description"
+        content="Complete REST API reference for WolfStack. Authentication, metrics, Docker, LXC, components, services, clustering, and WebSocket console.">
+    <meta property="og:image" content="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg">
+
+    <title>API Reference - WolfStack | WolfScale</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=8">
+</head>
+
+<body>
+    <div class="wiki-layout">
+        <aside class="sidebar" id="sidebar">
+            <a href="index.html" class="sidebar-logo"><img
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"></a>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span>
+                    </div>
+                    <a href="wolfstack.html">Overview & Quick Start</a>
+                    <a href="wolfstack-containers.html">Container Management</a>
+                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
+                    <a href="wolfstack-api.html" class="active">API Reference</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load
+                            Balancer</span></div>
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="features.html">Features</a>
+                    <a href="architecture.html">Architecture</a>
+                    <a href="how-it-works.html">How It Works</a>
+                    <a href="binlog.html">Binlog Mode</a>
+                    <a href="load-balancer.html">Load Balancer</a>
+                    <a href="configuration.html">Configuration</a>
+                    <a href="performance.html">Performance</a>
+                    <a href="cli.html">CLI Reference</a>
+                    <a href="api.html">API Reference</a>
+                    <a href="troubleshooting.html">Troubleshooting</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication & Sharing</span>
+                    </div>
+                    <a href="wolfdisk.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
+                    <a href="wolfnet.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
+                            Firewall</span></div>
+                    <a href="wolfproxy.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
+                    </div>
+                    <a href="wolfserve.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Company</div>
+                    <a href="https://wolf.uk.com" target="_blank">Wolf Software</a>
+                    <a href="about.html">About</a>
+                    <a href="contact.html">Contact</a>
+                    <a href="glossary.html">Glossary</a>
+                </div>
+            </nav>
+            <div class="theme-toggle-wrapper">
+                <span class="theme-toggle-label">Theme</span>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-toggle-slider"></span>
+                </button>
+            </div>
+            <div class="sidebar-links">
+                <a href="https://github.com/wolfsoftwaresystemsltd/WolfStack" target="_blank">GitHub</a>
+                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+                <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+            </div>
+        </aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <main class="wiki-main">
+            <div class="mobile-header">
+                <a href="index.html" class="nav-logo"><img
+                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
+                        class="logo-img"></a>
+                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+            </div>
+
+            <div class="wiki-content">
+                <div class="content-header">
+                    <h1>📡 API Reference</h1>
+                    <p class="content-subtitle">Complete REST API & WebSocket Documentation for WolfStack</p>
+                </div>
+
+                <!-- Overview -->
+                <section class="content-section">
+                    <h2>Overview</h2>
+                    <p>
+                        WolfStack exposes a <strong>RESTful JSON API</strong> on port <code>8553</code> (default).
+                        All endpoints require <strong>session authentication</strong> (cookie-based) unless otherwise
+                        noted.
+                    </p>
+
+                    <h3>Authentication</h3>
+                    <p>
+                        Log in with your Linux system credentials to receive a session cookie.
+                        All subsequent requests must include this cookie. Sessions expire after <strong>8
+                            hours</strong>.
+                    </p>
+
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code># Login (returns Set-Cookie header)
+curl -c cookies.txt -X POST http://localhost:8553/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "root", "password": "your-password"}'
+
+# Use the session cookie for subsequent requests
+curl -b cookies.txt http://localhost:8553/api/metrics</code></pre>
+                    </div>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>🔐 PAM Authentication:</strong> WolfStack authenticates against your Linux system
+                        users via PAM. Any user in <code>/etc/shadow</code> can log in. WolfStack requires root
+                        to read shadow passwords.
+                    </div>
+                </section>
+
+                <!-- Auth Endpoints -->
+                <section class="content-section">
+                    <h2>🔑 Authentication</h2>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Endpoint</th>
+                                    <th>Auth</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/auth/login</code></td>
+                                    <td>No</td>
+                                    <td>Authenticate with Linux credentials. Returns session cookie.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/auth/logout</code></td>
+                                    <td>Yes</td>
+                                    <td>Destroy the current session.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/auth/check</code></td>
+                                    <td>Yes</td>
+                                    <td>Check if the current session is still valid.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">POST /api/auth/login</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Request Body</span></div>
+                        <pre><code>{
+  "username": "root",
+  "password": "your-password"
+}</code></pre>
+                    </div>
+                    <div class="code-block" style="margin-top: 1rem;">
+                        <div class="code-header"><span class="code-lang">Response (200 OK)</span></div>
+                        <pre><code>{
+  "status": "ok",
+  "username": "root"
+}
+// Set-Cookie: wolfstack_session=abc123; HttpOnly; Path=/; Max-Age=28800</code></pre>
+                    </div>
+                </section>
+
+                <!-- Dashboard -->
+                <section class="content-section">
+                    <h2>📊 Dashboard & Metrics</h2>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Endpoint</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/metrics</code></td>
+                                    <td>Current system metrics — CPU, memory, disk, network, load averages</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">GET /api/metrics</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Response</span></div>
+                        <pre><code>{
+  "hostname": "my-server",
+  "cpu_usage": 23.5,
+  "cpu_count": 8,
+  "memory_total": 16777216,
+  "memory_used": 8388608,
+  "swap_total": 4194304,
+  "swap_used": 1048576,
+  "load_avg": [1.2, 0.8, 0.5],
+  "uptime": 864000,
+  "disk": [
+    {"mount": "/", "total": 107374182400, "used": 53687091200, "fs_type": "ext4"}
+  ],
+  "network": [
+    {"name": "eth0", "rx_bytes": 1073741824, "tx_bytes": 536870912}
+  ]
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- Cluster Nodes -->
+                <section class="content-section">
+                    <h2>🖥️ Cluster Nodes</h2>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Endpoint</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/nodes</code></td>
+                                    <td>List all cluster nodes with their status and metrics</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/nodes</code></td>
+                                    <td>Add a server to the cluster</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/nodes/{id}</code></td>
+                                    <td>Get details for a specific node</td>
+                                </tr>
+                                <tr>
+                                    <td><code>DELETE</code></td>
+                                    <td><code>/api/nodes/{id}</code></td>
+                                    <td>Remove a server from the cluster</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET/POST/PUT/DELETE</code></td>
+                                    <td><code>/api/nodes/{id}/proxy/{path}</code></td>
+                                    <td>Proxy any API call to a remote node</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">POST /api/nodes</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Request Body</span></div>
+                        <pre><code>{
+  "name": "office-server",
+  "address": "10.10.10.2:8553"
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- Components -->
+                <section class="content-section">
+                    <h2>📦 Components</h2>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Endpoint</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/components</code></td>
+                                    <td>Status of all managed components (WolfNet, WolfProxy, WolfServe, WolfDisk,
+                                        WolfScale, MariaDB, Certbot)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/components/{name}/detail</code></td>
+                                    <td>Detailed component info: systemd status, memory, PID, restart count, config
+                                        file, logs</td>
+                                </tr>
+                                <tr>
+                                    <td><code>PUT</code></td>
+                                    <td><code>/api/components/{name}/config</code></td>
+                                    <td>Save updated configuration file for a component</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/components/{name}/install</code></td>
+                                    <td>Install a Wolf component from its setup script</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">GET /api/components</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Response</span></div>
+                        <pre><code>[
+  {
+    "name": "wolfnet",
+    "label": "WolfNet",
+    "description": "Mesh VPN",
+    "installed": true,
+    "running": true,
+    "version": "1.0.0"
+  },
+  {
+    "name": "wolfproxy",
+    "label": "WolfProxy",
+    "description": "Reverse proxy with firewall",
+    "installed": true,
+    "running": false,
+    "version": null
+  }
+]</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">PUT /api/components/{name}/config</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Request Body</span></div>
+                        <pre><code>{
+  "content": "[server]\nport = 8443\nbind = \"0.0.0.0\"\n"
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- Services -->
+                <section class="content-section">
+                    <h2>⚡ Services</h2>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Endpoint</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/services/{name}/action</code></td>
+                                    <td>Start, stop, restart, enable, or disable a systemd service</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">POST /api/services/{name}/action</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Request Body</span></div>
+                        <pre><code>// Valid actions: "start", "stop", "restart", "enable", "disable"
+{
+  "action": "restart"
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- Certificates -->
+                <section class="content-section">
+                    <h2>🔒 SSL Certificates</h2>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Endpoint</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/certificates</code></td>
+                                    <td>Request a Let's Encrypt certificate via Certbot</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <h3 style="margin-top: 2rem;">POST /api/certificates</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Request Body</span></div>
+                        <pre><code>{
+  "domain": "example.com",
+  "email": "admin@example.com"
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- Container Runtime -->
+                <section class="content-section">
+                    <h2>⚙️ Container Runtimes</h2>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Endpoint</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/status</code></td>
+                                    <td>Docker & LXC runtime detection — installed? version? container counts</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/install</code></td>
+                                    <td>Install Docker or LXC via system package manager</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">GET /api/containers/status</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Response</span></div>
+                        <pre><code>{
+  "docker": {
+    "installed": true,
+    "version": "24.0.7",
+    "running_count": 3,
+    "total_count": 5
+  },
+  "lxc": {
+    "installed": true,
+    "version": "5.0.0",
+    "running_count": 1,
+    "total_count": 2
+  }
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- Docker Endpoints -->
+                <section class="content-section">
+                    <h2>🐳 Docker Container Endpoints</h2>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Endpoint</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/docker</code></td>
+                                    <td>List all Docker containers (name, image, status, IP, ports)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/docker/stats</code></td>
+                                    <td>Real-time resource stats (CPU %, memory, PIDs) for running containers</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/docker/images</code></td>
+                                    <td>List local Docker images (name, tag, size, created)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/docker/search?q={query}</code></td>
+                                    <td>Search Docker Hub for images</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/docker/pull</code></td>
+                                    <td>Pull an image from Docker Hub</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/docker/create</code></td>
+                                    <td>Create a new Docker container</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/docker/{id}/logs</code></td>
+                                    <td>Get container output logs (last 100 lines)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/docker/{id}/action</code></td>
+                                    <td>Start / stop / restart / pause / unpause / remove</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/docker/{id}/clone</code></td>
+                                    <td>Clone a container (commit image + create new container)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/docker/{id}/migrate</code></td>
+                                    <td>Migrate container to another WolfStack node</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/docker/import</code></td>
+                                    <td>Receive a migrated container image (inter-node endpoint)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">POST /api/containers/docker/create</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Request Body</span></div>
+                        <pre><code>{
+  "name": "my-nginx",
+  "image": "nginx:latest",
+  "ports": ["8080:80", "443:443"],
+  "env": ["NGINX_HOST=example.com"],
+  "wolfnet_ip": "10.10.10.101",
+  "memory": "256m",
+  "cpus": "0.5"
+}</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">POST /api/containers/docker/{id}/action</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Request Body</span></div>
+                        <pre><code>// Valid actions: "start", "stop", "restart", "pause", "unpause", "remove"
+{
+  "action": "start"
+}</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">POST /api/containers/docker/{id}/clone</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Request Body</span></div>
+                        <pre><code>{
+  "new_name": "my-nginx-clone"
+}</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">POST /api/containers/docker/{id}/migrate</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Request Body</span></div>
+                        <pre><code>{
+  "target_node": "ws-a1b2c3d4",
+  "remove_source": true
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- LXC Endpoints -->
+                <section class="content-section">
+                    <h2>📦 LXC Container Endpoints</h2>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Endpoint</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/lxc</code></td>
+                                    <td>List all LXC containers (name, state, IP)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/lxc/stats</code></td>
+                                    <td>Real-time stats for running LXC containers</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/lxc/templates</code></td>
+                                    <td>List available LXC templates (distro, release, arch)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/lxc/create</code></td>
+                                    <td>Create an LXC container from a template</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/lxc/{name}/logs</code></td>
+                                    <td>Container journal logs</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/lxc/{name}/config</code></td>
+                                    <td>Read the LXC configuration file</td>
+                                </tr>
+                                <tr>
+                                    <td><code>PUT</code></td>
+                                    <td><code>/api/containers/lxc/{name}/config</code></td>
+                                    <td>Save updated LXC configuration file</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/lxc/{name}/action</code></td>
+                                    <td>Start / stop / restart / freeze / unfreeze / destroy</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/lxc/{name}/clone</code></td>
+                                    <td>Clone container (full copy or snapshot)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">POST /api/containers/lxc/create</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Request Body</span></div>
+                        <pre><code>{
+  "name": "my-debian",
+  "template": "download",
+  "dist": "debian",
+  "release": "bookworm",
+  "arch": "amd64"
+}</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">POST /api/containers/lxc/{name}/action</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Request Body</span></div>
+                        <pre><code>// Valid actions: "start", "stop", "restart", "freeze", "unfreeze", "destroy"
+{
+  "action": "start"
+}</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">POST /api/containers/lxc/{name}/clone</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Request Body</span></div>
+                        <pre><code>{
+  "new_name": "my-debian-clone",
+  "snapshot": false
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- WolfNet Endpoints -->
+                <section class="content-section">
+                    <h2>🌐 WolfNet</h2>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Endpoint</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/wolfnet/status</code></td>
+                                    <td>WolfNet network status and peer information</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/wolfnet/used-ips</code></td>
+                                    <td>List all used WolfNet IPs (for allocation)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- WebSocket Console -->
+                <section class="content-section">
+                    <h2>💻 WebSocket Console</h2>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Protocol</th>
+                                    <th>Endpoint</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>WS</code></td>
+                                    <td><code>/ws/console/{type}/{name}</code></td>
+                                    <td>Interactive terminal — full PTY to Docker or LXC container</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">Parameters</h3>
+                    <ul>
+                        <li><code>{type}</code> — <code>docker</code> or <code>lxc</code></li>
+                        <li><code>{name}</code> — Container name or ID</li>
+                    </ul>
+
+                    <h3 style="margin-top: 2rem;">Connection</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">JavaScript</span></div>
+                        <pre><code>// Connect to a Docker container's shell
+const ws = new WebSocket('ws://localhost:8553/ws/console/docker/my-nginx');
+
+// Send input
+ws.send('ls -la\n');
+
+// Receive output
+ws.onmessage = (event) => {
+  terminal.write(event.data);
+};</code></pre>
+                    </div>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>🔧 Under the hood:</strong> The server spawns a PTY and runs
+                        <code>docker exec -i</code> or <code>lxc-attach</code>. Shell detection prefers
+                        <code>/bin/bash</code> if available, otherwise falls back to <code>/bin/sh</code>.
+                        The WebSocket carries raw terminal bytes in both directions.
+                    </div>
+                </section>
+
+                <!-- Agent Endpoints -->
+                <section class="content-section">
+                    <h2>🤖 Agent (No Auth)</h2>
+                    <p>These endpoints do not require authentication. They are used for inter-node communication.</p>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Endpoint</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/agent/status</code></td>
+                                    <td>Node status — hostname, version, metrics, components. Used by cluster polling.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/docker/import</code></td>
+                                    <td>Receive a migrated container image (multipart upload)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Error Handling -->
+                <section class="content-section">
+                    <h2>⚠️ Error Handling</h2>
+                    <p>All endpoints return standard HTTP status codes:</p>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Meaning</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>200</code></td>
+                                    <td>Success</td>
+                                </tr>
+                                <tr>
+                                    <td><code>400</code></td>
+                                    <td>Bad request — invalid parameters or missing fields</td>
+                                </tr>
+                                <tr>
+                                    <td><code>401</code></td>
+                                    <td>Unauthorized — invalid or expired session</td>
+                                </tr>
+                                <tr>
+                                    <td><code>404</code></td>
+                                    <td>Not found — container, component, or node does not exist</td>
+                                </tr>
+                                <tr>
+                                    <td><code>500</code></td>
+                                    <td>Internal server error — check <code>journalctl -u wolfstack</code></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="code-block" style="margin-top: 1rem;">
+                        <div class="code-header"><span class="code-lang">Error Response</span></div>
+                        <pre><code>{
+  "error": "Container 'my-nginx' not found"
+}</code></pre>
+                    </div>
+                </section>
+
+                <div class="page-nav">
+                    <a href="wolfstack-clustering.html" class="prev">← Multi-Server Clustering</a>
+                    <a href="quickstart.html" class="next">WolfScale Quick Start →</a>
+                </div>
+            </div>
+
+            <footer class="wiki-footer"
+                style="margin-top: 3rem; padding: 2rem 0; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; opacity: 0.7; font-size: 0.875rem;">
+                <p>© 2026 <a href="https://wolf.uk.com" target="_blank"
+                        style="color: inherit; text-decoration: underline;">Wolf
+                        Software Systems Ltd</a> • MIT License
+                </p>
+                <p style="font-size: 0.75rem; margin-top: 0.5rem;">
+                    USE AT YOUR OWN RISK. This software is provided "as is" without warranty of any kind.
+                </p>
+            </footer>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
