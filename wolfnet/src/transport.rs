@@ -85,6 +85,9 @@ pub fn build_keepalive(peer_id: &[u8; 4]) -> Vec<u8> {
 /// Send handshakes to all peers that don't have active sessions
 /// For PEX-learned peers, also sends via the relay peer so the handshake
 /// gets forwarded through the mesh even when direct connectivity is impossible.
+/// When a peer is offline, we try BOTH the last-known endpoint AND the original
+/// configured endpoint (from config.toml), because the last-known endpoint may
+/// be a stale LAN address from discovery that's no longer reachable.
 pub fn send_handshakes(
     socket: &UdpSocket,
     keypair: &KeyPair,
@@ -98,11 +101,26 @@ pub fn send_handshakes(
     for ip in peer_manager.all_ips() {
         peer_manager.with_peer_by_ip(&ip, |peer| {
             if !peer.is_connected() {
-                // Try direct handshake first
+                // Try last-known endpoint (may be a LAN address from discovery)
                 if let Some(endpoint) = peer.endpoint {
                     debug!("Sending handshake to {} at {}", ip, endpoint);
                     if let Err(e) = socket.send_to(&handshake, endpoint) {
                         debug!("Handshake to {} at {} failed: {}", ip, endpoint, e);
+                    }
+                }
+
+                // Also try the configured endpoint from config.toml if it differs
+                // from the current endpoint. This ensures we reach the peer via their
+                // public IP even when discovery has overwritten the endpoint with a
+                // stale LAN address.
+                if let Some(ref configured_ep) = peer.configured_endpoint {
+                    if let Ok(configured_addr) = configured_ep.parse::<SocketAddr>() {
+                        if peer.endpoint != Some(configured_addr) {
+                            debug!("Sending handshake to {} at configured endpoint {}", ip, configured_addr);
+                            if let Err(e) = socket.send_to(&handshake, configured_addr) {
+                                debug!("Handshake to {} at {} failed: {}", ip, configured_addr, e);
+                            }
+                        }
                     }
                 }
             }
