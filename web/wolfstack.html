@@ -116,16 +116,17 @@
             <div class="wiki-content">
                 <div class="content-header">
                     <h1>🐺📊 WolfStack</h1>
-                    <p class="content-subtitle">Server Management Platform</p>
+                    <p class="content-subtitle">Server & Container Management Platform — The Flagship Product</p>
                 </div>
 
                 <!-- Overview -->
                 <section class="content-section">
                     <h2>Overview</h2>
                     <p>
-                        <strong>WolfStack</strong> is a beautiful, Proxmox-like server management dashboard for
-                        the entire Wolf software suite. Monitor your servers, manage components, control services,
-                        edit configurations, and view logs — all from a premium web interface.
+                        <strong>WolfStack</strong> is the central management platform for your entire
+                        infrastructure. A beautiful, Proxmox-like dashboard for monitoring servers,
+                        <strong>managing Docker & LXC containers</strong>, controlling services,
+                        editing configurations, and viewing logs — all from a premium web interface.
                     </p>
                     <p style="margin-top: 1rem;">
                         © 2026 Wolf Software Systems Ltd —
@@ -145,16 +146,28 @@
 
                     <div
                         style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
-                        <div class="feature-card">
-                            <div class="feature-icon">🔒</div>
-                            <h3>Linux Authentication</h3>
-                            <p>Log in with your Linux system username and password. No separate accounts needed.</p>
+                        <div class="feature-card" style="border-color: rgba(56, 189, 248, 0.3);">
+                            <div class="feature-icon">🐳</div>
+                            <h3>Docker Management</h3>
+                            <p>List, start, stop, restart, pause, and remove Docker containers. View real-time CPU,
+                                memory, and PID stats. Browse images. Install Docker from the dashboard.</p>
+                        </div>
+                        <div class="feature-card" style="border-color: rgba(168, 85, 247, 0.3);">
+                            <div class="feature-icon">📦</div>
+                            <h3>LXC Management</h3>
+                            <p>List, start, stop, freeze, and destroy LXC containers. Edit container configs. View logs.
+                                Install LXC from the dashboard.</p>
                         </div>
                         <div class="feature-card">
                             <div class="feature-icon">📊</div>
                             <h3>Real-Time Dashboard</h3>
                             <p>Live CPU, memory, disk, and network monitoring with animated gauges and charts. 2-second
                                 refresh.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🔒</div>
+                            <h3>Linux Authentication</h3>
+                            <p>Log in with your Linux system username and password. No separate accounts needed.</p>
                         </div>
                         <div class="feature-card">
                             <div class="feature-icon">📦</div>
@@ -171,7 +184,8 @@
                         <div class="feature-card">
                             <div class="feature-icon">📋</div>
                             <h3>Live Logs</h3>
-                            <p>View recent journal logs for any component. Real-time systemd journal integration.</p>
+                            <p>View recent journal logs for any component or container. Real-time systemd journal
+                                integration.</p>
                         </div>
                         <div class="feature-card">
                             <div class="feature-icon">🖥️</div>
@@ -440,6 +454,76 @@ sudo wolfstack --bind 127.0.0.1 --port 8553</code></pre>
                                     <td><code>GET</code></td>
                                     <td><code>/api/agent/status</code></td>
                                     <td>Node status (no auth — used for remote polling)</td>
+                                </tr>
+                                <tr style="border-top: 2px solid var(--border-color);">
+                                    <td colspan="3"
+                                        style="font-weight: 600; color: var(--text-primary); padding-top: 1rem;">
+                                        Container Management</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/status</code></td>
+                                    <td>Docker & LXC runtime detection (installed, version, counts)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/install</code></td>
+                                    <td>Install Docker or LXC</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/docker</code></td>
+                                    <td>List all Docker containers</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/docker/stats</code></td>
+                                    <td>Docker container resource stats (CPU, memory, PIDs)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/docker/images</code></td>
+                                    <td>List Docker images</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/docker/{id}/logs</code></td>
+                                    <td>Docker container logs</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/docker/{id}/action</code></td>
+                                    <td>Start/stop/restart/pause/unpause/remove container</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/lxc</code></td>
+                                    <td>List all LXC containers</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/lxc/stats</code></td>
+                                    <td>LXC container resource stats</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/lxc/{name}/logs</code></td>
+                                    <td>LXC container logs</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/lxc/{name}/config</code></td>
+                                    <td>Read LXC container config file</td>
+                                </tr>
+                                <tr>
+                                    <td><code>PUT</code></td>
+                                    <td><code>/api/containers/lxc/{name}/config</code></td>
+                                    <td>Save LXC container config file</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/lxc/{name}/action</code></td>
+                                    <td>Start/stop/restart/freeze/unfreeze/destroy container</td>
                                 </tr>
                             </tbody>
                         </table>
