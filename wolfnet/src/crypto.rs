@@ -132,14 +132,26 @@ impl SessionCipher {
 
     /// Decrypt a packet
     pub fn decrypt(&mut self, counter: u64, ciphertext: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
-        // Replay protection: only accept counters greater than last received
-        if counter <= self.recv_counter && self.recv_counter > 0 {
-            return Err("Replay detected: stale nonce".into());
+        // Replay protection with restart tolerance:
+        // - Accept if counter > last seen (normal forward progress)
+        // - Accept if counter < 100 and recv_counter > 1000 (peer likely restarted)
+        // - Reject if counter <= recv_counter (replay) unless it's a restart
+        let is_likely_restart = counter < 100 && self.recv_counter > 1000;
+        if counter <= self.recv_counter && self.recv_counter > 0 && !is_likely_restart {
+            // Allow a small reorder window of 32 packets
+            if self.recv_counter - counter > 32 {
+                return Err("Replay detected: stale nonce".into());
+            }
         }
+
         let nonce = self.make_nonce(counter, !self.is_low_side);
         let plaintext = self.cipher.decrypt(&nonce, ciphertext)
             .map_err(|_| "Decryption failed (invalid key or corrupted data)")?;
-        self.recv_counter = counter;
+
+        // Only update counter if this is forward progress or a restart
+        if counter > self.recv_counter || is_likely_restart {
+            self.recv_counter = counter;
+        }
         Ok(plaintext)
     }
 }
