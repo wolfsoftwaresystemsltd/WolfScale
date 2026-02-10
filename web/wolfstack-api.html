@@ -715,6 +715,86 @@ curl -b cookies.txt http://localhost:8553/api/metrics</code></pre>
                     </div>
                 </section>
 
+                <!-- VM Endpoints -->
+                <section class="content-section">
+                    <h2>🖥️ Virtual Machine Endpoints</h2>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Endpoint</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/vms</code></td>
+                                    <td>List all VMs with status, resources, and VNC port</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/vms/create</code></td>
+                                    <td>Create a new KVM/QEMU virtual machine</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/vms/{name}</code></td>
+                                    <td>Get details for a specific VM</td>
+                                </tr>
+                                <tr>
+                                    <td><code>DELETE</code></td>
+                                    <td><code>/api/vms/{name}</code></td>
+                                    <td>Delete a VM and its disk image</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/vms/{name}/action</code></td>
+                                    <td>Start or stop a VM</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">POST /api/vms/create</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Request Body</span></div>
+                        <pre><code>{
+  "name": "ubuntu-server",
+  "cpus": 2,
+  "memory_mb": 2048,
+  "disk_gb": 20,
+  "iso_path": "/var/lib/wolfstack/isos/ubuntu-24.04-live-server-amd64.iso"
+}</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">GET /api/vms</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Response</span></div>
+                        <pre><code>[
+  {
+    "name": "ubuntu-server",
+    "cpus": 2,
+    "memory_mb": 2048,
+    "disk_gb": 20,
+    "iso_path": "/var/lib/wolfstack/isos/ubuntu-24.04.iso",
+    "running": true,
+    "vnc_port": 5942
+  }
+]</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">POST /api/vms/{name}/action</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Request Body</span></div>
+                        <pre><code>// Valid actions: "start", "stop"
+{
+  "action": "start"
+}</code></pre>
+                    </div>
+                </section>
+
                 <!-- WolfNet Endpoints -->
                 <section class="content-section">
                     <h2>🌐 WolfNet</h2>

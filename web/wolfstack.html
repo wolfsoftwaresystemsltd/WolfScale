@@ -118,7 +118,7 @@
             <div class="wiki-content">
                 <div class="content-header">
                     <h1>🐺📊 WolfStack</h1>
-                    <p class="content-subtitle">Server & Container Management Platform — The Flagship Product</p>
+                    <p class="content-subtitle">Server, VM & Container Management Platform — The Flagship Product</p>
                 </div>
 
                 <!-- Overview -->
@@ -176,6 +176,13 @@
                         <p>Migrate Docker containers between WolfStack nodes with one click. Exports, transfers,
                             and imports containers automatically. Works across your cluster with WolfDisk shared
                             storage for seamless data migration.</p>
+                    </div>
+                    <div class="feature-card" style="border-color: rgba(168, 85, 247, 0.3);">
+                        <div class="feature-icon">🖥️</div>
+                        <h3>Virtual Machines</h3>
+                        <p>Create and manage full KVM/QEMU virtual machines. Configure CPU, memory, and disk size.
+                            Boot from ISO images. Start, stop, and delete VMs. VNC console access for remote display.
+                            Near-native performance with KVM hardware acceleration.</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">📊</div>
@@ -598,6 +605,36 @@ sudo wolfstack --bind 127.0.0.1 --port 8553</code></pre>
                                 <td><code>POST</code></td>
                                 <td><code>/api/containers/lxc/create</code></td>
                                 <td>Create LXC container from template</td>
+                            </tr>
+                            <tr style="border-top: 2px solid var(--border-color);">
+                                <td colspan="3"
+                                    style="font-weight: 600; color: var(--text-primary); padding-top: 1rem;">Virtual
+                                    Machines (KVM/QEMU)</td>
+                            </tr>
+                            <tr>
+                                <td><code>GET</code></td>
+                                <td><code>/api/vms</code></td>
+                                <td>List all VMs with status, resources, and VNC port</td>
+                            </tr>
+                            <tr>
+                                <td><code>POST</code></td>
+                                <td><code>/api/vms/create</code></td>
+                                <td>Create a new VM (name, cpus, memory, disk, iso)</td>
+                            </tr>
+                            <tr>
+                                <td><code>GET</code></td>
+                                <td><code>/api/vms/{name}</code></td>
+                                <td>Get details for a specific VM</td>
+                            </tr>
+                            <tr>
+                                <td><code>DELETE</code></td>
+                                <td><code>/api/vms/{name}</code></td>
+                                <td>Delete a VM and its disk image</td>
+                            </tr>
+                            <tr>
+                                <td><code>POST</code></td>
+                                <td><code>/api/vms/{name}/action</code></td>
+                                <td>Start or stop a VM</td>
                             </tr>
                         </tbody>
                     </table>

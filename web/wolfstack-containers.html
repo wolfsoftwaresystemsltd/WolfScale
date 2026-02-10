@@ -14,7 +14,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
-        content="WolfStack Container Management - Complete guide to managing Docker and LXC containers, including creation, migration, cloning, WolfNet networking, and web terminal access.">
+        content="WolfStack Container & VM Management - Complete guide to managing Docker and LXC containers, KVM/QEMU virtual machines, including creation, migration, cloning, WolfNet networking, and web terminal access.">
     <meta name="keywords"
         content="WolfStack containers, Docker management, LXC management, container migration, container cloning, WolfNet, server management">
     <meta name="author" content="Wolf Software Systems Ltd">
@@ -117,18 +117,20 @@
 
             <div class="wiki-content">
                 <div class="content-header">
-                    <h1>🐳📦 Container Management</h1>
-                    <p class="content-subtitle">Docker & LXC Container Management with WolfStack</p>
+                    <h1>🐳📦🖥️ Container & VM Management</h1>
+                    <p class="content-subtitle">Docker, LXC & KVM/QEMU Virtual Machine Management with WolfStack</p>
                 </div>
 
                 <!-- Overview -->
                 <section class="content-section">
                     <h2>Overview</h2>
                     <p>
-                        WolfStack provides a <strong>unified management interface</strong> for both
-                        <strong>Docker</strong> and <strong>LXC</strong> containers. You can create, start, stop,
-                        restart, clone, migrate, and monitor containers — all from the web dashboard.
+                        WolfStack provides a <strong>unified management interface</strong> for
+                        <strong>Docker</strong> containers, <strong>LXC</strong> containers, and
+                        <strong>KVM/QEMU virtual machines</strong>. You can create, start, stop,
+                        restart, clone, migrate, and monitor containers and VMs — all from the web dashboard.
                         If Docker or LXC isn't installed, WolfStack can install it for you with one click.
+                        QEMU/KVM is installed automatically by the setup script.
                     </p>
 
                     <div class="info-box" style="margin-top: 1.5rem;">
@@ -379,6 +381,94 @@ lxc.net.0.hwaddr = 00:16:3e:xx:xx:xx
 # Resource limits
 lxc.cgroup2.memory.max = 512M
 lxc.cgroup2.cpu.max = 50000 100000</code></pre>
+                    </div>
+                </section>
+
+                <!-- VM Management -->
+                <section class="content-section">
+                    <h2>🖥️ Virtual Machine Management (KVM/QEMU)</h2>
+                    <p>
+                        WolfStack supports full <strong>KVM/QEMU virtual machines</strong> alongside containers.
+                        VMs provide complete hardware isolation and can run any operating system, including Windows.
+                    </p>
+
+                    <h3>Creating a Virtual Machine</h3>
+                    <p>Click <strong>"+ Create VM"</strong> to open the creation form:</p>
+                    <ol>
+                        <li><strong>Name</strong> — Give your VM a unique name (e.g. "ubuntu-server")</li>
+                        <li><strong>CPUs</strong> — Number of virtual CPUs to allocate</li>
+                        <li><strong>Memory (MB)</strong> — RAM allocation in megabytes (e.g. 1024, 2048, 4096)</li>
+                        <li><strong>Disk Size (GB)</strong> — Virtual disk size in gigabytes (qcow2 format)</li>
+                        <li><strong>ISO Path</strong> — Optional path to an ISO image for OS installation</li>
+                    </ol>
+
+                    <div class="code-block" style="margin-top: 1rem;">
+                        <div class="code-header"><span class="code-lang">Example</span></div>
+                        <pre><code>Name:       ubuntu-server
+CPUs:       2
+Memory:     2048 MB
+Disk:       20 GB
+ISO:        /var/lib/wolfstack/isos/ubuntu-24.04-live-server-amd64.iso</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">VM Actions</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Action</th>
+                                    <th>Description</th>
+                                    <th>When Available</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>▶ Start</strong></td>
+                                    <td>Boot the VM. Allocates a VNC display for console access.</td>
+                                    <td>When stopped</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>⏹ Stop</strong></td>
+                                    <td>Power off the VM (force stop via process kill)</td>
+                                    <td>When running</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>🗑 Delete</strong></td>
+                                    <td>Permanently delete the VM and its disk image</td>
+                                    <td>When stopped</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">VNC Console Access</h3>
+                    <p>
+                        Each running VM is assigned a <strong>VNC display port</strong> (5910–5999).
+                        The port is shown in the dashboard. Connect using any VNC viewer:
+                    </p>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">bash</span></div>
+                        <pre><code># Connect to a VM's VNC console
+vncviewer your-server-ip:5942
+
+# Or use TigerVNC, RealVNC, Remmina, etc.</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">Disk Images</h3>
+                    <p>
+                        VM disk images are stored at <code>/var/lib/wolfstack/vms/</code> in
+                        <strong>qcow2</strong> format (QEMU Copy-On-Write). This format supports:
+                    </p>
+                    <ul>
+                        <li><strong>Thin provisioning</strong> — only uses disk space as data is written</li>
+                        <li><strong>Snapshots</strong> — qcow2 supports internal snapshots (future feature)</li>
+                        <li><strong>Compression</strong> — can be compressed for backups</li>
+                    </ul>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>⚙️ Requirements:</strong> QEMU/KVM is installed automatically by
+                        <code>setup.sh</code>. Your CPU must support hardware virtualisation (Intel VT-x or AMD-V).
+                        Check with: <code>egrep -c '(vmx|svm)' /proc/cpuinfo</code> (should return > 0).
                     </div>
                 </section>
 
