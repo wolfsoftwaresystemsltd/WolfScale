@@ -276,7 +276,7 @@ pub fn run_discovery_broadcaster(
 /// Run discovery listener in a loop (call from a thread)
 pub fn run_discovery_listener(
     my_node_id: String,
-    keypair: Arc<KeyPair>,
+    _keypair: Arc<KeyPair>,
     peer_manager: Arc<PeerManager>,
     running: Arc<std::sync::atomic::AtomicBool>,
 ) {
@@ -300,13 +300,11 @@ pub fn run_discovery_listener(
                         let endpoint = SocketAddr::new(src.ip(), listen_port);
                         peer_manager.update_from_discovery(&pub_key, endpoint, wolfnet_ip, &hostname, is_gateway);
 
-                        // Only establish session if not already connected —
-                        // avoid resetting cipher counters on every broadcast
-                        peer_manager.with_peer_by_ip(&wolfnet_ip, |peer| {
-                            if !peer.is_connected() {
-                                peer.establish_session(&keypair.secret, &keypair.public);
-                            }
-                        });
+                        // Note: we do NOT establish sessions here. Discovery only updates
+                        // endpoints. The handshake mechanism handles session setup and
+                        // properly resets counters on reconnection. Calling establish_session
+                        // here would either: (a) reset counters on a working connection
+                        // (breaking it), or (b) fail to handle restart cases properly.
                     }
                 }
             }
