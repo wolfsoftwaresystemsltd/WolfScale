@@ -42,6 +42,8 @@ pub struct Peer {
     /// If we learned about this peer via PEX, which peer told us (relay via)
     /// This is the WolfNet IP of the peer that shared this entry with us
     pub relay_via: Option<Ipv4Addr>,
+    /// Original configured endpoint string (may be a hostname:port for DNS re-resolution)
+    pub configured_endpoint: Option<String>,
 }
 
 impl Peer {
@@ -61,6 +63,7 @@ impl Peer {
             tx_bytes: 0,
             last_handshake: None,
             relay_via: None,
+            configured_endpoint: None,
         }
     }
 

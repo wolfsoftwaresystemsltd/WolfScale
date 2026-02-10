@@ -6,7 +6,7 @@
 //! Supports automatic peer exchange (PEX) so joining one node
 //! automatically gives you access to all its peers.
 
-use std::net::{UdpSocket, Ipv4Addr, SocketAddr, TcpStream};
+use std::net::{UdpSocket, Ipv4Addr, SocketAddr, TcpStream, ToSocketAddrs};
 use std::io::{Read, Write};
 use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
 use std::time::{Duration, Instant};
@@ -149,6 +149,31 @@ fn cmd_init(config_path: &PathBuf, address: &str) {
             }
         }
         Err(e) => { error!("Failed to write config: {}", e); std::process::exit(1); }
+    }
+}
+
+/// Resolve an endpoint string to a SocketAddr.
+/// Supports both IP:port (e.g. "203.0.113.5:9600") and hostname:port (e.g. "myhome.dyndns.org:9600").
+fn resolve_endpoint(ep: &str) -> Option<SocketAddr> {
+    // Try direct parse first (fastest path for IP:port)
+    if let Ok(addr) = ep.parse::<SocketAddr>() {
+        return Some(addr);
+    }
+    // Fall back to DNS resolution (supports hostnames like myhome.dyndns.org:9600)
+    match ep.to_socket_addrs() {
+        Ok(mut addrs) => {
+            let result = addrs.next();
+            if let Some(addr) = result {
+                info!("Resolved endpoint '{}' -> {}", ep, addr);
+            } else {
+                warn!("DNS resolution for '{}' returned no addresses", ep);
+            }
+            result
+        }
+        Err(e) => {
+            warn!("Failed to resolve endpoint '{}': {}", ep, e);
+            None
+        }
     }
 }
 
@@ -418,7 +443,9 @@ fn run_daemon(config_path: &PathBuf) {
                 let mut peer = Peer::new(pub_key, ip);
                 peer.hostname = pc.name.clone().unwrap_or_default();
                 if let Some(ref ep) = pc.endpoint {
-                    if let Ok(addr) = ep.parse::<SocketAddr>() {
+                    // Store original endpoint string for periodic re-resolution (DynDNS support)
+                    peer.configured_endpoint = Some(ep.clone());
+                    if let Some(addr) = resolve_endpoint(ep) {
                         peer.endpoint = Some(addr);
                     }
                 }
@@ -541,6 +568,7 @@ fn run_daemon(config_path: &PathBuf) {
     let mut last_handshake = Instant::now();
     let mut last_keepalive = Instant::now();
     let mut last_pex = Instant::now();
+    let mut last_dns_resolve = Instant::now();
     let tun_fd = tun.raw_fd();
 
     while running.load(Ordering::Relaxed) {
@@ -828,6 +856,30 @@ fn run_daemon(config_path: &PathBuf) {
         if last_pex.elapsed() > Duration::from_secs(30) {
             transport::send_peer_exchange(&socket, &keypair, &peer_manager, wolfnet_ip);
             last_pex = Instant::now();
+        }
+
+        // 6. Periodic DNS re-resolution for hostname-based endpoints (every 60s)
+        //    This supports DynDNS — if a peer's hostname resolves to a new IP,
+        //    we update the endpoint so handshakes reach them at the new address.
+        if last_dns_resolve.elapsed() > Duration::from_secs(60) {
+            for ip in peer_manager.all_ips() {
+                let configured_ep = peer_manager.with_peer_by_ip(&ip, |peer| {
+                    peer.configured_endpoint.clone()
+                }).flatten();
+                if let Some(ep_str) = configured_ep {
+                    // Only re-resolve if it's a hostname (not a plain IP:port)
+                    if ep_str.parse::<SocketAddr>().is_err() {
+                        if let Some(new_addr) = resolve_endpoint(&ep_str) {
+                            let current = peer_manager.with_peer_by_ip(&ip, |peer| peer.endpoint).flatten();
+                            if current != Some(new_addr) {
+                                info!("DNS re-resolve: {} endpoint changed to {}", ip, new_addr);
+                                peer_manager.update_endpoint(&ip, new_addr);
+                            }
+                        }
+                    }
+                }
+            }
+            last_dns_resolve = Instant::now();
         }
     }
 

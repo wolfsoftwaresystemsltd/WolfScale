@@ -147,6 +147,7 @@ WolfNet creates a secure, encrypted private network between your machines over t
 | **Gateway Mode** | Route internet traffic through a gateway node with NAT masquerading |
 | **LAN Auto-Discovery** | Nodes find each other automatically on the same network |
 | **TUN-Based** | Uses kernel TUN interfaces for near-native performance |
+| **Hostname/DynDNS** | Use hostnames in endpoints — re-resolved every 60s for dynamic IPs |
 | **Single Binary** | No dependencies — just `wolfnet` and `wolfnetctl` |
 | **Systemd Service** | Runs as a background service with automatic startup |
 
@@ -208,6 +209,37 @@ Laptop (behind NAT)          Server (public IP)           Home PC (behind NAT)
 4. This happens automatically — no configuration needed
 5. Any node that can be reached by both parties can act as a relay
 
+### Peer Discovery Methods
+
+WolfNet supports three ways to find and connect to peers — mix and match as needed:
+
+| Method | Use Case | Config |
+|--------|----------|--------|
+| **LAN Auto-Discovery** | Machines on the same network | `discovery = true` (default) |
+| **Static IP** | VPS, dedicated servers, data centres | `endpoint = "203.0.113.5:9600"` |
+| **Hostname / DynDNS** | Home broadband, dynamic IPs | `endpoint = "myhome.dyndns.org:9600"` |
+
+Hostnames are resolved on startup and **re-resolved every 60 seconds**, so DynDNS changes are picked up automatically. Works with any DNS provider — DynDNS, No-IP, Cloudflare, DuckDNS, or your own domain.
+
+### Multi-Server Deployment (Static IPs)
+
+Link multiple standalone servers across different locations into a single WolfNet mesh:
+
+```
+Server A (London)              Server B (New York)           Server C (Tokyo)
+  Public: 203.0.113.5            Public: 198.51.100.10         Public: 192.0.2.50
+  WolfNet: 10.0.10.1             WolfNet: 10.0.10.2            WolfNet: 10.0.10.3
+       │                              │                             │
+       └────── encrypted UDP ────────►│◄───── encrypted UDP ────────┘
+```
+
+1. Install WolfNet on each server, giving each a unique WolfNet IP
+2. Use `sudo wolfnet invite` on one server to generate invite tokens
+3. Run the invite command on each other server to exchange keys
+4. Restart WolfNet — PEX automatically propagates the full mesh topology
+
+> 💡 **You don't need a full mesh in the config.** Each server only needs to know about at least one other server. PEX shares the rest automatically within 30 seconds.
+
 ### Architecture
 
 ```
@@ -250,6 +282,29 @@ wolfnetctl info                  # Combined status and peer list
 sudo systemctl start wolfnet     # Start service
 sudo systemctl status wolfnet    # Check status
 sudo journalctl -u wolfnet -f    # View logs
+```
+
+### Configuration Example
+
+```toml
+[network]
+address = "10.0.10.1"
+listen_port = 9600
+discovery = true        # LAN auto-discovery (default)
+
+# Static IP peer
+[[peers]]
+public_key = "BASE64_PUBLIC_KEY"
+endpoint = "203.0.113.5:9600"
+allowed_ip = "10.0.10.2"
+name = "london-vps"
+
+# DynDNS hostname peer (re-resolved every 60s)
+[[peers]]
+public_key = "ANOTHER_PUBLIC_KEY"
+endpoint = "myhome.dyndns.org:9600"
+allowed_ip = "10.0.10.3"
+name = "home-server"
 ```
 
 ### Security
