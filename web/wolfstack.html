@@ -41,8 +41,7 @@
     <div class="wiki-layout">
         <aside class="sidebar" id="sidebar">
             <a href="index.html" class="sidebar-logo"><img
-                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
-                    alt="Wolf"></a>
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"></a>
             <nav class="sidebar-nav">
                 <div class="nav-section">
                     <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span>
@@ -150,13 +149,22 @@
                             <div class="feature-icon">🐳</div>
                             <h3>Docker Management</h3>
                             <p>List, start, stop, restart, pause, and remove Docker containers. View real-time CPU,
-                                memory, and PID stats. Browse images. Install Docker from the dashboard.</p>
+                                memory, and PID stats. Clone containers, migrate them between servers, and browse
+                                images. Install Docker from the dashboard.</p>
                         </div>
                         <div class="feature-card" style="border-color: rgba(168, 85, 247, 0.3);">
                             <div class="feature-icon">📦</div>
                             <h3>LXC Management</h3>
-                            <p>List, start, stop, freeze, and destroy LXC containers. Edit container configs. View logs.
+                            <p>List, start, stop, freeze, and destroy LXC containers. Clone containers (full or snapshot
+                                copy-on-write). Edit container configs. View logs.
                                 Install LXC from the dashboard.</p>
+                        </div>
+                        <div class="feature-card" style="border-color: rgba(234, 179, 8, 0.3);">
+                            <div class="feature-icon">🚀</div>
+                            <h3>Container Migration</h3>
+                            <p>Migrate Docker containers between WolfStack nodes with one click. Exports, transfers,
+                                and imports containers automatically. Works across your cluster with WolfDisk shared
+                                storage for seamless data migration.</p>
                         </div>
                         <div class="feature-card">
                             <div class="feature-icon">📊</div>
@@ -524,6 +532,31 @@ sudo wolfstack --bind 127.0.0.1 --port 8553</code></pre>
                                     <td><code>POST</code></td>
                                     <td><code>/api/containers/lxc/{name}/action</code></td>
                                     <td>Start/stop/restart/freeze/unfreeze/destroy container</td>
+                                </tr>
+                                <tr style="border-top: 2px solid var(--border-color);">
+                                    <td colspan="3"
+                                        style="font-weight: 600; color: var(--text-primary); padding-top: 1rem;">Clone &
+                                        Migration</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/docker/{id}/clone</code></td>
+                                    <td>Clone a Docker container (commit + create new)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/docker/{id}/migrate</code></td>
+                                    <td>Migrate Docker container to another WolfStack node</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/docker/import</code></td>
+                                    <td>Receive a migrated container image (inter-node)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/lxc/{name}/clone</code></td>
+                                    <td>Clone LXC container (full copy or snapshot)</td>
                                 </tr>
                             </tbody>
                         </table>
