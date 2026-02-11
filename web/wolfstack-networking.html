@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-KK9NEE1S54');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="WolfStack Networking - Manage network interfaces, VLANs, WolfNet overlay, and DNS from the WolfStack dashboard. Full network visibility for every server.">
+    <meta name="keywords"
+        content="WolfStack networking, VLAN management, WolfNet, network interfaces, DNS, server networking, 802.1Q">
+    <meta name="author" content="Wolf Software Systems Ltd">
+    <link rel="canonical" href="https://wolfscale.org/wolfstack-networking.html">
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://wolfscale.org/wolfstack-networking.html">
+    <meta property="og:title" content="WolfStack Networking Guide">
+    <meta property="og:description"
+        content="Manage network interfaces, VLANs, WolfNet overlay, and DNS from the WolfStack web dashboard.">
+    <meta property="og:image" content="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg">
+
+    <title>Networking - WolfStack | WolfScale</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=9">
+</head>
+
+<body>
+    <div class="wiki-layout">
+        <aside class="sidebar" id="sidebar">
+            <a href="index.html" class="sidebar-logo"><img
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"></a>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span>
+                    </div>
+                    <a href="wolfstack.html">Overview & Quick Start</a>
+                    <a href="wolfstack-containers.html">Container Management</a>
+                    <a href="wolfstack-storage.html">Storage Manager</a>
+                    <a href="wolfstack-networking.html" class="active">Networking</a>
+                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
+                    <a href="wolfstack-api.html">API Reference</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load
+                            Balancer</span></div>
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="features.html">Features</a>
+                    <a href="architecture.html">Architecture</a>
+                    <a href="how-it-works.html">How It Works</a>
+                    <a href="binlog.html">Binlog Mode</a>
+                    <a href="load-balancer.html">Load Balancer</a>
+                    <a href="configuration.html">Configuration</a>
+                    <a href="performance.html">Performance</a>
+                    <a href="cli.html">CLI Reference</a>
+                    <a href="api.html">API Reference</a>
+                    <a href="troubleshooting.html">Troubleshooting</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication & Sharing</span>
+                    </div>
+                    <a href="wolfdisk.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
+                    <a href="wolfnet.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
+                            Firewall</span></div>
+                    <a href="wolfproxy.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
+                    </div>
+                    <a href="wolfserve.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Company</div>
+                    <a href="https://wolf.uk.com" target="_blank">Wolf Software</a>
+                    <a href="about.html">About</a>
+                    <a href="contact.html">Contact</a>
+                    <a href="glossary.html">Glossary</a>
+                </div>
+            </nav>
+            <div class="theme-toggle-wrapper">
+                <span class="theme-toggle-label">Theme</span>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-toggle-slider"></span>
+                </button>
+            </div>
+            <div class="sidebar-links">
+                <a href="https://github.com/wolfsoftwaresystemsltd/WolfStack" target="_blank">GitHub</a>
+                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+                <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+            </div>
+        </aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <main class="wiki-main">
+            <div class="mobile-header">
+                <a href="index.html" class="nav-logo"><img
+                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
+                        class="logo-img"></a>
+                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+            </div>
+
+            <div class="wiki-content">
+                <div class="content-header">
+                    <h1>🌐 Networking</h1>
+                    <p class="content-subtitle">Manage network interfaces, VLANs, WolfNet overlay, and DNS from the
+                        dashboard</p>
+                </div>
+
+                <!-- Overview -->
+                <section class="content-section">
+                    <h2>Overview</h2>
+                    <p>
+                        WolfStack gives you <strong>full visibility and control</strong> over every server's network
+                        configuration — right from the web dashboard. No more SSH-ing into machines to check IP
+                        addresses or create VLANs.
+                    </p>
+                    <p>
+                        The Networking page shows three sections for each server:
+                    </p>
+                    <ul>
+                        <li><strong>🔗 WolfNet Overlay</strong> — Status of your private mesh network</li>
+                        <li><strong>🌐 Network Interfaces</strong> — All interfaces with IPs, state, speed, and actions
+                        </li>
+                        <li><strong>🔤 DNS Configuration</strong> — Nameservers and search domains</li>
+                    </ul>
+                </section>
+
+                <!-- Network Interfaces -->
+                <section class="content-section">
+                    <h2>🌐 Network Interfaces</h2>
+                    <p>
+                        The interface table shows every network interface on the server (excluding loopback), with
+                        real-time information:
+                    </p>
+
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Column</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Interface</strong></td>
+                                    <td>Interface name with type badges — <span
+                                            style="background:rgba(168,85,247,0.15); color:#a855f7; padding:2px 6px; border-radius:4px; font-size:12px;">VLAN
+                                            100</span>, <span
+                                            style="background:rgba(59,130,246,0.15); color:#60a5fa; padding:2px 6px; border-radius:4px; font-size:12px;">Docker</span>,
+                                        <span
+                                            style="background:rgba(34,197,94,0.15); color:#22c55e; padding:2px 6px; border-radius:4px; font-size:12px;">WolfNet</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>State</strong></td>
+                                    <td><span style="color:#22c55e;">UP</span> or <span
+                                            style="color:#ef4444;">DOWN</span> — current interface state</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Addresses</strong></td>
+                                    <td>All IPv4 and IPv6 addresses with CIDR notation. Each address has a remove
+                                        button.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>MAC</strong></td>
+                                    <td>Hardware MAC address</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Speed</strong></td>
+                                    <td>Link speed (e.g. "1Gb/s", "10Gb/s") — read from
+                                        <code>/sys/class/net</code>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>MTU</strong></td>
+                                    <td>Maximum transmission unit size (typically 1500, or 9000 for jumbo frames)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Driver</strong></td>
+                                    <td>Kernel driver (e.g. "e1000e", "igb", "virtio_net")</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">Interface Actions</h3>
+                    <p>Each interface has action buttons:</p>
+                    <ul>
+                        <li><strong>⏸️ / ▶️ Toggle</strong> — Bring an interface up or down
+                            (<code>ip link set {name} up/down</code>)</li>
+                        <li><strong>➕ Add IP</strong> — Add an IP address to the interface with a specified prefix
+                            length</li>
+                        <li><strong>✕ Remove IP</strong> — Remove a specific IP address from the interface
+                            (click the ✕ next to any address)</li>
+                    </ul>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>⚠️ Warning:</strong> Bringing down a network interface or removing its IP address can
+                        disconnect you from the server. Be careful with changes to the interface you're connected
+                        through. WolfStack will prompt for confirmation before any destructive action.
+                    </div>
+                </section>
+
+                <!-- VLANs -->
+                <section class="content-section">
+                    <h2>🏷️ VLAN Management</h2>
+                    <p>
+                        WolfStack supports creating and managing <strong>802.1Q VLANs</strong> directly from the
+                        dashboard. VLANs allow you to segment your network traffic on a shared physical connection.
+                    </p>
+
+                    <h3>Creating a VLAN</h3>
+                    <p>Click <strong>"+ Add VLAN"</strong> and configure:</p>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Field</th>
+                                    <th>Description</th>
+                                    <th>Example</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Parent Interface</strong></td>
+                                    <td>The physical interface to create the VLAN on</td>
+                                    <td>eth0</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>VLAN ID</strong></td>
+                                    <td>802.1Q VLAN tag (1–4094)</td>
+                                    <td>100</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Name</strong></td>
+                                    <td>Optional custom name (defaults to <code>parent.vlanid</code>)</td>
+                                    <td>mgmt-vlan</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <p style="margin-top: 1rem;">
+                        Under the hood, WolfStack runs:
+                    </p>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">What happens</span></div>
+                        <pre><code># Create the VLAN interface
+ip link add link eth0 name eth0.100 type vlan id 100
+
+# Bring it up
+ip link set eth0.100 up
+
+# Then assign an IP through the dashboard
+ip addr add 192.168.100.1/24 dev eth0.100</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">Deleting a VLAN</h3>
+                    <p>
+                        VLAN interfaces show a <strong>🗑️ Delete</strong> button. Clicking it removes the VLAN
+                        interface immediately (<code>ip link delete</code>). All IPs and routes on that
+                        interface are lost.
+                    </p>
+
+                    <h3 style="margin-top: 2rem;">VLAN Detection</h3>
+                    <p>
+                        WolfStack auto-detects existing VLANs in two ways:
+                    </p>
+                    <ul>
+                        <li><strong>Kernel info</strong> — Reads <code>ip -j link show</code> to detect
+                            <code>vlan</code> link type
+                        </li>
+                        <li><strong>Name convention</strong> — Recognises interfaces named
+                            <code>{parent}.{id}</code> (e.g. <code>eth0.100</code>)
+                        </li>
+                    </ul>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>💡 Tip:</strong> VLANs created through WolfStack are <em>non-persistent</em> by
+                        default — they survive until the next reboot. To make them permanent, configure them through
+                        your system's network manager (netplan, NetworkManager, or
+                        <code>/etc/network/interfaces</code>).
+                    </div>
+                </section>
+
+                <!-- WolfNet -->
+                <section class="content-section">
+                    <h2>🔗 WolfNet Overlay</h2>
+                    <p>
+                        The WolfNet card shows the status of <a href="wolfnet.html">WolfNet</a> — Wolf Software's
+                        private mesh networking overlay. It displays:
+                    </p>
+                    <ul>
+                        <li><strong>Status</strong> — Whether the WolfNet service is running or stopped</li>
+                        <li><strong>Interface</strong> — The tunnel interface name (e.g. <code>wn0</code>)</li>
+                        <li><strong>IP</strong> — This node's WolfNet IP address (e.g. <code>10.10.10.1/24</code>)</li>
+                        <li><strong>Peers</strong> — Table of configured peers with name, IP, endpoint, and live
+                            connectivity status</li>
+                    </ul>
+
+                    <h3 style="margin-top: 2rem;">Peer Connectivity</h3>
+                    <p>
+                        WolfStack checks peer connectivity by pinging each peer's WolfNet IP
+                        (<code>ping -c 1 -W 1</code>). This gives you instant visibility into which
+                        peers are reachable:
+                    </p>
+                    <ul>
+                        <li><span
+                                style="background:rgba(34,197,94,0.15); color:#22c55e; padding:2px 8px; border-radius:4px; font-size:12px;">Connected</span>
+                            — Peer responded to ping</li>
+                        <li><span
+                                style="background:rgba(239,68,68,0.15); color:#ef4444; padding:2px 8px; border-radius:4px; font-size:12px;">Unreachable</span>
+                            — No response. Check the peer's WolfNet service and network path.</li>
+                    </ul>
+
+                    <h3 style="margin-top: 2rem;">Service Control</h3>
+                    <p>
+                        From the WolfNet card you can:
+                    </p>
+                    <ul>
+                        <li><strong>▶️ Start</strong> — Start the WolfNet service if it's stopped</li>
+                        <li><strong>🔄 Restart</strong> — Restart WolfNet to reload configuration changes</li>
+                    </ul>
+
+                    <p style="margin-top: 1rem;">
+                        If WolfNet is not installed, the card will show a message directing you to the
+                        <strong>Components</strong> page where you can install it with one click.
+                    </p>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>📖 Learn more:</strong> For full WolfNet setup and configuration, see the
+                        <a href="wolfnet.html">WolfNet documentation</a>.
+                    </div>
+                </section>
+
+                <!-- DNS -->
+                <section class="content-section">
+                    <h2>🔤 DNS Configuration</h2>
+                    <p>
+                        The DNS card displays the server's current DNS configuration and lets you
+                        <strong>add, edit, and remove</strong> nameservers and search domains directly
+                        from the dashboard.
+                    </p>
+                    <ul>
+                        <li><strong>Nameservers</strong> — The DNS servers this machine uses for name resolution.
+                            Click <strong>+ Add</strong> to add a new one, or <strong>✕</strong> to remove.</li>
+                        <li><strong>Search Domains</strong> — Domain suffixes automatically appended to
+                            short hostnames. Add or remove with the same controls.</li>
+                    </ul>
+
+                    <h3 style="margin-top: 2rem;">Multi-Distro Support</h3>
+                    <p>
+                        WolfStack <strong>auto-detects</strong> how your system manages DNS and writes to the
+                        correct configuration. The detected method is shown at the bottom of the DNS card.
+                    </p>
+
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Distros</th>
+                                    <th>What WolfStack Does</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Netplan</strong></td>
+                                    <td>Ubuntu Server 18+</td>
+                                    <td>Writes <code>/etc/netplan/99-wolfstack-dns.yaml</code> then runs
+                                        <code>netplan apply</code>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>systemd-resolved</strong></td>
+                                    <td>Ubuntu Desktop, Fedora 33+, modern Debian</td>
+                                    <td>Writes a drop-in to <code>/etc/systemd/resolved.conf.d/wolfstack-dns.conf</code>
+                                        then restarts <code>systemd-resolved</code></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>NetworkManager</strong></td>
+                                    <td>Fedora, RHEL, CentOS, IBM Power (RHEL)</td>
+                                    <td>Runs <code>nmcli connection modify</code> on the primary ethernet connection,
+                                        then reactivates it</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>/etc/resolv.conf</strong></td>
+                                    <td>Debian (no systemd-resolved), IBM Power (SLES), older systems</td>
+                                    <td>Writes directly to <code>/etc/resolv.conf</code>, preserving comments and
+                                        options</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>🖥️ IBM Power:</strong> WolfStack works on IBM Power (ppc64le). DNS management
+                        uses NetworkManager on RHEL-based Power systems and direct <code>/etc/resolv.conf</code>
+                        on SLES-based systems. Detection is automatic.
+                    </div>
+
+                    <div class="code-block" style="margin-top: 1.5rem;">
+                        <div class="code-header"><span class="code-lang">Example: Set DNS via API</span></div>
+                        <pre><code># Set nameservers and search domains
+curl -X POST http://localhost:8553/api/networking/dns \
+  -H "Cookie: session=YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nameservers": ["1.1.1.1", "8.8.8.8"],
+    "search_domains": ["example.com", "internal.example.com"]
+  }'
+
+# Response
+{ "message": "DNS updated via netplan" }</code></pre>
+                    </div>
+                </section>
+
+                <!-- API Reference -->
+                <section class="content-section">
+                    <h2>📡 Networking API</h2>
+                    <p>
+                        All networking features are available through the REST API. Requires session authentication
+                        or cluster secret.
+                    </p>
+
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Endpoint</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/networking/interfaces</code></td>
+                                    <td>List all network interfaces with addresses</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/networking/dns</code></td>
+                                    <td>Get DNS configuration (with detected method)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/networking/dns</code></td>
+                                    <td>Set DNS (<code>{"nameservers":[...],"search_domains":[...]}</code>)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/networking/wolfnet</code></td>
+                                    <td>Get WolfNet overlay status</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/networking/interfaces/{name}/ip</code></td>
+                                    <td>Add an IP address (<code>{"address":"...","prefix":24}</code>)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>DELETE</code></td>
+                                    <td><code>/api/networking/interfaces/{name}/ip</code></td>
+                                    <td>Remove an IP address</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/networking/interfaces/{name}/state</code></td>
+                                    <td>Bring interface up/down (<code>{"up":true}</code>)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/networking/interfaces/{name}/mtu</code></td>
+                                    <td>Set MTU (<code>{"mtu":9000}</code>)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/networking/vlans</code></td>
+                                    <td>Create VLAN (<code>{"parent":"eth0","vlan_id":100}</code>)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>DELETE</code></td>
+                                    <td><code>/api/networking/vlans/{name}</code></td>
+                                    <td>Delete a VLAN interface</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">Example: List Interfaces</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">bash</span></div>
+                        <pre><code># List all interfaces
+curl -s http://localhost:8553/api/networking/interfaces \
+  -H "Cookie: session=YOUR_TOKEN" | jq
+
+# Response
+[
+  {
+    "name": "eth0",
+    "mac": "52:54:00:ab:cd:ef",
+    "state": "up",
+    "mtu": 1500,
+    "addresses": [
+      { "address": "192.168.1.10", "prefix": 24, "family": "inet", "scope": "global" }
+    ],
+    "is_vlan": false,
+    "speed": "1Gb/s",
+    "driver": "virtio_net"
+  }
+]</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">Example: Create a VLAN</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">bash</span></div>
+                        <pre><code># Create VLAN 200 on eth0
+curl -X POST http://localhost:8553/api/networking/vlans \
+  -H "Cookie: session=YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"parent":"eth0","vlan_id":200,"name":"storage-vlan"}'
+
+# Response
+{ "message": "Created VLAN storage-vlan (ID 200) on eth0" }
+
+# Add an IP to the new VLAN
+curl -X POST http://localhost:8553/api/networking/interfaces/storage-vlan/ip \
+  -H "Cookie: session=YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"address":"10.20.0.1","prefix":24}'</code></pre>
+                    </div>
+                </section>
+
+                <!-- Troubleshooting -->
+                <section class="content-section">
+                    <h2>🔧 Troubleshooting</h2>
+
+                    <h3>Interface shows "UNKNOWN" state</h3>
+                    <p>
+                        Virtual interfaces (bridges, tunnels, VPNs) may report "unknown" as their operstate.
+                        This is normal — it doesn't mean the interface is broken. Check if it has an IP address
+                        and can send traffic.
+                    </p>
+
+                    <h3 style="margin-top: 1.5rem;">VLAN interface has no traffic</h3>
+                    <p>
+                        Ensure the upstream switch port is configured as a trunk port and allows the VLAN ID you
+                        created. Untagged (access) ports will drop VLAN-tagged frames.
+                    </p>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">bash</span></div>
+                        <pre><code># Verify the VLAN interface exists
+ip -d link show eth0.100
+
+# Check for traffic
+tcpdump -i eth0 vlan 100 -c 10
+
+# Verify switch configuration — VLAN must be
+# allowed on the trunk port connected to this server</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 1.5rem;">WolfNet peer shows "Unreachable"</h3>
+                    <p>Common causes:</p>
+                    <ul>
+                        <li>Remote peer's WolfNet service is stopped — start it</li>
+                        <li>Firewall blocking UDP port 51820 — check <code>iptables</code> /
+                            <code>nft</code>
+                        </li>
+                        <li>Endpoint address changed — update the peer's endpoint in
+                            <code>/etc/wolfnet/config.toml</code>
+                        </li>
+                        <li>NAT traversal failing — ensure at least one side has a public
+                            endpoint</li>
+                    </ul>
+
+                    <h3 style="margin-top: 1.5rem;">Speed shows "—" for an interface</h3>
+                    <p>
+                        Speed is read from <code>/sys/class/net/{name}/speed</code>. Virtual interfaces
+                        (bridges, tunnels, VLANs) don't report speed. This is normal.
+                    </p>
+                </section>
+
+                <div class="page-nav">
+                    <a href="wolfstack-storage.html" class="prev">← Storage Manager</a>
+                    <a href="wolfstack-clustering.html" class="next">Multi-Server Clustering →</a>
+                </div>
+            </div>
+
+            <footer class="wiki-footer"
+                style="margin-top: 3rem; padding: 2rem 0; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; opacity: 0.7; font-size: 0.875rem;">
+                <p>© 2026 <a href="https://wolf.uk.com" target="_blank"
+                        style="color: inherit; text-decoration: underline;">Wolf
+                        Software Systems Ltd</a> • MIT License
+                </p>
+                <p style="font-size: 0.75rem; margin-top: 0.5rem;">
+                    USE AT YOUR OWN RISK. This software is provided "as is" without warranty of any kind.
+                </p>
+            </footer>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
