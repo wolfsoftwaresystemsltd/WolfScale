@@ -900,8 +900,8 @@ fn ctrlc_handler(running: Arc<AtomicBool>) {
 
 fn ctrlc_signal(running: Arc<AtomicBool>) -> Result<(), Box<dyn std::error::Error>> {
     unsafe {
-        libc::signal(libc::SIGINT, handle_signal as libc::sighandler_t);
-        libc::signal(libc::SIGTERM, handle_signal as libc::sighandler_t);
+        libc::signal(libc::SIGINT, handle_signal as *const () as libc::sighandler_t);
+        libc::signal(libc::SIGTERM, handle_signal as *const () as libc::sighandler_t);
     }
     RUNNING.store(running);
     Ok(())
