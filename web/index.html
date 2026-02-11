@@ -42,7 +42,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=8">
+    <link rel="stylesheet" href="styles.css?v=9">
     <style>
         /* Hero Animations */
         @keyframes fadeInUp {
@@ -537,6 +537,8 @@
                     </div>
                     <a href="wolfstack.html">Overview & Quick Start</a>
                     <a href="wolfstack-containers.html">Container Management</a>
+                    <a href="wolfstack-storage.html">Storage Manager</a>
+                    <a href="wolfstack-networking.html">Networking</a>
                     <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
                     <a href="wolfstack-api.html">API Reference</a>
                 </div>
@@ -696,7 +698,7 @@
                                 <li>Docker container management with live stats</li>
                                 <li>LXC container management with config editor</li>
                                 <li>Clone & migrate containers between servers</li>
-                                <li>Component drill-down with config editor & logs</li>
+                                <li>S3, NFS & WolfDisk storage manager (rust-s3)</li>
                                 <li>Multi-server clustering & fleet management</li>
                             </ul>
                             <a href="wolfstack.html" class="product-cta">Get Started →</a>
@@ -737,7 +739,7 @@
                             <ul class="product-features">
                                 <li>FUSE-based — works as a regular Linux directory</li>
                                 <li>Content-addressed deduplication with SHA256</li>
-                                <li>Client mode for thin mount-only access</li>
+                                <li>S3-compatible API — mount from WolfStack via rust-s3</li>
                                 <li>Multiple independent drives per node</li>
                             </ul>
                             <a href="wolfdisk.html" class="product-cta">Get Started →</a>

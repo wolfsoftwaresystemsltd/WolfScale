@@ -35,22 +35,28 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=8">
+    <link rel="stylesheet" href="styles.css?v=9">
 </head>
 
 <body>
     <div class="wiki-layout">
         <aside class="sidebar" id="sidebar">
             <a href="index.html" class="sidebar-logo"><img
-                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
-                    alt="Wolf"></a>
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"></a>
             <nav class="sidebar-nav">
                 <div class="nav-section">
-                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span></div>
+                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span>
+                    </div>
                     <a href="wolfstack.html">Overview &amp; Quick Start</a>
+                    <a href="wolfstack-containers.html">Container Management</a>
+                    <a href="wolfstack-storage.html">Storage Manager</a>
+                    <a href="wolfstack-networking.html">Networking</a>
+                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
+                    <a href="wolfstack-api.html">API Reference</a>
                 </div>
                 <div class="nav-section">
-                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load Balancer</span></div>
+                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load
+                            Balancer</span></div>
                     <a href="quickstart.html">Quick Start</a>
                     <a href="features.html">Features</a>
                     <a href="architecture.html">Architecture</a>
@@ -64,7 +70,8 @@
                     <a href="troubleshooting.html">Troubleshooting</a>
                 </div>
                 <div class="nav-section">
-                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication & Sharing</span></div>
+                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication & Sharing</span>
+                    </div>
                     <a href="wolfdisk.html">Overview & Quick Start</a>
                 </div>
                 <div class="nav-section">
@@ -72,11 +79,13 @@
                     <a href="wolfnet.html">Overview & Quick Start</a>
                 </div>
                 <div class="nav-section">
-                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with Firewall</span></div>
+                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
+                            Firewall</span></div>
                     <a href="wolfproxy.html">Overview & Quick Start</a>
                 </div>
                 <div class="nav-section">
-                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span></div>
+                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
+                    </div>
                     <a href="wolfserve.html">Overview & Quick Start</a>
                 </div>
                 <div class="nav-section">
@@ -150,6 +159,20 @@
                             <div class="feature-icon">⚡</div>
                             <h3>Chunk-Based</h3>
                             <p>Large files split into 4MB chunks for efficient transfer and sync.</p>
+                        </div>
+                        <div class="feature-card" style="border-color: rgba(34, 197, 94, 0.3);">
+                            <div class="feature-icon">☁️</div>
+                            <h3>S3-Compatible API</h3>
+                            <p>WolfDisk exposes an S3-compatible endpoint. Mount from WolfStack using
+                                <strong>rust-s3</strong> (pure Rust, works on IBM Power/ppc64le). Compatible with
+                                AWS S3 tools, Cyberduck, and rclone.
+                            </p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🖥️</div>
+                            <h3>WolfStack Integration</h3>
+                            <p>Mount WolfDisk S3 buckets directly from the WolfStack dashboard. Native storage
+                                manager support with sync and auto-mount on boot.</p>
                         </div>
                     </div>
                 </section>
@@ -589,6 +612,13 @@ wolfdisk status --config /etc/wolfdisk/config2.toml</code></pre>
                                         <td>❌ No</td>
                                         <td class="highlight">✅ Native</td>
                                     </tr>
+                                    <tr>
+                                        <td>S3-Compatible API</td>
+                                        <td>❌ No</td>
+                                        <td>❌ No</td>
+                                        <td>✅ Yes (RGW)</td>
+                                        <td class="highlight">✅ Yes (built-in)</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -637,10 +667,21 @@ wolfdisk status --config /etc/wolfdisk/config2.toml</code></pre>
                                 </div>
                             </div>
                             <div
+                                style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px;">
+                                <span style="font-size: 1.5rem;">✅</span>
+                                <div>
+                                    <strong>Phase 5: S3 Integration</strong>
+                                    <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">S3-compatible
+                                        API endpoint, WolfStack Storage Manager integration via <strong>rust-s3</strong>
+                                        (pure Rust),
+                                        sync to/from S3 buckets, rclone.conf import</p>
+                                </div>
+                            </div>
+                            <div
                                 style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 8px;">
                                 <span style="font-size: 1.5rem;">🔄</span>
                                 <div>
-                                    <strong>Phase 5: Production</strong>
+                                    <strong>Phase 6: Production</strong>
                                     <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Benchmarks,
                                         stress testing, multi-node validation</p>
                                 </div>

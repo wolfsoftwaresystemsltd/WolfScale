@@ -34,7 +34,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=8">
+    <link rel="stylesheet" href="styles.css?v=9">
 </head>
 
 <body>
@@ -48,6 +48,8 @@
                     </div>
                     <a href="wolfstack.html" class="active">Overview & Quick Start</a>
                     <a href="wolfstack-containers.html">Container Management</a>
+                    <a href="wolfstack-storage.html">Storage Manager</a>
+                    <a href="wolfstack-networking.html">Networking</a>
                     <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
                     <a href="wolfstack-api.html">API Reference</a>
                 </div>
@@ -161,110 +163,124 @@
                                 restart, pause, and remove. View real-time CPU,
                                 memory, and PID stats. Clone and migrate containers between servers.</p>
                         </div>
-                        <div class="feature-icon">📦</div>
-                        <h3>LXC Management</h3>
-                        <p>Browse the LXC template repository and create containers from any distro (Debian, Ubuntu,
-                            Alpine, CentOS, etc.). Clone containers (full or snapshot copy-on-write).
-                            <strong>Manage Docker images:</strong> create containers from existing images or delete
-                            unused ones.
-                            Edit configs, view logs, install LXC/Docker from the dashboard.
-                        </p>
+                        <div class="feature-card" style="border-color: rgba(56, 189, 248, 0.3);">
+                            <div class="feature-icon">📦</div>
+                            <h3>LXC Management</h3>
+                            <p>Browse the LXC template repository and create containers from any distro (Debian, Ubuntu,
+                                Alpine, CentOS, etc.). Clone containers (full or snapshot copy-on-write).
+                                <strong>Manage Docker images:</strong> create containers from existing images or delete
+                                unused ones.
+                                Edit configs, view logs, install LXC/Docker from the dashboard.
+                            </p>
+                        </div>
+                        <div class="feature-card" style="border-color: rgba(234, 179, 8, 0.3);">
+                            <div class="feature-icon">🚀</div>
+                            <h3>Container Migration</h3>
+                            <p>Migrate Docker containers between WolfStack nodes with one click. Exports, transfers,
+                                and imports containers automatically. Works across your cluster with WolfDisk shared
+                                storage for seamless data migration.</p>
+                        </div>
+                        <div class="feature-card" style="border-color: rgba(168, 85, 247, 0.3);">
+                            <div class="feature-icon">🖥️</div>
+                            <h3>Virtual Machines</h3>
+                            <p>Full KVM/QEMU virtual machine management with a <strong>tabbed creation wizard</strong>
+                                (General → Disks → Network &amp; Boot). Choose disk bus (VirtIO, IDE, SATA),
+                                network adapter (VirtIO, Intel e1000, Realtek), and attach VirtIO drivers ISO for
+                                Windows.
+                                Add <strong>multiple storage volumes</strong> with custom size, format, and bus type.
+                                <strong>In-browser VNC console</strong> via noVNC. Near-native performance with KVM.
+                            </p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">📊</div>
+                            <h3>Real-Time Dashboard</h3>
+                            <p>Live CPU, memory, disk, and network monitoring with animated gauges and charts. 2-second
+                                refresh.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🔒</div>
+                            <h3>Linux Authentication</h3>
+                            <p>Log in with your Linux system username and password. No separate accounts needed.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">📦</div>
+                            <h3>Component Management</h3>
+                            <p>Detect, install, start, stop, and restart all Wolf components. Drill down into each for
+                                detailed stats.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">⚙️</div>
+                            <h3>Config Editor</h3>
+                            <p>Edit component configuration files directly in the browser. Monospace editor with
+                                syntax-friendly formatting.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">📋</div>
+                            <h3>Live Logs</h3>
+                            <p>View recent journal logs for any component or container. Real-time systemd journal
+                                integration.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🖥️</div>
+                            <h3>Multi-Server Clustering</h3>
+                            <p>Add remote servers and monitor your entire fleet from one dashboard. Works over WolfNet
+                                or direct IP.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">⚡</div>
+                            <h3>Service Control</h3>
+                            <p>Start, stop, restart any systemd service. Enable or disable services. View status across
+                                your fleet.</p>
+                        </div>
+                        <div class="feature-card" style="border-color: rgba(34, 197, 94, 0.3);">
+                            <div class="feature-icon">💾</div>
+                            <h3>Storage Manager</h3>
+                            <p>Mount S3-compatible storage (AWS, Cloudflare R2, MinIO, Wasabi, WolfDisk S3),
+                                NFS shares, and local directories. Uses <strong>rust-s3</strong> (pure Rust,
+                                no C/C++ deps) for native S3 access — works on IBM Power (ppc64le).
+                                Import existing rclone.conf files. Auto-mount on boot, global cluster replication.
+                            </p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🔐</div>
+                            <h3>SSL Certificates</h3>
+                            <p>Request Let's Encrypt certificates via Certbot. One-click certificate provisioning.</p>
+                        </div>
                     </div>
-                    <div class="feature-card" style="border-color: rgba(234, 179, 8, 0.3);">
-                        <div class="feature-icon">🚀</div>
-                        <h3>Container Migration</h3>
-                        <p>Migrate Docker containers between WolfStack nodes with one click. Exports, transfers,
-                            and imports containers automatically. Works across your cluster with WolfDisk shared
-                            storage for seamless data migration.</p>
-                    </div>
-                    <div class="feature-card" style="border-color: rgba(168, 85, 247, 0.3);">
-                        <div class="feature-icon">🖥️</div>
-                        <h3>Virtual Machines</h3>
-                        <p>Create and manage full KVM/QEMU virtual machines. Configure CPU, memory, and disk size.
-                            Boot from ISO images. Start, stop, and delete VMs. VNC console access for remote display.
-                            Near-native performance with KVM hardware acceleration.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">📊</div>
-                        <h3>Real-Time Dashboard</h3>
-                        <p>Live CPU, memory, disk, and network monitoring with animated gauges and charts. 2-second
-                            refresh.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">🔒</div>
-                        <h3>Linux Authentication</h3>
-                        <p>Log in with your Linux system username and password. No separate accounts needed.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">📦</div>
-                        <h3>Component Management</h3>
-                        <p>Detect, install, start, stop, and restart all Wolf components. Drill down into each for
-                            detailed stats.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">⚙️</div>
-                        <h3>Config Editor</h3>
-                        <p>Edit component configuration files directly in the browser. Monospace editor with
-                            syntax-friendly formatting.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">📋</div>
-                        <h3>Live Logs</h3>
-                        <p>View recent journal logs for any component or container. Real-time systemd journal
-                            integration.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">🖥️</div>
-                        <h3>Multi-Server Clustering</h3>
-                        <p>Add remote servers and monitor your entire fleet from one dashboard. Works over WolfNet
-                            or direct IP.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">⚡</div>
-                        <h3>Service Control</h3>
-                        <p>Start, stop, restart any systemd service. Enable or disable services. View status across
-                            your fleet.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">🔐</div>
-                        <h3>SSL Certificates</h3>
-                        <p>Request Let's Encrypt certificates via Certbot. One-click certificate provisioning.</p>
-                    </div>
-            </div>
-            </section>
+                </section>
 
-            <!-- Quick Install -->
-            <section class="content-section">
-                <h2>Quick Install</h2>
-                <p>Install WolfStack with a single command:</p>
-                <div class="code-block">
-                    <div class="code-header">
-                        <span class="code-lang">bash</span>
-                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                <!-- Quick Install -->
+                <section class="content-section">
+                    <h2>Quick Install</h2>
+                    <p>Install WolfStack with a single command:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfStack/master/setup.sh | sudo bash</code></pre>
                     </div>
-                    <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfStack/master/setup.sh | sudo bash</code></pre>
-                </div>
 
-                <p style="margin-top: 1rem;">Then open <code>http://your-server:8553</code> and log in with your
-                    Linux system username and password.</p>
+                    <p style="margin-top: 1rem;">Then open <code>http://your-server:8553</code> and log in with your
+                        Linux system username and password.</p>
 
-                <h3 style="margin-top: 2rem;">What the Installer Does</h3>
-                <ol>
-                    <li>Detects your package manager (apt, dnf, yum)</li>
-                    <li>Installs build dependencies (Rust, OpenSSL, libcrypt)</li>
-                    <li>Clones the WolfStack repository to <code>/opt/wolfstack-src</code></li>
-                    <li>Builds WolfStack in release mode</li>
-                    <li>Installs the binary to <code>/usr/local/bin/wolfstack</code></li>
-                    <li>Installs the web UI to <code>/opt/wolfstack/web</code></li>
-                    <li>Creates configuration at <code>/etc/wolfstack/config.toml</code></li>
-                    <li>Creates and enables the systemd service</li>
-                    <li>Opens the firewall port</li>
-                </ol>
+                    <h3 style="margin-top: 2rem;">What the Installer Does</h3>
+                    <ol>
+                        <li>Detects your package manager (apt, dnf, yum)</li>
+                        <li>Installs build dependencies (Rust, OpenSSL, libcrypt)</li>
+                        <li>Clones the WolfStack repository to <code>/opt/wolfstack-src</code></li>
+                        <li>Builds WolfStack in release mode</li>
+                        <li>Installs the binary to <code>/usr/local/bin/wolfstack</code></li>
+                        <li>Installs the web UI to <code>/opt/wolfstack/web</code></li>
+                        <li>Creates configuration at <code>/etc/wolfstack/config.toml</code></li>
+                        <li>Creates and enables the systemd service</li>
+                        <li>Opens the firewall port</li>
+                    </ol>
 
-                <h3 style="margin-top: 2rem;">After Installation</h3>
-                <div class="code-block">
-                    <div class="code-header"><span class="code-lang">bash</span></div>
-                    <pre><code># View status
+                    <h3 style="margin-top: 2rem;">After Installation</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">bash</span></div>
+                        <pre><code># View status
 sudo systemctl status wolfstack
 
 # View logs
@@ -272,381 +288,455 @@ sudo journalctl -u wolfstack -f
 
 # Open the dashboard
 xdg-open http://localhost:8553</code></pre>
-                </div>
-
-                <h3 style="margin-top: 2rem;">Upgrading</h3>
-                <p>Re-run the installer to upgrade. Your configuration is preserved:</p>
-                <div class="code-block">
-                    <div class="code-header">
-                        <span class="code-lang">bash</span>
-                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                     </div>
-                    <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfStack/master/setup.sh | sudo bash</code></pre>
-                </div>
-            </section>
 
-            <!-- Managed Components -->
-            <section class="content-section">
-                <h2>Managed Components</h2>
-                <p>WolfStack automatically detects and manages these components:</p>
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Component</th>
-                                <th>Service Name</th>
-                                <th>Config File</th>
-                                <th>Description</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>🌐 WolfNet</td>
-                                <td><code>wolfnet</code></td>
-                                <td><code>/etc/wolfnet/config.toml</code></td>
-                                <td>Mesh VPN with automatic peer discovery</td>
-                            </tr>
-                            <tr>
-                                <td>🔀 WolfProxy</td>
-                                <td><code>wolfproxy</code></td>
-                                <td><code>/etc/wolfproxy/config.toml</code></td>
-                                <td>NGINX-compatible reverse proxy with firewall</td>
-                            </tr>
-                            <tr>
-                                <td>🌐 WolfServe</td>
-                                <td><code>wolfserve</code></td>
-                                <td><code>/etc/wolfserve/config.toml</code></td>
-                                <td>Apache2-compatible web server</td>
-                            </tr>
-                            <tr>
-                                <td>💾 WolfDisk</td>
-                                <td><code>wolfdisk</code></td>
-                                <td><code>/etc/wolfdisk/config.toml</code></td>
-                                <td>Distributed filesystem replication</td>
-                            </tr>
-                            <tr>
-                                <td>⚖️ WolfScale</td>
-                                <td><code>wolfscale</code></td>
-                                <td><code>/etc/wolfscale/config.toml</code></td>
-                                <td>Database replication & load balancer</td>
-                            </tr>
-                            <tr>
-                                <td>🗄️ MariaDB</td>
-                                <td><code>mariadb</code></td>
-                                <td><code>/etc/mysql/mariadb.conf.d/50-server.cnf</code></td>
-                                <td>MySQL-compatible database</td>
-                            </tr>
-                            <tr>
-                                <td>🔒 Certbot</td>
-                                <td><code>certbot</code></td>
-                                <td>—</td>
-                                <td>Let's Encrypt certificate automation</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
+                    <h3 style="margin-top: 2rem;">Upgrading</h3>
+                    <p>Re-run the installer to upgrade. Your configuration is preserved:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfStack/master/setup.sh | sudo bash</code></pre>
+                    </div>
+                </section>
 
-            <!-- Component Detail -->
-            <section class="content-section">
-                <h2>Component Detail View</h2>
-                <p>Click on any component card to view its detailed information:</p>
-                <ul>
-                    <li><strong>Service status:</strong> Active/inactive state, sub-state (running, dead, etc.)</li>
-                    <li><strong>Memory usage:</strong> Current memory consumption from systemd cgroup</li>
-                    <li><strong>Process ID:</strong> Main PID of the service</li>
-                    <li><strong>Restart count:</strong> Number of times systemd has restarted the service</li>
-                    <li><strong>Service controls:</strong> Start, stop, restart buttons</li>
-                    <li><strong>Configuration editor:</strong> Full monospace editor for the config file with save
-                        button</li>
-                    <li><strong>Journal logs:</strong> Last 50 lines from <code>journalctl -u &lt;service&gt;</code>
-                    </li>
-                </ul>
-            </section>
+                <!-- Managed Components -->
+                <section class="content-section">
+                    <h2>Managed Components</h2>
+                    <p>WolfStack automatically detects and manages these components:</p>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Component</th>
+                                    <th>Service Name</th>
+                                    <th>Config File</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>🌐 WolfNet</td>
+                                    <td><code>wolfnet</code></td>
+                                    <td><code>/etc/wolfnet/config.toml</code></td>
+                                    <td>Mesh VPN with automatic peer discovery</td>
+                                </tr>
+                                <tr>
+                                    <td>🔀 WolfProxy</td>
+                                    <td><code>wolfproxy</code></td>
+                                    <td><code>/etc/wolfproxy/config.toml</code></td>
+                                    <td>NGINX-compatible reverse proxy with firewall</td>
+                                </tr>
+                                <tr>
+                                    <td>🌐 WolfServe</td>
+                                    <td><code>wolfserve</code></td>
+                                    <td><code>/etc/wolfserve/config.toml</code></td>
+                                    <td>Apache2-compatible web server</td>
+                                </tr>
+                                <tr>
+                                    <td>💾 WolfDisk</td>
+                                    <td><code>wolfdisk</code></td>
+                                    <td><code>/etc/wolfdisk/config.toml</code></td>
+                                    <td>Distributed filesystem replication</td>
+                                </tr>
+                                <tr>
+                                    <td>⚖️ WolfScale</td>
+                                    <td><code>wolfscale</code></td>
+                                    <td><code>/etc/wolfscale/config.toml</code></td>
+                                    <td>Database replication & load balancer</td>
+                                </tr>
+                                <tr>
+                                    <td>🗄️ MariaDB</td>
+                                    <td><code>mariadb</code></td>
+                                    <td><code>/etc/mysql/mariadb.conf.d/50-server.cnf</code></td>
+                                    <td>MySQL-compatible database</td>
+                                </tr>
+                                <tr>
+                                    <td>🔒 Certbot</td>
+                                    <td><code>certbot</code></td>
+                                    <td>—</td>
+                                    <td>Let's Encrypt certificate automation</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
 
-            <!-- Configuration -->
-            <section class="content-section">
-                <h2>Configuration</h2>
-                <p>WolfStack uses a simple TOML configuration file:</p>
-                <div class="code-block">
-                    <div class="code-header"><span class="code-lang">toml</span></div>
-                    <pre><code># /etc/wolfstack/config.toml
+                <!-- Component Detail -->
+                <section class="content-section">
+                    <h2>Component Detail View</h2>
+                    <p>Click on any component card to view its detailed information:</p>
+                    <ul>
+                        <li><strong>Service status:</strong> Active/inactive state, sub-state (running, dead, etc.)</li>
+                        <li><strong>Memory usage:</strong> Current memory consumption from systemd cgroup</li>
+                        <li><strong>Process ID:</strong> Main PID of the service</li>
+                        <li><strong>Restart count:</strong> Number of times systemd has restarted the service</li>
+                        <li><strong>Service controls:</strong> Start, stop, restart buttons</li>
+                        <li><strong>Configuration editor:</strong> Full monospace editor for the config file with save
+                            button</li>
+                        <li><strong>Journal logs:</strong> Last 50 lines from <code>journalctl -u &lt;service&gt;</code>
+                        </li>
+                    </ul>
+                </section>
+
+                <!-- Configuration -->
+                <section class="content-section">
+                    <h2>Configuration</h2>
+                    <p>WolfStack uses a simple TOML configuration file:</p>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">toml</span></div>
+                        <pre><code># /etc/wolfstack/config.toml
 
 [server]
 port = 8553
 bind = "0.0.0.0"
 web_dir = "/opt/wolfstack/web"</code></pre>
-                </div>
+                    </div>
 
-                <h3 style="margin-top: 2rem;">Command Line Options</h3>
-                <div class="code-block">
-                    <div class="code-header"><span class="code-lang">bash</span></div>
-                    <pre><code># Run with custom port
+                    <h3 style="margin-top: 2rem;">Command Line Options</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">bash</span></div>
+                        <pre><code># Run with custom port
 sudo wolfstack --port 9000
 
 # Run with custom bind address
 sudo wolfstack --bind 127.0.0.1 --port 8553</code></pre>
-                </div>
+                    </div>
 
-                <div class="info-box" style="margin-top: 1.5rem;">
-                    <strong>⚠️ Root required:</strong> WolfStack must run as root to read <code>/etc/shadow</code>
-                    for authentication and to manage systemd services. The setup script configures this
-                    automatically.
-                </div>
-            </section>
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>⚠️ Root required:</strong> WolfStack must run as root to read <code>/etc/shadow</code>
+                        for authentication and to manage systemd services. The setup script configures this
+                        automatically.
+                    </div>
+                </section>
 
-            <!-- API Reference -->
-            <section class="content-section">
-                <h2>API Reference</h2>
-                <p>All endpoints require session authentication (cookie-based) except
-                    <code>/api/agent/status</code>.
-                </p>
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Method</th>
-                                <th>Endpoint</th>
-                                <th>Description</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><code>POST</code></td>
-                                <td><code>/api/auth/login</code></td>
-                                <td>Login with Linux credentials</td>
-                            </tr>
-                            <tr>
-                                <td><code>POST</code></td>
-                                <td><code>/api/auth/logout</code></td>
-                                <td>Destroy session</td>
-                            </tr>
-                            <tr>
-                                <td><code>GET</code></td>
-                                <td><code>/api/auth/check</code></td>
-                                <td>Check if session is valid</td>
-                            </tr>
-                            <tr>
-                                <td><code>GET</code></td>
-                                <td><code>/api/metrics</code></td>
-                                <td>Current system metrics (CPU, memory, disk, network)</td>
-                            </tr>
-                            <tr>
-                                <td><code>GET</code></td>
-                                <td><code>/api/nodes</code></td>
-                                <td>List all cluster nodes</td>
-                            </tr>
-                            <tr>
-                                <td><code>POST</code></td>
-                                <td><code>/api/nodes</code></td>
-                                <td>Add a server to the cluster</td>
-                            </tr>
-                            <tr>
-                                <td><code>DELETE</code></td>
-                                <td><code>/api/nodes/{id}</code></td>
-                                <td>Remove a server</td>
-                            </tr>
-                            <tr>
-                                <td><code>GET</code></td>
-                                <td><code>/api/components</code></td>
-                                <td>Status of all managed components</td>
-                            </tr>
-                            <tr>
-                                <td><code>GET</code></td>
-                                <td><code>/api/components/{name}/detail</code></td>
-                                <td>Component detail (config, logs, systemd info)</td>
-                            </tr>
-                            <tr>
-                                <td><code>PUT</code></td>
-                                <td><code>/api/components/{name}/config</code></td>
-                                <td>Save component configuration file</td>
-                            </tr>
-                            <tr>
-                                <td><code>POST</code></td>
-                                <td><code>/api/components/{name}/install</code></td>
-                                <td>Install a component</td>
-                            </tr>
-                            <tr>
-                                <td><code>POST</code></td>
-                                <td><code>/api/services/{name}/action</code></td>
-                                <td>Start / stop / restart a service</td>
-                            </tr>
-                            <tr>
-                                <td><code>POST</code></td>
-                                <td><code>/api/certificates</code></td>
-                                <td>Request Let's Encrypt certificate</td>
-                            </tr>
-                            <tr>
-                                <td><code>GET</code></td>
-                                <td><code>/api/agent/status</code></td>
-                                <td>Node status (no auth — used for remote polling)</td>
-                            </tr>
-                            <tr style="border-top: 2px solid var(--border-color);">
-                                <td colspan="3"
-                                    style="font-weight: 600; color: var(--text-primary); padding-top: 1rem;">
-                                    Container Management</td>
-                            </tr>
-                            <tr>
-                                <td><code>GET</code></td>
-                                <td><code>/api/containers/status</code></td>
-                                <td>Docker & LXC runtime detection (installed, version, counts)</td>
-                            </tr>
-                            <tr>
-                                <td><code>POST</code></td>
-                                <td><code>/api/containers/install</code></td>
-                                <td>Install Docker or LXC</td>
-                            </tr>
-                            <tr>
-                                <td><code>GET</code></td>
-                                <td><code>/api/containers/docker</code></td>
-                                <td>List all Docker containers</td>
-                            </tr>
-                            <tr>
-                                <td><code>GET</code></td>
-                                <td><code>/api/containers/docker/stats</code></td>
-                                <td>Docker container resource stats (CPU, memory, PIDs)</td>
-                            </tr>
-                            <tr>
-                                <td><code>GET</code></td>
-                                <td><code>/api/containers/docker/images</code></td>
-                                <td>List Docker images</td>
-                            </tr>
-                            <tr>
-                                <td><code>GET</code></td>
-                                <td><code>/api/containers/docker/{id}/logs</code></td>
-                                <td>Docker container logs</td>
-                            </tr>
-                            <tr>
-                                <td><code>POST</code></td>
-                                <td><code>/api/containers/docker/{id}/action</code></td>
-                                <td>Start/stop/restart/pause/unpause/remove container</td>
-                            </tr>
-                            <tr>
-                                <td><code>GET</code></td>
-                                <td><code>/api/containers/lxc</code></td>
-                                <td>List all LXC containers</td>
-                            </tr>
-                            <tr>
-                                <td><code>GET</code></td>
-                                <td><code>/api/containers/lxc/stats</code></td>
-                                <td>LXC container resource stats</td>
-                            </tr>
-                            <tr>
-                                <td><code>GET</code></td>
-                                <td><code>/api/containers/lxc/{name}/logs</code></td>
-                                <td>LXC container logs</td>
-                            </tr>
-                            <tr>
-                                <td><code>GET</code></td>
-                                <td><code>/api/containers/lxc/{name}/config</code></td>
-                                <td>Read LXC container config file</td>
-                            </tr>
-                            <tr>
-                                <td><code>PUT</code></td>
-                                <td><code>/api/containers/lxc/{name}/config</code></td>
-                                <td>Save LXC container config file</td>
-                            </tr>
-                            <tr>
-                                <td><code>POST</code></td>
-                                <td><code>/api/containers/lxc/{name}/action</code></td>
-                                <td>Start/stop/restart/freeze/unfreeze/destroy container</td>
-                            </tr>
-                            <tr style="border-top: 2px solid var(--border-color);">
-                                <td colspan="3"
-                                    style="font-weight: 600; color: var(--text-primary); padding-top: 1rem;">Clone &
-                                    Migration</td>
-                            </tr>
-                            <tr>
-                                <td><code>POST</code></td>
-                                <td><code>/api/containers/docker/{id}/clone</code></td>
-                                <td>Clone a Docker container (commit + create new)</td>
-                            </tr>
-                            <tr>
-                                <td><code>POST</code></td>
-                                <td><code>/api/containers/docker/{id}/migrate</code></td>
-                                <td>Migrate Docker container to another WolfStack node</td>
-                            </tr>
-                            <tr>
-                                <td><code>POST</code></td>
-                                <td><code>/api/containers/docker/import</code></td>
-                                <td>Receive a migrated container image (inter-node)</td>
-                            </tr>
-                            <tr>
-                                <td><code>POST</code></td>
-                                <td><code>/api/containers/lxc/{name}/clone</code></td>
-                                <td>Clone LXC container (full copy or snapshot)</td>
-                            </tr>
-                            <tr style="border-top: 2px solid var(--border-color);">
-                                <td colspan="3"
-                                    style="font-weight: 600; color: var(--text-primary); padding-top: 1rem;">Container
-                                    Creation & Registry</td>
-                            </tr>
-                            <tr>
-                                <td><code>GET</code></td>
-                                <td><code>/api/containers/docker/search?q=</code></td>
-                                <td>Search Docker Hub for images</td>
-                            </tr>
-                            <tr>
-                                <td><code>POST</code></td>
-                                <td><code>/api/containers/docker/pull</code></td>
-                                <td>Pull a Docker image from Docker Hub</td>
-                            </tr>
-                            <tr>
-                                <td><code>POST</code></td>
-                                <td><code>/api/containers/docker/create</code></td>
-                                <td>Create a Docker container (name, image, ports, env)</td>
-                            </tr>
-                            <tr>
-                                <td><code>GET</code></td>
-                                <td><code>/api/containers/lxc/templates</code></td>
-                                <td>List available LXC templates (distro, release, arch)</td>
-                            </tr>
-                            <tr>
-                                <td><code>POST</code></td>
-                                <td><code>/api/containers/lxc/create</code></td>
-                                <td>Create LXC container from template</td>
-                            </tr>
-                            <tr style="border-top: 2px solid var(--border-color);">
-                                <td colspan="3"
-                                    style="font-weight: 600; color: var(--text-primary); padding-top: 1rem;">Virtual
-                                    Machines (KVM/QEMU)</td>
-                            </tr>
-                            <tr>
-                                <td><code>GET</code></td>
-                                <td><code>/api/vms</code></td>
-                                <td>List all VMs with status, resources, and VNC port</td>
-                            </tr>
-                            <tr>
-                                <td><code>POST</code></td>
-                                <td><code>/api/vms/create</code></td>
-                                <td>Create a new VM (name, cpus, memory, disk, iso)</td>
-                            </tr>
-                            <tr>
-                                <td><code>GET</code></td>
-                                <td><code>/api/vms/{name}</code></td>
-                                <td>Get details for a specific VM</td>
-                            </tr>
-                            <tr>
-                                <td><code>DELETE</code></td>
-                                <td><code>/api/vms/{name}</code></td>
-                                <td>Delete a VM and its disk image</td>
-                            </tr>
-                            <tr>
-                                <td><code>POST</code></td>
-                                <td><code>/api/vms/{name}/action</code></td>
-                                <td>Start or stop a VM</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
+                <!-- API Reference -->
+                <section class="content-section">
+                    <h2>API Reference</h2>
+                    <p>All endpoints require session authentication (cookie-based) except
+                        <code>/api/agent/status</code>.
+                    </p>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Endpoint</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/auth/login</code></td>
+                                    <td>Login with Linux credentials</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/auth/logout</code></td>
+                                    <td>Destroy session</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/auth/check</code></td>
+                                    <td>Check if session is valid</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/metrics</code></td>
+                                    <td>Current system metrics (CPU, memory, disk, network)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/nodes</code></td>
+                                    <td>List all cluster nodes</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/nodes</code></td>
+                                    <td>Add a server to the cluster</td>
+                                </tr>
+                                <tr>
+                                    <td><code>DELETE</code></td>
+                                    <td><code>/api/nodes/{id}</code></td>
+                                    <td>Remove a server</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/components</code></td>
+                                    <td>Status of all managed components</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/components/{name}/detail</code></td>
+                                    <td>Component detail (config, logs, systemd info)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>PUT</code></td>
+                                    <td><code>/api/components/{name}/config</code></td>
+                                    <td>Save component configuration file</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/components/{name}/install</code></td>
+                                    <td>Install a component</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/services/{name}/action</code></td>
+                                    <td>Start / stop / restart a service</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/certificates</code></td>
+                                    <td>Request Let's Encrypt certificate</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/agent/status</code></td>
+                                    <td>Node status (no auth — used for remote polling)</td>
+                                </tr>
+                                <tr style="border-top: 2px solid var(--border-color);">
+                                    <td colspan="3"
+                                        style="font-weight: 600; color: var(--text-primary); padding-top: 1rem;">
+                                        Container Management</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/status</code></td>
+                                    <td>Docker & LXC runtime detection (installed, version, counts)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/install</code></td>
+                                    <td>Install Docker or LXC</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/docker</code></td>
+                                    <td>List all Docker containers</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/docker/stats</code></td>
+                                    <td>Docker container resource stats (CPU, memory, PIDs)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/docker/images</code></td>
+                                    <td>List Docker images</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/docker/{id}/logs</code></td>
+                                    <td>Docker container logs</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/docker/{id}/action</code></td>
+                                    <td>Start/stop/restart/pause/unpause/remove container</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/lxc</code></td>
+                                    <td>List all LXC containers</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/lxc/stats</code></td>
+                                    <td>LXC container resource stats</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/lxc/{name}/logs</code></td>
+                                    <td>LXC container logs</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/lxc/{name}/config</code></td>
+                                    <td>Read LXC container config file</td>
+                                </tr>
+                                <tr>
+                                    <td><code>PUT</code></td>
+                                    <td><code>/api/containers/lxc/{name}/config</code></td>
+                                    <td>Save LXC container config file</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/lxc/{name}/action</code></td>
+                                    <td>Start/stop/restart/freeze/unfreeze/destroy container</td>
+                                </tr>
+                                <tr style="border-top: 2px solid var(--border-color);">
+                                    <td colspan="3"
+                                        style="font-weight: 600; color: var(--text-primary); padding-top: 1rem;">Clone &
+                                        Migration</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/docker/{id}/clone</code></td>
+                                    <td>Clone a Docker container (commit + create new)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/docker/{id}/migrate</code></td>
+                                    <td>Migrate Docker container to another WolfStack node</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/docker/import</code></td>
+                                    <td>Receive a migrated container image (inter-node)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/lxc/{name}/clone</code></td>
+                                    <td>Clone LXC container (full copy or snapshot)</td>
+                                </tr>
+                                <tr style="border-top: 2px solid var(--border-color);">
+                                    <td colspan="3"
+                                        style="font-weight: 600; color: var(--text-primary); padding-top: 1rem;">
+                                        Container
+                                        Creation & Registry</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/docker/search?q=</code></td>
+                                    <td>Search Docker Hub for images</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/docker/pull</code></td>
+                                    <td>Pull a Docker image from Docker Hub</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/docker/create</code></td>
+                                    <td>Create a Docker container (name, image, ports, env)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/containers/lxc/templates</code></td>
+                                    <td>List available LXC templates (distro, release, arch)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/containers/lxc/create</code></td>
+                                    <td>Create LXC container from template</td>
+                                </tr>
+                                <tr style="border-top: 2px solid var(--border-color);">
+                                    <td colspan="3"
+                                        style="font-weight: 600; color: var(--text-primary); padding-top: 1rem;">Virtual
+                                        Machines (KVM/QEMU)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/vms</code></td>
+                                    <td>List all VMs with status, resources, and VNC port</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/vms/storage</code></td>
+                                    <td>List available storage locations on the host</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/vms/create</code></td>
+                                    <td>Create VM (name, cpus, memory, disk, iso, bus, network adapter, drivers ISO,
+                                        extra
+                                        disks)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/vms/{name}</code></td>
+                                    <td>Get details for a specific VM</td>
+                                </tr>
+                                <tr>
+                                    <td><code>PUT</code></td>
+                                    <td><code>/api/vms/{name}</code></td>
+                                    <td>Update VM settings (cpus, memory, disk, iso, bus, network adapter, drivers ISO,
+                                        WolfNet IP)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>DELETE</code></td>
+                                    <td><code>/api/vms/{name}</code></td>
+                                    <td>Delete a VM and its disk image</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/vms/{name}/action</code></td>
+                                    <td>Start or stop a VM</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/vms/{name}/volumes</code></td>
+                                    <td>Add a storage volume to a VM</td>
+                                </tr>
+                                <tr>
+                                    <td><code>DELETE</code></td>
+                                    <td><code>/api/vms/{name}/volumes/{vol}</code></td>
+                                    <td>Remove a storage volume</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/vms/{name}/volumes/{vol}/resize</code></td>
+                                    <td>Resize a storage volume (grow only)</td>
+                                </tr>
+                                <tr style="border-top: 2px solid var(--border-color);">
+                                    <td colspan="3"
+                                        style="font-weight: 600; color: var(--text-primary); padding-top: 1rem;">
+                                        Storage Manager (S3, NFS, WolfDisk)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/storage/mounts</code></td>
+                                    <td>List all storage mounts with live status</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/storage/mounts</code></td>
+                                    <td>Create a new mount (S3, NFS, directory, WolfDisk)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/storage/mounts/{id}/mount</code></td>
+                                    <td>Mount a storage entry</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/storage/mounts/{id}/unmount</code></td>
+                                    <td>Unmount a storage entry</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/storage/mounts/{id}/sync</code></td>
+                                    <td>Sync mount config to cluster nodes (global mounts)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/storage/mounts/{id}/sync-s3</code></td>
+                                    <td>Push local changes back to S3 bucket (rust-s3)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>DELETE</code></td>
+                                    <td><code>/api/storage/mounts/{id}</code></td>
+                                    <td>Remove a mount entry</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/storage/import-rclone</code></td>
+                                    <td>Import S3 remotes from rclone.conf content</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
 
-            <!-- Systemd -->
-            <section class="content-section">
-                <h2>Systemd Service</h2>
-                <div class="code-block">
-                    <div class="code-header"><span class="code-lang">bash</span></div>
-                    <pre><code># Start / stop
+                <!-- Systemd -->
+                <section class="content-section">
+                    <h2>Systemd Service</h2>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">bash</span></div>
+                        <pre><code># Start / stop
 sudo systemctl start wolfstack
 sudo systemctl stop wolfstack
 
@@ -658,55 +748,56 @@ sudo systemctl status wolfstack
 
 # View logs
 journalctl -u wolfstack -f</code></pre>
-                </div>
+                    </div>
 
-                <h3 style="margin-top: 2rem;">Installation Paths</h3>
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Path</th>
-                                <th>Description</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><code>/usr/local/bin/wolfstack</code></td>
-                                <td>Binary</td>
-                            </tr>
-                            <tr>
-                                <td><code>/opt/wolfstack/web/</code></td>
-                                <td>Web UI files</td>
-                            </tr>
-                            <tr>
-                                <td><code>/etc/wolfstack/config.toml</code></td>
-                                <td>Configuration</td>
-                            </tr>
-                            <tr>
-                                <td><code>/etc/systemd/system/wolfstack.service</code></td>
-                                <td>Systemd service file</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
+                    <h3 style="margin-top: 2rem;">Installation Paths</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Path</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>/usr/local/bin/wolfstack</code></td>
+                                    <td>Binary</td>
+                                </tr>
+                                <tr>
+                                    <td><code>/opt/wolfstack/web/</code></td>
+                                    <td>Web UI files</td>
+                                </tr>
+                                <tr>
+                                    <td><code>/etc/wolfstack/config.toml</code></td>
+                                    <td>Configuration</td>
+                                </tr>
+                                <tr>
+                                    <td><code>/etc/systemd/system/wolfstack.service</code></td>
+                                    <td>Systemd service file</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
 
-            <div class="page-nav">
-                <a href="index.html" class="prev">← Home</a>
-                <a href="quickstart.html" class="next">WolfScale Quick Start →</a>
+                <div class="page-nav">
+                    <a href="index.html" class="prev">← Home</a>
+                    <a href="quickstart.html" class="next">WolfScale Quick Start →</a>
+                </div>
             </div>
-    </div>
 
-    <footer class="wiki-footer"
-        style="margin-top: 3rem; padding: 2rem 0; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; opacity: 0.7; font-size: 0.875rem;">
-        <p>© 2026 <a href="https://wolf.uk.com" target="_blank" style="color: inherit; text-decoration: underline;">Wolf
-                Software Systems Ltd</a> • MIT License
-        </p>
-        <p style="font-size: 0.75rem; margin-top: 0.5rem;">
-            USE AT YOUR OWN RISK. This software is provided "as is" without warranty of any kind.
-        </p>
-    </footer>
-    </main>
+            <footer class="wiki-footer"
+                style="margin-top: 3rem; padding: 2rem 0; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; opacity: 0.7; font-size: 0.875rem;">
+                <p>© 2026 <a href="https://wolf.uk.com" target="_blank"
+                        style="color: inherit; text-decoration: underline;">Wolf
+                        Software Systems Ltd</a> • MIT License
+                </p>
+                <p style="font-size: 0.75rem; margin-top: 0.5rem;">
+                    USE AT YOUR OWN RISK. This software is provided "as is" without warranty of any kind.
+                </p>
+            </footer>
+        </main>
     </div>
     <script src="script.js"></script>
 </body>

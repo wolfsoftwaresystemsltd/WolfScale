@@ -10,6 +10,7 @@ pub mod storage;
 pub mod network;
 pub mod cluster;
 pub mod replication;
+pub mod s3;
 
 pub use config::{Config, NodeRole, ReplicationMode};
 pub use cluster::{ClusterManager, ClusterState};

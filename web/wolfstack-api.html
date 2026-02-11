@@ -34,7 +34,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=8">
+    <link rel="stylesheet" href="styles.css?v=9">
 </head>
 
 <body>
@@ -48,6 +48,8 @@
                     </div>
                     <a href="wolfstack.html">Overview & Quick Start</a>
                     <a href="wolfstack-containers.html">Container Management</a>
+                    <a href="wolfstack-storage.html">Storage Manager</a>
+                    <a href="wolfstack-networking.html">Networking</a>
                     <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
                     <a href="wolfstack-api.html" class="active">API Reference</a>
                 </div>
@@ -820,6 +822,162 @@ curl -b cookies.txt http://localhost:8553/api/metrics</code></pre>
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                </section>
+
+                <!-- Storage Manager Endpoints -->
+                <section class="content-section">
+                    <h2>💾 Storage Manager</h2>
+                    <p>
+                        Mount and manage <strong>S3, NFS, directory, and WolfDisk</strong> storage from the dashboard.
+                        S3 mounts use <strong>rust-s3</strong> (pure Rust — works on IBM Power/ppc64le, no C/C++ deps)
+                        as the primary mount method, with s3fs-fuse as a fallback.
+                    </p>
+
+                    <div class="info-box" style="margin-top: 1rem;">
+                        <strong>☁️ Supported S3 Providers:</strong> AWS S3, Cloudflare R2, MinIO, Wasabi,
+                        DigitalOcean Spaces, Backblaze B2, WolfDisk S3 — any S3-compatible endpoint.
+                    </div>
+
+                    <div class="table-wrapper" style="margin-top: 1.5rem;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Endpoint</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/storage/mounts</code></td>
+                                    <td>List all storage mounts with live status (mounted/unmounted/error)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/storage/available</code></td>
+                                    <td>List mounted storage suitable for container attachment</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/storage/mounts</code></td>
+                                    <td>Create a new S3, NFS, directory, or WolfDisk mount</td>
+                                </tr>
+                                <tr>
+                                    <td><code>PUT</code></td>
+                                    <td><code>/api/storage/mounts/{id}</code></td>
+                                    <td>Update mount configuration</td>
+                                </tr>
+                                <tr>
+                                    <td><code>DELETE</code></td>
+                                    <td><code>/api/storage/mounts/{id}</code></td>
+                                    <td>Remove a mount entry (unmounts first if mounted)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/storage/mounts/{id}/mount</code></td>
+                                    <td>Mount a storage entry</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/storage/mounts/{id}/unmount</code></td>
+                                    <td>Unmount a storage entry</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/storage/mounts/{id}/sync</code></td>
+                                    <td>Sync mount config to all cluster nodes (global mounts)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/storage/mounts/{id}/sync-s3</code></td>
+                                    <td>Push local changes back to S3 bucket (rust-s3 upload)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/storage/import-rclone</code></td>
+                                    <td>Import S3 remotes from rclone.conf content</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">POST /api/storage/mounts — Create S3 Mount</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Request Body</span></div>
+                        <pre><code>{
+  "name": "my-r2-bucket",
+  "type": "s3",
+  "mount_point": "/mnt/r2-storage",
+  "global": true,
+  "auto_mount": true,
+  "s3_config": {
+    "bucket": "my-bucket",
+    "provider": "Cloudflare",
+    "region": "auto",
+    "endpoint": "https://abc123.r2.cloudflarestorage.com",
+    "access_key_id": "AKID...",
+    "secret_access_key": "SECRET..."
+  }
+}</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">POST /api/storage/mounts — Create NFS Mount</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Request Body</span></div>
+                        <pre><code>{
+  "name": "nfs-share",
+  "type": "nfs",
+  "source": "192.168.1.10:/export/data",
+  "mount_point": "/mnt/nfs-data",
+  "nfs_options": "vers=4,rw,hard,intr"
+}</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">POST /api/storage/import-rclone</h3>
+                    <p>Import existing rclone.conf configurations as WolfStack S3 mounts:</p>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Request Body</span></div>
+                        <pre><code>{
+  "config": "[my-r2]\ntype = s3\nprovider = Cloudflare\naccess_key_id = AKID...\nsecret_access_key = SECRET...\nendpoint = https://abc.r2.cloudflarestorage.com\n"
+}</code></pre>
+                    </div>
+                    <div class="code-block" style="margin-top: 1rem;">
+                        <div class="code-header"><span class="code-lang">Response (200 OK)</span></div>
+                        <pre><code>{
+  "message": "Imported 1 S3 remotes",
+  "mounts": [
+    {
+      "id": "abc123",
+      "name": "my-r2",
+      "mount_type": "s3",
+      "mount_point": "/mnt/wolfstack/my-r2",
+      "status": "unmounted",
+      "s3_config": { "bucket": "", "provider": "Cloudflare", ... }
+    }
+  ]
+}</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">POST /api/storage/mounts/{id}/sync-s3</h3>
+                    <p>Push local changes back to the S3 bucket. Uses <strong>rust-s3</strong> to upload
+                        files from the local cache directory (<code>/var/cache/wolfstack/s3/{id}/</code>) to the bucket:
+                    </p>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Response (200 OK)</span></div>
+                        <pre><code>{
+  "message": "Synced 42 files to S3"
+}</code></pre>
+                    </div>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>🦀 How rust-s3 Mounting Works:</strong> WolfStack uses the
+                        <code>rust-s3</code> crate to list and download bucket objects to a local cache directory
+                        (<code>/var/cache/wolfstack/s3/{mount-id}/</code>), then bind-mounts it to the chosen path.
+                        This avoids FUSE-over-network (rclone/s3fs) overhead and works on any architecture
+                        including IBM Power (ppc64le). Files are synced on mount and can be pushed back with
+                        <code>sync-s3</code>.
                     </div>
                 </section>
 

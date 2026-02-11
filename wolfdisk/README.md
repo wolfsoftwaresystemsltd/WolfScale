@@ -16,6 +16,8 @@ WolfDisk is a distributed file system that provides easy-to-use shared and repli
 - **Content-Addressed Storage**: Automatic deduplication via SHA256 hashing
 - **FUSE-Based**: Mount as a regular directory
 - **Chunk-Based**: Large files split for efficient transfer and sync
+- **S3-Compatible API**: Optional S3 gateway — access WolfDisk storage via any S3 client
+- **IBM Power Ready**: Pure Rust dependencies, builds natively on ppc64le
 
 ## Quick Install
 
@@ -117,6 +119,13 @@ chunk_size = 4194304 # 4MB
 [mount]
 path = "/mnt/wolfdisk"
 allow_other = true
+
+# Optional: S3-compatible API
+[s3]
+enabled = true
+bind = "0.0.0.0:9878"
+# access_key = "your-access-key"   # optional auth
+# secret_key = "your-secret-key"   # optional auth
 ```
 
 ## Architecture
@@ -134,10 +143,65 @@ allow_other = true
 │   │ File Index│  │  Chunks   │  │ Replication Engine      │ │
 │   │ (metadata)│  │ (SHA256)  │  │ (leader election)       │ │
 │   └───────────┘  └───────────┘  └─────────────────────────┘ │
+│   ┌─────────────────────────────────────────────────────────┐ │
+│   │             S3-Compatible API (optional)                │ │
+│   │        ListBuckets / Get / Put / Delete Objects          │ │
+│   └─────────────────────────────────────────────────────────┘ │
 ├─────────────────────────────────────────────────────────────┤
 │      Network Layer: Discovery + Peer + Protocol              │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+## S3-Compatible API
+
+WolfDisk can optionally expose an S3-compatible REST API, allowing any S3 client to read and write files.
+
+### Enabling S3
+
+Add to `/etc/wolfdisk/config.toml`:
+
+```toml
+[s3]
+enabled = true
+bind = "0.0.0.0:9878"
+```
+
+### How It Maps
+
+| WolfDisk | S3 |
+|----------|----|
+| Top-level directory | Bucket |
+| File in directory | Object |
+| Nested directory | Object key prefix |
+
+### Supported Operations
+
+| Operation | Method | Path |
+|-----------|--------|------|
+| ListBuckets | GET | `/` |
+| CreateBucket | PUT | `/bucket` |
+| DeleteBucket | DELETE | `/bucket` |
+| HeadBucket | HEAD | `/bucket` |
+| ListObjectsV2 | GET | `/bucket?prefix=...` |
+| GetObject | GET | `/bucket/key` |
+| PutObject | PUT | `/bucket/key` |
+| DeleteObject | DELETE | `/bucket/key` |
+| HeadObject | HEAD | `/bucket/key` |
+
+### Example
+
+```bash
+# Using AWS CLI
+aws --endpoint-url http://localhost:9878 s3 ls
+aws --endpoint-url http://localhost:9878 s3 cp file.txt s3://mybucket/file.txt
+aws --endpoint-url http://localhost:9878 s3 ls s3://mybucket/
+
+# Using curl
+curl http://localhost:9878/mybucket/myfile.txt
+curl -X PUT --data-binary @file.txt http://localhost:9878/mybucket/file.txt
+```
+
+Both FUSE and S3 access the **same underlying data** — files written via FUSE are instantly visible through S3 and vice versa.
 
 ## Leader Failover
 

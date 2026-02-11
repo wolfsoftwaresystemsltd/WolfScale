@@ -1,6 +1,6 @@
 [package]
 name = "wolfdisk"
-version = "2.5.0"
+version = "2.6.0"
 edition = "2021"
 authors = ["Wolf Software Systems Ltd"]
 description = "Distributed file system with replicated and shared storage modes"
@@ -47,6 +47,14 @@ ctrlc = "3.4"
 
 # Compression for network replication
 lz4_flex = "0.11"
+
+# S3-compatible API server
+axum = "0.7"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# S3 client (pure Rust - works on IBM Power/ppc64le)
+rust-s3 = { version = "0.35", default-features = false, features = ["tokio-rustls-tls"] }
 
 [dev-dependencies]
 tempfile = "3"

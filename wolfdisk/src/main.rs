@@ -1916,6 +1916,41 @@ fn main() {
                 }
             });
 
+            // Start S3-compatible API server if enabled
+            if config.s3.enabled {
+                let s3_file_index = file_index.clone();
+                let s3_chunk_store = chunk_store.clone();
+                let s3_inode_table = inode_table.clone();
+                let s3_next_inode = next_inode.clone();
+                let s3_bind = config.s3.bind.clone();
+                let s3_credentials = config.s3.credentials();
+
+                std::thread::spawn(move || {
+                    let rt = tokio::runtime::Builder::new_multi_thread()
+                        .worker_threads(2)
+                        .enable_all()
+                        .build()
+                        .expect("Failed to create S3 tokio runtime");
+
+                    rt.block_on(async {
+                        let server = wolfdisk::s3::S3Server::new(
+                            s3_bind,
+                            s3_file_index,
+                            s3_chunk_store,
+                            s3_inode_table,
+                            s3_next_inode,
+                            s3_credentials,
+                        );
+
+                        if let Err(e) = server.run().await {
+                            error!("S3 server failed: {}", e);
+                        }
+                    });
+                });
+
+                info!("S3-compatible API enabled on {}", config.s3.bind);
+            }
+
             // Mount the filesystem (this blocks)
             if let Err(e) = fuser::mount2(fs, &mountpoint, &options) {
                 error!("Mount failed: {}", e);

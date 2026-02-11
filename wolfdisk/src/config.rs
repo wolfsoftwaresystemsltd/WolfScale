@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 use crate::error::Result;
+use crate::s3::auth::S3Credentials;
 
 /// Main configuration structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -19,6 +20,10 @@ pub struct Config {
 
     /// Mount options
     pub mount: MountConfig,
+
+    /// S3-compatible API configuration
+    #[serde(default)]
+    pub s3: S3Config,
 }
 
 /// Node configuration
@@ -135,6 +140,52 @@ fn default_allow_other() -> bool {
     true
 }
 
+/// S3-compatible API configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct S3Config {
+    /// Enable S3-compatible API
+    #[serde(default)]
+    pub enabled: bool,
+
+    /// Bind address for S3 API
+    #[serde(default = "default_s3_bind")]
+    pub bind: String,
+
+    /// Optional access key for authentication
+    pub access_key: Option<String>,
+
+    /// Optional secret key for authentication
+    pub secret_key: Option<String>,
+}
+
+impl Default for S3Config {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            bind: default_s3_bind(),
+            access_key: None,
+            secret_key: None,
+        }
+    }
+}
+
+impl S3Config {
+    /// Get S3 credentials if both access_key and secret_key are set
+    pub fn credentials(&self) -> Option<S3Credentials> {
+        match (&self.access_key, &self.secret_key) {
+            (Some(ak), Some(sk)) => Some(S3Credentials {
+                access_key: ak.clone(),
+                secret_key: sk.clone(),
+            }),
+            _ => None,
+        }
+    }
+}
+
+fn default_s3_bind() -> String {
+    "0.0.0.0:9878".to_string()
+}
+
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -159,6 +210,7 @@ impl Default for Config {
                 path: default_mount_path(),
                 allow_other: default_allow_other(),
             },
+            s3: S3Config::default(),
         }
     }
 }
