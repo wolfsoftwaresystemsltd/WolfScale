@@ -829,7 +829,23 @@ fn run_daemon(config_path: &PathBuf) {
                         }
                     }
                     transport::PKT_KEEPALIVE => {
-                        if let Some(peer_ip) = peer_manager.find_ip_by_endpoint(&src) {
+                        let mut peer_ip_opt = peer_manager.find_ip_by_endpoint(&src);
+                        
+                        // If not found by endpoint, try extracting Peer ID from body
+                        // This handles cases where a peer's NAT mapping changed (rebind) or
+                        // the gateway restarted and lost its ephemeral endpoint mapping.
+                        if peer_ip_opt.is_none() && data.len() >= 5 {
+                            let mut peer_id = [0u8; 4];
+                            peer_id.copy_from_slice(&data[1..5]);
+                            peer_ip_opt = peer_manager.find_ip_by_id(&peer_id);
+                            
+                            if let Some(ip) = peer_ip_opt {
+                                info!("Peer {} recovered from unknown endpoint via keepalive: {}", ip, src);
+                                peer_manager.update_endpoint(&ip, src);
+                            }
+                        }
+
+                        if let Some(peer_ip) = peer_ip_opt {
                             peer_manager.with_peer_by_ip(&peer_ip, |peer| {
                                 peer.last_seen = Some(Instant::now());
                             });
