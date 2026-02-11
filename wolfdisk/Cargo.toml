@@ -4,7 +4,7 @@ version = "2.6.0"
 edition = "2021"
 authors = ["Wolf Software Systems Ltd"]
 description = "Distributed file system with replicated and shared storage modes"
-license = "MIT"
+license = "FSL-1.1-Apache-2.0"
 repository = "https://github.com/wolfsoftwaresystemsltd/wolfdisk"
 
 [dependencies]

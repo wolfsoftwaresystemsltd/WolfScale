@@ -2,10 +2,10 @@
 
 <div align="center">
 
-**Open-source tools for building robust, clustered server infrastructure**
+**Free tools for building robust, clustered server infrastructure**
 
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-FSL--1.1-blue.svg)](LICENSE)
 [![Patreon](https://img.shields.io/badge/Patreon-Support%20Us-orange.svg)](https://www.patreon.com/15362110/join)
 
 **[wolfscale.org](https://wolfscale.org)** • **[wolf.uk.com](https://wolf.uk.com)** • **[Discord](https://discord.gg/q9qMjHjUQY)**
@@ -368,7 +368,9 @@ name = "home-server"
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+[Functional Source License (FSL-1.1-Apache-2.0)](LICENSE) — Free to use for any purpose except competing with Wolf Software Systems Ltd. Converts to Apache 2.0 after two years.
+
+© 2024-2026 [Wolf Software Systems Ltd](https://wolf.uk.com/)
 
 ## ⚠️ Disclaimer
 
