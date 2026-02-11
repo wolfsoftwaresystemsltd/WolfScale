@@ -207,14 +207,31 @@ if [ ! -f "/etc/wolfnet/config.toml" ]; then
     DEFAULT_IP=${DEFAULT_IP:-"0.0.0.0"}
 
     # Prompt for WolfNet IP address
-    echo -n "WolfNet IP address for this node [10.0.10.1]: "
+    echo -n "WolfNet IP address for this node [10.10.10.1]: "
     read NODE_ADDRESS < /dev/tty
-    NODE_ADDRESS=${NODE_ADDRESS:-10.0.10.1}
+    NODE_ADDRESS=${NODE_ADDRESS:-10.10.10.1}
 
     # Prompt for subnet
     echo -n "Subnet mask (CIDR) [24]: "
     read SUBNET < /dev/tty
     SUBNET=${SUBNET:-24}
+
+    # Warn if the chosen subnet is already in use on this machine
+    CHOSEN_NETWORK=$(echo "$NODE_ADDRESS" | awk -F. '{print $1"."$2"."$3}')
+    if ip route show 2>/dev/null | grep -q "${CHOSEN_NETWORK}\." || \
+       ip addr show 2>/dev/null | grep -q "${CHOSEN_NETWORK}\."; then
+        echo ""
+        echo "  ⚠  WARNING: Subnet ${CHOSEN_NETWORK}.0/${SUBNET} appears to already"
+        echo "  be in use on this machine. This may cause routing conflicts."
+        echo "  Consider using a different IP range (e.g. 10.10.20.1)."
+        echo ""
+        echo -n "Continue anyway? [y/N]: "
+        read cont < /dev/tty
+        if [ "$cont" != "y" ] && [ "$cont" != "Y" ]; then
+            echo "Aborted. Please re-run with a different IP range."
+            exit 1
+        fi
+    fi
 
     # Prompt for listen port
     echo -n "UDP listen port [9600]: "
