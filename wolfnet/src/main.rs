@@ -666,13 +666,15 @@ fn run_daemon(config_path: &PathBuf) {
                                 Ok((counter, ciphertext)) => {
                                     let pkt = transport::build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
                                     if let Err(e) = socket.send_to(&pkt, endpoint) {
-                                        debug!("UDP send error to relay {}: {}", endpoint, e);
+                                        debug!("Relay send to {} via {} failed: {}", dest_ip, relay_ip, e);
                                     } else {
-                                        debug!("Relayed packet to {} via {}", dest_ip, relay_ip);
+                                        debug!("Relayed packet to {} via {} ({})", dest_ip, relay_ip, endpoint);
                                     }
                                 }
-                                Err(e) => debug!("Encrypt error for relay {}: {}", relay_ip, e),
+                                Err(e) => debug!("Relay encrypt error for {} via {}: {}", dest_ip, relay_ip, e),
                             }
+                        } else {
+                            debug!("Relay peer {} has no endpoint", relay_ip);
                         }
                     });
                     continue;
@@ -760,40 +762,15 @@ fn run_daemon(config_path: &PathBuf) {
                                         continue;
                                     }
 
-                                    // Check if this is a relayed handshake packet
-                                    // A peer sent a handshake through us (as a relay) for another peer.
-                                    // Handshakes contain the SENDER's wolfnet_ip, not the target's.
-                                    // So we process it ourselves (learning about the sender) and forward
-                                    // it to all other connected peers so they can learn about the sender too.
+                                    // If a relayed handshake arrives inside an encrypted data packet,
+                                    // just ignore it — handshakes should only be processed when they
+                                    // arrive as raw UDP packets (handled in the PKT_HANDSHAKE case above).
+                                    // Processing them here corrupts endpoint info and causes session storms.
                                     if plaintext.len() > 1 && plaintext[0] == transport::PKT_HANDSHAKE {
-                                        if let Some((hs_pub_key, hs_sender_ip, _hs_port, hs_is_gw, hs_hostname)) = transport::parse_handshake(&plaintext) {
-                                            // Process the handshake for ourselves — learn about this peer
-                                            peer_manager.update_from_discovery(&hs_pub_key, src, hs_sender_ip, &hs_hostname, hs_is_gw);
-                                            peer_manager.with_peer_by_ip(&hs_sender_ip, |peer| {
-                                                peer.establish_session(&keypair.secret, &keypair.public);
-                                                peer.last_seen = Some(Instant::now());
-                                            });
-
-                                            // Forward the raw handshake to all other connected peers
-                                            // so they can learn about the sender and reply directly
-                                            for fwd_ip in peer_manager.all_ips() {
-                                                if fwd_ip == wolfnet_ip || fwd_ip == hs_sender_ip || fwd_ip == peer_ip { continue; }
-                                                peer_manager.with_peer_by_ip(&fwd_ip, |dest_peer| {
-                                                    if dest_peer.is_connected() {
-                                                        if let Some(endpoint) = dest_peer.endpoint {
-                                                            if let Err(e) = socket.send_to(&plaintext, endpoint) {
-                                                                debug!("Relayed handshake forward to {} failed: {}", fwd_ip, e);
-                                                            } else {
-                                                                info!("Relayed handshake from {} ({}) to {} at {}",
-                                                                    hs_hostname, hs_sender_ip, fwd_ip, endpoint);
-                                                            }
-                                                        }
-                                                    }
-                                                });
-                                            }
-                                        }
+                                        debug!("Ignoring relayed handshake inside data packet from {}", peer_ip);
                                         continue;
                                     }
+
 
                                     // Check if this packet is for us or needs relaying
                                     if let Some(dest_ip) = tun::get_dest_ip(&plaintext) {
@@ -832,17 +809,20 @@ fn run_daemon(config_path: &PathBuf) {
                                                         Ok((ctr, ct)) => {
                                                             let pkt = transport::build_data_packet(&keypair.my_peer_id(), ctr, &ct);
                                                             let _ = socket.send_to(&pkt, endpoint);
+                                                            debug!("Relayed packet from {} to {} at {} ({} bytes)", peer_ip, dest_ip, endpoint, plaintext.len());
                                                             true
                                                         }
-                                                        Err(_) => false,
+                                                        Err(e) => {
+                                                            debug!("Relay forward {} -> {} encrypt failed: {}", peer_ip, dest_ip, e);
+                                                            false
+                                                        }
                                                     }
                                                 } else {
+                                                    debug!("Relay forward {} -> {} has no endpoint", peer_ip, dest_ip);
                                                     false
                                                 }
                                             });
-                                            if forwarded.unwrap_or(false) {
-                                                debug!("Relayed packet from {} to {}", peer_ip, dest_ip);
-                                            } else {
+                                            if !forwarded.unwrap_or(false) {
                                                 // Destination unknown or unreachable, write to TUN for kernel routing
                                                 unsafe { libc::write(tun_fd, plaintext.as_ptr() as *const _, plaintext.len()) };
                                             }
