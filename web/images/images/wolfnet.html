@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-KK9NEE1S54');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="WolfNet - Secure private mesh networking over the internet. Create encrypted virtual networks between machines with automatic discovery and gateway support.">
+    <meta name="keywords"
+        content="private network, mesh networking, VPN, encrypted tunnel, WireGuard alternative, WolfNet, WolfScale">
+    <meta name="author" content="Wolf Software Systems Ltd">
+    <link rel="canonical" href="https://wolfscale.org/wolfnet.html">
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://wolfscale.org/wolfnet.html">
+    <meta property="og:title" content="WolfNet - Secure Private Mesh Networking">
+    <meta property="og:description" content="Create encrypted virtual networks between machines over the internet.">
+    <meta property="og:image" content="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg">
+
+    <title>WolfNet - Secure Private Mesh Networking | WolfScale</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=9">
+</head>
+
+<body>
+    <div class="wiki-layout">
+        <aside class="sidebar" id="sidebar">
+            <a href="index.html" class="sidebar-logo"><img
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
+                    alt="Wolf"></a>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span></div>
+                    <a href="wolfstack.html">Overview &amp; Quick Start</a>
+                    <a href="wolfstack-containers.html">Container Management</a>
+                    <a href="wolfstack-storage.html">Storage Manager</a>
+                    <a href="wolfstack-networking.html">Networking</a>
+                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
+                    <a href="wolfstack-ai.html">AI Agent</a>
+                    <a href="wolfstack-api.html">API Reference</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load
+                            Balancer</span></div>
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="features.html">Features</a>
+                    <a href="architecture.html">Architecture</a>
+                    <a href="how-it-works.html">How It Works</a>
+                    <a href="binlog.html">Binlog Mode</a>
+                    <a href="load-balancer.html">Load Balancer</a>
+                    <a href="configuration.html">Configuration</a>
+                    <a href="performance.html">Performance</a>
+                    <a href="cli.html">CLI Reference</a>
+                    <a href="api.html">API Reference</a>
+                    <a href="troubleshooting.html">Troubleshooting</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication & Sharing</span>
+                    </div>
+                    <a href="wolfdisk.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
+                    <a href="wolfnet.html" class="active">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
+                            Firewall</span></div>
+                    <a href="wolfproxy.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
+                    </div>
+                    <a href="wolfserve.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Company</div>
+                    <a href="https://wolf.uk.com" target="_blank">Wolf Software</a>
+                    <a href="about.html">About</a>
+                    <a href="contact.html">Contact</a>
+                    <a href="glossary.html">Glossary</a>
+                    <a href="licensing.html">Licensing</a>
+                </div>
+            </nav>
+            <div class="theme-toggle-wrapper">
+                <span class="theme-toggle-label">Theme</span>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-toggle-slider"></span>
+                </button>
+            </div>
+            <div class="sidebar-links">
+                <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
+                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+                <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+            </div>
+        </aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <main class="wiki-main">
+            <div class="mobile-header">
+                <a href="index.html" class="nav-logo"><img
+                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
+                        class="logo-img"></a>
+                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+            </div>
+
+            <div class="wiki-content">
+                <div class="content-header">
+                    <h1>🐺🌐 WolfNet</h1>
+                    <p class="content-subtitle">Secure Private Mesh Networking</p>
+                </div>
+
+
+
+                <!-- Overview -->
+                <section class="content-section">
+                    <h2>Overview</h2>
+                    <p>
+                        <strong>WolfNet</strong> creates a secure, encrypted private network between your machines
+                        over the internet. Think of it as your own private network layer — machines on WolfNet can
+                        see each other as if they were on the same LAN, but all traffic is encrypted with modern
+                        cryptography.
+                    </p>
+
+                    <div
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
+                        <div class="feature-card">
+                            <div class="feature-icon">🔐</div>
+                            <h3>Military-Grade Encryption</h3>
+                            <p>X25519 key exchange + ChaCha20-Poly1305 authenticated encryption. Same crypto as
+                                WireGuard.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🌐</div>
+                            <h3>Mesh Networking</h3>
+                            <p>Every node can reach every other node directly. No single point of failure.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🎟️</div>
+                            <h3>Invite/Join System</h3>
+                            <p>Connect peers with a single token — no manual key exchange or config editing needed.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🔀</div>
+                            <h3>Relay Forwarding</h3>
+                            <p>Nodes behind NAT can communicate through a relay — no port forwarding needed.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🔄</div>
+                            <h3>Endpoint Roaming</h3>
+                            <p>Dynamic IP changes are detected automatically — connections self-heal in ~30 seconds.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🚪</div>
+                            <h3>Gateway Mode</h3>
+                            <p>Route internet traffic through a gateway node. Only WolfNet machines can access the
+                                network.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">⚡</div>
+                            <h3>Fast & Lightweight</h3>
+                            <p>Built in Rust with minimal overhead. Uses kernel TUN interfaces for near-native
+                                performance.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Architecture -->
+                <section class="content-section">
+                    <h2>Architecture</h2>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">text</span></div>
+                        <pre><code>Machine A (10.0.10.1)          Machine B (10.0.10.2)
+┌─────────────────┐            ┌─────────────────┐
+│  wolfnet0 (TUN) │◄──────────►│  wolfnet0 (TUN) │
+│  10.0.10.1/24   │  Encrypted │  10.0.10.2/24   │
+│  ChaCha20-Poly  │  UDP/9600  │  ChaCha20-Poly  │
+└─────────────────┘            └─────────────────┘
+         ▲                              ▲
+         │       Encrypted UDP          │
+         └──────────┬───────────────────┘
+                    │
+           ┌────────▼────────┐
+           │  Machine C      │
+           │  (Gateway)      │
+           │  10.0.10.3/24   │
+           │  NAT → Internet │
+           └─────────────────┘</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">How It Works</h3>
+                    <ol>
+                        <li>Each machine runs the <code>wolfnet</code> daemon which creates a virtual network interface
+                            (<code>wolfnet0</code>)</li>
+                        <li>The interface gets an IP from the private range (default <code>10.0.10.0/24</code>)</li>
+                        <li>Traffic to other WolfNet IPs is encrypted and sent via UDP tunnels</li>
+                        <li>Nodes discover each other automatically on LAN, or are configured manually for WAN</li>
+                        <li>External traffic <strong>cannot</strong> enter the network — it's truly private</li>
+                    </ol>
+                </section>
+
+                <!-- Quick Install -->
+                <section class="content-section">
+                    <h2>Quick Install</h2>
+                    <p>Install WolfNet with the interactive installer:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/wolfnet/setup.sh | sudo bash</code></pre>
+                    </div>
+
+                    <p style="margin-top: 1.5rem;">The installer will:</p>
+                    <ul>
+                        <li>Check for <code>/dev/net/tun</code> (required for virtual interfaces)</li>
+                        <li>Download and install <code>wolfnet</code> and <code>wolfnetctl</code></li>
+                        <li>Generate an X25519 keypair</li>
+                        <li>Prompt for WolfNet IP address, port, and gateway mode</li>
+                        <li>Create a systemd service for automatic startup</li>
+                    </ul>
+                </section>
+
+                <!-- CLI -->
+                <section class="content-section">
+                    <h2>CLI Reference</h2>
+
+                    <h3>wolfnet (Daemon)</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Command</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>wolfnet</code></td>
+                                    <td>Start the daemon (usually via systemd)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>wolfnet init --address 10.0.10.1</code></td>
+                                    <td>Generate config and keypair</td>
+                                </tr>
+                                <tr>
+                                    <td><code>wolfnet genkey</code></td>
+                                    <td>Generate a new X25519 keypair</td>
+                                </tr>
+                                <tr>
+                                    <td><code>wolfnet pubkey</code></td>
+                                    <td>Show this node's public key</td>
+                                </tr>
+                                <tr>
+                                    <td><code>wolfnet token</code></td>
+                                    <td>Show join token for sharing with peers</td>
+                                </tr>
+                                <tr>
+                                    <td><code>wolfnet invite</code></td>
+                                    <td>Generate an invite token for a new peer</td>
+                                </tr>
+                                <tr>
+                                    <td><code>wolfnet join &lt;token&gt;</code></td>
+                                    <td>Join a network using an invite token</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">wolfnetctl (Control Utility)</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Command</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>wolfnetctl status</code></td>
+                                    <td>Show node status, IP, uptime, peer count</td>
+                                </tr>
+                                <tr>
+                                    <td><code>wolfnetctl peers</code></td>
+                                    <td>List all peers with hostnames, IPs, and connection status</td>
+                                </tr>
+                                <tr>
+                                    <td><code>wolfnetctl info</code></td>
+                                    <td>Combined status and peer list</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">Systemd Service</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">bash</span></div>
+                        <pre><code># Start / stop
+sudo systemctl start wolfnet
+sudo systemctl stop wolfnet
+
+# Check status
+sudo systemctl status wolfnet
+
+# View logs
+sudo journalctl -u wolfnet -f</code></pre>
+                    </div>
+                </section>
+
+                <!-- Remote Connection -->
+                <section class="content-section">
+                    <h2>Setting Up a Remote Connection</h2>
+                    <p>Follow these steps to connect two machines over the internet.</p>
+
+                    <h3>Step 1: Install WolfNet on both machines</h3>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/wolfnet/setup.sh | sudo bash</code></pre>
+                    </div>
+                    <p style="margin-top: 1rem;">Run this on both machines. The installer will prompt for an IP address
+                        —
+                        choose a different address for each (e.g. <code>10.0.10.1</code> and <code>10.0.10.2</code>).
+                    </p>
+
+                    <h3 style="margin-top: 2rem;">Step 2: Generate an invite on the first machine</h3>
+                    <p>On the machine with a <strong>public IP</strong> or port forwarding (port 9600/UDP), run:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code>sudo wolfnet invite</code></pre>
+                    </div>
+                    <p style="margin-top: 1rem;">This will output a <code>wolfnet join</code> command with a token.</p>
+
+                    <h3 style="margin-top: 2rem;">Step 3: Join from the second machine</h3>
+                    <p>Copy and paste the command from step 2 onto the second machine:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code>sudo wolfnet --config /etc/wolfnet/config.toml join eyJwa...</code></pre>
+                    </div>
+                    <p style="margin-top: 1rem;">This will output a <strong>reverse token</strong>. Copy it.</p>
+
+                    <h3 style="margin-top: 2rem;">Step 4: Complete the link on the first machine</h3>
+                    <p>Paste the reverse token command on the first machine:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code>sudo wolfnet --config /etc/wolfnet/config.toml join eyJlc...</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">Step 5: Restart WolfNet on both machines</h3>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code>sudo systemctl restart wolfnet</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">Step 6: Verify the connection</h3>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code># Check peer status
+wolfnetctl peers
+
+# Ping the other machine
+ping 10.0.10.2</code></pre>
+                    </div>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>💡 Dynamic IP?</strong> If your public IP changes (common with home broadband),
+                        WolfNet handles it automatically. Periodic handshakes detect IP changes and update endpoints
+                        within ~30 seconds — no manual intervention needed. A relay VPS is only required if
+                        <em>neither</em> machine has a reachable IP.
+                    </div>
+                </section>
+
+                <!-- Easy Peer Setup -->
+                <section class="content-section">
+                    <h2>Easy Peer Setup (Invite/Join)</h2>
+                    <p>Connect two machines in seconds — no manual key exchange or config editing needed:</p>
+
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code># Step 1: On the first machine, generate an invite token:
+sudo wolfnet invite
+
+# It will output something like:
+#   sudo wolfnet --config /etc/wolfnet/config.toml join eyJwa...
+
+# Step 2: Copy that command and run it on the second machine:
+sudo wolfnet --config /etc/wolfnet/config.toml join eyJwa...
+
+# Step 3: It gives you a reverse token — run that on the first machine:
+sudo wolfnet --config /etc/wolfnet/config.toml join eyJlc...
+
+# Step 4: Restart WolfNet on both:
+sudo systemctl restart wolfnet</code></pre>
+                    </div>
+
+                    <p style="margin-top: 1.5rem;">The invite token automatically:</p>
+                    <ul>
+                        <li>Detects your public IP address</li>
+                        <li>Includes your public key and endpoint</li>
+                        <li>Auto-assigns the next available WolfNet IP</li>
+                        <li>Generates a reverse token so both sides are configured</li>
+                    </ul>
+                </section>
+
+                <!-- NAT Traversal -->
+                <section class="content-section">
+                    <h2>NAT Traversal (Relay Forwarding)</h2>
+                    <p>WolfNet supports <strong>relay forwarding</strong> so machines behind NAT firewalls can
+                        communicate <strong>without port forwarding</strong>:</p>
+
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">text</span></div>
+                        <pre><code>Laptop (behind NAT)       Server (public IP)        Home PC (behind NAT)
+    10.0.10.1                10.0.10.2                 10.0.10.3
+        │                        │                        │
+        └── encrypted UDP ──────►│◄───── encrypted UDP ───┘
+                                 │
+                          Relay forwards
+                         packets between
+                        Laptop ◄──► Home PC</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">How It Works</h3>
+                    <ol>
+                        <li>Both the laptop and home PC connect to the server (which has a public IP)</li>
+                        <li>When the laptop sends a packet to the home PC, the server detects it's not the destination
+                        </li>
+                        <li>The server decrypts, re-encrypts for the home PC, and forwards it</li>
+                        <li>This happens <strong>automatically</strong> — any node that both peers can reach acts as a
+                            relay</li>
+                        <li>All traffic remains encrypted at every hop</li>
+                    </ol>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>💡 Tip:</strong> You only need <strong>one</strong> node with a public IP (or port
+                        forwarding).
+                        All other nodes can connect through it as a relay. A cheap VPS works perfectly for this.
+                    </div>
+                </section>
+
+                <!-- Endpoint Roaming -->
+                <section class="content-section">
+                    <h2>Endpoint Roaming (Dynamic IPs)</h2>
+                    <p>WolfNet automatically handles <strong>dynamic IP changes</strong>. If your ISP assigns a new
+                        public IP, WolfNet detects the change and updates peer endpoints automatically.</p>
+
+                    <h3>How It Works</h3>
+                    <ol>
+                        <li>Every node sends periodic <strong>handshakes</strong> to known peers (~30 seconds)</li>
+                        <li>When a handshake arrives from a peer's <strong>new IP</strong>, the endpoint is
+                            updated automatically</li>
+                        <li>Data packets also trigger roaming — if a valid encrypted packet arrives from an unknown
+                            IP, WolfNet identifies the peer and updates their endpoint</li>
+                        <li>Reconnection happens within <strong>~30 seconds</strong> of an IP change</li>
+                    </ol>
+
+                    <div class="table-wrapper" style="margin-top: 1.5rem;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Scenario</th>
+                                    <th>Result</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>One side's IP changes</td>
+                                    <td>✅ Auto-recovers via handshakes (~30s)</td>
+                                </tr>
+                                <tr>
+                                    <td>Both sides' IPs change</td>
+                                    <td>⚠ Needs a relay VPS as rendezvous point</td>
+                                </tr>
+                                <tr>
+                                    <td>Peer moves to different network</td>
+                                    <td>✅ Auto-recovers once the peer sends a handshake</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>💡 No configuration needed.</strong> Endpoint roaming is always active. There's
+                        nothing to enable — WolfNet handles it automatically.
+                    </div>
+                </section>
+
+                <!-- Real-World Scenarios -->
+                <section class="content-section">
+                    <h2>Real-World Scenarios</h2>
+                    <p>Here's how WolfNet works in three common situations. Pick the one that matches
+                        your setup — or combine them.</p>
+                </section>
+
+                <!-- Scenario 1: Office + Home -->
+                <section class="content-section">
+                    <h2>📋 Scenario 1: Office + Home Network</h2>
+                    <p>You have servers at work and want to access them securely from home.
+                        Your office has a <strong>static IP</strong> from the ISP.
+                        Your home broadband has a <strong>changing IP</strong> (like most home connections).</p>
+
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">text</span></div>
+                        <pre><code>
+          YOUR OFFICE                              YOUR HOME
+      ┌─────────────────┐                     ┌─────────────────┐
+      │  Office Server   │                     │  Home PC / Laptop│
+      │                  │    Encrypted        │                  │
+      │  Static IP:      │◄══════════════════►│  Dynamic IP:     │
+      │  82.45.100.20    │    WolfNet Tunnel   │  Changes daily   │
+      │                  │                     │                  │
+      │  WolfNet IP:     │                     │  WolfNet IP:     │
+      │  10.0.10.1       │                     │  10.0.10.2       │
+      └─────────────────┘                     └─────────────────┘
+
+      The office server has a fixed IP          Your home IP changes, but WolfNet
+      that never changes.                       finds it using your DynDNS hostname
+                                                (e.g. myhome.dyndns.org).
+
+      Result: You can access your office servers from home as if you were
+      sitting at your desk. Just use the WolfNet IP (10.0.10.1) from home.</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">How to Set This Up</h3>
+                    <ol>
+                        <li><strong>Install WolfNet</strong> on both the office server and your home machine</li>
+                        <li>On the <strong>office server</strong>, run <code>sudo wolfnet invite</code></li>
+                        <li>Copy the invite command to your <strong>home machine</strong> and run it</li>
+                        <li>Copy the reverse token back to the <strong>office server</strong> and run it</li>
+                        <li>Restart WolfNet on both: <code>sudo systemctl restart wolfnet</code></li>
+                    </ol>
+
+                    <h3 style="margin-top: 2rem;">Office Server Config</h3>
+                    <p>The office knows how to find your home machine via DynDNS:</p>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">toml</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code>[network]
+address = "10.0.10.1"
+
+[[peers]]
+public_key = "YOUR_HOME_PUBLIC_KEY"
+endpoint = "myhome.dyndns.org:9600"   # Your home's DynDNS hostname
+allowed_ip = "10.0.10.2"
+name = "home"</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 1.5rem;">Home Machine Config</h3>
+                    <p>Your home machine knows the office's fixed IP address:</p>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">toml</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code>[network]
+address = "10.0.10.2"
+
+[[peers]]
+public_key = "OFFICE_SERVER_PUBLIC_KEY"
+endpoint = "82.45.100.20:9600"   # Office's static IP address
+allowed_ip = "10.0.10.1"
+name = "office"</code></pre>
+                    </div>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>💡 DynDNS hostname support</strong> — WolfNet re-resolves hostnames every
+                        60 seconds, so when your home ISP gives you a new IP address, WolfNet picks it up
+                        automatically. Works with DynDNS, No-IP, DuckDNS, Cloudflare, or any DNS provider.
+                        Most home routers have DynDNS built in — just enable it in your router settings.
+                    </div>
+
+                    <div class="info-box" style="margin-top: 1rem;">
+                        <strong>💡 Multiple people at home?</strong> Install WolfNet on each person's machine
+                        and give them each a unique WolfNet IP (10.0.10.3, 10.0.10.4, etc.). They'll all be
+                        able to access the office servers securely.
+                    </div>
+                </section>
+
+                <!-- Scenario 2: Hetzner / Cloud Servers -->
+                <section class="content-section">
+                    <h2>🖥️ Scenario 2: Standalone Servers (Hetzner, OVH, etc.)</h2>
+                    <p>You have two or more servers rented from a hosting provider. Each server has its
+                        own <strong>static public IP</strong>, but they're on completely separate networks —
+                        <strong>no VLAN, no private network</strong> between them.
+                        WolfNet creates a private encrypted network between them.
+                    </p>
+
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">text</span></div>
+                        <pre><code>
+      Hetzner (Germany)             OVH (France)              DigitalOcean (US)
+      ┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
+      │  Server 1        │      │  Server 2        │      │  Server 3        │
+      │                  │      │                  │      │                  │
+      │  Public IP:      │      │  Public IP:      │      │  Public IP:      │
+      │  116.203.45.10   │      │  51.178.200.30   │      │  167.99.120.50   │
+      │                  │      │                  │      │                  │
+      │  WolfNet IP:     │      │  WolfNet IP:     │      │  WolfNet IP:     │
+      │  10.0.10.1       │      │  10.0.10.2       │      │  10.0.10.3       │
+      └────────┬─────────┘      └────────┬─────────┘      └────────┬─────────┘
+               │                         │                         │
+               └─────── Encrypted ───────┼─────── Encrypted ──────┘
+                        WolfNet          │         WolfNet
+                        Tunnel           │         Tunnel
+                                         │
+                                  All three servers
+                                  see each other as
+                                  10.0.10.1, .2, .3
+                                  on a private network.
+
+      No VLAN needed. No provider-specific private networking.
+      WolfNet creates the private network over the public internet.</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">Why Use WolfNet Instead of a VLAN?</h3>
+                    <ul>
+                        <li><strong>Works across providers</strong> — Link a Hetzner server to an OVH server
+                            to a DigitalOcean droplet. VLANs only work within one provider.</li>
+                        <li><strong>No extra cost</strong> — Many providers charge for private networking.
+                            WolfNet is free.</li>
+                        <li><strong>Encrypted</strong> — VLANs are often unencrypted. WolfNet traffic is always
+                            encrypted with ChaCha20-Poly1305.</li>
+                        <li><strong>Works anywhere</strong> — Any server with a public IP and UDP access can
+                            join your WolfNet.</li>
+                    </ul>
+
+                    <h3 style="margin-top: 2rem;">How to Set This Up</h3>
+                    <ol>
+                        <li><strong>Install WolfNet</strong> on all three servers</li>
+                        <li>On <strong>Server 1</strong>, run <code>sudo wolfnet invite</code></li>
+                        <li>Copy the invite command to <strong>Server 2</strong>, run it, copy the reverse
+                            token back to Server 1</li>
+                        <li>On <strong>Server 1</strong>, run <code>sudo wolfnet invite</code> again for
+                            Server 3</li>
+                        <li>Copy the invite to <strong>Server 3</strong>, run it, copy the reverse token
+                            back to Server 1</li>
+                        <li>Restart WolfNet on all servers: <code>sudo systemctl restart wolfnet</code></li>
+                    </ol>
+
+                    <p style="margin-top: 1rem;">That's it. Server 2 and Server 3 will discover each other
+                        automatically via <strong>Peer Exchange (PEX)</strong> within 30 seconds — you don't
+                        need to manually link every pair.</p>
+
+                    <h3 style="margin-top: 2rem;">Example Config (Server 1 — Hetzner)</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">toml</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code>[network]
+address = "10.0.10.1"
+listen_port = 9600
+
+[[peers]]
+public_key = "SERVER_2_PUBLIC_KEY"
+endpoint = "51.178.200.30:9600"     # OVH server's static IP
+allowed_ip = "10.0.10.2"
+name = "ovh-france"
+
+[[peers]]
+public_key = "SERVER_3_PUBLIC_KEY"
+endpoint = "167.99.120.50:9600"     # DigitalOcean server's static IP
+allowed_ip = "10.0.10.3"
+name = "do-usa"</code></pre>
+                    </div>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>💡 Once connected, use your WolfNet IPs everywhere.</strong> Configure your
+                        applications to talk to <code>10.0.10.1</code>, <code>10.0.10.2</code>,
+                        <code>10.0.10.3</code> — just like they're on the same local network. This works
+                        perfectly with WolfScale database replication and WolfDisk file sharing.
+                    </div>
+                </section>
+
+                <!-- Scenario 3: Simple Local Network -->
+                <section class="content-section">
+                    <h2>🏠 Scenario 3: Simple Local Network (Auto-Discovery)</h2>
+                    <p>You have multiple machines on the <strong>same local network</strong>
+                        (same router, same office, same home) and want a private encrypted network
+                        between them. No internet access needed — everything stays local.</p>
+
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">text</span></div>
+                        <pre><code>
+                      Your Local Network (e.g. 192.168.1.x)
+      ┌──────────────────────────────────────────────────────┐
+      │                                                      │
+      │   PC 1               PC 2              PC 3          │
+      │   ┌──────────┐       ┌──────────┐      ┌──────────┐  │
+      │   │ WolfNet  │       │ WolfNet  │      │ WolfNet  │  │
+      │   │ 10.0.10.1│◄─────►│ 10.0.10.2│◄────►│ 10.0.10.3│  │
+      │   └──────────┘       └──────────┘      └──────────┘  │
+      │                                                      │
+      │         All machines auto-discover each other.        │
+      │         No configuration needed beyond install.       │
+      │                                                      │
+      └──────────────────────────────────────────────────────┘
+
+      Just install WolfNet on each machine. They find each
+      other automatically via UDP broadcast. Zero config.</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">How to Set This Up</h3>
+                    <p>This is the simplest scenario — just install WolfNet on each machine:</p>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">bash</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code># Run this on every machine:
+curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/wolfnet/setup.sh | sudo bash</code></pre>
+                    </div>
+
+                    <p style="margin-top: 1rem;">When prompted, give each machine a different WolfNet IP:</p>
+                    <ul>
+                        <li>PC 1: <code>10.0.10.1</code></li>
+                        <li>PC 2: <code>10.0.10.2</code></li>
+                        <li>PC 3: <code>10.0.10.3</code></li>
+                    </ul>
+
+                    <p style="margin-top: 1rem;">That's it. No invite tokens needed. No config files to edit.
+                        WolfNet's <strong>auto-discovery</strong> uses UDP broadcast to find peers on the same
+                        network within seconds.</p>
+
+                    <h3 style="margin-top: 2rem;">Verify It's Working</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">bash</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code># Check who's on the network:
+wolfnetctl peers
+
+# Ping another machine:
+ping 10.0.10.2</code></pre>
+                    </div>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>💡 Why use WolfNet on a local network?</strong> Even on LAN, WolfNet gives you
+                        an <strong>encrypted</strong> private network that's separate from your regular network
+                        traffic. It also makes your applications portable — if you later move a server to the
+                        cloud, just change the config from auto-discovery to a static IP and your apps keep
+                        using the same WolfNet IPs.
+                    </div>
+                </section>
+
+                <!-- Summary: Which Method to Use -->
+                <section class="content-section">
+                    <h2>Which Method Should I Use?</h2>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Your Situation</th>
+                                    <th>Method</th>
+                                    <th>Endpoint Config</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>All machines on the same LAN</td>
+                                    <td><strong>Auto-Discovery</strong></td>
+                                    <td>Nothing needed — automatic</td>
+                                </tr>
+                                <tr>
+                                    <td>Servers with fixed public IPs (VPS, cloud)</td>
+                                    <td><strong>Static IP</strong></td>
+                                    <td><code>endpoint = "203.0.113.5:9600"</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Home broadband (IP changes)</td>
+                                    <td><strong>DynDNS hostname</strong></td>
+                                    <td><code>endpoint = "myhome.dyndns.org:9600"</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Mix of office, home, and cloud</td>
+                                    <td><strong>All of the above</strong></td>
+                                    <td>Use the right method for each peer</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p style="margin-top: 1rem;">You can freely mix all three methods in the same
+                        network. A WolfNet mesh can include auto-discovered LAN machines, cloud
+                        servers with static IPs, and home connections via DynDNS — all connected
+                        together.</p>
+                </section>
+
+                <!-- Proxmox Section -->
+                <section class="content-section">
+                    <h2>⚠️ Proxmox / LXC Container Users</h2>
+
+                    <p>If you're running WolfNet inside a <strong>Proxmox LXC container</strong>, the TUN device
+                        (<code>/dev/net/tun</code>) is blocked by default for security. This is the same issue that
+                        affects Tailscale, WireGuard, and OpenVPN in containers.</p>
+
+                    <div class="info-box"
+                        style="background: rgba(234, 179, 8, 0.1); border-color: rgba(234, 179, 8, 0.3);">
+                        <strong>📌 These steps must be done on the Proxmox HOST, not inside the container.</strong>
+                    </div>
+
+                    <h3 style="margin-top: 1.5rem;">Step 1: Edit the container config</h3>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code># On the Proxmox host, edit /etc/pve/lxc/&lt;CTID&gt;.conf
+# Replace &lt;CTID&gt; with your container ID (e.g. 100)
+nano /etc/pve/lxc/100.conf</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 1.5rem;">Step 2: Add TUN device permissions</h3>
+                    <p>Add these lines to the container config file:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">conf</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code>lxc.cgroup2.devices.allow: c 10:200 rwm
+lxc.mount.entry: /dev/net dev/net none bind,create=dir</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 1.5rem;">Step 3: Restart the container</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">bash</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code>pct restart 100</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 1.5rem;">Step 4: Verify inside the container</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">bash</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code># If /dev/net/tun still doesn't exist, create it manually:
+mkdir -p /dev/net
+mknod /dev/net/tun c 10 200
+chmod 666 /dev/net/tun
+
+# Verify
+ls -la /dev/net/tun</code></pre>
+                    </div>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>💡 Note:</strong> For <strong>Proxmox VMs</strong> (not LXC containers), TUN works
+                        out of the box — no extra configuration needed.
+                    </div>
+                </section>
+
+                <!-- Configuration -->
+                <section class="content-section">
+                    <h2>Configuration</h2>
+                    <p>Edit <code>/etc/wolfnet/config.toml</code>:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">toml</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code>[network]
+interface = "wolfnet0"       # Virtual interface name
+address = "10.0.10.1"        # This node's IP on the WolfNet
+subnet = 24                  # Subnet mask
+listen_port = 9600           # UDP port for tunnel traffic
+gateway = false              # Set true to act as internet gateway
+discovery = true             # Auto-discover peers on LAN
+mtu = 1400                   # MTU for tunnel interface
+
+[security]
+private_key_file = "/etc/wolfnet/private.key"
+
+# Add peers for WAN connections (IP address or hostname):
+[[peers]]
+public_key = "BASE64_PUBLIC_KEY_HERE"
+endpoint = "203.0.113.5:9600"           # Static IP
+allowed_ip = "10.0.10.2"                # Peer's WolfNet IP
+name = "server2"                         # Friendly name
+
+[[peers]]
+public_key = "ANOTHER_PUBLIC_KEY_HERE"
+endpoint = "myhome.dyndns.org:9600"     # DynDNS hostname (re-resolved every 60s)
+allowed_ip = "10.0.10.3"
+name = "home-server"</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">IP Range</h3>
+                    <p>The default range is <code>10.0.10.0/24</code>, giving you addresses
+                        <code>10.0.10.1</code> through <code>10.0.10.254</code>. You can use any private IP range
+                        by changing the <code>address</code> and <code>subnet</code> settings.
+                    </p>
+                </section>
+
+                <!-- Gateway Mode -->
+                <section class="content-section">
+                    <h2>Gateway Mode</h2>
+                    <p>A gateway node lets other WolfNet machines access the internet through it. This is useful
+                        when you want all traffic from your private network to exit through a single point.</p>
+
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">toml</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code># On the gateway node:
+[network]
+gateway = true</code></pre>
+                    </div>
+
+                    <p style="margin-top: 1rem;">When gateway mode is enabled, WolfNet automatically:</p>
+                    <ul>
+                        <li>Enables IP forwarding (<code>net.ipv4.ip_forward=1</code>)</li>
+                        <li>Detects your external network interface</li>
+                        <li>Sets up iptables NAT masquerading</li>
+                        <li>Blocks external inbound traffic to the WolfNet subnet</li>
+                    </ul>
+                </section>
+
+
+                <!-- Security -->
+                <section class="content-section">
+                    <h2>Security</h2>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Layer</th>
+                                    <th>Technology</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Key Exchange</td>
+                                    <td><strong>X25519</strong> (Curve25519 Diffie-Hellman)</td>
+                                </tr>
+                                <tr>
+                                    <td>Encryption</td>
+                                    <td><strong>ChaCha20-Poly1305</strong> AEAD (256-bit)</td>
+                                </tr>
+                                <tr>
+                                    <td>Replay Protection</td>
+                                    <td>Counter-based nonces with monotonic validation</td>
+                                </tr>
+                                <tr>
+                                    <td>Network Isolation</td>
+                                    <td>iptables firewall blocks all external inbound traffic</td>
+                                </tr>
+                                <tr>
+                                    <td>Key Storage</td>
+                                    <td>Private keys stored with 0600 permissions</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <div class="page-nav">
+                    <a href="wolfdisk.html" class="prev">← WolfDisk</a>
+                    <span></span>
+                </div>
+            </div>
+
+            <footer class="wiki-footer"
+                style="margin-top: 3rem; padding: 2rem 0; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; opacity: 0.7; font-size: 0.875rem;">
+                <p>© 2026 <a href="https://wolf.uk.com" target="_blank"
+                        style="color: inherit; text-decoration: underline;">Wolf Software Systems Ltd</a> • FSL-1.1
+                </p>
+                <p style="font-size: 0.75rem; margin-top: 0.5rem;">
+                    USE AT YOUR OWN RISK. This software is provided "as is" without warranty of any kind.
+                </p>
+            </footer>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

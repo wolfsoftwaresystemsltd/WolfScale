@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-KK9NEE1S54');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Troubleshooting - WolfScale</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=9">
+</head>
+
+<body>
+    <div class="wiki-layout">
+        <aside class="sidebar" id="sidebar">
+            <a href="index.html" class="sidebar-logo"><img
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
+                    alt="Wolf"></a>
+                        <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span></div>
+                    <a href="wolfstack.html">Overview &amp; Quick Start</a>
+                    <a href="wolfstack-containers.html">Container Management</a>
+                    <a href="wolfstack-storage.html">Storage Manager</a>
+                    <a href="wolfstack-networking.html">Networking</a>
+                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
+                    <a href="wolfstack-ai.html">AI Agent</a>
+                    <a href="wolfstack-api.html">API Reference</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load Balancer</span></div>
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="features.html">Features</a>
+                    <a href="architecture.html">Architecture</a>
+                    <a href="how-it-works.html">How It Works</a>
+                    <a href="binlog.html">Binlog Mode</a>
+                    <a href="load-balancer.html">Load Balancer</a>
+                    <a href="configuration.html">Configuration</a>
+                    <a href="performance.html">Performance</a>
+                    <a href="cli.html">CLI Reference</a>
+                    <a href="api.html">API Reference</a>
+                    <a href="troubleshooting.html">Troubleshooting</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication & Sharing</span></div>
+                    <a href="wolfdisk.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with Firewall</span></div>
+                    <a href="wolfproxy.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span></div>
+                    <a href="wolfserve.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Company</div>
+                    <a href="about.html">About</a>
+                    <a href="contact.html">Contact</a>
+                    <a href="glossary.html">Glossary</a>
+                    <a href="licensing.html">Licensing</a>
+                </div>
+            </nav>
+            <div class="theme-toggle-wrapper">
+                <span class="theme-toggle-label">Theme</span>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-toggle-slider"></span>
+                </button>
+            </div>
+            <div class="sidebar-links">
+                <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
+                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+                <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+            </div>
+        </aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <main class="wiki-main">
+            <div class="mobile-header">
+                <a href="index.html" class="nav-logo"><img
+                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
+                        style="height: 28px;"></a>
+                <button class="hamburger" id="hamburger" aria-label="Toggle menu">☰</button>
+            </div>
+
+            <div class="page-header">
+                <h1>Troubleshooting</h1>
+                <p>Diagnose and resolve common WolfScale issues</p>
+            </div>
+
+            <div class="wiki-content">
+                <!-- Log Locations -->
+                <section class="content-section">
+                    <h2>Log Locations</h2>
+                    <p>WolfScale writes logs to standard output by default. When running as a systemd service, logs are
+                        captured by journald.</p>
+
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Log Type</th>
+                                    <th>Location</th>
+                                    <th>Command to View</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Service Logs</td>
+                                    <td>journald (systemd)</td>
+                                    <td><code>journalctl -u wolfscale -f</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Follow Live</td>
+                                    <td>journald</td>
+                                    <td><code>journalctl -u wolfscale -f --no-pager</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Last 100 Lines</td>
+                                    <td>journald</td>
+                                    <td><code>journalctl -u wolfscale -n 100</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Today's Logs</td>
+                                    <td>journald</td>
+                                    <td><code>journalctl -u wolfscale --since today</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Data Directory</td>
+                                    <td>/var/lib/wolfscale/</td>
+                                    <td><code>ls -la /var/lib/wolfscale/</code></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Log Levels -->
+                <section class="content-section">
+                    <h2>Log Levels</h2>
+                    <p>Control log verbosity with the <code>RUST_LOG</code> environment variable:</p>
+
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Level</th>
+                                    <th>Shows</th>
+                                    <th>Use Case</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>error</code></td>
+                                    <td>Errors only</td>
+                                    <td>Production (minimal output)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>warn</code></td>
+                                    <td>Warnings + errors</td>
+                                    <td>Production (recommended)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>info</code></td>
+                                    <td>General info + above</td>
+                                    <td>Default level</td>
+                                </tr>
+                                <tr>
+                                    <td><code>debug</code></td>
+                                    <td>Detailed debugging</td>
+                                    <td>Troubleshooting issues</td>
+                                </tr>
+                                <tr>
+                                    <td><code>trace</code></td>
+                                    <td>Everything</td>
+                                    <td>Deep debugging (very verbose)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3>Setting Log Level</h3>
+                    <div class="code-header"><span>Command line</span></div>
+                    <pre><code>RUST_LOG=debug wolfscale</code></pre>
+
+                    <div class="code-header"><span>In systemd service</span></div>
+                    <pre><code># Edit /etc/systemd/system/wolfscale.service
+Environment="RUST_LOG=debug"
+
+# Then reload
+systemctl daemon-reload
+systemctl restart wolfscale</code></pre>
+                </section>
+
+                <!-- Diagnostic Commands -->
+                <section class="content-section">
+                    <h2>Diagnostic Commands</h2>
+
+                    <h3>wolfctl stats</h3>
+                    <p>Live dashboard showing cluster health, replication status, and throughput:</p>
+                    <pre><code>wolfctl stats</code></pre>
+                    <p>Shows: node role, LSN, replication lag, processlist, error log, and write throughput graph.</p>
+
+                    <h3>wolfctl list servers</h3>
+                    <p>List all nodes in the cluster with their status:</p>
+                    <pre><code>wolfctl list servers</code></pre>
+                    <p>Shows: node ID, address, role (leader/follower), status (active/syncing/lagging), and LSN.</p>
+
+                    <h3>Check WolfScale Service</h3>
+                    <pre><code># Service status
+systemctl status wolfscale
+
+# Is it running?
+pgrep -a wolfscale
+
+# Check listening ports
+ss -tlnp | grep wolfscale</code></pre>
+
+                    <h3>Check Database Connectivity</h3>
+                    <pre><code># Connect via WolfScale proxy
+mysql -h 127.0.0.1 -P 3307 -u root -p
+
+# Direct to local MariaDB
+mysql -h 127.0.0.1 -P 3306 -u root -p</code></pre>
+                </section>
+
+                <!-- Common Issues -->
+                <section class="content-section">
+                    <h2>Common Issues</h2>
+
+                    <div class="highlight-box">
+                        <h3>Node Won't Join Cluster</h3>
+                        <ul>
+                            <li>Check firewall: ports 7654 (cluster), 3307 (proxy), 8080 (API) must be open</li>
+                            <li>Verify peers can reach each other: <code>telnet &lt;peer-ip&gt; 7654</code></li>
+                            <li>Check logs: <code>journalctl -u wolfscale -n 50</code></li>
+                            <li>Ensure databases are in sync before starting</li>
+                        </ul>
+                    </div>
+
+                    <div class="highlight-box">
+                        <h3>Replication Lag Increasing</h3>
+                        <ul>
+                            <li>Check network latency between nodes</li>
+                            <li>Monitor write throughput: <code>wolfctl stats</code></li>
+                            <li>Check if follower's MariaDB is slow (disk IO, locks)</li>
+                            <li>Increase <code>max_connections</code> if needed</li>
+                        </ul>
+                    </div>
+
+                    <div class="highlight-box">
+                        <h3>Connection Refused on Port 3307</h3>
+                        <ul>
+                            <li>Ensure WolfScale is running: <code>systemctl status wolfscale</code></li>
+                            <li>Check if proxy is listening: <code>ss -tlnp | grep 3307</code></li>
+                            <li>Verify the local MariaDB is accessible first</li>
+                        </ul>
+                    </div>
+
+                    <div class="highlight-box">
+                        <h3>Split-Brain / Multiple Leaders</h3>
+                        <ul>
+                            <li>WolfScale uses deterministic leader election (lowest node ID wins)</li>
+                            <li>If you see multiple leaders, check network partitioning</li>
+                            <li>Restart nodes one at a time to resolve</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- Useful Ports -->
+                <section class="content-section">
+                    <h2>Port Reference</h2>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Port</th>
+                                    <th>Service</th>
+                                    <th>Purpose</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>3306</td>
+                                    <td>MariaDB/MySQL</td>
+                                    <td>Local database (direct)</td>
+                                </tr>
+                                <tr>
+                                    <td>3307</td>
+                                    <td>WolfScale Proxy</td>
+                                    <td>MySQL protocol with read/write splitting</td>
+                                </tr>
+                                <tr>
+                                    <td>7654</td>
+                                    <td>WolfScale Cluster</td>
+                                    <td>Inter-node replication and gossip</td>
+                                </tr>
+                                <tr>
+                                    <td>8080</td>
+                                    <td>HTTP API / Stats</td>
+                                    <td>wolfctl, monitoring, REST API</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Getting Help -->
+                <section class="content-section">
+                    <h2>Getting Help</h2>
+                    <p>If you're still stuck:</p>
+                    <ul>
+                        <li><strong>Discord:</strong> <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Join our
+                                Discord</a> for real-time help</li>
+                        <li><strong>GitHub Issues:</strong> <a
+                                href="https://github.com/wolfsoftwaresystemsltd/WolfScale/issues" target="_blank">Report
+                                bugs or request features</a></li>
+                        <li><strong>Include:</strong> WolfScale version, OS, log output, and steps to reproduce</li>
+                    </ul>
+                </section>
+            </div>
+        </main>
+    </div>
+    <script src="theme.js"></script>
+</body>
+
+</html>

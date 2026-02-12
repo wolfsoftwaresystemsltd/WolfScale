@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-KK9NEE1S54');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="WolfStack Storage Manager - Mount and manage S3, NFS, SFTP, WolfDisk, and local storage across your cluster. Auto-sync mounts to all nodes.">
+    <meta name="keywords"
+        content="WolfStack storage, S3 mount, NFS mount, SFTP storage, WolfDisk, rclone, cluster storage, storage management">
+    <meta name="author" content="Wolf Software Systems Ltd">
+    <link rel="canonical" href="https://wolfscale.org/wolfstack-storage.html">
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://wolfscale.org/wolfstack-storage.html">
+    <meta property="og:title" content="WolfStack Storage Manager Guide">
+    <meta property="og:description"
+        content="Mount and manage S3, NFS, SFTP, WolfDisk, and local storage from the WolfStack dashboard. Auto-sync across your cluster.">
+    <meta property="og:image" content="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg">
+
+    <title>Storage Manager - WolfStack | WolfScale</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=9">
+</head>
+
+<body>
+    <div class="wiki-layout">
+        <aside class="sidebar" id="sidebar">
+            <a href="index.html" class="sidebar-logo"><img
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"></a>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span>
+                    </div>
+                    <a href="wolfstack.html">Overview & Quick Start</a>
+                    <a href="wolfstack-containers.html">Container Management</a>
+                    <a href="wolfstack-storage.html" class="active">Storage Manager</a>
+                    <a href="wolfstack-networking.html">Networking</a>
+                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
+                    <a href="proxmox.html">Proxmox Integration</a>
+                    <a href="wolfstack-ai.html">AI Agent</a>
+                    <a href="wolfstack-api.html">API Reference</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load
+                            Balancer</span></div>
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="features.html">Features</a>
+                    <a href="architecture.html">Architecture</a>
+                    <a href="how-it-works.html">How It Works</a>
+                    <a href="binlog.html">Binlog Mode</a>
+                    <a href="load-balancer.html">Load Balancer</a>
+                    <a href="configuration.html">Configuration</a>
+                    <a href="performance.html">Performance</a>
+                    <a href="cli.html">CLI Reference</a>
+                    <a href="api.html">API Reference</a>
+                    <a href="troubleshooting.html">Troubleshooting</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication & Sharing</span>
+                    </div>
+                    <a href="wolfdisk.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
+                    <a href="wolfnet.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
+                            Firewall</span></div>
+                    <a href="wolfproxy.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
+                    </div>
+                    <a href="wolfserve.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Company</div>
+                    <a href="https://wolf.uk.com" target="_blank">Wolf Software</a>
+                    <a href="about.html">About</a>
+                    <a href="contact.html">Contact</a>
+                    <a href="glossary.html">Glossary</a>
+                    <a href="licensing.html">Licensing</a>
+                </div>
+            </nav>
+            <div class="theme-toggle-wrapper">
+                <span class="theme-toggle-label">Theme</span>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-toggle-slider"></span>
+                </button>
+            </div>
+            <div class="sidebar-links">
+                <a href="https://github.com/wolfsoftwaresystemsltd/WolfStack" target="_blank">GitHub</a>
+                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+                <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+            </div>
+        </aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <main class="wiki-main">
+            <div class="mobile-header">
+                <a href="index.html" class="nav-logo"><img
+                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
+                        class="logo-img"></a>
+                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+            </div>
+
+            <div class="wiki-content">
+                <div class="content-header">
+                    <h1>💾 Storage Manager</h1>
+                    <p class="content-subtitle">Mount and manage S3, NFS, SFTP, WolfDisk, and local storage across your
+                        cluster</p>
+                </div>
+
+                <!-- Overview -->
+                <section class="content-section">
+                    <h2>Overview</h2>
+                    <p>
+                        WolfStack's <strong>Storage Manager</strong> lets you attach external and local storage to your
+                        servers with a few clicks. Mounts are configured through the web dashboard and can be
+                        <strong>synced across your entire cluster</strong> — so add a mount on one node and every node
+                        gets it automatically.
+                    </p>
+                    <p>
+                        Under the hood, WolfStack uses <strong>rclone</strong> for cloud and remote mounts, and standard
+                        Linux <code>mount</code> for local filesystems. Every mount is tracked in a JSON config and
+                        managed by systemd for automatic remounting on boot.
+                    </p>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>💡 Tip:</strong> You can import your existing <code>rclone.conf</code> file to
+                        instantly create mounts for all your configured remotes.
+                    </div>
+                </section>
+
+                <!-- Supported Storage Types -->
+                <section class="content-section">
+                    <h2>📁 Supported Storage Types</h2>
+
+                    <div
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
+                        <div class="feature-card">
+                            <h3>☁️ Amazon S3</h3>
+                            <p>Mount S3 buckets (or any S3-compatible service like MinIO, Wasabi, Backblaze B2) as local
+                                directories. Configure with access key, secret key, region, and endpoint.</p>
+                        </div>
+                        <div class="feature-card">
+                            <h3>🔗 NFS</h3>
+                            <p>Mount NFS shares from any server on your network. Specify the server address and export
+                                path. Standard NFSv3/v4 with configurable options.</p>
+                        </div>
+                        <div class="feature-card">
+                            <h3>🔒 SFTP</h3>
+                            <p>Mount remote directories over SSH/SFTP. Uses key-based or password authentication.
+                                Great for accessing files on remote servers securely.</p>
+                        </div>
+                        <div class="feature-card">
+                            <h3>🐺 WolfDisk</h3>
+                            <p>Mount WolfDisk shares — Wolf Software's own distributed filesystem. Files are replicated
+                                across all connected WolfDisk nodes in real time.</p>
+                        </div>
+                        <div class="feature-card">
+                            <h3>📂 Local Directory</h3>
+                            <p>Bind-mount a local directory to another path. Useful for organising storage or making
+                                directories available to containers at specific mount points.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Creating Mounts -->
+                <section class="content-section">
+                    <h2>➕ Creating Storage Mounts</h2>
+                    <p>
+                        Click <strong>"+ Add Mount"</strong> in the Storage Manager to create a new mount. The form
+                        adapts based on the storage type you select:
+                    </p>
+
+                    <h3>S3 Mount</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Field</th>
+                                    <th>Description</th>
+                                    <th>Example</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Name</strong></td>
+                                    <td>Friendly name for this mount</td>
+                                    <td>backups-s3</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Bucket</strong></td>
+                                    <td>S3 bucket name</td>
+                                    <td>my-company-backups</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Region</strong></td>
+                                    <td>AWS region or region of your S3-compatible service</td>
+                                    <td>eu-west-2</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Access Key</strong></td>
+                                    <td>Your S3 access key ID</td>
+                                    <td>AKIA...</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Secret Key</strong></td>
+                                    <td>Your S3 secret access key</td>
+                                    <td>(hidden)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Endpoint</strong></td>
+                                    <td>Custom endpoint for S3-compatible services (leave blank for AWS)</td>
+                                    <td>https://s3.wasabisys.com</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Mount Point</strong></td>
+                                    <td>Where to mount on the filesystem</td>
+                                    <td>/mnt/backups-s3</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">NFS Mount</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Example</span></div>
+                        <pre><code>Name:         nas-share
+Source:       192.168.1.50:/export/data
+Mount Point:  /mnt/nas
+Options:      vers=4,soft,timeo=30</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">SFTP Mount</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Example</span></div>
+                        <pre><code>Name:         remote-server
+Host:         backup.example.com
+User:         admin
+Key File:     /root/.ssh/id_rsa
+Remote Path:  /home/admin/data
+Mount Point:  /mnt/remote</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">WolfDisk Mount</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Example</span></div>
+                        <pre><code>Name:         shared-files
+Source:       10.10.10.1:8100
+Mount Point:  /mnt/wolfdisk</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">Local Directory (Bind Mount)</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">Example</span></div>
+                        <pre><code>Name:         docker-data
+Source:       /var/lib/docker/volumes
+Mount Point:  /mnt/docker-volumes</code></pre>
+                    </div>
+                </section>
+
+                <!-- Mount Actions -->
+                <section class="content-section">
+                    <h2>⚙️ Managing Mounts</h2>
+                    <p>
+                        Each mount in the Storage Manager table has a set of actions:
+                    </p>
+
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Action</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>▶ Mount</strong></td>
+                                    <td>Activate the mount. For S3/SFTP this starts an rclone process; for NFS/local it
+                                        runs <code>mount</code>.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>⏹ Unmount</strong></td>
+                                    <td>Deactivate the mount. Stops the rclone process or runs
+                                        <code>umount</code>.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>✏️ Edit</strong></td>
+                                    <td>Modify the mount's configuration (name, source, credentials, mount point,
+                                        options).</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>📋 Duplicate</strong></td>
+                                    <td>Create a copy of this mount with a new name. Useful for creating similar mounts
+                                        with slight variations.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>🔄 Sync to Cluster</strong></td>
+                                    <td>Push this mount configuration to all other nodes in your WolfStack cluster.
+                                        Remote nodes will create and mount it automatically.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>🗑 Delete</strong></td>
+                                    <td>Remove the mount. Unmounts first if currently active.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Cluster Sync -->
+                <section class="content-section">
+                    <h2>🔄 Cluster Storage Sync</h2>
+                    <p>
+                        The <strong>"Sync to Cluster"</strong> feature is one of the most powerful parts of the Storage
+                        Manager. When you sync a mount:
+                    </p>
+                    <ol>
+                        <li>WolfStack sends the mount configuration to every other node in the cluster</li>
+                        <li>Each remote node creates the mount locally</li>
+                        <li>Each remote node activates the mount immediately</li>
+                        <li>You get a summary showing which nodes succeeded or failed</li>
+                    </ol>
+
+                    <p style="margin-top: 1rem;">
+                        This means you can configure an S3 bucket on one server and have it appear on all your servers
+                        within seconds — no need to SSH into each machine.
+                    </p>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>🔐 Security:</strong> Cluster sync uses the built-in WolfStack cluster secret for
+                        authentication. Only nodes in your cluster can receive mount configurations. Credentials
+                        (like S3 keys) are transmitted securely between nodes.
+                    </div>
+                </section>
+
+                <!-- Importing rclone -->
+                <section class="content-section">
+                    <h2>📥 Importing rclone.conf</h2>
+                    <p>
+                        If you already use <a href="https://rclone.org" target="_blank">rclone</a>, you can import your
+                        existing configuration. Click <strong>"📥 Import rclone.conf"</strong> and paste the contents of
+                        your <code>rclone.conf</code> file.
+                    </p>
+                    <p>
+                        WolfStack will parse the config, create a mount for each remote, and auto-generate mount points
+                        at <code>/mnt/{remote-name}</code>.
+                    </p>
+
+                    <div class="code-block" style="margin-top: 1rem;">
+                        <div class="code-header"><span class="code-lang">rclone.conf</span></div>
+                        <pre><code>[backups]
+type = s3
+provider = AWS
+access_key_id = AKIA...
+secret_access_key = ...
+region = eu-west-2
+
+[nas]
+type = sftp
+host = 192.168.1.50
+user = admin
+key_file = /root/.ssh/id_rsa</code></pre>
+                    </div>
+
+                    <p style="margin-top: 1rem;">
+                        This would create two mounts: <strong>backups</strong> (S3) at <code>/mnt/backups</code> and
+                        <strong>nas</strong> (SFTP) at <code>/mnt/nas</code>.
+                    </p>
+                </section>
+
+                <!-- Status Indicators -->
+                <section class="content-section">
+                    <h2>📊 Status Indicators</h2>
+                    <p>
+                        The mount table shows real-time status for each mount:
+                    </p>
+                    <ul>
+                        <li><strong style="color: #22c55e;">● Mounted</strong> — The mount is active and accessible at
+                            the mount point</li>
+                        <li><strong style="color: #f59e0b;">● Unmounted</strong> — The mount is configured but not
+                            currently active</li>
+                        <li><strong style="color: #ef4444;">● Error</strong> — The mount failed (check credentials,
+                            network, or permissions)</li>
+                    </ul>
+                    <p style="margin-top: 1rem;">
+                        WolfStack checks mount status by verifying the filesystem is mounted at the configured path
+                        using <code>mountpoint -q</code>.
+                    </p>
+                </section>
+
+                <!-- Container Attachment -->
+                <section class="content-section">
+                    <h2>🐳 Attaching Storage to Containers</h2>
+                    <p>
+                        Storage mounts are integrated with WolfStack's container management. When creating or editing
+                        a Docker or LXC container, you can attach any active storage mount as a volume:
+                    </p>
+                    <ul>
+                        <li>Storage mounts appear in the volume picker dropdown</li>
+                        <li>The mount point path is used as the host-side path</li>
+                        <li>Containers get immediate access to the mounted storage</li>
+                    </ul>
+
+                    <div class="code-block" style="margin-top: 1rem;">
+                        <div class="code-header"><span class="code-lang">Example: Docker container with S3
+                                storage</span></div>
+                        <pre><code># A container with an S3 bucket mounted at /data
+Container:    my-app
+Image:        nginx:latest
+Volume:       /mnt/backups-s3:/data:ro
+
+# The container can now read files from S3
+# as if they were local files in /data</code></pre>
+                    </div>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>💡 Performance Tip:</strong> For high-throughput workloads, use NFS or local mounts.
+                        S3 and SFTP mounts work well for backups, archives, and read-heavy workloads.
+                        For real-time replication, use <a href="wolfdisk.html">WolfDisk</a>.
+                    </div>
+                </section>
+
+                <!-- Configuration File -->
+                <section class="content-section">
+                    <h2>📄 Configuration</h2>
+                    <p>
+                        Storage mounts are stored in <code>/etc/wolfstack/storage.json</code>:
+                    </p>
+                    <div class="code-block" style="margin-top: 1rem;">
+                        <div class="code-header"><span class="code-lang">storage.json</span></div>
+                        <pre><code>[
+  {
+    "id": "a1b2c3d4",
+    "name": "company-backups",
+    "mount_type": "s3",
+    "source": "my-bucket",
+    "mount_point": "/mnt/backups",
+    "options": "region=eu-west-2",
+    "s3_access_key": "AKIA...",
+    "s3_secret_key": "...",
+    "s3_region": "eu-west-2",
+    "s3_endpoint": ""
+  }
+]</code></pre>
+                    </div>
+                    <p style="margin-top: 1rem;">
+                        You can edit this file directly, but it's recommended to use the web dashboard or API.
+                        Changes made via the API are applied immediately.
+                    </p>
+                </section>
+
+                <!-- Troubleshooting -->
+                <section class="content-section">
+                    <h2>🔧 Troubleshooting</h2>
+
+                    <h3>Mount shows "Unmounted" but should be active</h3>
+                    <p>
+                        The rclone process may have crashed. Click <strong>▶ Mount</strong> to re-mount it.
+                        Check <code>journalctl -u wolfstack</code> for errors related to rclone.
+                    </p>
+
+                    <h3 style="margin-top: 1.5rem;">S3 mount fails with "AccessDenied"</h3>
+                    <p>
+                        Verify your access key and secret key are correct. Ensure the IAM user/role has
+                        <code>s3:GetObject</code>, <code>s3:PutObject</code>, and <code>s3:ListBucket</code>
+                        permissions on the bucket.
+                    </p>
+
+                    <h3 style="margin-top: 1.5rem;">NFS mount hangs</h3>
+                    <p>
+                        Check that the NFS server is reachable and the export is configured:
+                    </p>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">bash</span></div>
+                        <pre><code># Check NFS exports on the server
+showmount -e 192.168.1.50
+
+# Test connectivity
+rpcinfo -p 192.168.1.50
+
+# Check firewall
+nft list ruleset | grep 2049</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 1.5rem;">Cluster sync fails for a node</h3>
+                    <p>
+                        The remote node must be online and running WolfStack. Check that the node is reachable
+                        and the cluster secret matches. View sync results in the response summary.
+                    </p>
+                </section>
+
+                <div class="page-nav">
+                    <a href="wolfstack-containers.html" class="prev">← Container Management</a>
+                    <a href="wolfstack-networking.html" class="next">Networking →</a>
+                </div>
+            </div>
+
+            <footer class="wiki-footer"
+                style="margin-top: 3rem; padding: 2rem 0; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; opacity: 0.7; font-size: 0.875rem;">
+                <p>© 2026 <a href="https://wolf.uk.com" target="_blank"
+                        style="color: inherit; text-decoration: underline;">Wolf
+                        Software Systems Ltd</a> • FSL-1.1
+                </p>
+                <p style="font-size: 0.75rem; margin-top: 0.5rem;">
+                    USE AT YOUR OWN RISK. This software is provided "as is" without warranty of any kind.
+                </p>
+            </footer>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

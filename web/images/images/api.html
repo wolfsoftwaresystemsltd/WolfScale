@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-KK9NEE1S54');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Reference - WolfScale</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=9">
+</head>
+
+<body>
+    <div class="wiki-layout">
+        <aside class="sidebar" id="sidebar">
+            <a href="index.html" class="sidebar-logo"><img
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
+                    alt="Wolf"></a>
+                        <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span></div>
+                    <a href="wolfstack.html">Overview &amp; Quick Start</a>
+                    <a href="wolfstack-containers.html">Container Management</a>
+                    <a href="wolfstack-storage.html">Storage Manager</a>
+                    <a href="wolfstack-networking.html">Networking</a>
+                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
+                    <a href="wolfstack-ai.html">AI Agent</a>
+                    <a href="wolfstack-api.html">API Reference</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load Balancer</span></div>
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="features.html">Features</a>
+                    <a href="architecture.html">Architecture</a>
+                    <a href="how-it-works.html">How It Works</a>
+                    <a href="binlog.html">Binlog Mode</a>
+                    <a href="load-balancer.html">Load Balancer</a>
+                    <a href="configuration.html">Configuration</a>
+                    <a href="performance.html">Performance</a>
+                    <a href="cli.html">CLI Reference</a>
+                    <a href="api.html">API Reference</a>
+                    <a href="troubleshooting.html">Troubleshooting</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication & Sharing</span></div>
+                    <a href="wolfdisk.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with Firewall</span></div>
+                    <a href="wolfproxy.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span></div>
+                    <a href="wolfserve.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Company</div>
+                    <a href="about.html">About</a>
+                    <a href="contact.html">Contact</a>
+                    <a href="glossary.html">Glossary</a>
+                    <a href="licensing.html">Licensing</a>
+                </div>
+            </nav>
+            <div class="theme-toggle-wrapper">
+                <span class="theme-toggle-label">Theme</span>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-toggle-slider"></span>
+                </button>
+            </div>
+            <div class="sidebar-links">
+                <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
+                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+            </div>
+        </aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+        <main class="wiki-main">
+            <div class="mobile-header">
+                <a href="index.html" class="nav-logo"><img
+                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
+                        class="logo-img"></a>
+                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+            </div>
+            <div class="page-header">
+                <h1>API Reference</h1>
+                <p>HTTP API and CLI commands</p>
+            </div>
+            <div class="wiki-content">
+                <section class="content-section">
+                    <h2>HTTP API</h2>
+                    <p>Default: <code>http://localhost:8080</code></p>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Endpoint</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>POST</td>
+                                    <td>/write/insert</td>
+                                    <td>Insert row</td>
+                                </tr>
+                                <tr>
+                                    <td>POST</td>
+                                    <td>/write/update</td>
+                                    <td>Update row</td>
+                                </tr>
+                                <tr>
+                                    <td>POST</td>
+                                    <td>/write/delete</td>
+                                    <td>Delete row</td>
+                                </tr>
+                                <tr>
+                                    <td>POST</td>
+                                    <td>/write/ddl</td>
+                                    <td>Execute DDL</td>
+                                </tr>
+                                <tr>
+                                    <td>GET</td>
+                                    <td>/health</td>
+                                    <td>Health check</td>
+                                </tr>
+                                <tr>
+                                    <td>GET</td>
+                                    <td>/status</td>
+                                    <td>Node status</td>
+                                </tr>
+                                <tr>
+                                    <td>GET</td>
+                                    <td>/cluster</td>
+                                    <td>Cluster info</td>
+                                </tr>
+                                <tr>
+                                    <td>GET</td>
+                                    <td>/stats</td>
+                                    <td>Throughput metrics</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                <section class="content-section">
+                    <h2>wolfctl CLI</h2>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Command</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>list servers</td>
+                                    <td>Show cluster nodes</td>
+                                </tr>
+                                <tr>
+                                    <td>status</td>
+                                    <td>Local node status</td>
+                                </tr>
+                                <tr>
+                                    <td>stats</td>
+                                    <td>Live throughput</td>
+                                </tr>
+                                <tr>
+                                    <td>promote</td>
+                                    <td>Request leader promotion</td>
+                                </tr>
+                                <tr>
+                                    <td>demote</td>
+                                    <td>Step down</td>
+                                </tr>
+                                <tr>
+                                    <td>binlog-setup</td>
+                                    <td>Auto-detect binlog</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                <section class="content-section">
+                    <h2>MySQL Proxy</h2>
+                    <p>Connect on port <code>3307</code>:</p>
+                    <div class="code-block">
+                        <pre><code>mysql -h wolfscale-host -P 3307 -u user -p</code></pre>
+                    </div>
+                </section>
+                <section class="content-section">
+                    <h2>Support</h2>
+                    <div class="support-links">
+                        <a href="https://discord.gg/q9qMjHjUQY" target="_blank"
+                            class="support-link"><strong>Discord</strong><span>Community</span></a>
+                        <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale/issues" target="_blank"
+                            class="support-link"><strong>GitHub Issues</strong><span>Bug reports</span></a>
+                        <a href="https://www.patreon.com/15362110/join" target="_blank"
+                            class="support-link"><strong>Patreon</strong><span>Support</span></a>
+                    </div>
+                </section>
+                <div class="page-nav"><a href="configuration.html">← Configuration</a><a href="index.html">Home →</a>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

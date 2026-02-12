@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-KK9NEE1S54');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="WolfServe - A high-performance Rust web server that serves PHP via FastCGI with native SSL/TLS and Apache configuration compatibility. Drop-in Apache replacement.">
+    <meta name="keywords"
+        content="web server, Apache replacement, PHP FastCGI, Rust web server, WolfServe, WolfScale, SSL, php-fpm">
+    <meta name="author" content="Wolf Software Systems Ltd">
+    <link rel="canonical" href="https://wolfscale.org/wolfserve.html">
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://wolfscale.org/wolfserve.html">
+    <meta property="og:title" content="WolfServe - High-Performance PHP Web Server">
+    <meta property="og:description"
+        content="Drop-in Apache replacement built in Rust with PHP FastCGI, SSL/TLS, and admin dashboard.">
+    <meta property="og:image" content="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg">
+
+    <title>WolfServe - High-Performance PHP Web Server | WolfScale</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=9">
+</head>
+
+<body>
+    <div class="wiki-layout">
+        <aside class="sidebar" id="sidebar">
+            <a href="index.html" class="sidebar-logo"><img
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
+                    alt="Wolf"></a>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span></div>
+                    <a href="wolfstack.html">Overview &amp; Quick Start</a>
+                    <a href="wolfstack-containers.html">Container Management</a>
+                    <a href="wolfstack-storage.html">Storage Manager</a>
+                    <a href="wolfstack-networking.html">Networking</a>
+                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
+                    <a href="wolfstack-ai.html">AI Agent</a>
+                    <a href="wolfstack-api.html">API Reference</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load Balancer</span></div>
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="features.html">Features</a>
+                    <a href="architecture.html">Architecture</a>
+                    <a href="how-it-works.html">How It Works</a>
+                    <a href="binlog.html">Binlog Mode</a>
+                    <a href="load-balancer.html">Load Balancer</a>
+                    <a href="configuration.html">Configuration</a>
+                    <a href="performance.html">Performance</a>
+                    <a href="cli.html">CLI Reference</a>
+                    <a href="api.html">API Reference</a>
+                    <a href="troubleshooting.html">Troubleshooting</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication & Sharing</span></div>
+                    <a href="wolfdisk.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
+                    <a href="wolfnet.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with Firewall</span></div>
+                    <a href="wolfproxy.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span></div>
+                    <a href="wolfserve.html" class="active">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Company</div>
+                    <a href="https://wolf.uk.com" target="_blank">Wolf Software</a>
+                    <a href="about.html">About</a>
+                    <a href="contact.html">Contact</a>
+                    <a href="glossary.html">Glossary</a>
+                    <a href="licensing.html">Licensing</a>
+                </div>
+            </nav>
+            <div class="theme-toggle-wrapper">
+                <span class="theme-toggle-label">Theme</span>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-toggle-slider"></span>
+                </button>
+            </div>
+            <div class="sidebar-links">
+                <a href="https://github.com/wolfsoftwaresystemsltd/wolfserve" target="_blank">GitHub</a>
+                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+                <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+            </div>
+        </aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <main class="wiki-main">
+            <div class="mobile-header">
+                <a href="index.html" class="nav-logo"><img
+                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
+                        class="logo-img"></a>
+                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+            </div>
+
+            <div class="wiki-content">
+                <div class="content-header">
+                    <h1>🐺🌐 WolfServe</h1>
+                    <p class="content-subtitle">High-Performance PHP Web Server</p>
+                </div>
+
+                <!-- Overview -->
+                <section class="content-section">
+                    <h2>Overview</h2>
+                    <p>
+                        <strong>WolfServe</strong> is a high-performance web server written in Rust that serves PHP
+                        applications via FastCGI with native SSL/TLS support and <strong>Apache configuration
+                            compatibility</strong>. It's a drop-in replacement for Apache2 — just point it at your
+                        existing
+                        Apache vhost configs and go.
+                    </p>
+                    <p style="margin-top: 1rem;">
+                        © 2026 Wolf Software Systems Ltd —
+                        <a href="https://github.com/wolfsoftwaresystemsltd/wolfserve" target="_blank">GitHub
+                            Repository</a>
+                    </p>
+
+                    <div
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
+                        <div class="feature-card">
+                            <div class="feature-icon">⚡</div>
+                            <h3>Blazing Fast</h3>
+                            <p>Built on Axum & Tokio for maximum async performance. Handles thousands of concurrent
+                                connections.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🐘</div>
+                            <h3>PHP Support</h3>
+                            <p>Execute PHP files via FastCGI (php-fpm or php-cgi). Full PHP 7.4+ compatibility.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🔐</div>
+                            <h3>SSL/TLS</h3>
+                            <p>Native HTTPS support with SNI for multiple domains on a single IP. Let's Encrypt ready.
+                            </p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">📋</div>
+                            <h3>Apache Compatible</h3>
+                            <p>Reads existing Apache vhost configurations directly. No config rewrite needed.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">📁</div>
+                            <h3>Static Files</h3>
+                            <p>Serves static assets efficiently with proper MIME types and caching headers.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🔧</div>
+                            <h3>PHP FFI Bridge</h3>
+                            <p>Call Rust functions directly from PHP via <code>libwolflib.so</code> using FFI.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">📊</div>
+                            <h3>Admin Dashboard</h3>
+                            <p>Built-in web dashboard on port 5000 for real-time monitoring, stats, and request logging.
+                            </p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🖥️</div>
+                            <h3>Cross-Platform</h3>
+                            <p>Debian/Ubuntu, Fedora/RHEL, Arch Linux, openSUSE — all supported out of the box.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Requirements -->
+                <section class="content-section">
+                    <h2>Requirements</h2>
+                    <ul>
+                        <li>Linux with systemd</li>
+                        <li>Rust 1.70+ (for building from source)</li>
+                        <li>PHP 7.4+ with php-fpm</li>
+                    </ul>
+                </section>
+
+                <!-- Quick Start -->
+                <section class="content-section">
+                    <h2>Quick Start</h2>
+
+                    <h3>Option 1: Install from Source</h3>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code># Clone the repository
+git clone https://github.com/wolfsoftwaresystemsltd/wolfserve.git
+cd wolfserve
+
+# Run the installer (requires root)
+sudo ./install.sh
+
+# Start the server
+./run.sh</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">Option 2: Install Precompiled Binaries</h3>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code># Download the release package
+tar -xzf wolfserve-x86_64-YYYYMMDD.tar.gz
+cd wolfserve-x86_64-YYYYMMDD
+
+# Run the installer (requires root)
+sudo ./install_precompiled.sh</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">Option 3: Install as a Service</h3>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code># Build and install as systemd service
+sudo ./install_service.sh
+
+# The server will start automatically
+systemctl status wolfserve</code></pre>
+                    </div>
+                </section>
+
+                <!-- Configuration -->
+                <section class="content-section">
+                    <h2>Configuration</h2>
+                    <p>Edit <code>wolfserve.toml</code>:</p>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">toml</span></div>
+                        <pre><code>[server]
+host = "0.0.0.0"
+port = 3000
+
+[php]
+fpm_address = "127.0.0.1:9993"
+session_save_path = "/var/lib/php/sessions"
+
+[apache]
+# Load existing Apache vhost configs
+# Debian/Ubuntu: "/etc/apache2"
+# Fedora/RHEL:   "/etc/httpd"
+config_dir = "/etc/apache2"</code></pre>
+                    </div>
+                </section>
+
+                <!-- Admin Dashboard -->
+                <section class="content-section">
+                    <h2>Admin Dashboard</h2>
+                    <p>WolfServe includes a built-in admin dashboard at <code>http://your-server:5000/</code> for
+                        monitoring and statistics.</p>
+
+                    <h3>Features</h3>
+                    <ul>
+                        <li><strong>Real-time statistics:</strong> Total requests, response codes (2xx/3xx/4xx/5xx), avg
+                            response time, requests/sec</li>
+                        <li><strong>Request logging:</strong> Last 50 requests with method, path, status, duration,
+                            client IP, and host</li>
+                        <li><strong>Uptime tracking:</strong> Server uptime displayed in days, hours, minutes, seconds
+                        </li>
+                        <li><strong>Auto-refresh:</strong> Dashboard updates every 5 seconds</li>
+                        <li><strong>Secure authentication:</strong> Session-based login with bcrypt password hashing
+                        </li>
+                    </ul>
+
+                    <h3 style="margin-top: 2rem;">Default Credentials</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Field</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Username</td>
+                                    <td><code>admin</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Password</td>
+                                    <td><code>admin</code></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>⚠️ Important:</strong> Change the default password immediately after first login!
+                        Credentials are stored in <code>wolfserve_admin.dat</code> using bcrypt hashing.
+                    </div>
+                </section>
+
+                <!-- Multi-Server PHP Sessions -->
+                <section class="content-section">
+                    <h2>Multi-Server PHP Sessions</h2>
+                    <p>WolfServe supports shared PHP sessions across multiple servers, enabling seamless load balancing
+                        without sticky sessions.</p>
+
+                    <h3>Configuration</h3>
+                    <p>Set <code>session_save_path</code> in <code>wolfserve.toml</code> to a shared network location:
+                    </p>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">toml</span></div>
+                        <pre><code>[php]
+fpm_address = "127.0.0.1:9993"
+session_save_path = "/mnt/shared/wolfserve/sessions"</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">How It Works</h3>
+                    <ol>
+                        <li>User logs in on <strong>Server A</strong> → session file created at
+                            <code>/mnt/shared/wolfserve/sessions/sess_abc123</code></li>
+                        <li>Next request routed to <strong>Server B</strong> → reads the same session file from shared
+                            storage</li>
+                        <li>User stays logged in seamlessly across all servers</li>
+                    </ol>
+
+                    <h3 style="margin-top: 2rem;">Requirements</h3>
+                    <ul>
+                        <li>All servers must mount the same shared storage (NFS, GlusterFS, Ceph, etc.)</li>
+                        <li>Clocks should be synchronized (NTP) for consistent session expiry</li>
+                        <li>The installer automatically sets correct permissions (<code>chmod 1733</code> with sticky
+                            bit)</li>
+                    </ul>
+
+                    <h3 style="margin-top: 2rem;">Interactive Installation</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">bash</span></div>
+                        <pre><code>sudo ./install_service.sh
+
+📝 Configuration Options (press Enter to accept defaults)
+Server bind address [0.0.0.0]:
+Server port [3000]:
+PHP-FPM port [9993]:
+PHP session save path [/var/lib/php/sessions]: /mnt/shared/wolfserve/sessions
+Apache config directory [/etc/apache2]:</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">Non-Interactive Installation</h3>
+                    <p>Use environment variables for automated deployments:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code>sudo WOLFSERVE_SESSION_PATH="/mnt/shared/wolfserve/sessions" \
+     WOLFSERVE_PORT="3000" \
+     ./install_service.sh -y</code></pre>
+                    </div>
+
+                    <div class="table-wrapper" style="margin-top: 1.5rem;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Environment Variable</th>
+                                    <th>Default</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>WOLFSERVE_HOST</code></td>
+                                    <td><code>0.0.0.0</code></td>
+                                    <td>Bind address</td>
+                                </tr>
+                                <tr>
+                                    <td><code>WOLFSERVE_PORT</code></td>
+                                    <td><code>3000</code></td>
+                                    <td>HTTP port</td>
+                                </tr>
+                                <tr>
+                                    <td><code>WOLFSERVE_FPM_PORT</code></td>
+                                    <td><code>9993</code></td>
+                                    <td>PHP-FPM port</td>
+                                </tr>
+                                <tr>
+                                    <td><code>WOLFSERVE_SESSION_PATH</code></td>
+                                    <td><code>/var/lib/php/sessions</code></td>
+                                    <td>Session storage path</td>
+                                </tr>
+                                <tr>
+                                    <td><code>WOLFSERVE_APACHE_DIR</code></td>
+                                    <td><code>/etc/apache2</code></td>
+                                    <td>Apache config directory</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- PHP FFI -->
+                <section class="content-section">
+                    <h2>PHP FFI Integration</h2>
+                    <p>WolfServe includes <code>libwolflib.so</code>, a Rust library that can be called directly from
+                        PHP using FFI:</p>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">php</span></div>
+                        <pre><code>&lt;?php
+$ffi = FFI::cdef("
+    int wolf_add(int a, int b);
+    char* wolf_greet(const char* name);
+    void wolf_free_string(char* s);
+", "/opt/wolfserve/libwolflib.so");
+
+// Call Rust from PHP!
+$result = $ffi->wolf_add(10, 32);     // Returns 42
+$greeting = $ffi->wolf_greet("World");
+echo FFI::string($greeting);          // "Hello, World from Rust!"
+$ffi->wolf_free_string($greeting);</code></pre>
+                    </div>
+                </section>
+
+                <!-- Migration from Apache -->
+                <section class="content-section">
+                    <h2>Migration from Apache</h2>
+                    <p>Switching from Apache to WolfServe:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code># Debian/Ubuntu
+sudo systemctl stop apache2 && sudo systemctl disable apache2
+
+# Fedora/RHEL
+sudo systemctl stop httpd && sudo systemctl disable httpd
+
+# Install & start WolfServe
+sudo ./install_service.sh
+sudo systemctl enable wolfserve</code></pre>
+                    </div>
+                    <p style="margin-top: 1rem;">WolfServe reads your existing Apache vhost configurations from
+                        <code>/etc/apache2/</code> (or <code>/etc/httpd/</code> on RHEL) — no config changes needed.
+                    </p>
+                </section>
+
+                <!-- Service Management -->
+                <section class="content-section">
+                    <h2>Service Management</h2>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">bash</span></div>
+                        <pre><code># Start / stop / restart
+sudo systemctl start wolfserve
+sudo systemctl stop wolfserve
+sudo systemctl restart wolfserve
+
+# Enable on boot
+sudo systemctl enable wolfserve
+
+# Check status
+sudo systemctl status wolfserve
+
+# View logs
+sudo journalctl -u wolfserve -f</code></pre>
+                    </div>
+                </section>
+
+                <!-- Project Structure -->
+                <section class="content-section">
+                    <h2>Project Structure</h2>
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">text</span></div>
+                        <pre><code>wolfserve/
+├── src/
+│   ├── main.rs              # Main server code
+│   ├── apache.rs            # Apache config parser
+│   └── admin.rs             # Admin dashboard & authentication
+├── wolflib/                 # Rust library for PHP FFI
+│   └── src/lib.rs
+├── public/                  # Web root directory
+│   ├── index.php
+│   └── rust.php             # PHP FFI example
+├── install.sh               # Source installation script
+├── install_service.sh       # Systemd service installer
+├── install_precompiled.sh   # Precompiled binary installer
+└── wolfserve.toml           # Server configuration</code></pre>
+                    </div>
+                </section>
+
+                <div class="page-nav">
+                    <a href="wolfproxy.html" class="prev">← WolfProxy</a>
+                    <span></span>
+                </div>
+            </div>
+
+            <footer class="wiki-footer"
+                style="margin-top: 3rem; padding: 2rem 0; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; opacity: 0.7; font-size: 0.875rem;">
+                <p>© 2026 <a href="https://wolf.uk.com" target="_blank"
+                        style="color: inherit; text-decoration: underline;">Wolf Software Systems Ltd</a> • FSL-1.1
+                </p>
+                <p style="font-size: 0.75rem; margin-top: 0.5rem;">
+                    USE AT YOUR OWN RISK. This software is provided "as is" without warranty of any kind.
+                </p>
+            </footer>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

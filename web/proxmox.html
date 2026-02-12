@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-KK9NEE1S54');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="WolfStack Proxmox VE Integration — Monitor Proxmox clusters, manage VMs and LXC containers, access consoles, and control guests from WolfStack's dashboard.">
+    <meta name="keywords"
+        content="WolfStack, Proxmox VE, Proxmox integration, VM management, LXC containers, server dashboard, API token, cluster monitoring">
+    <meta name="author" content="Wolf Software Systems Ltd">
+    <link rel="canonical" href="https://wolfscale.org/proxmox.html">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://wolfscale.org/proxmox.html">
+    <meta property="og:title" content="WolfStack — Proxmox VE Integration">
+    <meta property="og:description"
+        content="Seamlessly manage Proxmox clusters from WolfStack. Monitor nodes, control VMs and containers, access consoles — all from one dashboard.">
+    <meta property="og:image" content="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://wolfscale.org/proxmox.html">
+    <meta property="twitter:title" content="WolfStack — Proxmox VE Integration">
+    <meta property="twitter:description"
+        content="Seamlessly manage Proxmox clusters from WolfStack. Monitor nodes, control VMs and containers, access consoles.">
+
+    <title>WolfStack — Proxmox VE Integration</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=9">
+    <style>
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .animate-fade-in {
+            animation: fadeInUp 0.8s ease-out both;
+        }
+
+        .animate-delay-1 {
+            animation-delay: 0.1s;
+        }
+
+        .animate-delay-2 {
+            animation-delay: 0.2s;
+        }
+
+        .animate-delay-3 {
+            animation-delay: 0.3s;
+        }
+
+        .animate-delay-4 {
+            animation-delay: 0.4s;
+        }
+
+        .hero-section {
+            text-align: center;
+            padding: 1.5rem 0 1rem;
+            position: relative;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: -40%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            animation: float 4s ease-in-out infinite;
+            filter: drop-shadow(0 10px 40px rgba(99, 102, 241, 0.3));
+        }
+
+        .hero-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .hero-title {
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            font-weight: 800;
+            margin-bottom: 0.25rem;
+            background: linear-gradient(135deg, #fff 0%, #818cf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-tagline {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+            font-weight: 400;
+            max-width: 650px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
+        }
+
+        .hero-badges {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .hero-badge {
+            display: inline-block;
+            padding: 5px 14px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 100px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        /* Sidebar nav descriptions */
+        .nav-desc {
+            display: block;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: 400;
+            margin-top: 1px;
+            line-height: 1.3;
+            opacity: 0.7;
+        }
+
+        /* Docs content */
+        .docs-content {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: left;
+            padding: 2rem 0;
+        }
+
+        .docs-content h2 {
+            font-size: 1.5rem;
+            margin-top: 48px;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .docs-content h3 {
+            font-size: 1.15rem;
+            margin-top: 32px;
+            margin-bottom: 12px;
+        }
+
+        .docs-content p {
+            color: var(--text-secondary);
+            line-height: 1.8;
+            margin-bottom: 16px;
+        }
+
+        .docs-content ol,
+        .docs-content ul {
+            margin-left: 20px;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            margin-bottom: 16px;
+        }
+
+        .docs-content code {
+            background: var(--bg-tertiary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85em;
+        }
+
+        .docs-content pre {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+
+        .docs-content pre code {
+            background: none;
+            padding: 0;
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        /* Feature grid */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin: 24px 0 32px;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            border-color: rgba(99, 102, 241, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .feature-card-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .feature-card h4 {
+            font-size: 0.95rem;
+            margin-bottom: 6px;
+        }
+
+        .feature-card p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0;
+        }
+
+        /* Alert boxes */
+        .alert-box {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .alert-info {
+            background: rgba(99, 102, 241, 0.1);
+            border-left: 4px solid #6366f1;
+        }
+
+        .alert-warn {
+            background: rgba(234, 179, 8, 0.1);
+            border-left: 4px solid #eab308;
+        }
+
+        .alert-success {
+            background: rgba(34, 197, 94, 0.1);
+            border-left: 4px solid #22c55e;
+        }
+
+        /* Troubleshooting table */
+        .ts-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0 24px;
+            font-size: 0.85rem;
+        }
+
+        .ts-table th,
+        .ts-table td {
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            text-align: left;
+        }
+
+        .ts-table th {
+            background: var(--bg-tertiary);
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .ts-table td {
+            color: var(--text-secondary);
+        }
+
+        /* Tab buttons for permission options */
+        .option-tabs {
+            display: flex;
+            gap: 12px;
+            margin: 16px 0;
+            flex-wrap: wrap;
+        }
+
+        .option-tab {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            flex: 1;
+            min-width: 220px;
+        }
+
+        .option-tab h4 {
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .option-tab p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wiki-layout">
+        <aside class="sidebar" id="sidebar">
+            <a href="index.html" class="sidebar-logo"><img
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"></a>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span>
+                    </div>
+                    <a href="wolfstack.html">Overview & Quick Start</a>
+                    <a href="wolfstack-containers.html">Container Management</a>
+                    <a href="wolfstack-storage.html">Storage Manager</a>
+                    <a href="wolfstack-networking.html">Networking</a>
+                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
+                    <a href="proxmox.html" style="color: var(--accent-primary); font-weight: 600;">Proxmox
+                        Integration</a>
+                    <a href="wolfstack-ai.html">AI Agent</a>
+                    <a href="wolfstack-api.html">API Reference</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load
+                            Balancer</span></div>
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="features.html">Features</a>
+                    <a href="architecture.html">Architecture</a>
+                    <a href="how-it-works.html">How It Works</a>
+                    <a href="binlog.html">Binlog Mode</a>
+                    <a href="load-balancer.html">Load Balancer</a>
+                    <a href="configuration.html">Configuration</a>
+                    <a href="performance.html">Performance</a>
+                    <a href="cli.html">CLI Reference</a>
+                    <a href="api.html">API Reference</a>
+                    <a href="troubleshooting.html">Troubleshooting</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication & Sharing</span>
+                    </div>
+                    <a href="wolfdisk.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
+                    <a href="wolfnet.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
+                            Firewall</span></div>
+                    <a href="wolfproxy.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
+                    </div>
+                    <a href="wolfserve.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Company</div>
+                    <a href="https://wolf.uk.com" target="_blank">Wolf Software</a>
+                    <a href="about.html">About</a>
+                    <a href="contact.html">Contact</a>
+                    <a href="glossary.html">Glossary</a>
+                    <a href="licensing.html">Licensing</a>
+                </div>
+            </nav>
+            <div class="theme-toggle-wrapper">
+                <span class="theme-toggle-label">Theme</span>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-toggle-slider"></span>
+                </button>
+            </div>
+            <div class="sidebar-links">
+                <a href="https://github.com/wolfsoftwaresystemsltd/WolfStack" target="_blank">GitHub</a>
+                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+                <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+                <a href="https://wolf.uk.com" target="_blank">wolf.uk.com</a>
+            </div>
+        </aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <main class="wiki-main">
+            <div class="mobile-header">
+                <a href="index.html" class="nav-logo"><img
+                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
+                        class="logo-img"></a>
+                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+            </div>
+
+            <div class="wiki-content">
+                <!-- Hero Section -->
+                <section class="hero-section">
+                    <div class="hero-badges animate-fade-in">
+                        <span class="hero-badge">Integration</span>
+                        <span class="hero-badge">Virtualisation</span>
+                        <span class="hero-badge">Proxmox VE</span>
+                    </div>
+
+                    <div class="hero-icon animate-fade-in animate-delay-1">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <rect x="3" y="2" width="18" height="6" rx="1" />
+                            <rect x="3" y="10" width="18" height="6" rx="1" />
+                            <rect x="3" y="18" width="18" height="4" rx="1" />
+                            <circle cx="7" cy="5" r="1" fill="currentColor" />
+                            <circle cx="7" cy="13" r="1" fill="currentColor" />
+                            <circle cx="7" cy="20" r="1" fill="currentColor" />
+                        </svg>
+                    </div>
+
+                    <h1 class="hero-title animate-fade-in animate-delay-2">Proxmox VE Integration</h1>
+                    <p class="hero-tagline animate-fade-in animate-delay-2">
+                        Seamlessly manage your Proxmox clusters alongside WolfStack nodes from a single pane of glass.
+                        <strong>No agent required</strong> — connects securely via the Proxmox REST API.
+                    </p>
+                </section>
+
+                <div class="docs-content">
+
+                    <!-- Key Features -->
+                    <h2>Key Features</h2>
+                    <div class="feature-grid">
+                        <div class="feature-card">
+                            <div class="feature-card-icon">📊</div>
+                            <h4>Live Monitoring</h4>
+                            <p>CPU, memory, disk, and uptime polled in real-time from every Proxmox node via the PVE
+                                API.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-card-icon">🖥️</div>
+                            <h4>VM & Container Listing</h4>
+                            <p>See all QEMU VMs and LXC containers with resource usage, progress bars, and status
+                                badges.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-card-icon">🎮</div>
+                            <h4>Guest Controls</h4>
+                            <p>Start, stop, shutdown, reboot, suspend, and resume VMs and containers directly from
+                                WolfStack.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-card-icon">🖧</div>
+                            <h4>Console Access</h4>
+                            <p>One-click link to Proxmox's noVNC console for running guests — no extra setup needed.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-card-icon">🏢</div>
+                            <h4>Cluster Grouping</h4>
+                            <p>Proxmox nodes are grouped by cluster name in the sidebar with live VM/container counts.
+                            </p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-card-icon">🔐</div>
+                            <h4>API Token Auth</h4>
+                            <p>Secure connection using PVE API tokens. Works with self-signed TLS certificates.</p>
+                        </div>
+                    </div>
+
+                    <!-- Step 1: Create API Token -->
+                    <h2>Step 1: Create an API Token in Proxmox</h2>
+                    <p>To connect WolfStack to your Proxmox cluster, you need to create an API Token with sufficient
+                        privileges.</p>
+                    <ol>
+                        <li>Log in to your <strong>Proxmox VE</strong> web interface.</li>
+                        <li>Go to <strong>Datacenter → Permissions → API Tokens</strong>.</li>
+                        <li>Click <strong>Add</strong>.</li>
+                        <li>Select a user (e.g., <code>root@pam</code>) and enter a Token ID (e.g.,
+                            <code>wolfstack</code>).
+                        </li>
+                        <li><strong>Important:</strong> Uncheck "Privilege Separation" if you want full admin access, or
+                            ensure the token has the required roles (see Step 2).</li>
+                        <li>Click <strong>Add</strong> and <strong>copy the Secret value immediately</strong> — Proxmox
+                            shows it only once!</li>
+                    </ol>
+
+                    <div class="alert-box alert-warn">
+                        <strong>⚠️ Save the Secret!</strong> Proxmox shows the API Token Secret only once when you
+                        create it. If you lose it, you'll need to regenerate the token.
+                    </div>
+
+                    <!-- Step 2: Set Permissions -->
+                    <h2>Step 2: Set API Token Permissions</h2>
+                    <p>The API token needs at least <code>Sys.Audit</code> permission to read node status, and
+                        <code>VM.Audit</code> + <code>VM.PowerMgmt</code> to list and control guests. There are three
+                        ways to set this up:
+                    </p>
+
+                    <div class="option-tabs">
+                        <div class="option-tab">
+                            <h4>Option A: Proxmox Web UI</h4>
+                            <p>Easiest for most users</p>
+                        </div>
+                        <div class="option-tab">
+                            <h4>Option B: Command Line</h4>
+                            <p>Quick one-liner via SSH</p>
+                        </div>
+                        <div class="option-tab">
+                            <h4>Option C: Custom Role</h4>
+                            <p>Minimal permissions for security</p>
+                        </div>
+                    </div>
+
+                    <h3>Option A: Via Proxmox Web UI</h3>
+                    <ol>
+                        <li>Go to <strong>Datacenter → Permissions → Add → API Token Permission</strong>.</li>
+                        <li>Set <strong>Path</strong> to <code>/</code> (root — applies to all nodes).</li>
+                        <li>Set <strong>API Token</strong> to <code>root@pam!wolfstack</code>.</li>
+                        <li>Set <strong>Role</strong> to <code>PVEAuditor</code> (read-only monitoring) or
+                            <code>PVEAdmin</code> (full VM control).
+                        </li>
+                        <li>Check <strong>Propagate</strong> ✅ — this ensures it applies to child resources.</li>
+                    </ol>
+
+                    <h3>Option B: Via Command Line</h3>
+                    <p>SSH into your Proxmox node and run:</p>
+                    <pre><code>pveum aclmod / -token 'root@pam!wolfstack' -role PVEAuditor</code></pre>
+                    <p>For full VM control (start, stop, reboot, etc.), use <code>PVEAdmin</code> instead:</p>
+                    <pre><code>pveum aclmod / -token 'root@pam!wolfstack' -role PVEAdmin</code></pre>
+
+                    <h3>Option C: Minimal Custom Role</h3>
+                    <p>For maximum security, create a custom role with only the permissions WolfStack needs:</p>
+                    <pre><code># Create the role
+pveum role add WolfStackMonitor -privs "Sys.Audit,VM.Audit,VM.PowerMgmt,Datastore.Audit"
+
+# Assign it to your API token
+pveum aclmod / -token 'root@pam!wolfstack' -role WolfStackMonitor</code></pre>
+
+                    <table class="ts-table">
+                        <thead>
+                            <tr>
+                                <th>Permission</th>
+                                <th>Purpose</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>Sys.Audit</code></td>
+                                <td>Read node status, CPU, memory, disk metrics</td>
+                            </tr>
+                            <tr>
+                                <td><code>VM.Audit</code></td>
+                                <td>List VMs and containers with their resource usage</td>
+                            </tr>
+                            <tr>
+                                <td><code>VM.PowerMgmt</code></td>
+                                <td>Start, stop, shutdown, reboot, suspend, resume guests</td>
+                            </tr>
+                            <tr>
+                                <td><code>Datastore.Audit</code></td>
+                                <td>View storage pools and backup information</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Step 3: Add to WolfStack -->
+                    <h2>Step 3: Add Proxmox to WolfStack</h2>
+                    <ol>
+                        <li>Open your <strong>WolfStack Dashboard</strong>.</li>
+                        <li>Click <strong>+ Add Server</strong> in the sidebar.</li>
+                        <li>Select <strong>Node Type: Proxmox VE</strong>.</li>
+                        <li>Fill in the connection details:
+                            <ul>
+                                <li><strong>Cluster Name</strong> — display name for grouping in the sidebar (e.g.,
+                                    "Production")</li>
+                                <li><strong>Server Address</strong> — IP or hostname only, no <code>https://</code></li>
+                                <li><strong>Port</strong> — default <code>8006</code></li>
+                                <li><strong>PVE Node Name</strong> — as shown in Proxmox sidebar (e.g.,
+                                    <code>pve1</code>)</li>
+                                <li><strong>Token ID</strong> — e.g., <code>root@pam!wolfstack</code></li>
+                                <li><strong>Token Secret</strong> — the secret from Step 1</li>
+                                <li><strong>TLS Fingerprint</strong> — optional, leave blank unless you need certificate
+                                    pinning</li>
+                            </ul>
+                        </li>
+                        <li>Click <strong>Add Server</strong>.</li>
+                    </ol>
+
+                    <div class="alert-box alert-info">
+                        <strong>ℹ️ Auto-Discovery:</strong> WolfStack automatically discovers all nodes in the same
+                        Proxmox cluster and adds them. You only need to add one node per cluster — the rest are found
+                        automatically.
+                    </div>
+
+                    <!-- What You Get -->
+                    <h2>What You Get</h2>
+
+                    <h3>Sidebar Navigation</h3>
+                    <p>Proxmox clusters appear in the sidebar with a server rack icon. Each cluster shows its nodes
+                        underneath, and each node shows VM and container counts. Click any node to see its metrics, or
+                        click "VMs & Containers" to view the guest listing.</p>
+
+                    <h3>Dashboard Monitoring</h3>
+                    <p>Proxmox nodes appear alongside your WolfStack servers in the datacenter overview with live
+                        metrics cards showing CPU, memory, disk usage, and uptime. Proxmox nodes are marked with a
+                        <strong>PVE</strong> badge and grouped by cluster.
+                    </p>
+
+                    <h3>VM & Container Management</h3>
+                    <p>The VMs & Containers page shows each guest as an individual card with:</p>
+                    <ul>
+                        <li><strong>Name, type, and VMID</strong> — e.g., "web1 · VM 101 · pve1"</li>
+                        <li><strong>Status badge</strong> — ● running / ○ stopped / ⏸ paused</li>
+                        <li><strong>CPU count</strong> — number of virtual CPUs allocated</li>
+                        <li><strong>Memory usage</strong> — progress bar with percentage and absolute values</li>
+                        <li><strong>Disk usage</strong> — progress bar with colour coding (green → yellow → red)</li>
+                        <li><strong>Uptime</strong> — human-readable duration (e.g., "5d 12h")</li>
+                    </ul>
+
+                    <h3>Guest Controls</h3>
+                    <p>Each guest card shows action buttons based on its current state:</p>
+                    <table class="ts-table">
+                        <thead>
+                            <tr>
+                                <th>Guest State</th>
+                                <th>Available Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>● Running</td>
+                                <td>🔄 Restart, ⏹ Shutdown, ⛔ Stop, ⏸ Suspend (VMs only), 🖥 Console</td>
+                            </tr>
+                            <tr>
+                                <td>⏸ Paused</td>
+                                <td>▶ Resume, ⛔ Stop</td>
+                            </tr>
+                            <tr>
+                                <td>○ Stopped</td>
+                                <td>▶ Start</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="alert-box alert-info">
+                        <strong>Shutdown vs Stop:</strong> "Shutdown" sends an ACPI signal for a graceful OS shutdown.
+                        "Stop" immediately powers off the guest (like pulling the plug). Use Shutdown for production
+                        systems.
+                    </div>
+
+                    <h3>Console Access</h3>
+                    <p>Running guests show a <strong>🖥 Console</strong> button that opens the Proxmox noVNC console
+                        directly in a new browser tab. The link points to your Proxmox web interface
+                        (<code>https://your-pve:8006/?console=kvm&vmid=100&node=pve1</code>) — no additional setup
+                        is required.</p>
+
+                    <h3>Cluster Settings</h3>
+                    <p>Click the ⚙️ button next to a Proxmox cluster in the sidebar to edit:</p>
+                    <ul>
+                        <li><strong>Cluster Name</strong> — change the display name</li>
+                        <li><strong>Token ID & Secret</strong> — update API credentials</li>
+                        <li><strong>TLS Fingerprint</strong> — update or clear the certificate fingerprint</li>
+                    </ul>
+                    <p>Changes apply to all nodes in the cluster at once.</p>
+
+                    <!-- Troubleshooting -->
+                    <h2>Troubleshooting</h2>
+
+                    <table class="ts-table">
+                        <thead>
+                            <tr>
+                                <th>Symptom</th>
+                                <th>Cause</th>
+                                <th>Fix</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Nodes show <strong>offline</strong></td>
+                                <td>API token lacks <code>Sys.Audit</code></td>
+                                <td>Follow Step 2 to grant <code>PVEAuditor</code> role or add <code>Sys.Audit</code>
+                                    privilege</td>
+                            </tr>
+                            <tr>
+                                <td><code>403 Permission check failed</code></td>
+                                <td>Token permissions not propagated</td>
+                                <td>Set path to <code>/</code> with <strong>Propagate</strong> checked</td>
+                            </tr>
+                            <tr>
+                                <td>Wrong node name</td>
+                                <td>PVE node name doesn't match</td>
+                                <td>Check <code>Datacenter → Nodes</code> in Proxmox for exact name</td>
+                            </tr>
+                            <tr>
+                                <td>TLS certificate error</td>
+                                <td>Self-signed certificate</td>
+                                <td>WolfStack accepts self-signed certs by default. If issues persist, add the TLS
+                                    fingerprint in cluster settings.</td>
+                            </tr>
+                            <tr>
+                                <td>VMs/containers not showing</td>
+                                <td>Token lacks <code>VM.Audit</code></td>
+                                <td>Add <code>VM.Audit</code> privilege or use <code>PVEAuditor</code> role</td>
+                            </tr>
+                            <tr>
+                                <td>Cannot start/stop guests</td>
+                                <td>Token lacks <code>VM.PowerMgmt</code></td>
+                                <td>Add <code>VM.PowerMgmt</code> or use the custom role from Option C</td>
+                            </tr>
+                            <tr>
+                                <td>Node listed twice</td>
+                                <td>Same node added manually and via auto-discovery</td>
+                                <td>Remove the duplicate from the sidebar (🗑️ button)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Checking Logs</h3>
+                    <p>For detailed error information, check the WolfStack service logs:</p>
+                    <pre><code>sudo journalctl -u wolfstack -f | grep -i proxmox</code></pre>
+
+                    <div class="alert-box alert-success">
+                        <strong>💡 Tip:</strong> WolfStack also provides a built-in <strong>Help & Docs</strong> page
+                        accessible from the sidebar footer of the dashboard, with the same Proxmox setup guide and
+                        troubleshooting information.
+                    </div>
+
+                    <!-- API Reference -->
+                    <h2>API Reference</h2>
+                    <p>WolfStack exposes the following REST API endpoints for Proxmox integration:</p>
+
+                    <table class="ts-table">
+                        <thead>
+                            <tr>
+                                <th>Method</th>
+                                <th>Endpoint</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>GET</code></td>
+                                <td><code>/api/nodes/{id}/pve/resources</code></td>
+                                <td>List all VMs and containers on a Proxmox node</td>
+                            </tr>
+                            <tr>
+                                <td><code>POST</code></td>
+                                <td><code>/api/nodes/{id}/pve/{vmid}/{action}</code></td>
+                                <td>Perform action on a guest (start, stop, shutdown, reboot, suspend, resume)</td>
+                            </tr>
+                            <tr>
+                                <td><code>PATCH</code></td>
+                                <td><code>/api/nodes/{id}/settings</code></td>
+                                <td>Update node settings (token, fingerprint, cluster name)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Example: List Guests</h3>
+                    <pre><code>curl -H "Cookie: session=YOUR_SESSION" \
+     https://localhost:9090/api/nodes/abc123/pve/resources</code></pre>
+
+                    <h3>Example: Start a VM</h3>
+                    <pre><code>curl -X POST \
+     -H "Cookie: session=YOUR_SESSION" \
+     https://localhost:9090/api/nodes/abc123/pve/100/start</code></pre>
+
+                </div>
+
+                <div class="page-nav">
+                    <a href="wolfstack-clustering.html" class="prev">← Multi-Server Clustering</a>
+                    <a href="wolfstack-ai.html" class="next">AI Agent →</a>
+                </div>
+            </div>
+
+            <footer class="wiki-footer"
+                style="margin-top: 3rem; padding: 2rem 0; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; opacity: 0.7; font-size: 0.875rem;">
+                <p>© 2026 <a href="https://wolf.uk.com" target="_blank"
+                        style="color: inherit; text-decoration: underline;">Wolf
+                        Software Systems Ltd</a> •
+                    FSL-1.1
+                </p>
+                <p style="font-size: 0.75rem; margin-top: 0.5rem;">
+                    USE AT YOUR OWN RISK. This software is provided "as is" without warranty of any kind.
+                </p>
+            </footer>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-KK9NEE1S54');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binlog Mode - WolfScale</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=9">
+</head>
+
+<body>
+    <div class="wiki-layout">
+        <aside class="sidebar" id="sidebar">
+            <a href="index.html" class="sidebar-logo"><img
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
+                    alt="Wolf"></a>
+                        <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span></div>
+                    <a href="wolfstack.html">Overview &amp; Quick Start</a>
+                    <a href="wolfstack-containers.html">Container Management</a>
+                    <a href="wolfstack-storage.html">Storage Manager</a>
+                    <a href="wolfstack-networking.html">Networking</a>
+                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
+                    <a href="wolfstack-ai.html">AI Agent</a>
+                    <a href="wolfstack-api.html">API Reference</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load Balancer</span></div>
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="features.html">Features</a>
+                    <a href="architecture.html">Architecture</a>
+                    <a href="how-it-works.html">How It Works</a>
+                    <a href="binlog.html">Binlog Mode</a>
+                    <a href="load-balancer.html">Load Balancer</a>
+                    <a href="configuration.html">Configuration</a>
+                    <a href="performance.html">Performance</a>
+                    <a href="cli.html">CLI Reference</a>
+                    <a href="api.html">API Reference</a>
+                    <a href="troubleshooting.html">Troubleshooting</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication & Sharing</span></div>
+                    <a href="wolfdisk.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with Firewall</span></div>
+                    <a href="wolfproxy.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span></div>
+                    <a href="wolfserve.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Company</div>
+                    <a href="about.html">About</a>
+                    <a href="contact.html">Contact</a>
+                    <a href="glossary.html">Glossary</a>
+                    <a href="licensing.html">Licensing</a>
+                </div>
+            </nav>
+            <div class="theme-toggle-wrapper">
+                <span class="theme-toggle-label">Theme</span>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-toggle-slider"></span>
+                </button>
+            </div>
+            <div class="sidebar-links">
+                <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
+                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+            </div>
+        </aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <main class="wiki-main">
+            <div class="mobile-header">
+                <a href="index.html" class="nav-logo"><img
+                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
+                        class="logo-img"></a>
+                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+            </div>
+
+            <div class="page-header">
+                <h1>Binlog Mode</h1>
+                <p>Replicate from existing databases without using the proxy</p>
+            </div>
+
+            <div class="wiki-content">
+                <section class="content-section">
+                    <h2>What is Binlog Mode?</h2>
+                    <p>Binlog mode allows WolfScale to capture changes directly from a MariaDB/MySQL binary log instead
+                        of requiring applications to connect through the proxy. This enables:</p>
+                    <ul>
+                        <li>Replicating from existing Galera clusters without modifying applications</li>
+                        <li>Linking two separate Galera clusters together</li>
+                        <li>Adding WolfScale nodes to an existing database infrastructure</li>
+                        <li>Geo-replication between data centers</li>
+                    </ul>
+                    <div class="warning-box">
+                        <strong>CRITICAL: Connect WolfScale to only ONE node in a Galera cluster.</strong>
+                        <ul>
+                            <li>All Galera nodes contain the same data via Galera's internal replication</li>
+                            <li>If you connect WolfScale to multiple Galera nodes, you will duplicate every write</li>
+                            <li>This causes "double replication" — the same data written multiple times</li>
+                            <li>Pick ONE Galera node as the binlog source and connect WolfScale only to that node</li>
+                        </ul>
+                    </div>
+                    <div class="info-box">
+                        <p><strong>Note:</strong> Binlog mode is available in WolfScale v3.0 and later.</p>
+                    </div>
+
+                    <h3>Proxy Mode vs Binlog Mode</h3>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Aspect</th>
+                                    <th>Proxy Mode</th>
+                                    <th>Binlog Mode</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Write routing</strong></td>
+                                    <td>Write to <strong>any</strong> WolfScale node — writes auto-forward to leader
+                                    </td>
+                                    <td>Writes must go to the <strong>source database</strong> you're reading binlog
+                                        from</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Leader failover</strong></td>
+                                    <td>Transparent — proxy handles routing</td>
+                                    <td>May need to update binlog source if leader changes</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Application changes</strong></td>
+                                    <td>Point apps to proxy port (8007)</td>
+                                    <td>No app changes needed</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Best for</strong></td>
+                                    <td>New deployments, full control</td>
+                                    <td>Migration, existing Galera clusters</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="content-section">
+                    <h2>How It Works</h2>
+                    <p>In binlog mode, WolfScale connects to a MariaDB/MySQL server as a replication client and reads
+                        the binary log stream. Every write operation that appears in the binlog is captured and
+                        replicated to other WolfScale nodes.</p>
+                    <div class="flow-diagram">
+                        <span class="flow-step">Source DB</span><span class="flow-arrow">→</span>
+                        <span class="flow-step">Binlog</span><span class="flow-arrow">→</span>
+                        <span class="flow-step highlight">WolfScale</span><span class="flow-arrow">→</span>
+                        <span class="flow-step">WAL</span><span class="flow-arrow">→</span>
+                        <span class="flow-step">Target Nodes</span>
+                    </div>
+                </section>
+
+                <section class="content-section">
+                    <h2>Preparing WolfScale: Initial Data Sync</h2>
+                    <p>Before starting binlog replication, you must copy the existing data from your source Galera
+                        cluster to the WolfScale target database. This ensures both systems start from the same
+                        baseline.</p>
+
+                    <div class="warning-box">
+                        <strong>IMPORTANT: You must sync the data BEFORE enabling binlog replication.</strong>
+                        <ul>
+                            <li>WolfScale binlog mode only captures NEW changes after it starts</li>
+                            <li>Existing data in the source database will NOT be automatically copied</li>
+                            <li>Use mysqldump to create a consistent snapshot and restore it to WolfScale</li>
+                        </ul>
+                    </div>
+
+                    <h3>Step 1: Backup from Galera (Source)</h3>
+                    <p>Run this on the Galera node that has binlog enabled. Use all the recommended options to handle
+                        BLOBs, avoid locking, and ensure consistency:</p>
+                    <div class="code-block large">
+                        <div class="code-header"><span>Full backup with all options</span></div>
+                        <pre><code>mysqldump \
+  --single-transaction \
+  --routines \
+  --triggers \
+  --events \
+  --hex-blob \
+  --quick \
+  --max-allowed-packet=1G \
+  --set-gtid-purged=OFF \
+  --master-data=2 \
+  --all-databases \
+  -u root -p > galera_backup.sql</code></pre>
+                    </div>
+
+                    <h3>mysqldump Options Explained</h3>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Option</th>
+                                    <th>Purpose</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>--single-transaction</code></td>
+                                    <td>Consistent snapshot without locking tables (InnoDB)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>--routines</code></td>
+                                    <td>Include stored procedures and functions</td>
+                                </tr>
+                                <tr>
+                                    <td><code>--triggers</code></td>
+                                    <td>Include triggers</td>
+                                </tr>
+                                <tr>
+                                    <td><code>--events</code></td>
+                                    <td>Include scheduled events</td>
+                                </tr>
+                                <tr>
+                                    <td><code>--hex-blob</code></td>
+                                    <td>Dump BLOB/BINARY data as hex (prevents corruption)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>--quick</code></td>
+                                    <td>Stream rows directly, reduces memory usage for large tables</td>
+                                </tr>
+                                <tr>
+                                    <td><code>--max-allowed-packet=1G</code></td>
+                                    <td>Handle large rows and BLOBs</td>
+                                </tr>
+                                <tr>
+                                    <td><code>--set-gtid-purged=OFF</code></td>
+                                    <td>Avoid GTID conflicts when restoring</td>
+                                </tr>
+                                <tr>
+                                    <td><code>--master-data=2</code></td>
+                                    <td>Mode 2 = records binlog file/position as a SQL comment. Mode 1 would execute it
+                                        as a statement. The "2" is the mode, not the position value.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>--all-databases</code></td>
+                                    <td>Backup all databases</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="info-box">
+                        <p><strong>Note:</strong> The <code>--master-data=2</code> option adds a comment at the top of
+                            the dump file showing the exact binlog file and position. Use this position when configuring
+                            WolfScale binlog mode.</p>
+                    </div>
+
+                    <h3>Step 2: Copy Backup to WolfScale Server</h3>
+                    <div class="code-block">
+                        <pre><code>scp galera_backup.sql user@wolfscale-server:/tmp/</code></pre>
+                    </div>
+
+                    <h3>Step 3: Restore to WolfScale Target Database</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span>Restore on WolfScale server</span></div>
+                        <pre><code>mysql -u root -p < /tmp/galera_backup.sql</code></pre>
+                    </div>
+
+                    <h3>Step 4: Get Binlog Position from Backup</h3>
+                    <p>The binlog position is recorded at the top of the dump file:</p>
+                    <div class="code-block">
+                        <pre><code>head -50 galera_backup.sql | grep "CHANGE MASTER"
+
+# Output example:
+# -- CHANGE MASTER TO MASTER_LOG_FILE='mysql-bin.000042', MASTER_LOG_POS=154;</code></pre>
+                    </div>
+                    <p>Use these values in your WolfScale binlog configuration.</p>
+
+                    <h3>Alternative: Specific Databases Only</h3>
+                    <p>If you only want to replicate specific databases:</p>
+                    <div class="code-block">
+                        <pre><code>mysqldump \
+  --single-transaction \
+  --routines \
+  --triggers \
+  --events \
+  --hex-blob \
+  --quick \
+  --max-allowed-packet=1G \
+  --set-gtid-purged=OFF \
+  --master-data=2 \
+  --databases myapp_db analytics_db \
+  -u root -p > selected_dbs_backup.sql</code></pre>
+                    </div>
+                </section>
+
+                <section class="content-section">
+                    <h2>Use Case 1: WolfScale Cluster Attached to Galera</h2>
+                    <p>Attach a WolfScale cluster to an existing Galera cluster to add read replicas or create a
+                        geo-distributed copy of your data.</p>
+
+                    <h3>Architecture</h3>
+                    <div class="cluster-diagram">
+                        <div class="server-box leader">
+                            <div class="server-title">Galera Node 1</div>
+                            <div class="server-content">
+                                <div class="component">MariaDB Galera</div>
+                            </div>
+                            <div class="server-note">Source (binlog enabled)</div>
+                        </div>
+                        <div class="server-box">
+                            <div class="server-title">Galera Node 2</div>
+                            <div class="server-content">
+                                <div class="component">MariaDB Galera</div>
+                            </div>
+                        </div>
+                        <div class="server-box">
+                            <div class="server-title">Galera Node 3</div>
+                            <div class="server-content">
+                                <div class="component">MariaDB Galera</div>
+                            </div>
+                        </div>
+                    </div>
+                    <p style="text-align: center; color: var(--accent-primary); font-weight: bold; margin: 12px 0;">↓
+                        Binlog Replication ↓</p>
+                    <div class="cluster-diagram">
+                        <div class="server-box">
+                            <div class="server-title">WolfScale Node A</div>
+                            <div class="server-content">
+                                <div class="component">WolfScale + MariaDB</div>
+                            </div>
+                            <div class="server-note">Receives from Galera</div>
+                        </div>
+                        <div class="server-box">
+                            <div class="server-title">WolfScale Node B</div>
+                            <div class="server-content">
+                                <div class="component">WolfScale + MariaDB</div>
+                            </div>
+                            <div class="server-note">Read replica</div>
+                        </div>
+                    </div>
+
+                    <h3>Setup Steps</h3>
+                    <ol class="numbered-list">
+                        <li>Enable binary logging on ONE Galera node (edit my.cnf):</li>
+                    </ol>
+                    <div class="code-block">
+                        <div class="code-header"><span>/etc/mysql/mariadb.conf.d/60-galera.cnf</span></div>
+                        <pre><code>[mysqld]
+log_bin = mysql-bin
+binlog_format = ROW
+log_slave_updates = ON
+expire_logs_days = 7</code></pre>
+                    </div>
+                    <ol class="numbered-list" start="2">
+                        <li>Create a replication user on the Galera node:</li>
+                    </ol>
+                    <div class="code-block">
+                        <pre><code>CREATE USER 'wolfscale_repl'@'%' IDENTIFIED BY 'password';
+GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'wolfscale_repl'@'%';
+FLUSH PRIVILEGES;</code></pre>
+                    </div>
+                    <ol class="numbered-list" start="3">
+                        <li>Configure WolfScale to use binlog mode:</li>
+                    </ol>
+                    <div class="code-block">
+                        <div class="code-header"><span>wolfscale.toml</span></div>
+                        <pre><code>[binlog]
+enabled = true
+source_host = "galera-node-1.example.com"
+source_port = 3306
+source_user = "wolfscale_repl"
+source_password = "password"
+
+# Auto-detect position (or specify manually)
+# file = "mysql-bin.000001"
+# position = 4</code></pre>
+                    </div>
+                    <ol class="numbered-list" start="4">
+                        <li>Run the binlog setup command to auto-detect position:</li>
+                    </ol>
+                    <div class="code-block">
+                        <pre><code>wolfctl binlog-setup</code></pre>
+                    </div>
+                </section>
+
+                <section class="content-section">
+                    <h2>Use Case 2: Linking Two Galera Clusters</h2>
+                    <p>Use WolfScale as a bridge to replicate data between two separate Galera clusters in different
+                        data centers.</p>
+
+                    <h3>Architecture</h3>
+                    <div class="highlight-box">
+                        <h3>Data Center A — Galera Cluster</h3>
+                        <p>Primary cluster handling production traffic</p>
+                        <ul>
+                            <li>Galera Node A1 (binlog enabled) → WolfScale reads from here</li>
+                            <li>Galera Node A2</li>
+                            <li>Galera Node A3</li>
+                        </ul>
+                    </div>
+                    <p style="text-align: center; color: var(--accent-primary); font-weight: bold; margin: 12px 0;">↓
+                        WolfScale Binlog Replication ↓</p>
+                    <div class="highlight-box">
+                        <h3>Data Center B — Galera Cluster</h3>
+                        <p>DR/read-only cluster receiving replicated data</p>
+                        <ul>
+                            <li>Galera Node B1 ← WolfScale writes here via proxy</li>
+                            <li>Galera Node B2</li>
+                            <li>Galera Node B3</li>
+                        </ul>
+                    </div>
+
+                    <h3>How It Works</h3>
+                    <ol class="numbered-list">
+                        <li>WolfScale connects to Galera Cluster A as a binlog client</li>
+                        <li>Changes are captured and replicated through WolfScale's WAL</li>
+                        <li>WolfScale writes to Galera Cluster B via the MySQL proxy</li>
+                        <li>Galera Cluster B synchronizes internally via Galera replication</li>
+                    </ol>
+
+                    <h3>Configuration</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span>wolfscale.toml (bridge node)</span></div>
+                        <pre><code>[node]
+id = "bridge-1"
+bind_address = "0.0.0.0:7400"
+
+# Local database - connected to Galera Cluster B
+[database]
+host = "galera-b1.example.com"
+port = 3306
+user = "wolfscale"
+password = "password"
+
+# Read from Galera Cluster A
+[binlog]
+enabled = true
+source_host = "galera-a1.example.com"
+source_port = 3306
+source_user = "wolfscale_repl"
+source_password = "password"
+
+[cluster]
+bootstrap = true
+peers = []</code></pre>
+                    </div>
+
+                    <div class="warning-box">
+                        <strong>Important Considerations:</strong>
+                        <ul>
+                            <li>This creates one-way replication (A → B)</li>
+                            <li>Do NOT write directly to Cluster B — changes won't replicate back</li>
+                            <li>For bidirectional sync, you need two WolfScale bridges (complex setup)</li>
+                            <li>Ensure network connectivity between data centers</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <section class="content-section">
+                    <h2>Supported Source Databases</h2>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Database</th>
+                                    <th>Supported</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>MariaDB standalone</td>
+                                    <td class="check">Yes</td>
+                                    <td>Enable log_bin in my.cnf</td>
+                                </tr>
+                                <tr>
+                                    <td>MariaDB Galera</td>
+                                    <td class="check">Yes</td>
+                                    <td>Enable binlog on one node</td>
+                                </tr>
+                                <tr>
+                                    <td>MySQL 5.7+</td>
+                                    <td class="check">Yes</td>
+                                    <td>ROW format required</td>
+                                </tr>
+                                <tr>
+                                    <td>MySQL 8.0</td>
+                                    <td class="check">Yes</td>
+                                    <td>ROW format required</td>
+                                </tr>
+                                <tr>
+                                    <td>Percona Server</td>
+                                    <td class="check">Yes</td>
+                                    <td>MySQL-compatible</td>
+                                </tr>
+                                <tr>
+                                    <td>Percona XtraDB Cluster</td>
+                                    <td class="check">Yes</td>
+                                    <td>Same as Galera</td>
+                                </tr>
+                                <tr>
+                                    <td>Amazon RDS MySQL</td>
+                                    <td class="check">Yes</td>
+                                    <td>Enable binlog retention</td>
+                                </tr>
+                                <tr>
+                                    <td>Amazon Aurora</td>
+                                    <td class="check">Yes</td>
+                                    <td>Enable binlog replication</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="content-section">
+                    <h2>Binlog Configuration Reference</h2>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Parameter</th>
+                                    <th>Required</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>enabled</td>
+                                    <td>Yes</td>
+                                    <td>Set to true to enable binlog mode</td>
+                                </tr>
+                                <tr>
+                                    <td>source_host</td>
+                                    <td>Yes</td>
+                                    <td>Hostname/IP of source database</td>
+                                </tr>
+                                <tr>
+                                    <td>source_port</td>
+                                    <td>No</td>
+                                    <td>Port (default 3306)</td>
+                                </tr>
+                                <tr>
+                                    <td>source_user</td>
+                                    <td>Yes</td>
+                                    <td>User with REPLICATION SLAVE privilege</td>
+                                </tr>
+                                <tr>
+                                    <td>source_password</td>
+                                    <td>Yes</td>
+                                    <td>Password for replication user</td>
+                                </tr>
+                                <tr>
+                                    <td>file</td>
+                                    <td>No</td>
+                                    <td>Binlog filename (auto-detected if not set)</td>
+                                </tr>
+                                <tr>
+                                    <td>position</td>
+                                    <td>No</td>
+                                    <td>Binlog position (auto-detected if not set)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="content-section">
+                    <h2>Troubleshooting</h2>
+                    <h3>Check binlog status on source</h3>
+                    <div class="code-block">
+                        <pre><code>SHOW MASTER STATUS;
+SHOW BINARY LOGS;</code></pre>
+                    </div>
+                    <h3>Verify replication user permissions</h3>
+                    <div class="code-block">
+                        <pre><code>SHOW GRANTS FOR 'wolfscale_repl'@'%';</code></pre>
+                    </div>
+                    <h3>Check WolfScale binlog position</h3>
+                    <div class="code-block">
+                        <pre><code>wolfctl status</code></pre>
+                    </div>
+                </section>
+
+                <div class="page-nav">
+                    <a href="quickstart.html" class="prev">← Quick Start</a>
+                    <a href="configuration.html" class="next">Configuration →</a>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

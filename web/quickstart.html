@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-KK9NEE1S54');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Start - WolfScale</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=9">
+</head>
+
+<body>
+    <div class="wiki-layout">
+        <aside class="sidebar" id="sidebar">
+            <a href="index.html" class="sidebar-logo"><img
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
+                    alt="Wolf"></a>
+                        <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span></div>
+                    <a href="wolfstack.html">Overview &amp; Quick Start</a>
+                    <a href="wolfstack-containers.html">Container Management</a>
+                    <a href="wolfstack-storage.html">Storage Manager</a>
+                    <a href="wolfstack-networking.html">Networking</a>
+                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
+                    <a href="proxmox.html">Proxmox Integration</a>
+                    <a href="wolfstack-ai.html">AI Agent</a>
+                    <a href="wolfstack-api.html">API Reference</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load Balancer</span></div>
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="features.html">Features</a>
+                    <a href="architecture.html">Architecture</a>
+                    <a href="how-it-works.html">How It Works</a>
+                    <a href="binlog.html">Binlog Mode</a>
+                    <a href="load-balancer.html">Load Balancer</a>
+                    <a href="configuration.html">Configuration</a>
+                    <a href="performance.html">Performance</a>
+                    <a href="cli.html">CLI Reference</a>
+                    <a href="api.html">API Reference</a>
+                    <a href="troubleshooting.html">Troubleshooting</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication & Sharing</span></div>
+                    <a href="wolfdisk.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with Firewall</span></div>
+                    <a href="wolfproxy.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span></div>
+                    <a href="wolfserve.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Company</div>
+                    <a href="about.html">About</a>
+                    <a href="contact.html">Contact</a>
+                    <a href="glossary.html">Glossary</a>
+                    <a href="licensing.html">Licensing</a>
+                </div>
+            </nav>
+            <div class="theme-toggle-wrapper">
+                <span class="theme-toggle-label">Theme</span>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-toggle-slider"></span>
+                </button>
+            </div>
+            <div class="sidebar-links">
+                <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
+                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+            </div>
+        </aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <main class="wiki-main">
+            <div class="mobile-header">
+                <a href="index.html" class="nav-logo"><img
+                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
+                        class="logo-img"></a>
+                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+            </div>
+
+            <div class="page-header">
+                <h1>Quick Start</h1>
+                <p>Set up a 3-node WolfScale cluster with load balancer</p>
+            </div>
+
+            <div class="wiki-content">
+                <!-- Professional Services -->
+                <div class="info-box">
+                    <p><strong>Need help?</strong> Wolf Software Systems Ltd provide professional installation and setup
+                        services for a fee. Contact <a href="mailto:sales@wolf.uk.com">sales@wolf.uk.com</a> for
+                        details.</p>
+                </div>
+
+                <!-- Very Quick Start -->
+                <section class="content-section">
+                    <h2>Very Quick Start</h2>
+                    <div
+                        style="background: var(--bg-card); border: 2px solid var(--accent-primary); border-radius: 12px; padding: 1.5rem;">
+                        <ol style="margin: 0; padding-left: 1.5rem; line-height: 2;">
+                            <li><strong>Create 4 containers/servers</strong></li>
+                            <li><strong>Install MariaDB</strong> on 3 of them</li>
+                            <li><strong>Install WolfScale</strong> on 3 of them as nodes</li>
+                            <li><strong>Install WolfScale Load Balancer</strong> on the 4th</li>
+                        </ol>
+                        <p style="margin: 1rem 0 0 0; text-align: center; font-weight: 600; color: var(--success);">✓
+                            Done!</p>
+                    </div>
+                </section>
+
+                <!-- Architecture Overview -->
+                <section class="content-section">
+                    <h2>Architecture Overview</h2>
+                    <div class="info-box">
+                        <p>This guide sets up:</p>
+                        <ul>
+                            <li><strong>3 WolfScale cluster nodes</strong> - Each runs MariaDB + WolfScale (proxy on
+                                port 8007)</li>
+                            <li><strong>1 Load Balancer</strong> - Separate server, listens on port 3306, routes traffic
+                                to cluster</li>
+                        </ul>
+                        <p>Your applications connect to the <strong>load balancer on port 3306</strong>. It
+                            automatically routes writes to the leader and distributes reads across all healthy nodes.
+                        </p>
+                        <p><strong>Only have 1 server?</strong> Use Proxmox, Docker, or any other virtualization system
+                            to run all 4 nodes (3 database nodes + 1 load balancer) on a single physical machine.</p>
+                    </div>
+                </section>
+
+                <!-- Choose Your Scenario -->
+                <section class="content-section">
+                    <h2>Choose Your Scenario</h2>
+
+                    <h3>Scenario 1: Fresh Installation (Empty Servers)</h3>
+                    <p>Starting from scratch with no existing data:</p>
+                    <ol>
+                        <li>Set up 3 servers with MariaDB installed</li>
+                        <li>Install WolfScale on each server (see below)</li>
+                        <li>Done! Your cluster is ready</li>
+                    </ol>
+
+                    <h3>Scenario 2: Migrate from Existing MySQL/MariaDB Server</h3>
+                    <p>You have an existing database server with data you want to replicate:</p>
+                    <ol>
+                        <li><strong>Stop the old server</strong> - <code>sudo systemctl stop mariadb</code></li>
+                        <li><strong>Create 2 new servers</strong> and install MariaDB on each</li>
+                        <li><strong>Stop MariaDB on the new servers</strong> - <code>sudo systemctl stop mariadb</code>
+                        </li>
+                        <li><strong>Copy the data folder</strong> from the old server to both new nodes:</li>
+                    </ol>
+                    <div class="code-block">
+                        <div class="code-header"><span>Copy data to new nodes</span></div>
+                        <pre><code># On each new server:
+rsync -avz user@old-server:/var/lib/mysql/ /var/lib/mysql/
+
+# Fix permissions
+sudo chown -R mysql:mysql /var/lib/mysql</code></pre>
+                    </div>
+                    <ol start="5">
+                        <li><strong>Start MariaDB on all 3 servers</strong> - <code>sudo systemctl start mariadb</code>
+                        </li>
+                        <li><strong>Install WolfScale</strong> on each server (see below)</li>
+                    </ol>
+
+                    <h3>Scenario 3: Live Replication (No Downtime)</h3>
+                    <p>Use <a href="binlog.html">Binlog Mode</a> to replicate from a running MySQL/MariaDB server
+                        without stopping it. See the <a href="binlog.html">Binlog Mode documentation</a> for details.
+                    </p>
+                </section>
+
+                <!-- Prerequisites -->
+                <section class="content-section">
+                    <h2>Prerequisites</h2>
+                    <ul>
+                        <li><strong>3 cluster servers</strong> - Ubuntu, Debian, Rocky, or AlmaLinux with MariaDB
+                            installed</li>
+                        <li><strong>1 load balancer server</strong> - Just needs WolfScale (no MariaDB required)</li>
+                        <li>Network connectivity between all servers</li>
+                    </ul>
+                    <p><strong>Tip:</strong> Only have 1 physical server? Use Proxmox, Docker, or any virtualization
+                        system to run all 4 nodes on a single machine. Each node must have a different IP address.</p>
+
+                    <h3>Create Database User (on each cluster node)</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span>MariaDB</span></div>
+                        <pre><code>CREATE USER 'wolfscale'@'localhost' IDENTIFIED BY 'your-password';
+GRANT ALL PRIVILEGES ON *.* TO 'wolfscale'@'localhost';
+FLUSH PRIVILEGES;</code></pre>
+                    </div>
+                </section>
+
+                <!-- Part 1: Cluster Setup -->
+                <section class="content-section">
+                    <h2>Part 1: Set Up the 3-Node Cluster</h2>
+
+                    <h3>Install WolfScale on All 3 Cluster Nodes</h3>
+                    <p>Run this on <strong>each of your 3 cluster servers</strong>:</p>
+                    <div class="code-block">
+                        <div class="code-header"><span>Install WolfScale</span></div>
+                        <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/setup.sh | bash</code></pre>
+                    </div>
+
+                    <h3>Configure Node 1</h3>
+                    <p>On <strong>Node 1</strong> (e.g., 10.0.10.111):</p>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Prompt</th>
+                                    <th>Enter</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Node ID</td>
+                                    <td><code>node1</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Bind address</td>
+                                    <td>Press Enter (default)</td>
+                                </tr>
+                                <tr>
+                                    <td>Advertise address</td>
+                                    <td><code>10.0.10.111:7654</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Cluster name</td>
+                                    <td>Press Enter (optional)</td>
+                                </tr>
+                                <tr>
+                                    <td>Peer address</td>
+                                    <td>Press Enter (auto-discovery will find nodes)</td>
+                                </tr>
+                                <tr>
+                                    <td>Database user</td>
+                                    <td><code>wolfscale</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Database password</td>
+                                    <td>Your password</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="info-box">
+                        <p><strong>Advertise address:</strong> This is the IP address and port that <em>other nodes</em>
+                            use to connect to this node. Use this server's actual network IP (not 127.0.0.1 or 0.0.0.0).
+                        </p>
+                    </div>
+
+                    <h3>Configure Nodes 2 and 3</h3>
+                    <p>On <strong>Node 2</strong> and <strong>Node 3</strong> - same as Node 1, just use different Node
+                        IDs and advertise addresses:</p>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Prompt</th>
+                                    <th>Enter</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Node ID</td>
+                                    <td><code>node2</code> or <code>node3</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Bind address</td>
+                                    <td>Press Enter (default)</td>
+                                </tr>
+                                <tr>
+                                    <td>Advertise address</td>
+                                    <td><code>10.0.10.112:7654</code> or <code>10.0.10.113:7654</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Cluster name</td>
+                                    <td>Press Enter (optional)</td>
+                                </tr>
+                                <tr>
+                                    <td>Peer address</td>
+                                    <td>Press Enter (auto-discovery will find nodes)</td>
+                                </tr>
+                                <tr>
+                                    <td>Database user</td>
+                                    <td><code>wolfscale</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Database password</td>
+                                    <td>Your password</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="info-box">
+                        <p><strong>Auto-Discovery:</strong> Nodes automatically find each other via UDP broadcast.
+                            Within seconds of starting, nodes will discover and join the cluster.</p>
+                    </div>
+
+                    <h3>Verify Cluster</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span>Check cluster status</span></div>
+                        <pre><code>wolfctl list servers
+
+# Expected output:
+# ID     | STATUS | ROLE     | ADDRESS
+# node1  | ACTIVE | LEADER   | 10.0.10.111:7400
+# node2  | ACTIVE | FOLLOWER | 10.0.10.112:7400
+# node3  | ACTIVE | FOLLOWER | 10.0.10.113:7400</code></pre>
+                    </div>
+                </section>
+
+                <!-- Part 2: Load Balancer Setup -->
+                <section class="content-section">
+                    <h2>Part 2: Set Up the Load Balancer</h2>
+                    <div class="info-box">
+                        <p>The load balancer runs on a <strong>separate server</strong> and routes all traffic to your
+                            cluster. Your applications connect to it on <strong>port 3306</strong> - the standard MySQL
+                            port.</p>
+                    </div>
+
+                    <h3>Install Load Balancer</h3>
+                    <p>On your <strong>load balancer server</strong> (e.g., 10.0.10.100):</p>
+                    <div class="code-block">
+                        <div class="code-header"><span>Install WolfScale Load Balancer</span></div>
+                        <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/setup_lb.sh | bash</code></pre>
+                    </div>
+
+                    <h3>Option 1: Auto-Discovery (Recommended)</h3>
+                    <p>The installer will ask if you want to use auto-discovery. Choose <strong>yes</strong> and the
+                        load balancer will automatically find your cluster nodes:</p>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Prompt</th>
+                                    <th>Enter</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Use auto-discovery?</td>
+                                    <td><strong>y</strong> (default)</td>
+                                </tr>
+                                <tr>
+                                    <td>Cluster name for filtering</td>
+                                    <td>Press Enter (optional)</td>
+                                </tr>
+                                <tr>
+                                    <td>MySQL proxy listen address</td>
+                                    <td>Press Enter (default <code>0.0.0.0:3306</code>)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="info-box">
+                        <p><strong>Auto-Discovery:</strong> The load balancer sends UDP broadcasts on port 7654 to find
+                            WolfScale nodes automatically. No manual IP entry needed!</p>
+                    </div>
+
+                    <h3>Option 2: Manual Configuration</h3>
+                    <p>If auto-discovery doesn't work (cross-subnet, firewalled UDP), choose <strong>n</strong> and
+                        enter node addresses manually:</p>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Prompt</th>
+                                    <th>Enter</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Use auto-discovery?</td>
+                                    <td><strong>n</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>Cluster node address</td>
+                                    <td><code>10.0.10.111:7654</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Cluster node address</td>
+                                    <td><code>10.0.10.112:7654</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Cluster node address</td>
+                                    <td><code>10.0.10.113:7654</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Cluster node address</td>
+                                    <td>Press Enter (done)</td>
+                                </tr>
+                                <tr>
+                                    <td>MySQL proxy listen address</td>
+                                    <td>Press Enter (default <code>0.0.0.0:3306</code>)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Part 3: Connect Your App -->
+                <section class="content-section">
+                    <h2>Part 3: Connect Your Application</h2>
+                    <p>Point your application to the <strong>load balancer</strong> on port <strong>3306</strong>:</p>
+
+                    <div class="code-block">
+                        <div class="code-header"><span>Connect via load balancer</span></div>
+                        <pre><code># Connect to the load balancer (10.0.10.100)
+mysql -h 10.0.10.100 -P 3306 -u wolfscale -p</code></pre>
+                    </div>
+
+                    <h3>Update your application config</h3>
+                    <div class="code-block">
+                        <div class="code-header"><span>Example: PHP / WordPress</span></div>
+                        <pre><code>// Before (direct MariaDB on single server)
+define('DB_HOST', '10.0.10.111:3306');
+
+// After (via WolfScale load balancer)
+define('DB_HOST', '10.0.10.100:3306');</code></pre>
+                    </div>
+
+                    <div class="info-box">
+                        <p><strong>What the load balancer does:</strong></p>
+                        <ul>
+                            <li>Routes <strong>writes</strong> (INSERT, UPDATE, DELETE) to the current leader</li>
+                            <li>Distributes <strong>reads</strong> (SELECT) across all healthy nodes</li>
+                            <li>Handles <strong>failover</strong> automatically if a node goes down</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- Test Replication -->
+                <section class="content-section">
+                    <h2>Test Replication</h2>
+                    <div class="code-block">
+                        <div class="code-header"><span>Test that writes replicate to all nodes</span></div>
+                        <pre><code># Connect via load balancer and create test data
+mysql -h 10.0.10.100 -P 3306 -u wolfscale -p -e "
+  CREATE DATABASE test_db;
+  USE test_db;
+  CREATE TABLE test (id INT PRIMARY KEY, data VARCHAR(100));
+  INSERT INTO test VALUES (1, 'Hello WolfScale!');
+"
+
+# Verify data exists (routed through load balancer)
+mysql -h 10.0.10.100 -P 3306 -u wolfscale -p -e "SELECT * FROM test_db.test;"
+
+# Should show: 1 | Hello WolfScale!</code></pre>
+                    </div>
+                </section>
+
+                <!-- Service Management -->
+                <section class="content-section">
+                    <h2>Service Management</h2>
+                    <div class="code-block">
+                        <div class="code-header"><span>Cluster nodes</span></div>
+                        <pre><code>sudo systemctl status wolfscale
+sudo journalctl -u wolfscale -f
+wolfctl stats</code></pre>
+                    </div>
+                    <div class="code-block">
+                        <div class="code-header"><span>Load balancer</span></div>
+                        <pre><code>sudo systemctl status wolfscale-lb
+sudo journalctl -u wolfscale-lb -f</code></pre>
+                    </div>
+
+                    <div class="info-box">
+                        <p><strong>Tip: Optimize MariaDB.</strong> Run this on each cluster node to auto-tune MariaDB
+                            for optimal WolfScale performance:</p>
+                        <pre><code>sudo wolfctl tune-mariadb</code></pre>
+                    </div>
+                </section>
+
+                <!-- Next Steps -->
+                <section class="content-section">
+                    <h2>Next Steps</h2>
+                    <ul>
+                        <li><a href="load-balancer.html">Load Balancer</a>
+                <a href="wolfdisk.html">WolfDisk</a> - Advanced configuration</li>
+                        <li><a href="binlog.html">Binlog Mode</a> (Optional) - Replicate from existing databases</li>
+                        <li><a href="configuration.html">Configuration</a> - Fine-tune your cluster</li>
+                        <li><a href="performance.html">Performance</a> - Optimization tips</li>
+                    </ul>
+                </section>
+
+                <div class="page-nav">
+                    <a href="how-it-works.html" class="prev">← How It Works</a>
+                    <a href="binlog.html" class="next">Binlog Mode →</a>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

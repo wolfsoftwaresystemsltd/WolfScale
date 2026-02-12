@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-KK9NEE1S54');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="WolfScale suite licensing — Functional Source License (FSL-1.1). Free for non-competing use. Source-available, not open source.">
+    <meta name="keywords"
+        content="WolfScale license, FSL, Functional Source License, source-available, Wolf Software license">
+    <meta name="author" content="Wolf Software Systems Ltd">
+    <link rel="canonical" href="https://wolfscale.org/licensing.html">
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://wolfscale.org/licensing.html">
+    <meta property="og:title" content="Licensing - WolfScale Suite">
+    <meta property="og:description"
+        content="Functional Source License (FSL-1.1). Use it, modify it, deploy it — just don't compete with us.">
+    <meta property="og:image" content="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg">
+
+    <title>Licensing - WolfScale Suite</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=9">
+</head>
+
+<body>
+    <div class="wiki-layout">
+        <aside class="sidebar" id="sidebar">
+            <a href="index.html" class="sidebar-logo"><img
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"></a>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span>
+                    </div>
+                    <a href="wolfstack.html">Overview &amp; Quick Start</a>
+                    <a href="wolfstack-containers.html">Container Management</a>
+                    <a href="wolfstack-storage.html">Storage Manager</a>
+                    <a href="wolfstack-networking.html">Networking</a>
+                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
+                    <a href="proxmox.html">Proxmox Integration</a>
+                    <a href="wolfstack-ai.html">AI Agent</a>
+                    <a href="wolfstack-api.html">API Reference</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication &amp; Load
+                            Balancer</span></div>
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="features.html">Features</a>
+                    <a href="architecture.html">Architecture</a>
+                    <a href="how-it-works.html">How It Works</a>
+                    <a href="binlog.html">Binlog Mode</a>
+                    <a href="load-balancer.html">Load Balancer</a>
+                    <a href="configuration.html">Configuration</a>
+                    <a href="performance.html">Performance</a>
+                    <a href="cli.html">CLI Reference</a>
+                    <a href="api.html">API Reference</a>
+                    <a href="troubleshooting.html">Troubleshooting</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication &amp; Sharing</span>
+                    </div>
+                    <a href="wolfdisk.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
+                    <a href="wolfnet.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
+                            Firewall</span></div>
+                    <a href="wolfproxy.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
+                    </div>
+                    <a href="wolfserve.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Company</div>
+                    <a href="https://wolf.uk.com" target="_blank">Wolf Software</a>
+                    <a href="about.html">About</a>
+                    <a href="contact.html">Contact</a>
+                    <a href="glossary.html">Glossary</a>
+                    <a href="licensing.html" class="active">Licensing</a>
+                </div>
+            </nav>
+            <div class="theme-toggle-wrapper">
+                <span class="theme-toggle-label">Theme</span>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-toggle-slider"></span>
+                </button>
+            </div>
+            <div class="sidebar-links">
+                <a href="https://github.com/wolfsoftwaresystemsltd/WolfStack" target="_blank">GitHub</a>
+                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+                <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+            </div>
+        </aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <main class="wiki-main">
+            <div class="mobile-header">
+                <a href="index.html" class="nav-logo"><img
+                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
+                        class="logo-img"></a>
+                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+            </div>
+
+            <div class="wiki-content">
+                <div class="content-header">
+                    <h1>📄 Licensing</h1>
+                    <p class="content-subtitle">How the WolfScale suite is licensed — and what you can
+                        (and can't) do with it</p>
+                </div>
+
+                <!-- Summary -->
+                <section class="content-section">
+                    <h2>At a Glance</h2>
+                    <p>
+                        The entire WolfScale suite — <strong>WolfStack</strong>, <strong>WolfScale</strong>,
+                        <strong>WolfNet</strong>, <strong>WolfDisk</strong>, <strong>WolfProxy</strong>, and
+                        <strong>WolfServe</strong> — is licensed under the
+                        <strong>Functional Source License, Version 1.1</strong>
+                        (<strong>FSL-1.1</strong>).
+                    </p>
+
+                    <div
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                        <div class="feature-card" style="border-color: rgba(34, 197, 94, 0.4);">
+                            <div class="feature-icon">✅</div>
+                            <h3>Use It</h3>
+                            <p>Deploy on your own servers, use in your business, run it anywhere you like —
+                                free of charge.</p>
+                        </div>
+                        <div class="feature-card" style="border-color: rgba(59, 130, 246, 0.4);">
+                            <div class="feature-icon">✅</div>
+                            <h3>Modify It</h3>
+                            <p>Fork, patch, extend, customise — the source code is fully available
+                                for you to modify.</p>
+                        </div>
+                        <div class="feature-card" style="border-color: rgba(168, 85, 247, 0.4);">
+                            <div class="feature-icon">✅</div>
+                            <h3>Share It</h3>
+                            <p>Distribute copies to colleagues, clients, or the community.
+                                Attribution to Wolf Software is required.</p>
+                        </div>
+                        <div class="feature-card" style="border-color: rgba(239, 68, 68, 0.4);">
+                            <div class="feature-icon">🚫</div>
+                            <h3>Don't Compete</h3>
+                            <p>You may not offer the software (or a substantially similar product)
+                                as a competing commercial service.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- What is FSL? -->
+                <section class="content-section">
+                    <h2>📋 What Is the Functional Source License?</h2>
+                    <p>
+                        The <a href="https://fsl.software/" target="_blank"><strong>Functional Source License
+                                (FSL)</strong></a>
+                        is a modern license designed to balance two goals:
+                    </p>
+                    <ol style="line-height: 2;">
+                        <li><strong>Openness</strong> — the source code is published and freely available</li>
+                        <li><strong>Sustainability</strong> — the creators can sustain development without
+                            their work being resold by competitors</li>
+                    </ol>
+                    <p style="margin-top: 1rem;">
+                        It was created by <a href="https://sentry.io" target="_blank">Sentry</a> and is used by a
+                        growing number of companies who want to share their code without giving competitors a free ride.
+                    </p>
+                </section>
+
+                <!-- How It Works -->
+                <section class="content-section">
+                    <h2>⚙️ How It Works</h2>
+                    <p>
+                        The software is available under the FSL terms permanently. You can do almost
+                        anything with it, including:
+                    </p>
+                    <ul>
+                        <li>Use it in production for your own business or personal servers</li>
+                        <li>Modify the source code to suit your needs</li>
+                        <li>Distribute copies (with attribution)</li>
+                        <li>Use it internally within your organisation</li>
+                        <li>Integrate it into non-competing products and services</li>
+                    </ul>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>🚫 The only restriction:</strong> you may <strong>not</strong> use the software to
+                        provide a product or service that competes with any Wolf Software product. In plain English:
+                        don't take WolfStack and sell it (or something substantially similar) as a competing server
+                        management platform.
+                    </div>
+                </section>
+
+                <!-- What Counts as Competing? -->
+                <section class="content-section">
+                    <h2>🤔 What Counts as "Competing"?</h2>
+                    <p>
+                        The FSL defines a <strong>Competing Use</strong> as making the software available to
+                        third parties as a commercial product or service that is <strong>substantially similar</strong>
+                        to, or a substitute for, any Wolf Software product.
+                    </p>
+
+                    <h3 style="margin-top: 1.5rem;">✅ Allowed (Not Competing)</h3>
+                    <ul>
+                        <li>Using WolfStack to manage your own company's servers</li>
+                        <li>A hosting provider using WolfStack internally to manage customer VMs</li>
+                        <li>A school or university using it for teaching</li>
+                        <li>A developer forking the code to add a custom feature for their workplace</li>
+                        <li>Using WolfNet to connect your home lab to your office</li>
+                        <li>Running WolfProxy as your reverse proxy for client websites</li>
+                        <li>A consultancy deploying WolfStack on client servers as part of a larger service</li>
+                    </ul>
+
+                    <h3 style="margin-top: 1.5rem;">🚫 Not Allowed (Competing)</h3>
+                    <ul>
+                        <li>Rebranding WolfStack and selling it as "YourBrand Server Manager"</li>
+                        <li>Building a commercial SaaS product that is essentially WolfStack as a hosted service</li>
+                        <li>Offering WolfScale as a managed database replication service for paying customers</li>
+                        <li>Forking WolfNet and launching a competing VPN product</li>
+                    </ul>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>💡 Rule of thumb:</strong> if you're <em>using</em> the software,
+                        you're fine. If you're <em>reselling</em> it as a competing product, that's not allowed.
+                    </div>
+                </section>
+
+                <!-- Covered Products -->
+                <section class="content-section">
+                    <h2>📦 Covered Products</h2>
+                    <p>
+                        The FSL-1.1 licence applies to all components of the Wolf software suite:
+                    </p>
+                    <div class="table-wrapper" style="margin-top: 1rem;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Description</th>
+                                    <th>Repository</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>WolfStack</strong></td>
+                                    <td>Server management dashboard</td>
+                                    <td><a href="https://github.com/wolfsoftwaresystemsltd/WolfStack"
+                                            target="_blank">GitHub</a></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>WolfScale</strong></td>
+                                    <td>MySQL replication &amp; load balancer</td>
+                                    <td><a href="https://github.com/wolfsoftwaresystemsltd/WolfScale"
+                                            target="_blank">GitHub</a></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>WolfNet</strong></td>
+                                    <td>Private mesh VPN</td>
+                                    <td><a href="https://github.com/wolfsoftwaresystemsltd/WolfNet"
+                                            target="_blank">GitHub</a></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>WolfDisk</strong></td>
+                                    <td>Distributed filesystem</td>
+                                    <td><a href="https://github.com/wolfsoftwaresystemsltd/WolfDisk"
+                                            target="_blank">GitHub</a></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>WolfProxy</strong></td>
+                                    <td>Reverse proxy</td>
+                                    <td><a href="https://github.com/wolfsoftwaresystemsltd/WolfProxy"
+                                            target="_blank">GitHub</a></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>WolfServe</strong></td>
+                                    <td>Web server</td>
+                                    <td><a href="https://github.com/wolfsoftwaresystemsltd/WolfServe"
+                                            target="_blank">GitHub</a></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Full Licence Text -->
+                <section class="content-section">
+                    <h2>📜 Full Licence Text</h2>
+                    <p>
+                        The complete licence text is included in the <code>LICENSE</code> file in every repository. Here
+                        is the key section:
+                    </p>
+                    <div class="code-block" style="margin-top: 1rem;">
+                        <div class="code-header"><span class="code-lang">FSL-1.1</span></div>
+                        <pre><code>Functional Source License, Version 1.1
+
+Copyright 2026 Wolf Software Systems Ltd
+
+Licensor:             Wolf Software Systems Ltd
+Software:             WolfScale Suite
+Use Limitation:       Competing Use
+
+For full terms, see https://fsl.software/</code></pre>
+                    </div>
+
+                    <p style="margin-top: 1.5rem;">
+                        The full text of the FSL is available at
+                        <a href="https://fsl.software/" target="_blank">fsl.software</a>.
+                    </p>
+                </section>
+
+                <!-- FAQ -->
+                <section class="content-section">
+                    <h2>❓ Frequently Asked Questions</h2>
+
+                    <h3>Is this open source?</h3>
+                    <p>
+                        The source code is publicly available and you can read, modify, and distribute it. However,
+                        it has a permanent competing-use restriction, so it is <strong>source-available</strong>
+                        rather than <em>open source</em> by the OSI definition.
+                    </p>
+
+                    <h3 style="margin-top: 1.5rem;">Is it free?</h3>
+                    <p>
+                        <strong>Yes.</strong> There is no cost to use, download, modify, or deploy any part of the Wolf
+                        software suite. The only restriction is that you cannot use it to offer a competing commercial
+                        product.
+                    </p>
+
+                    <h3 style="margin-top: 1.5rem;">Can I use it for my company?</h3>
+                    <p>
+                        <strong>Absolutely.</strong> If you're using WolfStack to manage your company's servers, WolfNet
+                        to connect your offices, or WolfScale to replicate your databases, that's exactly what it's for.
+                    </p>
+
+                    <h3 style="margin-top: 1.5rem;">Can I modify the code?</h3>
+                    <p>
+                        <strong>Yes.</strong> Fork it, patch it, extend it. You can modify the source code for any
+                        non-competing use. If you'd like to contribute your changes back, pull requests are welcome.
+                    </p>
+
+                    <h3 style="margin-top: 1.5rem;">Can I redistribute it?</h3>
+                    <p>
+                        <strong>Yes</strong>, with attribution. You must retain the copyright notice and licence
+                        information. You cannot strip out the Wolf Software branding and resell it as your own product.
+                    </p>
+
+                    <h3 style="margin-top: 1.5rem;">Will the licence ever change?</h3>
+                    <p>
+                        The FSL-1.1 licence applies permanently to all releases. The competing-use restriction
+                        does not expire. Wolf Software reserves the right to release future versions under
+                        different terms, but existing releases will always remain under FSL-1.1.
+                    </p>
+
+                    <h3 style="margin-top: 1.5rem;">I have a question not covered here</h3>
+                    <p>
+                        Reach out on <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>,
+                        <a href="mailto:support@wolf.uk.com">email us</a>, or open a
+                        <a href="https://github.com/wolfsoftwaresystemsltd/WolfStack/issues" target="_blank">GitHub
+                            issue</a>.
+                    </p>
+                </section>
+
+                <div class="page-nav">
+                    <a href="glossary.html" class="prev">← Glossary</a>
+                    <a href="index.html" class="next">Home →</a>
+                </div>
+            </div>
+
+            <footer class="wiki-footer"
+                style="margin-top: 3rem; padding: 2rem 0; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; opacity: 0.7; font-size: 0.875rem;">
+                <p>© 2026 <a href="https://wolf.uk.com" target="_blank"
+                        style="color: inherit; text-decoration: underline;">Wolf
+                        Software Systems Ltd</a> • FSL-1.1
+                </p>
+                <p style="font-size: 0.75rem; margin-top: 0.5rem;">
+                    USE AT YOUR OWN RISK. This software is provided "as is" without warranty of any kind.
+                </p>
+            </footer>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
