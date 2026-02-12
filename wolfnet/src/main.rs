@@ -760,6 +760,41 @@ fn run_daemon(config_path: &PathBuf) {
                                         continue;
                                     }
 
+                                    // Check if this is a relayed handshake packet
+                                    // A peer sent a handshake through us (as a relay) for another peer.
+                                    // Handshakes contain the SENDER's wolfnet_ip, not the target's.
+                                    // So we process it ourselves (learning about the sender) and forward
+                                    // it to all other connected peers so they can learn about the sender too.
+                                    if plaintext.len() > 1 && plaintext[0] == transport::PKT_HANDSHAKE {
+                                        if let Some((hs_pub_key, hs_sender_ip, _hs_port, hs_is_gw, hs_hostname)) = transport::parse_handshake(&plaintext) {
+                                            // Process the handshake for ourselves — learn about this peer
+                                            peer_manager.update_from_discovery(&hs_pub_key, src, hs_sender_ip, &hs_hostname, hs_is_gw);
+                                            peer_manager.with_peer_by_ip(&hs_sender_ip, |peer| {
+                                                peer.establish_session(&keypair.secret, &keypair.public);
+                                                peer.last_seen = Some(Instant::now());
+                                            });
+
+                                            // Forward the raw handshake to all other connected peers
+                                            // so they can learn about the sender and reply directly
+                                            for fwd_ip in peer_manager.all_ips() {
+                                                if fwd_ip == wolfnet_ip || fwd_ip == hs_sender_ip || fwd_ip == peer_ip { continue; }
+                                                peer_manager.with_peer_by_ip(&fwd_ip, |dest_peer| {
+                                                    if dest_peer.is_connected() {
+                                                        if let Some(endpoint) = dest_peer.endpoint {
+                                                            if let Err(e) = socket.send_to(&plaintext, endpoint) {
+                                                                debug!("Relayed handshake forward to {} failed: {}", fwd_ip, e);
+                                                            } else {
+                                                                info!("Relayed handshake from {} ({}) to {} at {}",
+                                                                    hs_hostname, hs_sender_ip, fwd_ip, endpoint);
+                                                            }
+                                                        }
+                                                    }
+                                                });
+                                            }
+                                        }
+                                        continue;
+                                    }
+
                                     // Check if this packet is for us or needs relaying
                                     if let Some(dest_ip) = tun::get_dest_ip(&plaintext) {
                                         // Compute subnet broadcast address

@@ -98,6 +98,10 @@ pub fn send_handshakes(
     is_gateway: bool,
 ) {
     let handshake = build_handshake(keypair, wolfnet_ip, listen_port, hostname, is_gateway);
+
+    // Collect relay info first to avoid nested lock issues
+    let mut relay_sends: Vec<(Ipv4Addr, Vec<u8>)> = Vec::new();
+
     for ip in peer_manager.all_ips() {
         peer_manager.with_peer_by_ip(&ip, |peer| {
             if !peer.is_connected() {
@@ -121,6 +125,36 @@ pub fn send_handshakes(
                                 debug!("Handshake to {} at {} failed: {}", ip, configured_addr, e);
                             }
                         }
+                    }
+                }
+
+                // For PEX-learned peers with relay_via set, also send the handshake
+                // through the relay peer. The relay will receive a data packet containing
+                // our handshake, decrypt it, see it's destined for the target peer's
+                // wolfnet IP, and forward it. This enables bidirectional connectivity
+                // even when the target peer's endpoint is an unreachable LAN address.
+                if let Some(relay_ip) = peer.relay_via {
+                    relay_sends.push((relay_ip, handshake.clone()));
+                }
+            }
+        });
+    }
+
+    // Send relayed handshakes (outside the per-peer lock)
+    for (relay_ip, hs_packet) in relay_sends {
+        peer_manager.with_peer_by_ip(&relay_ip, |relay_peer| {
+            if relay_peer.is_connected() {
+                if let Some(endpoint) = relay_peer.endpoint {
+                    match relay_peer.encrypt(&hs_packet) {
+                        Ok((counter, ciphertext)) => {
+                            let pkt = build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
+                            if let Err(e) = socket.send_to(&pkt, endpoint) {
+                                debug!("Relayed handshake via {} failed: {}", relay_ip, e);
+                            } else {
+                                debug!("Sent handshake via relay {}", relay_ip);
+                            }
+                        }
+                        Err(e) => debug!("Relay handshake encrypt error for {}: {}", relay_ip, e),
                     }
                 }
             }
