@@ -246,6 +246,16 @@
                             <h3>SSL Certificates</h3>
                             <p>Request Let's Encrypt certificates via Certbot. One-click certificate provisioning.</p>
                         </div>
+                        <div class="feature-card" style="border-color: rgba(168, 85, 247, 0.3);">
+                            <div class="feature-icon">🤖</div>
+                            <h3>AI Agent</h3>
+                            <p>Built-in AI assistant powered by <strong>Claude</strong> or <strong>Gemini</strong>.
+                                Chat via the 🐺 bubble, ask questions about your servers, and get help troubleshooting.
+                                <strong>Background health monitoring</strong> with configurable email alerts via SMTP.
+                                Knowledge base loaded from your Wolf suite docs. Dynamic model selection with
+                                <strong>automatic update checks</strong> against GitHub.
+                            </p>
+                        </div>
                     </div>
                 </section>
 
@@ -725,6 +735,41 @@ sudo wolfstack --bind 127.0.0.1 --port 8553</code></pre>
                                     <td><code>POST</code></td>
                                     <td><code>/api/storage/import-rclone</code></td>
                                     <td>Import S3 remotes from rclone.conf content</td>
+                                </tr>
+                                <tr style="border-top: 2px solid var(--border-color);">
+                                    <td colspan="3"
+                                        style="font-weight: 600; color: var(--text-primary); padding-top: 1rem;">AI
+                                        Agent</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/ai/config</code></td>
+                                    <td>Get AI config (API keys masked)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/ai/config</code></td>
+                                    <td>Save AI config (provider, keys, model, email settings)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/ai/chat</code></td>
+                                    <td>Send a chat message to the AI assistant</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/ai/status</code></td>
+                                    <td>AI agent status (configured, provider, model, alerts)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/ai/alerts</code></td>
+                                    <td>Historical health check alerts</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/ai/models</code></td>
+                                    <td>List available models for the configured provider</td>
                                 </tr>
                             </tbody>
                         </table>
