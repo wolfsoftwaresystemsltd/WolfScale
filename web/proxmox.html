@@ -458,12 +458,48 @@
 
                     <h1 class="hero-title animate-fade-in animate-delay-2">Proxmox VE Integration</h1>
                     <p class="hero-tagline animate-fade-in animate-delay-2">
-                        Seamlessly manage your Proxmox clusters alongside WolfStack nodes from a single pane of glass.
-                        <strong>No agent required</strong> — connects securely via the Proxmox REST API.
+                        Install WolfStack directly on your Proxmox nodes for full management, or connect remotely
+                        via the Proxmox REST API. <strong>No separate agent required</strong> for API-based monitoring.
                     </p>
                 </section>
 
                 <div class="docs-content">
+
+                    <!-- Installing on Proxmox -->
+                    <h2>Installing WolfStack on Proxmox</h2>
+                    <p>WolfStack can be installed directly on your Proxmox VE host, giving you the full WolfStack
+                        dashboard alongside your Proxmox environment. This lets you manage Docker containers, LXC,
+                        VMs, WolfNet, and all Wolf suite tools directly on the Proxmox node.</p>
+
+                    <h3>Quick Installation</h3>
+                    <p>SSH into your Proxmox node and run:</p>
+                    <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfStack/master/setup.sh | sudo bash</code></pre>
+
+                    <p style="margin-top: 16px;">Then open <code>http://your-proxmox-ip:8553</code> and log in with
+                        your Linux system credentials (the same <code>root</code> password you use for Proxmox).</p>
+
+                    <div class="alert-box alert-info">
+                        <strong>ℹ️ Proxmox runs Debian</strong> — WolfStack installs cleanly on Proxmox VE hosts since
+                        they run Debian under the hood. All dependencies are handled automatically by the installer.
+                    </div>
+
+                    <h3>Adding to Your Cluster</h3>
+                    <p>Once WolfStack is running on your Proxmox node, you can add it to your existing WolfStack cluster
+                        using a <strong>join token</strong>:</p>
+                    <ol>
+                        <li>Get the join token from the Proxmox node: <code>wolfstack --show-token</code></li>
+                        <li>On your main WolfStack dashboard, click <strong>+ Add Server</strong></li>
+                        <li>Select <strong>WolfStack</strong> as the node type</li>
+                        <li>Enter the Proxmox node's address and the join token</li>
+                        <li>Click <strong>Add Server</strong></li>
+                    </ol>
+                    <p style="margin-top: 16px;">See <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
+                        for full details on join tokens and cluster setup.</p>
+
+                    <h2 style="margin-top: 48px;">Proxmox API Integration (Alternative)</h2>
+                    <p>If you prefer not to install WolfStack on your Proxmox hosts, you can connect remotely via the
+                        Proxmox REST API. This gives you monitoring and guest control without installing anything on
+                        the Proxmox node.</p>
 
                     <!-- Key Features -->
                     <h2>Key Features</h2>
@@ -613,7 +649,8 @@ pveum aclmod / -token 'root@pam!wolfstack' -role WolfStackMonitor</code></pre>
                                 <li><strong>Server Address</strong> — IP or hostname only, no <code>https://</code></li>
                                 <li><strong>Port</strong> — default <code>8006</code></li>
                                 <li><strong>PVE Node Name</strong> — as shown in Proxmox sidebar (e.g.,
-                                    <code>pve1</code>)</li>
+                                    <code>pve1</code>)
+                                </li>
                                 <li><strong>Token ID</strong> — e.g., <code>root@pam!wolfstack</code></li>
                                 <li><strong>Token Secret</strong> — the secret from Step 1</li>
                                 <li><strong>TLS Fingerprint</strong> — optional, leave blank unless you need certificate

@@ -629,10 +629,11 @@
                             Ltd</a>
                     </p>
                     <p class="hero-subtitle animate-fade-in animate-delay-3">
-                        WolfStack is an all-in-one server management platform. Monitor metrics, manage Docker, LXC
-                        containers VMs, R2 CLoude Storage, disk sharing, edit configs, and control your entire
+                        WolfStack is an all-in-one server and workstation management platform. Monitor metrics, manage
+                        Docker, LXC
+                        containers, VMs, R2 Cloud Storage, disk sharing, edit configs, and control your entire
                         infrastructure from a single, beautiful
-                        dashboard.
+                        dashboard. Perfect for servers, Linux workstations, or any machine running containers and VMs.
                     </p>
                     <a href="https://www.patreon.com/15362110/join" target="_blank"
                         class="animate-fade-in animate-delay-4"
@@ -647,33 +648,155 @@
                         Support us on Patreon</a>
                 </section>
 
-                <!-- Dashboard Screenshot -->
+                <!-- Install One-Liner -->
+                <section style="padding: 0 0 1.5rem; text-align: center;">
+                    <div class="animate-fade-in animate-delay-4" style="max-width: 600px; margin: 0 auto;">
+                        <h3
+                            style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-primary);">
+                            Install WolfStack</h3>
+                        <ol
+                            style="text-align: left; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.8; margin-bottom: 1.25rem; padding-left: 1.25rem;">
+                            <li>Install WolfStack on each machine</li>
+                            <li>On one of the machines connect to the web<br>
+                                <code
+                                    style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px; font-size: 0.85rem;">http://yourip:8553</code>
+                                or if you have already got certificates installed
+                                <code
+                                    style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px; font-size: 0.85rem;">https://yourdomain:8553</code>
+                            </li>
+                            <li>Login with a Linux user</li>
+                            <li>Repeat on all servers and use the <strong>+</strong> button to add your server or
+                                Proxmox cluster — you only need to do this on one machine that you will use to view
+                                WolfStack</li>
+                        </ol>
+                        <div class="code-block" style="text-align: left;">
+                            <div class="code-header">
+                                <span class="code-lang">bash</span>
+                                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            </div>
+                            <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfStack/master/setup.sh | sudo bash</code></pre>
+                        </div>
+                        <p
+                            style="margin-top: 1.25rem; color: var(--text-secondary); font-size: 0.95rem; font-weight: 500;">
+                            Enjoy! 🐺 — Please don't forget my
+                            <a href="https://www.patreon.com/15362110/join" target="_blank"
+                                style="color: #22c55e; text-decoration: underline; font-weight: 600;">Patreon</a>.
+                        </p>
+                        <p style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">
+                            Works on most versions of Linux and runs fine on a single machine!
+                        </p>
+                    </div>
+                </section>
+
+                <!-- Community Links -->
+                <div
+                    style="text-align: center; margin-bottom: 1.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                    <a href="https://www.youtube.com/@wolfsoftwaresystems" target="_blank"
+                        style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 10px 20px; background: linear-gradient(135deg, #FF0000, #CC0000); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 0.85rem; transition: all 0.3s ease; box-shadow: 0 2px 12px rgba(255, 0, 0, 0.3);"
+                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 20px rgba(255,0,0,0.4)'"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 12px rgba(255,0,0,0.3)'">
+                        ▶ YouTube Channel
+                    </a>
+                    <a href="https://discord.gg/q9qMjHjUQY" target="_blank"
+                        style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 10px 20px; background: linear-gradient(135deg, #5865F2, #4752C4); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 0.85rem; transition: all 0.3s ease; box-shadow: 0 2px 12px rgba(88, 101, 242, 0.3);"
+                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 20px rgba(88,101,242,0.4)'"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 12px rgba(88,101,242,0.3)'">
+                        💬 Join Discord
+                    </a>
+                </div>
+
+                <!-- Video Section -->
                 <section style="padding: 0 0 2rem; text-align: center;">
                     <div class="animate-fade-in animate-delay-4"
                         style="max-width: 900px; margin: 0 auto; position: relative;">
-                        <a href="wolfstack.html">
-                            <img src="images/wolfstack-dashboard.png" alt="WolfStack Dashboard"
-                                style="width: 100%; border-radius: 12px; border: 1px solid var(--border-color);
-                                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4); transition: transform 0.3s ease, box-shadow 0.3s ease;"
-                                onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 25px 70px rgba(0,0,0,0.5)'"
-                                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 20px 60px rgba(0,0,0,0.4)'">
-                        </a>
+                        <div
+                            style="position: relative; width: 100%; padding-bottom: 56.25%; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);">
+                            <iframe src="https://www.youtube-nocookie.com/embed/mS0_xKX0o1E" title="WolfStack Demo"
+                                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowfullscreen>
+                            </iframe>
+                        </div>
                         <p style="margin-top: 1rem; color: var(--text-muted); font-size: 0.8rem;">WolfStack — Server
                             management dashboard with real-time monitoring</p>
+                    </div>
+                </section>
 
-                        <!-- Install One-Liner -->
-                        <div style="margin-top: 2rem; max-width: 600px; margin-left: auto; margin-right: auto;">
-                            <h3
-                                style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-primary);">
-                                Install WolfStack</h3>
-                            <div class="code-block" style="text-align: left;">
-                                <div class="code-header">
-                                    <span class="code-lang">bash</span>
-                                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                                </div>
-                                <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfStack/master/setup.sh | sudo bash</code></pre>
-                            </div>
-                        </div>
+                <!-- WolfNet Connection Guide -->
+                <section style="padding: 2rem 0; border-top: 1px solid var(--border-color);">
+                    <div style="max-width: 700px; margin: 0 auto;">
+                        <h2 style="text-align: center; font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem;">
+                            🌐 Connecting Your Machines with WolfNet
+                        </h2>
+                        <p
+                            style="text-align: center; color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 2rem;">
+                            WolfStack automatically installs WolfNet — a secure encrypted private network between your
+                            servers.
+                        </p>
+
+                        <!-- Scenario 1: Different Networks -->
+                        <h3
+                            style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-primary);">
+                            1. Connecting machines <em>not</em> on the same network
+                        </h3>
+                        <ol
+                            style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.8; margin-bottom: 1rem; padding-left: 1.25rem;">
+                            <li>Open the WolfStack dashboard, go to <strong>WolfNet → Add Peer → Internet Peer</strong>
+                                and follow the instructions</li>
+                            <li>Log in to the WolfStack interface on the second server, go to <strong>Console</strong>,
+                                and paste the command you were given</li>
+                            <li>Copy the <strong>reverse token</strong> it gives you back to the first server and run it
+                            </li>
+                        </ol>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 2rem;">
+                            ✅ <strong>You have now set up a WolfNet network between your servers.</strong>
+                            They can see each other on a private encrypted network — no port forwarding or VPN setup
+                            needed.
+                        </p>
+
+                        <!-- Scenario 2: Same Network -->
+                        <h3
+                            style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-primary);">
+                            2. Connecting machines on the same network
+                        </h3>
+                        <p
+                            style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.8; margin-bottom: 1rem;">
+                            If your machines are on the <strong>same local network</strong> (same router, same office,
+                            same home), there's nothing else to do!
+                            WolfNet uses <strong>auto-discovery</strong> — it broadcasts on your local network and finds
+                            other WolfNet machines automatically.
+                        </p>
+                        <p
+                            style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.8; margin-bottom: 1rem;">
+                            Just install WolfStack on each machine and they will discover each other within seconds. No
+                            invite tokens, no config files, zero setup.
+                        </p>
+                        <p style="color: var(--text-muted); font-size: 0.85rem;">
+                            💡 Even on a local network, WolfNet encrypts all traffic with ChaCha20-Poly1305 — giving you
+                            a secure private
+                            network separate from your regular LAN traffic.
+                        </p>
+
+                        <!-- Scenario 3: Remote into Local Network -->
+                        <h3
+                            style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; margin-top: 2rem; color: var(--text-primary);">
+                            3. Connecting to a local network remotely
+                        </h3>
+                        <p
+                            style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.8; margin-bottom: 1rem;">
+                            Want to access your home or office network from anywhere? Just install WolfNet on your
+                            laptop or remote
+                            machine (see the <a href="wolfnet.html"
+                                style="color: var(--accent-primary); text-decoration: underline;">WolfNet page</a>),
+                            then on a machine already on the network go to <strong>WolfNet → Add Peer</strong> and add
+                            your remote machine.
+                        </p>
+                        <p
+                            style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.8; margin-bottom: 1rem;">
+                            That's it — your remote machine is now connected like a VPN into your WolfNet network.
+                            Access
+                            all your servers, services, and files as if you were sitting right there.
+                        </p>
                     </div>
                 </section>
 

@@ -20,6 +20,7 @@ Wolf started as a database replication tool and has grown into a suite of server
 
 | Tool | Description | Status |
 |------|-------------|--------|
+| **[WolfStack](wolfstack/)** | Server, VM & container management dashboard with Proxmox integration | ✅ Available |
 | **[WolfScale](#wolfscale--database-replication)** | MariaDB/MySQL replication, clustering & load balancing | ✅ Available |
 | **[WolfDisk](#wolfdisk--distributed-filesystem)** | Disk sharing & replication across networks | ✅ Available |
 | **[WolfNet](#wolfnet--private-networking)** | Secure private networking across the internet | ✅ Available |

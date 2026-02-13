@@ -175,19 +175,48 @@
                         <li>The remote server must be reachable from your local WolfStack (via WolfNet or direct IP)
                         </li>
                         <li>Port <code>8553</code> (default) must be accessible</li>
+                        <li>You need the remote server's <strong>join token</strong> (see below)</li>
                     </ul>
+
+                    <h3 style="margin-top: 2rem;">🔐 Join Token Security</h3>
+                    <p>
+                        WolfStack uses <strong>join tokens</strong> to secure cluster additions. Every WolfStack server
+                        generates a unique token on first startup, stored at <code>/etc/wolfstack/join-token</code>.
+                        When you add a server, WolfStack verifies the token against the remote server before allowing
+                        the connection.
+                    </p>
+
+                    <div class="info-box" style="margin-top: 1rem; margin-bottom: 1.5rem;">
+                        <strong>🔑 Getting the join token:</strong> You can retrieve a server's join token in two ways:
+                        <ul style="margin-top: 0.5rem;">
+                            <li><strong>From the terminal:</strong> <code>wolfstack --show-token</code></li>
+                            <li><strong>From the dashboard:</strong> Open the "Add Server" modal — the current server's
+                                token is displayed at the bottom with a copy button</li>
+                        </ul>
+                    </div>
 
                     <h3 style="margin-top: 2rem;">Via the Dashboard</h3>
                     <ol>
-                        <li>Click <strong>"Servers"</strong> in the left sidebar</li>
-                        <li>Click <strong>"+ Add Server"</strong></li>
-                        <li>Enter the server's <strong>name</strong> (friendly label) and <strong>address</strong>
-                            (IP:port or hostname:port)</li>
-                        <li>Click <strong>"Add"</strong></li>
+                        <li>Click <strong>"+ Add Server"</strong> in the sidebar</li>
+                        <li>Select <strong>Node Type: WolfStack</strong></li>
+                        <li>Enter the server's <strong>address</strong> (IP or hostname) and <strong>port</strong>
+                            (default 8553)</li>
+                        <li>Optionally enter a <strong>Cluster Name</strong> to group nodes in the sidebar (defaults to
+                            "WolfStack")</li>
+                        <li>Enter the remote server's <strong>Join Token</strong></li>
+                        <li>Click <strong>"Add Server"</strong></li>
                     </ol>
                     <p style="margin-top: 1rem;">
-                        WolfStack immediately begins polling the remote node. Within 10 seconds, you'll see
-                        its metrics and status appear in your dashboard.
+                        WolfStack verifies the token against the remote server (trying HTTPS, then HTTP). On success,
+                        the node is added and marked as <strong>verified</strong>. Unverified nodes added via
+                        other means are automatically purged on restart.
+                    </p>
+
+                    <h3 style="margin-top: 2rem;">Adding Proxmox VE Nodes</h3>
+                    <p>
+                        Proxmox nodes use their own <strong>PVE API token</strong> for authentication instead of a join
+                        token. Select "Proxmox VE" as the node type and provide the API token credentials. See the
+                        <a href="proxmox.html">Proxmox Integration</a> page for full setup instructions.
                     </p>
 
                     <h3 style="margin-top: 2rem;">Via the API</h3>
@@ -196,17 +225,20 @@
                             <span class="code-lang">bash</span>
                             <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                         </div>
-                        <pre><code># Add a server using WolfNet IP
-curl -X POST http://localhost:8553/api/nodes \
-  -H "Content-Type: application/json" \
-  -H "Cookie: wolfstack_session=YOUR_SESSION" \
-  -d '{"name": "office-server", "address": "10.10.10.2:8553"}'
+                        <pre><code># Get the remote server's join token first
+ssh remote-server 'wolfstack --show-token'
 
-# Add using direct IP
+# Add a WolfStack server with join token
 curl -X POST http://localhost:8553/api/nodes \
   -H "Content-Type: application/json" \
   -H "Cookie: wolfstack_session=YOUR_SESSION" \
-  -d '{"name": "cloud-vps", "address": "203.0.113.10:8553"}'</code></pre>
+  -d '{"address": "10.10.10.2", "port": 8553, "join_token": "TOKEN_FROM_REMOTE"}'
+
+# Add with optional cluster name
+curl -X POST http://localhost:8553/api/nodes \
+  -H "Content-Type: application/json" \
+  -H "Cookie: wolfstack_session=YOUR_SESSION" \
+  -d '{"address": "10.10.10.2", "port": 8553, "join_token": "TOKEN", "cluster_name": "Production"}'</code></pre>
                     </div>
 
                     <div class="info-box" style="margin-top: 1.5rem;">
