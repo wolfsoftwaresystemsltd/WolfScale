@@ -279,14 +279,20 @@
                         </li>
                         <li><strong>Get the token from each server</strong> — after installation, each server displays
                             its cluster token. You can also retrieve it later by running
-                            <code>wolfstack --show-token</code> on that server.</li>
+                            <code>wolfstack --show-token</code> on that server.
+                        </li>
                         <li><strong>Open the web UI</strong> on <strong>one</strong> server — navigate to
                             <code>http://your-server-ip:8553</code> in your browser and log in with your Linux username
                             and password. You only need to log in to one server — this will be your management
-                            dashboard.</li>
+                            dashboard.
+                        </li>
                         <li><strong>Add your other nodes</strong> — click the <strong>+ Add Server</strong> button in
                             the
-                            sidebar and enter the address and token for each additional server.</li>
+                            sidebar and enter the address and token for each additional server or Proxmox server.</li>
+                        <li><strong>Update WolfNet connections</strong> — go into your cluster settings and click
+                            <strong>🔗 Update WolfNet Connections</strong> to automatically set up peer-to-peer
+                            networking between all your nodes.
+                        </li>
                     </ol>
                     <div class="info-box"
                         style="margin-top: 1.5rem; background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.3);">
