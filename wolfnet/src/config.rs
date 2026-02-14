@@ -123,9 +123,47 @@ pub struct PeerStatus {
 
 impl Config {
     /// Load configuration from a TOML file
+    /// Includes auto-migration: fixes `ip =` → `allowed_ip =` and removes duplicate peers.
     pub fn load(path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
         let content = std::fs::read_to_string(path)?;
-        let config: Config = toml::from_str(&content)?;
+
+        // --- Migration: replace `ip = "..."` with `allowed_ip = "..."` in [[peers]] ---
+        // Only replace bare `ip = ` lines (not `allowed_ip =`, not `public_ip =` etc.)
+        let mut migrated = false;
+        let fixed: String = content.lines().map(|line| {
+            let trimmed = line.trim();
+            if trimmed.starts_with("ip = ") && !trimmed.starts_with("ip_") {
+                migrated = true;
+                line.replace("ip = ", "allowed_ip = ")
+            } else {
+                line.to_string()
+            }
+        }).collect::<Vec<_>>().join("\n");
+
+        let mut config: Config = toml::from_str(&fixed)?;
+
+        // --- Dedup: remove peers with duplicate public_key or allowed_ip ---
+        let before = config.peers.len();
+        let mut seen_keys = std::collections::HashSet::new();
+        let mut seen_ips = std::collections::HashSet::new();
+        config.peers.retain(|p| {
+            let key_new = seen_keys.insert(p.public_key.clone());
+            let ip_new = seen_ips.insert(p.allowed_ip.clone());
+            key_new && ip_new
+        });
+        let removed = before - config.peers.len();
+
+        // Write back if anything changed
+        if migrated || removed > 0 {
+            if migrated {
+                eprintln!("[wolfnet] Config migration: fixed 'ip' → 'allowed_ip' in {}", path.display());
+            }
+            if removed > 0 {
+                eprintln!("[wolfnet] Config cleanup: removed {} duplicate peer(s) from {}", removed, path.display());
+            }
+            config.save(path).ok(); // best-effort write-back
+        }
+
         Ok(config)
     }
 
