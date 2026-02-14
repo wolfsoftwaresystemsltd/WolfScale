@@ -659,14 +659,17 @@
                             <li><strong>Install WolfStack on each server</strong> — run this on every machine you want
                                 to manage</li>
                             <li><strong>Get the token</strong> from each server — after installation, each server
-                                displays its cluster token</li>
-                            <li><strong>Open the web UI</strong> — navigate to
+                                displays its cluster token. You can also run
+                                <code
+                                    style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px; font-size: 0.85rem;">wolfstack --show-token</code>
+                            </li>
+                            <li><strong>Open the web UI</strong> on <strong>one</strong> server — navigate to
                                 <code
                                     style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px; font-size: 0.85rem;">http://your-server-ip:8553</code>
-                                in your browser and log in
+                                and log in. You only need to log in to one server.
                             </li>
-                            <li><strong>Add your nodes</strong> — click the <strong>+</strong> button to add each server
-                                or
+                            <li><strong>Add your other nodes</strong> — click the <strong>+</strong> button to add each
+                                server or
                                 Proxmox cluster. You're done!</li>
                         </ol>
                         <div class="code-block" style="text-align: left;">
