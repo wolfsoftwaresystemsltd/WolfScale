@@ -262,20 +262,33 @@
                     </div>
                 </section>
 
-                <!-- Quick Install -->
+                <!-- Quick Start -->
                 <section class="content-section">
-                    <h2>Quick Install</h2>
-                    <p>Install WolfStack with a single command:</p>
-                    <div class="code-block">
-                        <div class="code-header">
-                            <span class="code-lang">bash</span>
-                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                        </div>
-                        <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfStack/master/setup.sh | sudo bash</code></pre>
+                    <h2>⚡ Quick Start</h2>
+                    <p>Get your cluster up and running in minutes:</p>
+                    <ol>
+                        <li><strong>Install WolfStack on each server</strong> — run this on every machine you want to
+                            manage:
+                            <div class="code-block" style="margin: 0.75rem 0;">
+                                <div class="code-header">
+                                    <span class="code-lang">bash</span>
+                                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                                </div>
+                                <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfStack/master/setup.sh | sudo bash</code></pre>
+                            </div>
+                        </li>
+                        <li><strong>Get the token from each server</strong> — after installation, each server displays
+                            its cluster token. Copy it.</li>
+                        <li><strong>Open the web UI</strong> — navigate to <code>http://your-server-ip:8553</code> in
+                            your browser and log in with your Linux username and password.</li>
+                        <li><strong>Add your nodes</strong> — click the <strong>+ Add Server</strong> button in the
+                            sidebar and enter the address and token for each node.</li>
+                    </ol>
+                    <div class="info-box"
+                        style="margin-top: 1.5rem; background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.3);">
+                        <strong>✅ That's it!</strong> Your nodes will appear in the sidebar with live metrics. Manage
+                        containers, networking, storage, and more from a single dashboard.
                     </div>
-
-                    <p style="margin-top: 1rem;">Then open <code>http://your-server:8553</code> and log in with your
-                        Linux system username and password.</p>
 
                     <h3 style="margin-top: 2rem;">What the Installer Does</h3>
                     <ol>
@@ -290,17 +303,14 @@
                         <li>Opens the firewall port</li>
                     </ol>
 
-                    <h3 style="margin-top: 2rem;">After Installation</h3>
+                    <h3 style="margin-top: 2rem;">Useful Commands</h3>
                     <div class="code-block">
                         <div class="code-header"><span class="code-lang">bash</span></div>
                         <pre><code># View status
 sudo systemctl status wolfstack
 
 # View logs
-sudo journalctl -u wolfstack -f
-
-# Open the dashboard
-xdg-open http://localhost:8553</code></pre>
+sudo journalctl -u wolfstack -f</code></pre>
                     </div>
 
                     <h3 style="margin-top: 2rem;">Upgrading</h3>
