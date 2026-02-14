@@ -657,7 +657,15 @@
                         <ol
                             style="text-align: left; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.8; margin-bottom: 1.25rem; padding-left: 1.25rem;">
                             <li><strong>Install WolfStack on each server</strong> — run this on every machine you want
-                                to manage</li>
+                                to manage:
+                                <div class="code-block" style="text-align: left; margin: 0.5rem 0;">
+                                    <div class="code-header">
+                                        <span class="code-lang">bash</span>
+                                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                                    </div>
+                                    <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfStack/master/setup.sh | sudo bash</code></pre>
+                                </div>
+                            </li>
                             <li><strong>Get the token</strong> from each server — after installation, each server
                                 displays its cluster token. You can also run
                                 <code
@@ -681,13 +689,7 @@
                             <strong>Note:</strong> You can add multiple WolfStack or Proxmox clusters to WolfStack's
                             dashboard for a one-stop server management shop.
                         </p>
-                        <div class="code-block" style="text-align: left;">
-                            <div class="code-header">
-                                <span class="code-lang">bash</span>
-                                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                            </div>
-                            <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfStack/master/setup.sh | sudo bash</code></pre>
-                        </div>
+
                         <p
                             style="margin-top: 1.25rem; color: var(--text-secondary); font-size: 0.95rem; font-weight: 500;">
                             Enjoy! 🐺 — Please don't forget my
