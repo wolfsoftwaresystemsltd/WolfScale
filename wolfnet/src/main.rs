@@ -483,6 +483,11 @@ fn run_daemon(config_path: &PathBuf) {
     let r = running.clone();
     ctrlc_handler(r);
 
+    // Register SIGHUP for config hot-reload (checked in main loop)
+    unsafe {
+        libc::signal(libc::SIGHUP, handle_reload as *const () as libc::sighandler_t);
+    }
+
     let hostname = hostname::get().map(|h| h.to_string_lossy().to_string()).unwrap_or_else(|_| "unknown".into());
     let start_time = Instant::now();
 
@@ -914,6 +919,71 @@ fn run_daemon(config_path: &PathBuf) {
             }
             last_dns_resolve = Instant::now();
         }
+
+        // 7. Config hot-reload on SIGHUP — add new peers without restarting
+        if RELOAD_FLAG.swap(false, Ordering::SeqCst) {
+            info!("SIGHUP received — reloading config...");
+            match Config::load(config_path) {
+                Ok(new_config) => {
+                    let existing_ips = peer_manager.all_ips();
+                    let mut added = 0;
+                    let mut updated = 0;
+                    for pc in &new_config.peers {
+                        match wolfnet::crypto::parse_public_key(&pc.public_key) {
+                            Ok(pub_key) => {
+                                let ip: Ipv4Addr = match pc.allowed_ip.parse() {
+                                    Ok(ip) => ip,
+                                    Err(e) => { warn!("Reload: invalid peer IP '{}': {}", pc.allowed_ip, e); continue; }
+                                };
+                                if existing_ips.contains(&ip) {
+                                    // Update existing peer's endpoint and hostname if changed
+                                    if let Some(ref ep) = pc.endpoint {
+                                        if let Some(addr) = resolve_endpoint(ep) {
+                                            let current_ep = peer_manager.with_peer_by_ip(&ip, |peer| peer.endpoint).flatten();
+                                            if current_ep != Some(addr) {
+                                                info!("Reload: updated endpoint for {} -> {}", ip, addr);
+                                                peer_manager.update_endpoint(&ip, addr);
+                                                // Also update configured_endpoint for DNS re-resolution
+                                                peer_manager.with_peer_by_ip(&ip, |peer| {
+                                                    peer.configured_endpoint = Some(ep.clone());
+                                                });
+                                                updated += 1;
+                                            }
+                                        }
+                                    }
+                                    // Update hostname
+                                    let new_name = pc.name.clone().unwrap_or_default();
+                                    if !new_name.is_empty() {
+                                        peer_manager.with_peer_by_ip(&ip, |peer| {
+                                            if peer.hostname != new_name {
+                                                peer.hostname = new_name.clone();
+                                                updated += 1;
+                                            }
+                                        });
+                                    }
+                                } else {
+                                    // New peer — add it
+                                    let mut peer = Peer::new(pub_key, ip);
+                                    peer.hostname = pc.name.clone().unwrap_or_default();
+                                    if let Some(ref ep) = pc.endpoint {
+                                        peer.configured_endpoint = Some(ep.clone());
+                                        if let Some(addr) = resolve_endpoint(ep) {
+                                            peer.endpoint = Some(addr);
+                                        }
+                                    }
+                                    peer.establish_session(&keypair.secret, &keypair.public);
+                                    peer_manager.add_peer(peer);
+                                    added += 1;
+                                }
+                            }
+                            Err(e) => warn!("Reload: invalid peer public key: {}", e),
+                        }
+                    }
+                    info!("Config reload complete: {} new peer(s), {} updated", added, updated);
+                }
+                Err(e) => warn!("Config reload failed: {}", e),
+            }
+        }
     }
 
     // Cleanup
@@ -957,3 +1027,12 @@ unsafe impl Sync for RunningHolder {}
 extern "C" fn handle_signal(_sig: libc::c_int) {
     RUNNING.signal();
 }
+
+extern "C" fn handle_reload(_sig: libc::c_int) {
+    // Safety: AtomicBool::store is signal-safe
+    // We can't access the local RELOAD static from run_daemon directly,
+    // so we use a global.
+    RELOAD_FLAG.store(true, Ordering::SeqCst);
+}
+
+static RELOAD_FLAG: AtomicBool = AtomicBool::new(false);
