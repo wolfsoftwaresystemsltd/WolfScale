@@ -72,7 +72,7 @@ impl Peer {
         let shared = my_secret.diffie_hellman(&self.public_key);
         self.cipher = Some(SessionCipher::new(shared.as_bytes(), my_public, &self.public_key));
         self.last_handshake = Some(Instant::now());
-        info!("Session established with {} ({})", self.hostname, self.wolfnet_ip);
+        debug!("Session established with {} ({})", self.hostname, self.wolfnet_ip);
     }
 
     /// Check if this peer has an active session
@@ -121,7 +121,7 @@ impl PeerManager {
     pub fn add_peer(&self, peer: Peer) {
         let ip = peer.wolfnet_ip;
         let peer_id = peer.peer_id;
-        info!("Added peer: {} ({}) id={}", ip, peer.hostname, hex::encode(peer_id));
+        debug!("Added peer: {} ({}) id={}", ip, peer.hostname, hex::encode(peer_id));
 
         if let Some(endpoint) = peer.endpoint {
             self.endpoint_to_ip.write().unwrap().insert(endpoint, ip);
