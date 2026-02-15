@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/badge/license-FSL--1.1-blue.svg)](LICENSE)
 [![Patreon](https://img.shields.io/badge/Patreon-Support%20Us-orange.svg)](https://www.patreon.com/15362110/join)
 
-**[wolfscale.org](https://wolfscale.org)** • **[wolf.uk.com](https://wolf.uk.com)** • **[Discord](https://discord.gg/q9qMjHjUQY)**
+**[wolfscale.org](https://wolfscale.org)** • **[wolf.uk.com](https://wolf.uk.com)** • **[Discord](https://discord.gg/q9qMjHjUQY)** • **[Reddit](https://www.reddit.com/r/WolfStack/)**
 
 © Wolf Software Systems Ltd
 
@@ -361,6 +361,7 @@ name = "home-server"
 
 - ❤️ **Patreon:** [Support development](https://www.patreon.com/15362110/join)
 - 💬 **Discord:** [Join our community](https://discord.gg/q9qMjHjUQY)
+- 🔥 **Reddit:** [r/WolfStack](https://www.reddit.com/r/WolfStack/)
 - 🌐 **Website:** [wolf.uk.com](https://wolf.uk.com)
 - ⭐ **GitHub:** [Star this repo](https://github.com/wolfsoftwaresystemsltd/WolfScale)
 - 🐛 **Issues:** [Report a bug](https://github.com/wolfsoftwaresystemsltd/WolfScale/issues)
