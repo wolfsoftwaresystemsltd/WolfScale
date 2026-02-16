@@ -354,6 +354,7 @@ name = "home-server"
 - **Full Docs:** [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md)
 - **WolfDisk Docs:** [wolfdisk/README.md](wolfdisk/README.md)
 - **WolfNet Docs:** [wolfscale.org/wolfnet.html](https://wolfscale.org/wolfnet.html)
+- **MariaDB/MySQL Editor:** [wolfscale.org/wolfstack-mysql.html](https://wolfscale.org/wolfstack-mysql.html)
 
 ---
 
