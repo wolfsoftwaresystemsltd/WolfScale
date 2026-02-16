@@ -106,6 +106,8 @@ pub struct PeerManager {
     id_to_ip: Arc<RwLock<HashMap<[u8; 4], Ipv4Addr>>>,
     /// Endpoint → WolfNet IP mapping for incoming packet routing
     endpoint_to_ip: Arc<RwLock<HashMap<SocketAddr, Ipv4Addr>>>,
+    /// Subnet routes: container/VM IP → host peer IP (for routing to containers on remote nodes)
+    subnet_routes: Arc<RwLock<HashMap<Ipv4Addr, Ipv4Addr>>>,
 }
 
 impl PeerManager {
@@ -114,6 +116,7 @@ impl PeerManager {
             peers_by_ip: Arc::new(RwLock::new(HashMap::new())),
             id_to_ip: Arc::new(RwLock::new(HashMap::new())),
             endpoint_to_ip: Arc::new(RwLock::new(HashMap::new())),
+            subnet_routes: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -258,6 +261,41 @@ impl PeerManager {
             }
         }
         None
+    }
+
+    /// Find the host peer for a container/VM IP via subnet routes
+    /// Returns the WolfNet IP of the host that owns this container
+    pub fn find_route(&self, dest_ip: &Ipv4Addr) -> Option<Ipv4Addr> {
+        self.subnet_routes.read().unwrap().get(dest_ip).copied()
+    }
+
+    /// Load subnet routes from a JSON file (container_ip → host_peer_ip)
+    /// Called on startup and on SIGHUP to reload routes
+    pub fn load_routes(&self, path: &std::path::Path) {
+        let content = match std::fs::read_to_string(path) {
+            Ok(c) => c,
+            Err(_) => return, // File doesn't exist yet — that's fine
+        };
+        let map: HashMap<String, String> = match serde_json::from_str(&content) {
+            Ok(m) => m,
+            Err(e) => {
+                info!("Failed to parse routes file {}: {}", path.display(), e);
+                return;
+            }
+        };
+        let mut routes = self.subnet_routes.write().unwrap();
+        routes.clear();
+        for (container_ip_str, host_ip_str) in &map {
+            if let (Ok(container_ip), Ok(host_ip)) = (
+                container_ip_str.parse::<Ipv4Addr>(),
+                host_ip_str.parse::<Ipv4Addr>(),
+            ) {
+                routes.insert(container_ip, host_ip);
+            }
+        }
+        if !routes.is_empty() {
+            info!("Loaded {} subnet route(s) from {}", routes.len(), path.display());
+        }
     }
 
     /// Get peer count

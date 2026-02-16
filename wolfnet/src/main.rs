@@ -457,6 +457,10 @@ fn run_daemon(config_path: &PathBuf) {
         }
     }
 
+    // Load subnet routes (container/VM IPs → host peer IPs)
+    let routes_path = PathBuf::from("/var/run/wolfnet/routes.json");
+    peer_manager.load_routes(&routes_path);
+
     // Gateway mode is only enabled explicitly in config — a gateway is a node
     // that bridges networks and relays traffic between peers that can't see each other
     let is_gateway = config.network.gateway;
@@ -662,6 +666,26 @@ fn run_daemon(config_path: &PathBuf) {
 
                 if sent.unwrap_or(false) { continue; }
 
+                // Check subnet routes (container/VM IPs routed via a host peer)
+                if let Some(host_ip) = peer_manager.find_route(&dest_ip) {
+                    let routed = peer_manager.with_peer_by_ip(&host_ip, |host_peer| {
+                        if let Some(endpoint) = host_peer.endpoint {
+                            if host_peer.is_connected() {
+                                match host_peer.encrypt(&packet) {
+                                    Ok((counter, ciphertext)) => {
+                                        let pkt = transport::build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
+                                        let _ = socket.send_to(&pkt, endpoint);
+                                        debug!("Routed packet for container {} via host {}", dest_ip, host_ip);
+                                        true
+                                    }
+                                    Err(e) => { debug!("Encrypt error for {} via {}: {}", dest_ip, host_ip, e); false }
+                                }
+                            } else { false }
+                        } else { false }
+                    });
+                    if routed.unwrap_or(false) { continue; }
+                }
+
                 // Not directly connected — try relay via PEX-learned route
                 let relay_ip = peer_manager.find_relay_for(&dest_ip);
                 if let Some(relay_ip) = relay_ip {
@@ -828,8 +852,28 @@ fn run_daemon(config_path: &PathBuf) {
                                                 }
                                             });
                                             if !forwarded.unwrap_or(false) {
-                                                // Destination unknown or unreachable, write to TUN for kernel routing
-                                                unsafe { libc::write(tun_fd, plaintext.as_ptr() as *const _, plaintext.len()) };
+                                                // Check subnet routes — if the container is on us, write to TUN
+                                                // If it's on another peer, forward via that peer
+                                                if let Some(host_ip) = peer_manager.find_route(&dest_ip) {
+                                                    if host_ip == wolfnet_ip {
+                                                        // Container is on this node — write to TUN for kernel routing to bridge
+                                                        unsafe { libc::write(tun_fd, plaintext.as_ptr() as *const _, plaintext.len()) };
+                                                    } else {
+                                                        // Forward to the host peer
+                                                        peer_manager.with_peer_by_ip(&host_ip, |host_peer| {
+                                                            if let Some(endpoint) = host_peer.endpoint {
+                                                                if let Ok((ctr, ct)) = host_peer.encrypt(&plaintext) {
+                                                                    let pkt = transport::build_data_packet(&keypair.my_peer_id(), ctr, &ct);
+                                                                    let _ = socket.send_to(&pkt, endpoint);
+                                                                    debug!("Subnet-routed {} -> {} via host {}", dest_ip, endpoint, host_ip);
+                                                                }
+                                                            }
+                                                        });
+                                                    }
+                                                } else {
+                                                    // Destination unknown — write to TUN for kernel routing
+                                                    unsafe { libc::write(tun_fd, plaintext.as_ptr() as *const _, plaintext.len()) };
+                                                }
                                             }
                                         }
                                     } else {
@@ -980,6 +1024,9 @@ fn run_daemon(config_path: &PathBuf) {
                         }
                     }
                     info!("Config reload complete: {} new peer(s), {} updated", added, updated);
+
+                    // Also reload subnet routes
+                    peer_manager.load_routes(&routes_path);
                 }
                 Err(e) => warn!("Config reload failed: {}", e),
             }
