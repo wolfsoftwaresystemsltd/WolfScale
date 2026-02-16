@@ -578,6 +578,7 @@ fn run_daemon(config_path: &PathBuf) {
     let mut last_keepalive = Instant::now();
     let mut last_pex = Instant::now();
     let mut last_dns_resolve = Instant::now();
+    let mut last_route_reload = Instant::now();
     let tun_fd = tun.raw_fd();
 
     while running.load(Ordering::Relaxed) {
@@ -725,6 +726,24 @@ fn run_daemon(config_path: &PathBuf) {
                         }
                     });
                 }
+
+                // Last resort: broadcast to all connected peers (simple, always works)
+                // The receiving peer that owns the container will deliver it;
+                // others will drop it since it's not for them.
+                for peer_ip in peer_manager.all_ips() {
+                    if peer_ip == wolfnet_ip { continue; }
+                    peer_manager.with_peer_by_ip(&peer_ip, |peer| {
+                        if peer.is_connected() {
+                            if let Some(endpoint) = peer.endpoint {
+                                if let Ok((counter, ciphertext)) = peer.encrypt(&packet) {
+                                    let pkt = transport::build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
+                                    let _ = socket.send_to(&pkt, endpoint);
+                                }
+                            }
+                        }
+                    });
+                }
+                debug!("Broadcast packet for unknown dest {} to all peers", dest_ip);
             }
         }
 
@@ -962,6 +981,13 @@ fn run_daemon(config_path: &PathBuf) {
                 }
             }
             last_dns_resolve = Instant::now();
+        }
+
+        // 6b. Periodic route file reload (every 15s) — picks up container routes
+        //     from WolfStack without needing SIGHUP
+        if last_route_reload.elapsed() > Duration::from_secs(15) {
+            peer_manager.load_routes(&routes_path);
+            last_route_reload = Instant::now();
         }
 
         // 7. Config hot-reload on SIGHUP — add new peers without restarting
