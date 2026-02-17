@@ -499,19 +499,18 @@ ip addr add 192.168.100.1/24 dev eth0.100</code></pre>
 
                     <h4 style="margin-top: 1.5rem;">Option 2: Edit an existing peer's endpoint</h4>
                     <p>
-                        On the <strong>WolfNet</strong> page, expand the <strong>📄 Raw Configuration</strong>
-                        section at the bottom. This gives you a live editor for
-                        <code>/etc/wolfnet/config.toml</code>. Find the peer's <code>endpoint</code> line
-                        and change it to the vSwitch IP, then click <strong>💾 Save &amp; Apply</strong>:
+                        Already have a peer configured with its public IP? You can change it to the vSwitch IP
+                        <strong>right in your browser</strong>:
                     </p>
-                    <div class="code-block">
-                        <div class="code-header"><span class="code-lang">config.toml — change endpoint</span></div>
-                        <pre><code># Change from public IP:
-# endpoint = "203.0.113.5:9600"
-
-# To vSwitch IP:
-endpoint = "10.0.0.2:9600"</code></pre>
-                    </div>
+                    <ol>
+                        <li>In the WolfStack dashboard, go to the <strong>WolfNet</strong> page</li>
+                        <li>Scroll down and expand the <strong>📄 Raw Configuration</strong> section — this is a
+                            live text editor for the WolfNet config built into the dashboard</li>
+                        <li>Find the peer's <code>endpoint = "203.0.113.5:9600"</code> line</li>
+                        <li>Change it to the vSwitch IP: <code>endpoint = "10.0.0.2:9600"</code></li>
+                        <li>Click <strong>💾 Save &amp; Apply</strong> — WolfStack writes the config and
+                            restarts WolfNet automatically</li>
+                    </ol>
 
                     <div class="info-box" style="margin-top: 1.5rem;">
                         <strong>💡 When to use vSwitch vs public endpoints:</strong>
