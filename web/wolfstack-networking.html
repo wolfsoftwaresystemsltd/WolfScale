@@ -485,17 +485,31 @@ ip addr add 192.168.100.1/24 dev eth0.100</code></pre>
                         instead — this keeps WolfNet traffic on the private VLAN for better performance and lower
                         latency.
                     </p>
-                    <p>
-                        In WolfStack, go to <strong>Components</strong> → <strong>WolfNet</strong> → edit your peer
-                        configuration and change the endpoint to the vSwitch IP:
-                    </p>
 
+                    <h4 style="margin-top: 1.5rem;">Option 1: Set endpoint when adding a peer</h4>
+                    <p>
+                        In WolfStack, go to the <strong>WolfNet</strong> page → click <strong>"+ Add Peer"</strong>.
+                        In the <strong>Endpoint</strong> field, enter the peer's <strong>vSwitch IP</strong> instead
+                        of its public IP:
+                    </p>
+                    <div
+                        style="background: rgba(59,130,246,0.05); border: 1px solid rgba(59,130,246,0.15); border-radius: 8px; padding: 12px 16px; margin: 0.5rem 0;">
+                        <strong>Endpoint:</strong> <code>10.0.0.2:9600</code> (vSwitch IP instead of public IP)
+                    </div>
+
+                    <h4 style="margin-top: 1.5rem;">Option 2: Edit an existing peer's endpoint</h4>
+                    <p>
+                        On the <strong>WolfNet</strong> page, expand the <strong>📄 Raw Configuration</strong>
+                        section at the bottom. This gives you a live editor for
+                        <code>/etc/wolfnet/config.toml</code>. Find the peer's <code>endpoint</code> line
+                        and change it to the vSwitch IP, then click <strong>💾 Save &amp; Apply</strong>:
+                    </p>
                     <div class="code-block">
-                        <div class="code-header"><span class="code-lang">/etc/wolfnet/config.toml</span></div>
-                        <pre><code># Instead of:
+                        <div class="code-header"><span class="code-lang">config.toml — change endpoint</span></div>
+                        <pre><code># Change from public IP:
 # endpoint = "203.0.113.5:9600"
 
-# Use the vSwitch IP:
+# To vSwitch IP:
 endpoint = "10.0.0.2:9600"</code></pre>
                     </div>
 
