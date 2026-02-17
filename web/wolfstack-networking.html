@@ -53,6 +53,7 @@
                     <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
                     <a href="wolfstack-mysql.html">MariaDB/MySQL Editor</a>
                     <a href="proxmox.html">Proxmox Integration</a>
+                    <a href="app-store.html">App Store</a>
                     <a href="wolfstack-ai.html">AI Agent</a>
                     <a href="wolfstack-api.html">API Reference</a>
                 </div>
@@ -137,13 +138,23 @@
                         addresses or create VLANs.
                     </p>
                     <p>
-                        The Networking page shows three sections for each server:
+                        This guide covers the full networking stack — from physical interfaces to private
+                        overlays to exposing containers on the internet:
                     </p>
                     <ul>
-                        <li><strong>🔗 WolfNet Overlay</strong> — Status of your private mesh network</li>
-                        <li><strong>🌍 Public IP Mappings</strong> — Route public IPs to WolfNet containers, VMs, and
-                            LXC</li>
                         <li><strong>🌐 Network Interfaces</strong> — All interfaces with IPs, state, speed, and actions
+                        </li>
+                        <li><strong>🏷️ VLAN Management</strong> — Create and manage 802.1Q VLANs</li>
+                        <li><strong>🔗 WolfNet Overlay</strong> — Status of your private mesh network</li>
+                        <li><strong>🧩 Network Layers</strong> — How vSwitches, WolfNet, bridges, and public IPs
+                            relate</li>
+                        <li><strong>🔌 Hetzner vSwitch</strong> — Using Hetzner's private VLAN with WolfNet</li>
+                        <li><strong>🖥️ Proxmox Networking</strong> — Container bridges, wn0 interfaces, and
+                            WolfNet IPs</li>
+                        <li><strong>🚀 Exposing Containers</strong> — Step-by-step guide to making containers
+                            internet-accessible</li>
+                        <li><strong>🛡️ Port Safety</strong> — Blocked ports and live port scanning</li>
+                        <li><strong>🌍 Public IP Mappings</strong> — Route public IPs to WolfNet containers and VMs
                         </li>
                         <li><strong>🔤 DNS Configuration</strong> — Nameservers and search domains</li>
                     </ul>
@@ -358,6 +369,401 @@ ip addr add 192.168.100.1/24 dev eth0.100</code></pre>
                     </div>
                 </section>
 
+                <!-- Understanding Network Layers -->
+                <section class="content-section">
+                    <h2>🧩 Understanding the Network Layers</h2>
+                    <p>
+                        WolfStack environments typically have <strong>several network layers</strong> working together.
+                        Understanding how they connect is key to routing traffic correctly.
+                    </p>
+
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Layer</th>
+                                    <th>Interface</th>
+                                    <th>IP Range (typical)</th>
+                                    <th>What it connects</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Public Internet</strong></td>
+                                    <td><code>eth0</code> / <code>ens18</code></td>
+                                    <td>Your public IPs</td>
+                                    <td>Server to the internet</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Hetzner vSwitch</strong></td>
+                                    <td><code>enp7s0.4000</code> (VLAN)</td>
+                                    <td><code>10.0.0.0/24</code></td>
+                                    <td>Dedicated servers within Hetzner DC (private, Layer 2)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>WolfNet Overlay</strong></td>
+                                    <td><code>wg0</code> / <code>wn0</code></td>
+                                    <td><code>10.10.10.0/24</code></td>
+                                    <td>All servers across any provider (encrypted tunnel)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Proxmox Bridge</strong></td>
+                                    <td><code>vmbr0</code></td>
+                                    <td>(same as public)</td>
+                                    <td>VMs/containers to the physical NIC</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Container Bridge</strong></td>
+                                    <td><code>lxcbr0</code> / <code>docker0</code></td>
+                                    <td><code>10.10.10.0/24</code></td>
+                                    <td>Container WolfNet interfaces on a single host</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="code-block" style="margin-top: 1.5rem;">
+                        <div class="code-header"><span class="code-lang">Traffic flow: Internet → Container</span></div>
+                        <pre><code>Internet
+  │
+  ▼
+┌─────────────────────────────────────────────┐
+│  eth0 / ens18  (Public IP: 203.0.113.4)     │
+│                                             │
+│  iptables DNAT: 203.0.113.4:80 ──────┐     │
+│                                      │     │
+│  wg0 / wn0  (WolfNet: 10.10.10.1)   │     │
+│       │                              │     │
+│       │    ◄─────────────────────────┘     │
+│       │                                     │
+│  lxcbr0 / docker0                           │
+│       │                                     │
+│  ┌────▼─────────────┐                       │
+│  │ Container         │                       │
+│  │ WolfNet: 10.10.10.50                     │
+│  │ nginx on port 80  │                       │
+│  └───────────────────┘                       │
+└─────────────────────────────────────────────┘</code></pre>
+                    </div>
+                </section>
+
+                <!-- Hetzner vSwitch -->
+                <section class="content-section">
+                    <h2>🔌 Hetzner vSwitch Integration</h2>
+                    <p>
+                        A <strong>Hetzner vSwitch</strong> is a free Layer 2 VLAN service that connects your
+                        dedicated servers within Hetzner's data centre via a private network. Traffic on the
+                        vSwitch <strong>never touches the public internet</strong>.
+                    </p>
+
+                    <h3>Setting Up a vSwitch</h3>
+                    <ol>
+                        <li><strong>Create a vSwitch</strong> in the Hetzner Robot panel — choose a VLAN ID (e.g.
+                            4000) and add your servers to it</li>
+                        <li><strong>Create a VLAN interface</strong> on each server (WolfStack can do this from the
+                            Networking page → Add VLAN)</li>
+                        <li><strong>Assign private IPs</strong> from the same subnet on each server (e.g.
+                            <code>10.0.0.1/24</code>, <code>10.0.0.2/24</code>)
+                        </li>
+                    </ol>
+
+                    <div class="code-block" style="margin-top: 1rem;">
+                        <div class="code-header"><span class="code-lang">Example: vSwitch VLAN setup</span></div>
+                        <pre><code># On Server 1 (Sophie):
+ip link add link enp7s0 name enp7s0.4000 type vlan id 4000
+ip link set enp7s0.4000 up
+ip addr add 10.0.0.1/24 dev enp7s0.4000
+
+# On Server 2 (Cynthia):
+ip link add link enp7s0 name enp7s0.4000 type vlan id 4000
+ip link set enp7s0.4000 up
+ip addr add 10.0.0.2/24 dev enp7s0.4000
+
+# Test: ping from Sophie → Cynthia
+ping 10.0.0.2   # ✅ Should respond instantly</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">Using vSwitch IPs with WolfNet</h3>
+                    <p>
+                        By default, WolfNet peers connect using <strong>public IPs</strong> as endpoints. If your
+                        servers are all at Hetzner, you can use <strong>vSwitch IPs as WolfNet endpoints</strong>
+                        instead — this keeps WolfNet traffic on the private VLAN for better performance and lower
+                        latency.
+                    </p>
+
+                    <div class="code-block">
+                        <div class="code-header"><span class="code-lang">/etc/wolfnet/config.toml</span></div>
+                        <pre><code># Instead of:
+# endpoint = "203.0.113.5:9600"
+
+# Use the vSwitch IP:
+endpoint = "10.0.0.2:9600"</code></pre>
+                    </div>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>💡 When to use vSwitch vs public endpoints:</strong>
+                        <ul style="margin-top: 8px; margin-bottom: 0;">
+                            <li><strong>All servers at Hetzner</strong> → Use vSwitch IPs (faster, no bandwidth
+                                cost)</li>
+                            <li><strong>Mixed providers</strong> → Use public IPs (vSwitch only works within
+                                Hetzner)</li>
+                            <li><strong>Hybrid</strong> → Use vSwitch for Hetzner-to-Hetzner peers, public IPs
+                                for external peers</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- Proxmox Networking -->
+                <section class="content-section">
+                    <h2>🖥️ Proxmox Networking</h2>
+                    <p>
+                        On <strong>Proxmox</strong> hosts, networking has an extra layer — the Proxmox bridge
+                        (<code>vmbr0</code>) sits between the physical NIC and your VMs/containers. WolfStack
+                        integrates with this seamlessly.
+                    </p>
+
+                    <h3>How Proxmox Container Networking Works</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Interface</th>
+                                    <th>Location</th>
+                                    <th>Purpose</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>vmbr0</code></td>
+                                    <td>Host</td>
+                                    <td>Main bridge — connects VMs/containers to the physical NIC for public/external
+                                        access</td>
+                                </tr>
+                                <tr>
+                                    <td><code>lxcbr0</code></td>
+                                    <td>Host</td>
+                                    <td>WolfNet bridge — containers with WolfNet IPs get a <code>wn0</code> interface
+                                        on this bridge</td>
+                                </tr>
+                                <tr>
+                                    <td><code>eth0</code></td>
+                                    <td>Inside container</td>
+                                    <td>Main network (connected to <code>vmbr0</code>)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>wn0</code></td>
+                                    <td>Inside container</td>
+                                    <td>WolfNet network (connected to <code>lxcbr0</code>, has WolfNet IP)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">Assigning a WolfNet IP to a Container</h3>
+                    <p>In WolfStack:</p>
+                    <ol>
+                        <li>Go to <strong>Containers</strong> → click the ⚙️ settings gear on your container</li>
+                        <li>In the <strong>Network</strong> tab, enter a WolfNet IP (e.g. <code>10.10.10.50</code>)
+                        </li>
+                        <li>Click <strong>Save</strong> — WolfStack will:
+                            <ul>
+                                <li>Create a <code>wn0</code> NIC on <code>lxcbr0</code> in the Proxmox config</li>
+                                <li>Assign the IP inside the container</li>
+                                <li>Add routes so other WolfNet nodes can reach it</li>
+                            </ul>
+                        </li>
+                    </ol>
+
+                    <div class="code-block" style="margin-top: 1rem;">
+                        <div class="code-header"><span class="code-lang">What WolfStack configures (Proxmox)</span>
+                        </div>
+                        <pre><code># In /etc/pve/lxc/100.conf:
+net0: name=eth0,bridge=vmbr0,ip=dhcp,type=veth
+net1: name=wn0,bridge=lxcbr0,ip=10.10.10.50/24,type=veth
+
+# Routes added on the host:
+ip route add 10.10.10.50/32 dev lxcbr0</code></pre>
+                    </div>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>📖 Docker containers:</strong> Docker containers can also get WolfNet IPs.
+                        When creating a Docker container in WolfStack, enter a WolfNet IP and the container
+                        will be connected to a WolfNet bridge network. The IP is stored as a Docker label
+                        (<code>wolfnet.ip</code>).
+                    </div>
+                </section>
+
+                <!-- Exposing Containers to the Internet -->
+                <section class="content-section">
+                    <h2>🚀 Exposing Containers to the Internet</h2>
+                    <p>
+                        A container with a WolfNet IP is on a <strong>private overlay network</strong> — it's not
+                        directly reachable from the internet. To make a container's service (like a web server)
+                        publicly accessible, you use <strong>IP Mapping</strong>.
+                    </p>
+
+                    <h3>Step-by-Step: Expose a Web Server</h3>
+                    <div
+                        style="background: rgba(59,130,246,0.05); border: 1px solid rgba(59,130,246,0.15); border-radius: 8px; padding: 16px; margin: 1rem 0;">
+                        <ol style="margin: 0; padding-left: 20px; line-height: 2;">
+                            <li><strong>Create a container</strong> (LXC or Docker) with a WolfNet IP, e.g.
+                                <code>10.10.10.50</code>
+                            </li>
+                            <li><strong>Install your service</strong> inside the container (e.g. nginx on port 80)
+                            </li>
+                            <li>Go to <strong>Networking</strong> → <strong>Public IP Mappings</strong> → click
+                                <strong>+ Add Mapping</strong>
+                            </li>
+                            <li>Select your <strong>Public IP</strong> (auto-detected from the server)</li>
+                            <li>Select the <strong>WolfNet IP</strong> of the container (<code>10.10.10.50</code> —
+                                containers appear in the dropdown)</li>
+                            <li>Set <strong>Ports</strong> to <code>80,443</code> and <strong>Protocol</strong> to
+                                <code>TCP</code>
+                            </li>
+                            <li>Click <strong>Create Mapping</strong></li>
+                        </ol>
+                    </div>
+
+                    <p style="margin-top: 1rem;">
+                        That's it — internet users can now reach <code>http://your-public-ip</code> and it will be
+                        forwarded to the container's nginx on port 80.
+                    </p>
+
+                    <h3 style="margin-top: 2rem;">Common Scenarios</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Scenario</th>
+                                    <th>Public IP</th>
+                                    <th>WolfNet IP</th>
+                                    <th>Ports</th>
+                                    <th>Protocol</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Web server (HTTP + HTTPS)</td>
+                                    <td>203.0.113.4</td>
+                                    <td>10.10.10.50</td>
+                                    <td>80,443</td>
+                                    <td>TCP</td>
+                                </tr>
+                                <tr>
+                                    <td>Game server</td>
+                                    <td>203.0.113.4</td>
+                                    <td>10.10.10.51</td>
+                                    <td>25565</td>
+                                    <td>TCP</td>
+                                </tr>
+                                <tr>
+                                    <td>Full IP passthrough</td>
+                                    <td>203.0.113.5</td>
+                                    <td>10.10.10.52</td>
+                                    <td><em>(blank)</em></td>
+                                    <td>All</td>
+                                </tr>
+                                <tr>
+                                    <td>DNS server</td>
+                                    <td>203.0.113.4</td>
+                                    <td>10.10.10.53</td>
+                                    <td>53</td>
+                                    <td>UDP</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">Cross-Interface Routing</h3>
+                    <p>
+                        Don't worry about the public IP and WolfNet IP being on different network interfaces —
+                        the Linux kernel handles cross-interface routing automatically. WolfStack:
+                    </p>
+                    <ul>
+                        <li>Enables <code>net.ipv4.ip_forward</code> (required for routing between interfaces)
+                        </li>
+                        <li>Sets up <strong>conntrack</strong> rules so return traffic flows back correctly</li>
+                        <li>Uses <strong>SNAT</strong> to ensure reply packets route through this server (not
+                            directly to the client)</li>
+                    </ul>
+                </section>
+
+                <!-- Port Safety -->
+                <section class="content-section">
+                    <h2>🛡️ Port Safety</h2>
+                    <p>
+                        WolfStack <strong>prevents you from accidentally breaking critical services</strong> by
+                        blocking certain ports from being mapped. This applies to both the web UI and the API.
+                    </p>
+
+                    <h3>Blocked Ports</h3>
+                    <p>The following ports are always rejected when creating an IP mapping:</p>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Port</th>
+                                    <th>Service</th>
+                                    <th>Why it's blocked</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>22</code></td>
+                                    <td>SSH</td>
+                                    <td>Mapping this would lock you out of the server</td>
+                                </tr>
+                                <tr>
+                                    <td><code>111</code>, <code>2049</code></td>
+                                    <td>NFS</td>
+                                    <td>Breaking NFS can disconnect mounted storage</td>
+                                </tr>
+                                <tr>
+                                    <td><code>3128</code></td>
+                                    <td>Proxmox CONNECT proxy</td>
+                                    <td>Used by Proxmox for console access</td>
+                                </tr>
+                                <tr>
+                                    <td><code>5900–5903</code></td>
+                                    <td>Proxmox VNC</td>
+                                    <td>Used for VM console display</td>
+                                </tr>
+                                <tr>
+                                    <td><code>8006</code>, <code>8443</code></td>
+                                    <td>Proxmox Web UI / API</td>
+                                    <td>Mapping these breaks Proxmox access entirely</td>
+                                </tr>
+                                <tr>
+                                    <td><code>8552</code>, <code>8553</code></td>
+                                    <td>WolfStack</td>
+                                    <td>WolfStack's own API and cluster communication</td>
+                                </tr>
+                                <tr>
+                                    <td><code>9600</code></td>
+                                    <td>WolfNet</td>
+                                    <td>WolfNet's tunnel communication port</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">Live Port Scanning</h3>
+                    <p>
+                        In addition to the blocked list, WolfStack <strong>scans for all ports currently in
+                            use</strong> on the server (via <code>ss</code>). If a port is actively being used by
+                        a running service, the mapping will be rejected with a message telling you which
+                        process is using it. This prevents you from accidentally intercepting traffic meant
+                        for another application.
+                    </p>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>💡 Tip:</strong> When you type ports into the Create Mapping modal, warnings
+                        appear in real-time — <span style="color:#ef4444;">red</span> for blocked ports,
+                        <span style="color:#eab308;">yellow</span> for ports in use, and a
+                        <span style="color:#22c55e;">green ✓</span> when everything is safe.
+                    </div>
+                </section>
+
                 <!-- Public IP Mappings -->
                 <section class="content-section">
                     <h2>🌍 Public IP Mappings</h2>
@@ -370,9 +776,11 @@ ip addr add 192.168.100.1/24 dev eth0.100</code></pre>
                     <h3>How It Works</h3>
                     <p>When you create a mapping, WolfStack sets up three iptables rules:</p>
                     <ul>
-                        <li><strong>DNAT (Destination NAT)</strong> — Redirects incoming traffic on the public IP to the
+                        <li><strong>DNAT (Destination NAT)</strong> — Redirects incoming traffic on the public IP to
+                            the
                             WolfNet IP</li>
-                        <li><strong>SNAT (Source NAT)</strong> — Rewrites return traffic so it routes back through the
+                        <li><strong>SNAT (Source NAT)</strong> — Rewrites return traffic so it routes back through
+                            the
                             gateway</li>
                         <li><strong>FORWARD</strong> — Explicitly allows DNAT'd traffic through the firewall</li>
                     </ul>
@@ -398,7 +806,8 @@ ip addr add 192.168.100.1/24 dev eth0.100</code></pre>
                                 </tr>
                                 <tr>
                                     <td><strong>WolfNet IP</strong></td>
-                                    <td>The WolfNet IP of the target container, VM, or LXC instance. Known peers appear
+                                    <td>The WolfNet IP of the target container, VM, or LXC instance. Known peers
+                                        appear
                                         in a dropdown.</td>
                                     <td>10.10.10.104</td>
                                 </tr>
@@ -442,7 +851,8 @@ iptables -A FORWARD -d 10.10.10.104 -p tcp --dport 80 -m conntrack --ctstate DNA
                     </div>
 
                     <div class="info-box" style="margin-top: 1.5rem;">
-                        <strong>💡 Tip:</strong> To forward <em>all</em> traffic (every port and protocol), leave the
+                        <strong>💡 Tip:</strong> To forward <em>all</em> traffic (every port and protocol), leave
+                        the
                         Ports field blank and set Protocol to "All". This is useful for giving a container or VM
                         its own dedicated public IP.
                     </div>
@@ -489,13 +899,16 @@ iptables -A FORWARD -d 10.10.10.104 -p tcp --dport 80 -m conntrack --ctstate DNA
                                 <tr>
                                     <td><strong>systemd-resolved</strong></td>
                                     <td>Ubuntu Desktop, Fedora 33+, modern Debian</td>
-                                    <td>Writes a drop-in to <code>/etc/systemd/resolved.conf.d/wolfstack-dns.conf</code>
-                                        then restarts <code>systemd-resolved</code></td>
+                                    <td>Writes a drop-in to
+                                        <code>/etc/systemd/resolved.conf.d/wolfstack-dns.conf</code>
+                                        then restarts <code>systemd-resolved</code>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td><strong>NetworkManager</strong></td>
                                     <td>Fedora, RHEL, CentOS, IBM Power (RHEL)</td>
-                                    <td>Runs <code>nmcli connection modify</code> on the primary ethernet connection,
+                                    <td>Runs <code>nmcli connection modify</code> on the primary ethernet
+                                        connection,
                                         then reactivates it</td>
                                 </tr>
                                 <tr>
