@@ -460,27 +460,22 @@ ip addr add 192.168.100.1/24 dev eth0.100</code></pre>
                     <ol>
                         <li><strong>Create a vSwitch</strong> in the Hetzner Robot panel — choose a VLAN ID (e.g.
                             4000) and add your servers to it</li>
-                        <li><strong>Create a VLAN interface</strong> on each server (WolfStack can do this from the
-                            Networking page → Add VLAN)</li>
-                        <li><strong>Assign private IPs</strong> from the same subnet on each server (e.g.
-                            <code>10.0.0.1/24</code>, <code>10.0.0.2/24</code>)
+                        <li>In WolfStack, go to <strong>Networking</strong> → click <strong>"+ Add VLAN"</strong></li>
+                        <li>Select the <strong>Parent Interface</strong> (e.g. <code>enp7s0</code> — the NIC connected
+                            to Hetzner's VLAN switch)</li>
+                        <li>Enter the <strong>VLAN ID</strong> (must match what you set in Hetzner Robot, e.g.
+                            <code>4000</code>)
                         </li>
+                        <li>Click <strong>Create</strong> — WolfStack creates the VLAN interface and brings it up</li>
+                        <li>Click <strong>"+ Add IP"</strong> on the new VLAN interface and assign a private IP
+                            (e.g. <code>10.0.0.1/24</code>)</li>
+                        <li><strong>Repeat</strong> on each server with a unique IP from the same subnet</li>
                     </ol>
 
-                    <div class="code-block" style="margin-top: 1rem;">
-                        <div class="code-header"><span class="code-lang">Example: vSwitch VLAN setup</span></div>
-                        <pre><code># On Server 1 (Sophie):
-ip link add link enp7s0 name enp7s0.4000 type vlan id 4000
-ip link set enp7s0.4000 up
-ip addr add 10.0.0.1/24 dev enp7s0.4000
-
-# On Server 2 (Cynthia):
-ip link add link enp7s0 name enp7s0.4000 type vlan id 4000
-ip link set enp7s0.4000 up
-ip addr add 10.0.0.2/24 dev enp7s0.4000
-
-# Test: ping from Sophie → Cynthia
-ping 10.0.0.2   # ✅ Should respond instantly</code></pre>
+                    <div class="info-box" style="margin-top: 1rem;">
+                        <strong>💡 No terminal needed:</strong> Everything above is done through the WolfStack web
+                        dashboard. WolfStack handles the <code>ip link add</code>, <code>ip link set up</code>,
+                        and <code>ip addr add</code> commands automatically behind the scenes.
                     </div>
 
                     <h3 style="margin-top: 2rem;">Using vSwitch IPs with WolfNet</h3>
@@ -489,6 +484,10 @@ ping 10.0.0.2   # ✅ Should respond instantly</code></pre>
                         servers are all at Hetzner, you can use <strong>vSwitch IPs as WolfNet endpoints</strong>
                         instead — this keeps WolfNet traffic on the private VLAN for better performance and lower
                         latency.
+                    </p>
+                    <p>
+                        In WolfStack, go to <strong>Components</strong> → <strong>WolfNet</strong> → edit your peer
+                        configuration and change the endpoint to the vSwitch IP:
                     </p>
 
                     <div class="code-block">
