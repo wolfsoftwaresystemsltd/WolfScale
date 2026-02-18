@@ -3,7 +3,7 @@
 # WolfNet Quick Install Script
 # Installs WolfNet on Ubuntu/Debian (apt) or Fedora/RHEL (dnf)
 #
-# Usage: curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/wolfnet/setup.sh | sudo bash
+# Usage: curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfNet/main/setup.sh | sudo bash
 #
 
 set -e
