@@ -370,7 +370,6 @@
                         Integration</a>
                     <a href="app-store.html">App Store</a>
                     <a href="wolfstack-ai.html">AI Agent</a>
-                    <a href="wolfstack-api.html">API Reference</a>
                 </div>
                 <div class="nav-section">
                     <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load
@@ -384,7 +383,6 @@
                     <a href="configuration.html">Configuration</a>
                     <a href="performance.html">Performance</a>
                     <a href="cli.html">CLI Reference</a>
-                    <a href="api.html">API Reference</a>
                     <a href="troubleshooting.html">Troubleshooting</a>
                 </div>
                 <div class="nav-section">
@@ -802,45 +800,6 @@ pveum aclmod / -token 'root@pam!wolfstack' -role WolfStackMonitor</code></pre>
                         troubleshooting information.
                     </div>
 
-                    <!-- API Reference -->
-                    <h2>API Reference</h2>
-                    <p>WolfStack exposes the following REST API endpoints for Proxmox integration:</p>
-
-                    <table class="ts-table">
-                        <thead>
-                            <tr>
-                                <th>Method</th>
-                                <th>Endpoint</th>
-                                <th>Description</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><code>GET</code></td>
-                                <td><code>/api/nodes/{id}/pve/resources</code></td>
-                                <td>List all VMs and containers on a Proxmox node</td>
-                            </tr>
-                            <tr>
-                                <td><code>POST</code></td>
-                                <td><code>/api/nodes/{id}/pve/{vmid}/{action}</code></td>
-                                <td>Perform action on a guest (start, stop, shutdown, reboot, suspend, resume)</td>
-                            </tr>
-                            <tr>
-                                <td><code>PATCH</code></td>
-                                <td><code>/api/nodes/{id}/settings</code></td>
-                                <td>Update node settings (token, fingerprint, cluster name)</td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <h3>Example: List Guests</h3>
-                    <pre><code>curl -H "Cookie: session=YOUR_SESSION" \
-     https://localhost:9090/api/nodes/abc123/pve/resources</code></pre>
-
-                    <h3>Example: Start a VM</h3>
-                    <pre><code>curl -X POST \
-     -H "Cookie: session=YOUR_SESSION" \
-     https://localhost:9090/api/nodes/abc123/pve/100/start</code></pre>
 
                 </div>
 

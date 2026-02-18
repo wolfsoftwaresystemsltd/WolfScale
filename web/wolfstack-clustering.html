@@ -14,7 +14,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
-        content="WolfStack Multi-Server Clustering - Manage your entire fleet from one dashboard. Add servers, monitor remotely, migrate containers, and proxy API calls across nodes.">
+        content="WolfStack Multi-Server Clustering - Manage your entire fleet from one dashboard. Add servers, monitor remotely, and migrate containers across nodes.">
     <meta name="keywords"
         content="WolfStack clustering, multi-server management, server fleet, container migration, WolfNet cluster, infrastructure management">
     <meta name="author" content="Wolf Software Systems Ltd">
@@ -53,7 +53,6 @@
                     <a href="wolfstack-clustering.html" class="active">Multi-Server Clustering</a>
                     <a href="app-store.html">App Store</a>
                     <a href="wolfstack-ai.html">AI Agent</a>
-                    <a href="wolfstack-api.html">API Reference</a>
                 </div>
                 <div class="nav-section">
                     <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load
@@ -67,7 +66,6 @@
                     <a href="configuration.html">Configuration</a>
                     <a href="performance.html">Performance</a>
                     <a href="cli.html">CLI Reference</a>
-                    <a href="api.html">API Reference</a>
                     <a href="troubleshooting.html">Troubleshooting</a>
                 </div>
                 <div class="nav-section">
@@ -141,8 +139,8 @@
                             migrate
                             containers on any server directly from the dashboard</li>
                         <li><strong>Host Terminal</strong> — Open a root shell on any remote server via the sidebar</li>
-                        <li><strong>API proxying</strong> — Execute any API call on a remote node through your local
-                            WolfStack</li>
+                        <li><strong>Remote management</strong> — Manage any remote node directly through your local
+                            WolfStack dashboard</li>
                     </ul>
 
                     <div
@@ -160,9 +158,9 @@
                         </div>
                         <div class="feature-card" style="border-color: rgba(234, 179, 8, 0.3);">
                             <div class="feature-icon">🔀</div>
-                            <h3>API Proxy</h3>
-                            <p>Every API endpoint can be proxied to any remote node, so you can manage everything from
-                                one place.</p>
+                            <h3>Remote Management</h3>
+                            <p>Manage containers, services, and components on any remote node directly from your local
+                                dashboard.</p>
                         </div>
                     </div>
                 </section>
@@ -219,30 +217,10 @@
                         Proxmox nodes use their own <strong>PVE API token</strong> for authentication instead of a join
                         token. Select "Proxmox VE" as the node type and provide the API token credentials. See the
                         <a href="wolfstack-mysql.html">MariaDB/MySQL Editor</a>
-                    <a href="proxmox.html">Proxmox Integration</a> page for full setup instructions.
+                        <a href="proxmox.html">Proxmox Integration</a> page for full setup instructions.
                     </p>
 
-                    <h3 style="margin-top: 2rem;">Via the API</h3>
-                    <div class="code-block">
-                        <div class="code-header">
-                            <span class="code-lang">bash</span>
-                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                        </div>
-                        <pre><code># Get the remote server's join token first
-ssh remote-server 'wolfstack --show-token'
 
-# Add a WolfStack server with join token
-curl -X POST http://localhost:8553/api/nodes \
-  -H "Content-Type: application/json" \
-  -H "Cookie: wolfstack_session=YOUR_SESSION" \
-  -d '{"address": "10.10.10.2", "port": 8553, "join_token": "TOKEN_FROM_REMOTE"}'
-
-# Add with optional cluster name
-curl -X POST http://localhost:8553/api/nodes \
-  -H "Content-Type: application/json" \
-  -H "Cookie: wolfstack_session=YOUR_SESSION" \
-  -d '{"address": "10.10.10.2", "port": 8553, "join_token": "TOKEN", "cluster_name": "Production"}'</code></pre>
-                    </div>
 
                     <div class="info-box" style="margin-top: 1.5rem;">
                         <strong>💡 Recommended:</strong> Use <a href="wolfnet.html">WolfNet</a> addresses for cluster
@@ -271,77 +249,13 @@ curl -X POST http://localhost:8553/api/nodes \
 
                     <h3 style="margin-top: 2rem;">Remote Polling (every 10 seconds)</h3>
                     <p>
-                        The cluster manager polls each remote node's <code>/api/agent/status</code> endpoint.
-                        This endpoint <strong>does not require authentication</strong> — it returns basic
+                        The cluster manager polls each remote node every 10 seconds.
+                        This <strong>does not require authentication</strong> — it returns basic
                         node information needed for cluster visibility.
                     </p>
-
-                    <div class="code-block">
-                        <div class="code-header"><span class="code-lang">Agent Status Response</span></div>
-                        <pre><code>{
-  "node_id": "ws-a1b2c3d4",
-  "hostname": "office-server",
-  "version": "5.4.6",
-  "metrics": {
-    "cpu_usage": 23.5,
-    "memory_total": 16777216,
-    "memory_used": 8388608,
-    "load_avg": [1.2, 0.8, 0.5],
-    "disk": [...],
-    "network": [...]
-  },
-  "components": [
-    {"component": "wolfnet", "installed": true, "running": true, "version": "1.0.0"},
-    {"component": "wolfdisk", "installed": true, "running": true, "version": "2.1.0"}
-  ]
-}</code></pre>
-                    </div>
                 </section>
 
-                <!-- Node Proxy -->
-                <section class="content-section">
-                    <h2>API Proxy — Remote Management</h2>
-                    <p>
-                        WolfStack can <strong>proxy any API call</strong> to a remote node. This means you can
-                        manage containers, services, and components on any node from your local dashboard
-                        without opening additional ports.
-                    </p>
 
-                    <h3>How It Works</h3>
-                    <p>
-                        Any API endpoint can be prefixed with <code>/api/nodes/{node_id}/proxy/</code> to
-                        forward it to that node:
-                    </p>
-
-                    <div class="code-block">
-                        <div class="code-header">
-                            <span class="code-lang">bash</span>
-                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                        </div>
-                        <pre><code># List Docker containers on a remote node
-curl http://localhost:8553/api/nodes/ws-a1b2c3d4/proxy/api/containers/docker
-
-# Get metrics from a remote node
-curl http://localhost:8553/api/nodes/ws-a1b2c3d4/proxy/api/metrics
-
-# Restart a service on a remote node
-curl -X POST http://localhost:8553/api/nodes/ws-a1b2c3d4/proxy/api/services/wolfnet/action \
-  -H "Content-Type: application/json" \
-  -d '{"action": "restart"}'
-
-# Start a Docker container on a remote node
-curl -X POST http://localhost:8553/api/nodes/ws-a1b2c3d4/proxy/api/containers/docker/nginx/action \
-  -H "Content-Type: application/json" \
-  -d '{"action": "start"}'</code></pre>
-                    </div>
-
-                    <div class="info-box" style="margin-top: 1.5rem;">
-                        <strong>🔒 Authentication:</strong> You authenticate with your <em>local</em> WolfStack
-                        session. The proxy forwards requests to the remote node using the unauthenticated agent
-                        endpoint for reads, or direct HTTP for writes. All traffic between nodes is
-                        encrypted when using WolfNet.
-                    </div>
-                </section>
 
                 <!-- Container Migration -->
                 <section class="content-section">
@@ -374,8 +288,8 @@ curl -X POST http://localhost:8553/api/nodes/ws-a1b2c3d4/proxy/api/containers/do
 │   (Primary Dashboard)    │          │     (Remote Server)      │
 │                          │          │                          │
 │  ┌─────────────────────┐ │ WolfNet  │ ┌──────────────────────┐ │
-│  │  Dashboard UI (SPA) │ │◄────────►│ │  /api/agent/status   │ │
-│  │  + API Proxy        │ │ Polling  │ │  (No auth endpoint)  │ │
+│  │  Dashboard UI (SPA) │ │◄────────►│ │  Agent Status        │ │
+│  │  + Remote Proxy     │ │ Polling  │ │  (Health endpoint)   │ │
 │  └─────────────────────┘ │ 10s      │ └──────────────────────┘ │
 │                          │          │                          │
 │  ┌─────────────────────┐ │          │ ┌──────────────────────┐ │
@@ -407,16 +321,7 @@ curl -X POST http://localhost:8553/api/nodes/ws-a1b2c3d4/proxy/api/containers/do
                         WolfStack instance or any of its containers.
                     </p>
 
-                    <h3 style="margin-top: 2rem;">Via API</h3>
-                    <div class="code-block">
-                        <div class="code-header">
-                            <span class="code-lang">bash</span>
-                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                        </div>
-                        <pre><code># Remove a server by its node ID
-curl -X DELETE http://localhost:8553/api/nodes/ws-a1b2c3d4 \
-  -H "Cookie: wolfstack_session=YOUR_SESSION"</code></pre>
-                    </div>
+
                 </section>
 
                 <!-- Troubleshooting -->
@@ -428,7 +333,7 @@ curl -X DELETE http://localhost:8553/api/nodes/ws-a1b2c3d4 \
                         <li>Check that WolfStack is running on the remote server:
                             <code>systemctl status wolfstack</code>
                         </li>
-                        <li>Verify you can reach port 8553: <code>curl http://REMOTE_IP:8553/api/agent/status</code>
+                        <li>Verify you can reach port 8553: <code>curl http://REMOTE_IP:8553</code>
                         </li>
                         <li>If using WolfNet, check the tunnel is up: <code>ping 10.10.10.x</code></li>
                         <li>Check firewall rules: <code>ufw allow 8553/tcp</code> or
@@ -448,13 +353,12 @@ curl -X DELETE http://localhost:8553/api/nodes/ws-a1b2c3d4 \
                     <ul>
                         <li>Remote polling runs every 10 seconds — wait a few moments</li>
                         <li>Check the browser console for JavaScript errors</li>
-                        <li>Verify the <code>/api/agent/status</code> endpoint returns data</li>
+                        <li>Verify the remote node is responding on port 8553</li>
                     </ul>
                 </section>
 
                 <div class="page-nav">
                     <a href="wolfstack-networking.html" class="prev">← Networking</a>
-                    <a href="wolfstack-api.html" class="next">API Reference →</a>
                 </div>
             </div>
 

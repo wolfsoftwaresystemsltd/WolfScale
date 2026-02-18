@@ -54,7 +54,6 @@
                     <a href="wolfstack-mysql.html">MariaDB/MySQL Editor</a>
                     <a href="proxmox.html">Proxmox Integration</a>
                     <a href="wolfstack-ai.html" class="active">AI Agent</a>
-                    <a href="wolfstack-api.html">API Reference</a>
                 </div>
                 <div class="nav-section">
                     <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication &amp; Load
@@ -68,7 +67,6 @@
                     <a href="configuration.html">Configuration</a>
                     <a href="performance.html">Performance</a>
                     <a href="cli.html">CLI Reference</a>
-                    <a href="api.html">API Reference</a>
                     <a href="troubleshooting.html">Troubleshooting</a>
                 </div>
                 <div class="nav-section">
@@ -203,7 +201,7 @@
                         <li>WolfStack sends your message to the LLM (Claude or Gemini)</li>
                         <li>The AI responds with command tags: <code>[EXEC_ALL]lscpu[/EXEC_ALL]</code></li>
                         <li>WolfStack executes <code>lscpu</code> on the local server</li>
-                        <li>WolfStack proxies the command to every online cluster node via <code>/api/ai/exec</code>
+                        <li>WolfStack proxies the command to every online cluster node
                         </li>
                         <li>All command output is collected and sent <em>back</em> to the AI</li>
                         <li>The AI analyses the results and presents a clear human-readable summary</li>
@@ -456,58 +454,6 @@
                     </div>
                 </section>
 
-                <!-- API Endpoints -->
-                <section class="content-section">
-                    <h2>📡 API Endpoints</h2>
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Method</th>
-                                    <th>Endpoint</th>
-                                    <th>Description</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>GET</code></td>
-                                    <td><code>/api/ai/config</code></td>
-                                    <td>Get AI config (API keys masked)</td>
-                                </tr>
-                                <tr>
-                                    <td><code>POST</code></td>
-                                    <td><code>/api/ai/config</code></td>
-                                    <td>Save AI config (provider, keys, model, email settings)</td>
-                                </tr>
-                                <tr>
-                                    <td><code>POST</code></td>
-                                    <td><code>/api/ai/chat</code></td>
-                                    <td>Send a chat message — triggers multi-turn command execution</td>
-                                </tr>
-                                <tr>
-                                    <td><code>POST</code></td>
-                                    <td><code>/api/ai/exec</code></td>
-                                    <td>Execute a safe read-only command (used by cluster proxy)</td>
-                                </tr>
-                                <tr>
-                                    <td><code>GET</code></td>
-                                    <td><code>/api/ai/status</code></td>
-                                    <td>AI agent status (configured, provider, model, alerts)</td>
-                                </tr>
-                                <tr>
-                                    <td><code>GET</code></td>
-                                    <td><code>/api/ai/alerts</code></td>
-                                    <td>Historical health check alerts</td>
-                                </tr>
-                                <tr>
-                                    <td><code>GET</code></td>
-                                    <td><code>/api/ai/models</code></td>
-                                    <td>List available models for the configured provider</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
 
                 <!-- Example Conversations -->
                 <section class="content-section">
@@ -544,14 +490,13 @@
                             <pre><code>"How do I set up WolfNet between two servers?"
 "What's the difference between WolfDisk and NFS?"
 "How do I configure SMTP for email alerts?"
-"What API endpoints are available for containers?"</code></pre>
+"How do I set up IP port mapping for a container?"</code></pre>
                         </div>
                     </div>
                 </section>
 
                 <div class="page-nav">
                     <a href="wolfstack-clustering.html" class="prev">← Multi-Server Clustering</a>
-                    <a href="wolfstack-api.html" class="next">API Reference →</a>
                 </div>
             </div>
 

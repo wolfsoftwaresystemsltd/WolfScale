@@ -55,7 +55,6 @@
                     <a href="proxmox.html">Proxmox Integration</a>
                     <a href="app-store.html">App Store</a>
                     <a href="wolfstack-ai.html">AI Agent</a>
-                    <a href="wolfstack-api.html">API Reference</a>
                 </div>
                 <div class="nav-section">
                     <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load
@@ -69,7 +68,6 @@
                     <a href="configuration.html">Configuration</a>
                     <a href="performance.html">Performance</a>
                     <a href="cli.html">CLI Reference</a>
-                    <a href="api.html">API Reference</a>
                     <a href="troubleshooting.html">Troubleshooting</a>
                 </div>
                 <div class="nav-section">
@@ -453,58 +451,6 @@ ALTER TABLE orders ADD COLUMN tracking_number VARCHAR(50) AFTER status;</code></
                     </p>
                 </section>
 
-                <!-- API Endpoints -->
-                <section class="content-section">
-                    <h2>📡 API Endpoints</h2>
-                    <p>
-                        The MariaDB/MySQL editor uses the following API endpoints. All require authentication.
-                    </p>
-
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Method</th>
-                                    <th>Endpoint</th>
-                                    <th>Description</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>POST</td>
-                                    <td><code>/api/mysql/connect</code></td>
-                                    <td>Test connection to a MySQL/MariaDB server</td>
-                                </tr>
-                                <tr>
-                                    <td>POST</td>
-                                    <td><code>/api/mysql/databases</code></td>
-                                    <td>List all databases on the server</td>
-                                </tr>
-                                <tr>
-                                    <td>POST</td>
-                                    <td><code>/api/mysql/tables</code></td>
-                                    <td>List tables in a database</td>
-                                </tr>
-                                <tr>
-                                    <td>POST</td>
-                                    <td><code>/api/mysql/data</code></td>
-                                    <td>Fetch paginated table data</td>
-                                </tr>
-                                <tr>
-                                    <td>POST</td>
-                                    <td><code>/api/mysql/query</code></td>
-                                    <td>Execute an arbitrary SQL query</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <p style="margin-top: 1rem;">
-                        All endpoints accept a JSON body with connection credentials (<code>host</code>,
-                        <code>port</code>, <code>user</code>, <code>password</code>) plus endpoint-specific parameters
-                        like <code>database</code>, <code>table</code>, or <code>query</code>.
-                    </p>
-                </section>
 
                 <!-- Troubleshooting -->
                 <section class="content-section">
