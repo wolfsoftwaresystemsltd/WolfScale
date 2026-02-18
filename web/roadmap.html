@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-KK9NEE1S54');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="WolfStack Roadmap — See what's coming next for the Wolf platform, from ZFS management to local AI models.">
+    <title>Roadmap - WolfStack</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=9">
+    <style>
+        .roadmap-intro {
+            margin-bottom: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.8;
+        }
+
+        .roadmap-intro strong {
+            color: var(--text-primary);
+        }
+
+        .roadmap-grid {
+            display: grid;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .roadmap-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .roadmap-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .roadmap-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        .roadmap-card:hover::before {
+            opacity: 1;
+        }
+
+        .roadmap-card.storage::before {
+            background: linear-gradient(90deg, #3b82f6, #06b6d4);
+        }
+
+        .roadmap-card.database::before {
+            background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+        }
+
+        .roadmap-card.backup::before {
+            background: linear-gradient(90deg, #22c55e, #4ade80);
+        }
+
+        .roadmap-card.cloud::before {
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+        }
+
+        .roadmap-card.ai::before {
+            background: linear-gradient(90deg, #ec4899, #f472b6);
+        }
+
+        .roadmap-card:hover {
+            border-color: rgba(220, 38, 38, 0.2);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+
+        .card-title-group {
+            flex: 1;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .card-status {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 100px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: rgba(234, 179, 8, 0.15);
+            color: #eab308;
+            border: 1px solid rgba(234, 179, 8, 0.3);
+        }
+
+        .card-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.7;
+            margin-bottom: 1.25rem;
+        }
+
+        .card-features {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .card-features li {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            padding: 0.35rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-features li::before {
+            content: '◇';
+            color: var(--accent-primary);
+            font-weight: bold;
+            font-size: 0.75rem;
+        }
+
+        .roadmap-cta {
+            text-align: center;
+            padding: 2rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-top: 2rem;
+        }
+
+        .roadmap-cta h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .roadmap-cta p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1.25rem;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .roadmap-cta-buttons {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .roadmap-cta-buttons a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-discord-cta {
+            background: linear-gradient(135deg, #5865F2, #4752C4);
+            color: white;
+            box-shadow: 0 2px 12px rgba(88, 101, 242, 0.3);
+        }
+
+        .btn-discord-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(88, 101, 242, 0.4);
+            color: white;
+        }
+
+        .btn-patreon-cta {
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+            color: white;
+            box-shadow: 0 2px 12px rgba(34, 197, 94, 0.3);
+        }
+
+        .btn-patreon-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(34, 197, 94, 0.4);
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wiki-layout">
+        <aside class="sidebar" id="sidebar">
+            <a href="index.html" class="sidebar-logo"><img
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"></a>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span>
+                    </div>
+                    <a href="wolfstack.html">Overview & Quick Start</a>
+                    <a href="wolfstack-containers.html">Container Management</a>
+                    <a href="wolfstack-storage.html">Storage Manager</a>
+                    <a href="wolfstack-networking.html">Networking</a>
+                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
+                    <a href="wolfstack-mysql.html">MariaDB/MySQL Editor</a>
+                    <a href="proxmox.html">Proxmox Integration</a>
+                    <a href="app-store.html">App Store</a>
+                    <a href="wolfstack-ai.html">AI Agent</a>
+                    <a href="wolfstack-api.html">API Reference</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load
+                            Balancer</span></div>
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="features.html">Features</a>
+                    <a href="architecture.html">Architecture</a>
+                    <a href="how-it-works.html">How It Works</a>
+                    <a href="binlog.html">Binlog Mode</a>
+                    <a href="load-balancer.html">Load Balancer</a>
+                    <a href="configuration.html">Configuration</a>
+                    <a href="performance.html">Performance</a>
+                    <a href="cli.html">CLI Reference</a>
+                    <a href="api.html">API Reference</a>
+                    <a href="troubleshooting.html">Troubleshooting</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication & Sharing</span>
+                    </div>
+                    <a href="wolfdisk.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
+                    <a href="wolfnet.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
+                            Firewall</span></div>
+                    <a href="wolfproxy.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
+                    </div>
+                    <a href="wolfserve.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Company</div>
+                    <a href="https://wolf.uk.com" target="_blank">Wolf Software</a>
+                    <a href="about.html">About</a>
+                    <a href="roadmap.html">Roadmap</a>
+                    <a href="contact.html">Contact</a>
+                    <a href="glossary.html">Glossary</a>
+                    <a href="licensing.html">Licensing</a>
+                </div>
+            </nav>
+            <div class="theme-toggle-wrapper">
+                <span class="theme-toggle-label">Theme</span>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-toggle-slider"></span>
+                </button>
+            </div>
+            <div class="sidebar-links">
+                <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
+                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+                <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+                <a href="https://www.reddit.com/r/WolfStack/" target="_blank">Reddit</a>
+                <a href="https://wolf.uk.com" target="_blank">wolf.uk.com</a>
+            </div>
+        </aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <main class="wiki-main">
+            <div class="mobile-header">
+                <a href="index.html" class="nav-logo"><img
+                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
+                        class="logo-img"></a>
+                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+            </div>
+
+            <div class="page-header">
+                <h1>Roadmap</h1>
+                <p>What's coming next for WolfStack and the Wolf platform</p>
+            </div>
+
+            <div class="wiki-content">
+                <section class="content-section">
+                    <p class="roadmap-intro">
+                        WolfStack is under active development and we have a clear vision for where the platform is
+                        heading.
+                        Below are features we're currently working on or have planned for upcoming releases.
+                        Priorities can shift based on community feedback — if something here matters to you,
+                        <strong>let us know on <a href="https://discord.gg/q9qMjHjUQY" target="_blank"
+                                style="color: var(--accent-primary);">Discord</a></strong>
+                        or <strong><a href="https://www.patreon.com/15362110/join" target="_blank"
+                                style="color: #22c55e;">Patreon</a></strong>.
+                    </p>
+
+                    <div class="roadmap-grid">
+
+                        <!-- ZFS Management -->
+                        <div class="roadmap-card storage">
+                            <div class="card-header">
+                                <span class="card-icon">🗃️</span>
+                                <div class="card-title-group">
+                                    <div class="card-title">ZFS Storage Management</div>
+                                    <span class="card-status">Planned</span>
+                                </div>
+                            </div>
+                            <p class="card-description">
+                                Full ZFS configuration and management directly from the WolfStack dashboard. Create and
+                                manage
+                                zpools, datasets, and snapshots without touching the command line. Monitor pool health,
+                                scrub
+                                status, and disk utilisation in real time — the same way WolfStack already handles LVM
+                                and
+                                standard partitions, but for ZFS.
+                            </p>
+                            <ul class="card-features">
+                                <li>Create, import, and destroy zpools from the UI</li>
+                                <li>Dataset and zvol management with property editing</li>
+                                <li>Snapshot creation, rollback, and scheduled auto-snapshots</li>
+                                <li>Pool health monitoring with scrub and resilver status</li>
+                                <li>Visual disk layout and vdev topology overview</li>
+                            </ul>
+                        </div>
+
+                        <!-- PostgreSQL Support -->
+                        <div class="roadmap-card database">
+                            <div class="card-header">
+                                <span class="card-icon">🐘</span>
+                                <div class="card-title-group">
+                                    <div class="card-title">PostgreSQL Support</div>
+                                    <span class="card-status">Planned</span>
+                                </div>
+                            </div>
+                            <p class="card-description">
+                                Optional PostgreSQL support alongside the existing MariaDB/MySQL integration. Postgres
+                                brings
+                                powerful capabilities that go beyond traditional relational databases — built-in pub/sub
+                                can
+                                replace many Redis-based caching and messaging setups, and the
+                                <strong>pgvector</strong> extension makes it a first-class vector database for AI/ML
+                                workloads,
+                                without needing a separate service. We want WolfStack users to have the choice.
+                            </p>
+                            <ul class="card-features">
+                                <li>Full PostgreSQL database browser and query editor in the dashboard</li>
+                                <li>Leverage LISTEN/NOTIFY to reduce or eliminate Redis dependencies</li>
+                                <li>Native pgvector support for embedding storage and similarity search</li>
+                                <li>Replication management via WolfScale for Postgres clusters</li>
+                                <li>One-click deployment from the App Store</li>
+                            </ul>
+                        </div>
+
+                        <!-- System Backup/Restore -->
+                        <div class="roadmap-card backup">
+                            <div class="card-header">
+                                <span class="card-icon">💾</span>
+                                <div class="card-title-group">
+                                    <div class="card-title">Full System Backup & Restore</div>
+                                    <span class="card-status">Planned</span>
+                                </div>
+                            </div>
+                            <p class="card-description">
+                                One-click, Time Machine-style full system backup and restore — separate from existing
+                                data
+                                volume backups. The goal is to make bare-metal recovery as painless as restoring an
+                                iPhone from
+                                iCloud. Select a snapshot, hit restore, and your entire server comes back exactly as it
+                                was:
+                                OS, configs, services, containers, and all.
+                            </p>
+                            <ul class="card-features">
+                                <li>Incremental, deduplicated full-system snapshots</li>
+                                <li>Browse and restore individual files or the entire system</li>
+                                <li>Scheduled automatic backups with configurable retention</li>
+                                <li>Independent from per-volume and per-container backups</li>
+                                <li>Bare-metal restore to the same or replacement hardware</li>
+                            </ul>
+                        </div>
+
+                        <!-- Cloud Storage Plugins -->
+                        <div class="roadmap-card cloud">
+                            <div class="card-header">
+                                <span class="card-icon">☁️</span>
+                                <div class="card-title-group">
+                                    <div class="card-title">Cloud Storage Plugins — pCloud & Internxt</div>
+                                    <span class="card-status">Planned</span>
+                                </div>
+                            </div>
+                            <p class="card-description">
+                                Expanding the storage backend with first-class plugins for <strong>pCloud</strong> and
+                                <strong>Internxt Drive</strong>. These join the existing S3, NFS, and WolfDisk backends,
+                                giving
+                                you more options for offsite backup targets, cold storage, and hybrid cloud setups — all
+                                configurable from the Storage Manager, no CLI required.
+                            </p>
+                            <ul class="card-features">
+                                <li>Mount pCloud and Internxt as storage backends in the dashboard</li>
+                                <li>Use as backup destinations for container and system snapshots</li>
+                                <li>Encrypted transfers with provider-side encryption support</li>
+                                <li>Unified file browser across local and cloud storage</li>
+                                <li>Pluggable architecture — more providers coming based on demand</li>
+                            </ul>
+                        </div>
+
+                        <!-- Local AI Models -->
+                        <div class="roadmap-card ai">
+                            <div class="card-header">
+                                <span class="card-icon">🧠</span>
+                                <div class="card-title-group">
+                                    <div class="card-title">Local AI Model Support</div>
+                                    <span class="card-status">Planned</span>
+                                </div>
+                            </div>
+                            <p class="card-description">
+                                The WolfStack AI Agent currently integrates with Claude and Gemini for intelligent
+                                server management. We're adding support for <strong>locally hosted models</strong> — run
+                                Ollama, llama.cpp, or any OpenAI-compatible endpoint on your own hardware and use it as
+                                your AI backend. Keep your infrastructure queries entirely on-premises, reduce API
+                                costs,
+                                and maintain full data sovereignty.
+                            </p>
+                            <ul class="card-features">
+                                <li>Connect to Ollama, llama.cpp, LocalAI, or any OpenAI-compatible API</li>
+                                <li>Run models on the same server or a dedicated GPU node in your cluster</li>
+                                <li>Zero data leaves your network — full privacy and sovereignty</li>
+                                <li>Model management UI for downloading and switching between models</li>
+                                <li>Seamless fallback — use local models by default, cloud as backup</li>
+                            </ul>
+                        </div>
+
+
+                        <!-- Centralized Logging -->
+                        <div class="roadmap-card storage">
+                            <div class="card-header">
+                                <span class="card-icon">📋</span>
+                                <div class="card-title-group">
+                                    <div class="card-title">Centralized Log Aggregation</div>
+                                    <span class="card-status">Planned</span>
+                                </div>
+                            </div>
+                            <p class="card-description">
+                                Aggregate logs from every node, container, and service across your cluster into a
+                                single,
+                                searchable interface. No more SSH&#8209;ing into individual servers to tail log files —
+                                filter
+                                by node, service, severity, or time range right from the dashboard. Built-in,
+                                lightweight,
+                                and requires zero external tooling.
+                            </p>
+                            <ul class="card-features">
+                                <li>Unified log viewer across all cluster nodes and containers</li>
+                                <li>Full-text search with filters for service, severity, and time range</li>
+                                <li>Live log streaming with auto-scroll and pause</li>
+                                <li>Configurable log retention and rotation policies</li>
+                                <li>Export and download logs for external analysis</li>
+                            </ul>
+                        </div>
+
+                        <!-- Scheduled Tasks -->
+                        <div class="roadmap-card backup">
+                            <div class="card-header">
+                                <span class="card-icon">⏰</span>
+                                <div class="card-title-group">
+                                    <div class="card-title">Scheduled Tasks Manager</div>
+                                    <span class="card-status">Planned</span>
+                                </div>
+                            </div>
+                            <p class="card-description">
+                                A visual cron and task scheduler built into the dashboard. Create, edit, and monitor
+                                scheduled
+                                jobs across your entire fleet without memorising cron syntax. See execution history,
+                                catch
+                                failures early, and run tasks on any node or group of nodes from one place.
+                            </p>
+                            <ul class="card-features">
+                                <li>Visual cron editor — no crontab syntax required</li>
+                                <li>Schedule tasks across specific nodes or entire clusters</li>
+                                <li>Execution history with output capture and failure tracking</li>
+                                <li>One-click manual execution for testing</li>
+                                <li>Pre-built templates for common maintenance tasks</li>
+                            </ul>
+                        </div>
+
+                        <!-- Alerting & Notifications -->
+                        <div class="roadmap-card cloud">
+                            <div class="card-header">
+                                <span class="card-icon">🔔</span>
+                                <div class="card-title-group">
+                                    <div class="card-title">Alerting & Notifications</div>
+                                    <span class="card-status">Planned</span>
+                                </div>
+                            </div>
+                            <p class="card-description">
+                                Configurable alerts for the things that matter — high CPU, low disk, container crashes,
+                                node
+                                disconnects, failed backups. Set thresholds, choose your notification channels, and stop
+                                finding out about problems after your users do.
+                            </p>
+                            <ul class="card-features">
+                                <li>Threshold-based alerts for CPU, memory, disk, and network</li>
+                                <li>Container and service health monitoring with auto-alerts</li>
+                                <li>Notification via email, Discord webhooks, Slack, and Telegram</li>
+                                <li>Alert history and acknowledgement tracking</li>
+                                <li>Customisable escalation rules and quiet hours</li>
+                            </ul>
+                        </div>
+
+                        <!-- RBAC -->
+                        <div class="roadmap-card database">
+                            <div class="card-header">
+                                <span class="card-icon">🔐</span>
+                                <div class="card-title-group">
+                                    <div class="card-title">Role-Based Access Control</div>
+                                    <span class="card-status">Planned</span>
+                                </div>
+                            </div>
+                            <p class="card-description">
+                                Multi-user access with granular, role-based permissions. Give team members access to the
+                                nodes and features they need — and nothing else. Ideal for agencies, teams, and anyone
+                                managing infrastructure with more than one pair of hands.
+                            </p>
+                            <ul class="card-features">
+                                <li>Predefined roles — Admin, Operator, Viewer — with custom options</li>
+                                <li>Per-node and per-cluster permission scoping</li>
+                                <li>Audit log of all user actions across the dashboard</li>
+                                <li>SSO and LDAP/Active Directory integration</li>
+                                <li>API key management with per-key permission sets</li>
+                            </ul>
+                        </div>
+
+                    </div>
+                </section>
+
+                <div class="roadmap-cta">
+                    <h3>🐺 Help Shape the Roadmap</h3>
+                    <p>
+                        These features are built for the community. Your feedback directly influences what gets
+                        prioritised — jump into our Discord or support us on Patreon to have your say.
+                    </p>
+                    <div class="roadmap-cta-buttons">
+                        <a href="https://discord.gg/q9qMjHjUQY" target="_blank" class="btn-discord-cta">💬 Join
+                            Discord</a>
+                        <a href="https://www.patreon.com/15362110/join" target="_blank" class="btn-patreon-cta">❤️
+                            Support on Patreon</a>
+                    </div>
+                </div>
+
+                <div class="page-nav">
+                    <a href="index.html" class="prev">← Home</a>
+                    <a href="about.html" class="next">About →</a>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

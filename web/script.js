@@ -58,17 +58,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Copy button functionality
-    document.querySelectorAll('.copy-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
-            const code = this.dataset.code || this.closest('.code-block').querySelector('code').textContent;
-            navigator.clipboard.writeText(code).then(() => {
-                const originalText = this.textContent;
-                this.textContent = 'Copied!';
-                setTimeout(() => { this.textContent = originalText; }, 2000);
-            });
-        });
-    });
+    // Copy button functionality is handled by the global copyCode function below
 
     // Smooth scroll for anchor links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -81,3 +71,41 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 });
+
+// Global copy function called by inline onclick="copyCode(this)" handlers
+function copyCode(btn) {
+    const codeBlock = btn.closest('.code-block');
+    if (!codeBlock) return;
+    const code = codeBlock.querySelector('code');
+    if (!code) return;
+    const text = code.textContent;
+
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+            btn.textContent = 'Copied!';
+            setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+        }).catch(() => {
+            fallbackCopy(text, btn);
+        });
+    } else {
+        fallbackCopy(text, btn);
+    }
+}
+
+function fallbackCopy(text, btn) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+        document.execCommand('copy');
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+    } catch (e) {
+        btn.textContent = 'Failed';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+    }
+    document.body.removeChild(textarea);
+}

@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-KK9NEE1S54');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="WolfStack App Store — Browse 68+ open-source applications you can install with one click. From Kubernetes to Grafana, databases to AI tools.">
+    <meta name="keywords"
+        content="WolfStack, app store, self-hosted, open source, Kubernetes, Docker, LXC, server applications">
+    <meta name="author" content="Wolf Software Systems Ltd">
+    <link rel="canonical" href="https://wolfscale.org/app-store.html">
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://wolfscale.org/app-store.html">
+    <meta property="og:title" content="WolfStack App Store — 68+ One-Click Applications">
+    <meta property="og:description"
+        content="Browse open-source applications you can install with one click on your WolfStack cluster.">
+    <meta property="og:image" content="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg">
+
+    <title>App Store — WolfStack</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=9">
+    <style>
+        /* App Store Page Styles */
+        .appstore-hero {
+            text-align: center;
+            padding: 2rem 0 1.5rem;
+            position: relative;
+        }
+
+        .appstore-hero::before {
+            content: '';
+            position: absolute;
+            top: -30%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(220, 38, 38, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .appstore-hero h1 {
+            font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #fff 0%, #ff6b6b 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .appstore-hero p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            max-width: 620px;
+            margin: 0 auto 1rem;
+            line-height: 1.7;
+        }
+
+        .appstore-stats {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 1.5rem 0;
+        }
+
+        .appstore-stat {
+            text-align: center;
+        }
+
+        .appstore-stat-number {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--accent-primary);
+            display: block;
+        }
+
+        .appstore-stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        /* Deploy Targets */
+        .deploy-targets {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .deploy-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 6px 14px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 100px;
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* Filter Bar */
+        .filter-bar {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .filter-btn {
+            padding: 6px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 100px;
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--accent-primary);
+            color: var(--text-primary);
+        }
+
+        .filter-btn.active {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: white;
+        }
+
+        /* App Grid */
+        .app-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1rem;
+            margin-bottom: 3rem;
+        }
+
+        .app-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.25rem;
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .app-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--accent-gradient);
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .app-card:hover {
+            border-color: rgba(220, 38, 38, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        .app-card:hover::before {
+            opacity: 1;
+        }
+
+        .app-card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.6rem;
+        }
+
+        .app-card-icon {
+            font-size: 1.6rem;
+            flex-shrink: 0;
+            width: 36px;
+            text-align: center;
+        }
+
+        .app-card-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .app-card-category {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        .app-card-desc {
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            line-height: 1.5;
+            margin-bottom: 0.75rem;
+        }
+
+        .app-card-targets {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+
+        .target-pill {
+            font-size: 0.65rem;
+            padding: 2px 8px;
+            border-radius: 100px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+
+        .target-pill.docker {
+            background: rgba(56, 154, 213, 0.15);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 154, 213, 0.3);
+        }
+
+        .target-pill.lxc {
+            background: rgba(251, 191, 36, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+
+        .target-pill.host {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .app-card-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            transition: color 0.2s;
+        }
+
+        .app-card-link:hover {
+            color: var(--accent-primary);
+        }
+
+        /* How It Works */
+        .how-it-works {
+            padding: 2rem 0;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .how-it-works h2 {
+            text-align: center;
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .step-card {
+            text-align: center;
+            padding: 1.5rem;
+        }
+
+        .step-number {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            color: white;
+            font-weight: 800;
+            font-size: 1rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .step-card h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+        }
+
+        .step-card p {
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            line-height: 1.5;
+        }
+
+        /* Count display */
+        .category-count {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .app-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .appstore-stats {
+                gap: 1.5rem;
+            }
+
+            .filter-bar {
+                gap: 0.4rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wiki-layout">
+        <aside class="sidebar" id="sidebar">
+            <a href="index.html" class="sidebar-logo"><img
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"></a>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span>
+                    </div>
+                    <a href="wolfstack.html">Overview & Quick Start</a>
+                    <a href="wolfstack-containers.html">Container Management</a>
+                    <a href="wolfstack-storage.html">Storage Manager</a>
+                    <a href="wolfstack-networking.html">Networking</a>
+                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
+                    <a href="wolfstack-mysql.html">MariaDB/MySQL Editor</a>
+                    <a href="proxmox.html">Proxmox Integration</a>
+                    <a href="app-store.html" style="color: var(--accent-primary); font-weight: 600;">App Store</a>
+                    <a href="wolfstack-ai.html">AI Agent</a>
+                    <a href="wolfstack-api.html">API Reference</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load
+                            Balancer</span></div>
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="features.html">Features</a>
+                    <a href="architecture.html">Architecture</a>
+                    <a href="how-it-works.html">How It Works</a>
+                    <a href="binlog.html">Binlog Mode</a>
+                    <a href="load-balancer.html">Load Balancer</a>
+                    <a href="configuration.html">Configuration</a>
+                    <a href="performance.html">Performance</a>
+                    <a href="cli.html">CLI Reference</a>
+                    <a href="api.html">API Reference</a>
+                    <a href="troubleshooting.html">Troubleshooting</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication & Sharing</span>
+                    </div>
+                    <a href="wolfdisk.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
+                    <a href="wolfnet.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
+                            Firewall</span></div>
+                    <a href="wolfproxy.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
+                    </div>
+                    <a href="wolfserve.html">Overview & Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Company</div>
+                    <a href="https://wolf.uk.com" target="_blank">Wolf Software</a>
+                    <a href="about.html">About</a>
+                    <a href="roadmap.html">Roadmap</a>
+                    <a href="contact.html">Contact</a>
+                    <a href="glossary.html">Glossary</a>
+                    <a href="licensing.html">Licensing</a>
+                </div>
+            </nav>
+            <div class="theme-toggle-wrapper">
+                <span class="theme-toggle-label">Theme</span>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-toggle-slider"></span>
+                </button>
+            </div>
+            <div class="sidebar-links">
+                <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
+                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+                <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+                <a href="https://www.reddit.com/r/WolfStack/" target="_blank">Reddit</a>
+                <a href="https://wolf.uk.com" target="_blank">wolf.uk.com</a>
+            </div>
+        </aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <main class="wiki-main">
+            <div class="mobile-header">
+                <a href="index.html" class="nav-logo"><img
+                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
+                        class="logo-img"></a>
+                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+            </div>
+
+            <div class="wiki-content">
+                <!-- Hero Section -->
+                <section class="appstore-hero">
+                    <h1>🏪 WolfStack App Store</h1>
+                    <p>
+                        One-click deployment of <strong>68+ open-source applications</strong> directly from the
+                        WolfStack dashboard.
+                        Install databases, monitoring tools, CI/CD pipelines, AI platforms, and more — on Docker
+                        containers,
+                        LXC containers, or bare-metal hosts.
+                    </p>
+
+                    <div class="appstore-stats">
+                        <div class="appstore-stat">
+                            <span class="appstore-stat-number">68+</span>
+                            <span class="appstore-stat-label">Applications</span>
+                        </div>
+                        <div class="appstore-stat">
+                            <span class="appstore-stat-number">16</span>
+                            <span class="appstore-stat-label">Categories</span>
+                        </div>
+                        <div class="appstore-stat">
+                            <span class="appstore-stat-number">3</span>
+                            <span class="appstore-stat-label">Deploy Targets</span>
+                        </div>
+                    </div>
+
+                    <div class="deploy-targets">
+                        <span class="deploy-badge">🐳 Docker Containers</span>
+                        <span class="deploy-badge">📦 LXC Containers</span>
+                        <span class="deploy-badge">🖥️ Bare Metal / Host</span>
+                    </div>
+                </section>
+
+                <!-- How It Works -->
+                <section class="how-it-works" style="border-top: none; padding-top: 0;">
+                    <h2>How It Works</h2>
+                    <div class="steps-grid">
+                        <div class="step-card">
+                            <div class="step-number">1</div>
+                            <h3>Browse</h3>
+                            <p>Open the App Store from your WolfStack dashboard and browse the catalogue by category.
+                            </p>
+                        </div>
+                        <div class="step-card">
+                            <div class="step-number">2</div>
+                            <h3>Configure</h3>
+                            <p>Choose your target node, set passwords and ports, then pick Docker, LXC, or bare-metal
+                                deployment.</p>
+                        </div>
+                        <div class="step-card">
+                            <div class="step-number">3</div>
+                            <h3>Deploy</h3>
+                            <p>Click install. WolfStack handles image pulling, container creation, volumes, and
+                                networking automatically.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Filter Bar -->
+                <div class="filter-bar" id="filter-bar">
+                    <button class="filter-btn active" data-category="all">All</button>
+                    <button class="filter-btn" data-category="AI / ML">AI / ML</button>
+                    <button class="filter-btn" data-category="Analytics">Analytics</button>
+                    <button class="filter-btn" data-category="Automation">Automation</button>
+                    <button class="filter-btn" data-category="Backend / BaaS">Backend</button>
+                    <button class="filter-btn" data-category="CI/CD">CI/CD</button>
+                    <button class="filter-btn" data-category="CMS">CMS</button>
+                    <button class="filter-btn" data-category="Communication">Comms</button>
+                    <button class="filter-btn" data-category="Container Orchestration">Orchestration</button>
+                    <button class="filter-btn" data-category="Database">Database</button>
+                    <button class="filter-btn" data-category="Dev Tools">Dev Tools</button>
+                    <button class="filter-btn" data-category="Media">Media</button>
+                    <button class="filter-btn" data-category="Monitoring">Monitoring</button>
+                    <button class="filter-btn" data-category="Networking">Networking</button>
+                    <button class="filter-btn" data-category="PaaS">PaaS</button>
+                    <button class="filter-btn" data-category="Project Management">Projects</button>
+                    <button class="filter-btn" data-category="Security">Security</button>
+                    <button class="filter-btn" data-category="Wolf">Wolf</button>
+                </div>
+
+                <p class="category-count" id="app-count">Showing 68 applications</p>
+
+                <!-- App Grid -->
+                <div class="app-grid" id="app-grid">
+                </div>
+
+                <!-- CTA -->
+                <section class="how-it-works" style="text-align: center;">
+                    <h2>Get Started</h2>
+                    <p
+                        style="color: var(--text-secondary); font-size: 0.9rem; max-width: 500px; margin: 0 auto 1.5rem; line-height: 1.7;">
+                        Install WolfStack on your server and access the App Store from the dashboard.
+                        All applications are free and open-source.
+                    </p>
+                    <a href="wolfstack.html"
+                        style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 12px 28px; background: var(--accent-gradient); color: white; border-radius: 8px; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease; box-shadow: 0 2px 12px rgba(220, 38, 38, 0.3); text-decoration: none;"
+                        onmouseover="this.style.transform='translateY(-2px)'"
+                        onmouseout="this.style.transform='translateY(0)'">
+                        Install WolfStack →
+                    </a>
+                </section>
+            </div>
+
+            <footer class="wiki-footer">
+                <div class="footer-content">
+                    <p>&copy; 2025–2026 <a href="https://wolf.uk.com" target="_blank">Wolf Software Systems Ltd</a>. All
+                        rights reserved.</p>
+                    <p style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-muted);">
+                        Built with 🐺 in the United Kingdom
+                    </p>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // App data — all 68 applications
+        const apps = [
+            { name: "Apache Superset", icon: "📊", category: "Analytics", desc: "Enterprise-grade business intelligence and data exploration platform", targets: ["docker"], website: "https://superset.apache.org" },
+            { name: "Appwrite", icon: "⚡", category: "Backend / BaaS", desc: "Open-source Firebase alternative with auth, databases, and storage", targets: ["docker"], website: "https://appwrite.io" },
+            { name: "Authentik", icon: "🔐", category: "Security", desc: "Identity provider with SSO, LDAP, and social login support", targets: ["docker"], website: "https://goauthentik.io" },
+            { name: "CapRover", icon: "🚀", category: "PaaS", desc: "Self-hosted PaaS with automated app deployment and SSL", targets: ["docker"], website: "https://caprover.com" },
+            { name: "Certbot", icon: "🔒", category: "Wolf", desc: "Let's Encrypt certificate manager — free automatic HTTPS", targets: ["lxc", "host"], website: "https://certbot.eff.org" },
+            { name: "CockroachDB", icon: "🪳", category: "Database", desc: "Distributed SQL database with automatic replication", targets: ["docker"], website: "https://www.cockroachlabs.com" },
+            { name: "Code Server", icon: "💻", category: "Dev Tools", desc: "VS Code in the browser — code from anywhere", targets: ["docker"], website: "https://coder.com" },
+            { name: "Coolify", icon: "❄️", category: "PaaS", desc: "Self-hosted Heroku/Netlify alternative for app deployment", targets: ["docker"], website: "https://coolify.io" },
+            { name: "CrowdSec", icon: "🛡️", category: "Security", desc: "Collaborative intrusion prevention with community blocklists", targets: ["docker"], website: "https://www.crowdsec.net" },
+            { name: "Dify", icon: "🤖", category: "AI / ML", desc: "LLM application development platform with visual workflows", targets: ["docker"], website: "https://dify.ai" },
+            { name: "Dokku", icon: "🐳", category: "PaaS", desc: "Lightweight PaaS — your own mini Heroku powered by Docker", targets: ["docker", "host"], website: "https://dokku.com" },
+            { name: "Drone CI", icon: "🚁", category: "CI/CD", desc: "Container-native CI/CD pipeline with yaml-based config", targets: ["docker"], website: "https://www.drone.io" },
+            { name: "Elasticsearch", icon: "🔎", category: "Database", desc: "Distributed search and analytics engine for any data type", targets: ["docker"], website: "https://www.elastic.co" },
+            { name: "Flowise", icon: "🌊", category: "AI / ML", desc: "Drag-and-drop UI for building LLM apps with LangChain", targets: ["docker"], website: "https://flowiseai.com" },
+            { name: "Focalboard", icon: "📋", category: "Project Management", desc: "Open-source Trello/Notion/Asana alternative for project tracking", targets: ["docker"], website: "https://www.focalboard.com" },
+            { name: "Galera Cluster", icon: "🗄️", category: "Database", desc: "Synchronous multi-master cluster for MariaDB with automatic node provisioning", targets: ["docker", "lxc", "host"], website: "https://galeracluster.com" },
+            { name: "Ghost", icon: "👻", category: "CMS", desc: "Professional publishing platform and headless CMS", targets: ["docker"], website: "https://ghost.org" },
+            { name: "Gitea", icon: "🐙", category: "Dev Tools", desc: "Lightweight self-hosted Git service with issue tracking and CI", targets: ["docker"], website: "https://gitea.io" },
+            { name: "GitLab Runner", icon: "🦊", category: "CI/CD", desc: "Executes GitLab CI/CD jobs in containers on your infrastructure", targets: ["docker"], website: "https://docs.gitlab.com/runner/" },
+            { name: "Grafana", icon: "📈", category: "Monitoring", desc: "Beautiful dashboards for metrics, logs, and traces", targets: ["docker"], website: "https://grafana.com" },
+            { name: "Home Assistant", icon: "🏠", category: "Other", desc: "Open-source home automation platform", targets: ["docker"], website: "https://www.home-assistant.io" },
+            { name: "Hoppscotch", icon: "🦗", category: "Dev Tools", desc: "Open-source API development ecosystem and Postman alternative", targets: ["docker"], website: "https://hoppscotch.io" },
+            { name: "Huginn", icon: "👁️", category: "Automation", desc: "Build agents that monitor and act on your behalf — your own IFTTT", targets: ["docker"], website: "https://github.com/huginn/huginn" },
+            { name: "Immich", icon: "📸", category: "Media", desc: "Self-hosted Google Photos alternative with ML-powered features", targets: ["docker"], website: "https://immich.app" },
+            { name: "InfluxDB", icon: "📉", category: "Database", desc: "High-performance time series database for metrics and IoT", targets: ["docker"], website: "https://www.influxdata.com" },
+            { name: "Jellyfin", icon: "🎬", category: "Media", desc: "Free software media system for streaming movies and TV", targets: ["docker"], website: "https://jellyfin.org" },
+            { name: "Keycloak", icon: "🗝️", category: "Security", desc: "Enterprise identity and access management with SSO and RBAC", targets: ["docker"], website: "https://www.keycloak.org" },
+            { name: "Kubernetes (K3s)", icon: "☸️", category: "Container Orchestration", desc: "Lightweight Kubernetes distribution — production-ready in a single binary", targets: ["host"], website: "https://k3s.io" },
+            { name: "MariaDB", icon: "🐬", category: "Database", desc: "Community-developed fork of MySQL with enhanced performance", targets: ["docker", "lxc", "host"], website: "https://mariadb.org" },
+            { name: "Matrix (Synapse)", icon: "💬", category: "Communication", desc: "Decentralised real-time communication with end-to-end encryption", targets: ["docker"], website: "https://matrix.org" },
+            { name: "Mattermost", icon: "💬", category: "Communication", desc: "Open-source Slack alternative for team messaging and collaboration", targets: ["docker"], website: "https://mattermost.com" },
+            { name: "Meilisearch", icon: "🔍", category: "Database", desc: "Lightning-fast, typo-tolerant search engine with instant results", targets: ["docker"], website: "https://www.meilisearch.com" },
+            { name: "Metabase", icon: "📊", category: "Analytics", desc: "Business intelligence with no-code question builder and dashboards", targets: ["docker"], website: "https://www.metabase.com" },
+            { name: "MinIO", icon: "📦", category: "Other", desc: "High-performance S3-compatible object storage", targets: ["docker"], website: "https://min.io" },
+            { name: "MongoDB", icon: "🍃", category: "Database", desc: "Document-oriented NoSQL database for flexible schemas", targets: ["docker"], website: "https://www.mongodb.com" },
+            { name: "MySQL", icon: "🐬", category: "Database", desc: "The world's most popular open-source relational database", targets: ["docker", "lxc", "host"], website: "https://www.mysql.com" },
+            { name: "n8n", icon: "🔄", category: "Automation", desc: "Workflow automation tool — connect anything to everything", targets: ["docker"], website: "https://n8n.io" },
+            { name: "Netdata", icon: "📡", category: "Monitoring", desc: "Real-time performance monitoring with per-second granularity", targets: ["docker", "host"], website: "https://www.netdata.cloud" },
+            { name: "Nextcloud", icon: "☁️", category: "Other", desc: "Self-hosted file sync, sharing, and collaboration platform", targets: ["docker"], website: "https://nextcloud.com" },
+            { name: "Nginx", icon: "🌐", category: "Networking", desc: "High-performance web server, reverse proxy, and load balancer", targets: ["docker", "host"], website: "https://nginx.org" },
+            { name: "NocoDB", icon: "📋", category: "Dev Tools", desc: "Open-source Airtable alternative — turn any database into a smart spreadsheet", targets: ["docker"], website: "https://nocodb.com" },
+            { name: "Nomad", icon: "🏕️", category: "Container Orchestration", desc: "HashiCorp workload orchestrator for containers and non-containerised apps", targets: ["docker", "host"], website: "https://www.nomadproject.io" },
+            { name: "Ollama", icon: "🦙", category: "AI / ML", desc: "Run large language models locally — Llama, Mistral, Gemma and more", targets: ["docker"], website: "https://ollama.com" },
+            { name: "Open WebUI", icon: "🌐", category: "AI / ML", desc: "ChatGPT-style interface for local LLMs with Ollama integration", targets: ["docker"], website: "https://openwebui.com" },
+            { name: "Pi-hole", icon: "🕳️", category: "Networking", desc: "Network-wide ad blocker and DNS sinkhole", targets: ["docker"], website: "https://pi-hole.net" },
+            { name: "Plane", icon: "✈️", category: "Project Management", desc: "Open-source Jira alternative for issue tracking and sprints", targets: ["docker"], website: "https://plane.so" },
+            { name: "Plausible Analytics", icon: "📊", category: "Analytics", desc: "Privacy-friendly Google Analytics alternative — lightweight and GDPR compliant", targets: ["docker"], website: "https://plausible.io" },
+            { name: "PocketBase", icon: "🎒", category: "Backend / BaaS", desc: "Backend in a single file — auth, DB, and file storage in one binary", targets: ["docker"], website: "https://pocketbase.io" },
+            { name: "Portainer", icon: "🐳", category: "Other", desc: "Docker management UI with container visualization", targets: ["docker"], website: "https://portainer.io" },
+            { name: "PostgreSQL", icon: "🐘", category: "Database", desc: "Advanced open-source relational database with SQL compliance", targets: ["docker", "lxc", "host"], website: "https://www.postgresql.org" },
+            { name: "Prometheus", icon: "🔥", category: "Monitoring", desc: "Time-series monitoring and alerting toolkit", targets: ["docker"], website: "https://prometheus.io" },
+            { name: "Redis", icon: "🔴", category: "Database", desc: "In-memory data store for caching, queues, and real-time analytics", targets: ["docker", "host"], website: "https://redis.io" },
+            { name: "Rocket.Chat", icon: "🚀", category: "Communication", desc: "Enterprise team chat with channels, video calls, and omnichannel", targets: ["docker"], website: "https://www.rocket.chat" },
+            { name: "SQLite Web", icon: "🪶", category: "Database", desc: "Browser-based SQLite database manager", targets: ["docker"], website: "https://github.com/nicois/sqliteweb" },
+            { name: "Strapi", icon: "🚀", category: "CMS", desc: "Headless CMS with RESTful and GraphQL APIs and a visual content builder", targets: ["docker"], website: "https://strapi.io" },
+            { name: "Supabase", icon: "⚡", category: "Backend / BaaS", desc: "Firebase alternative with Postgres, auth, storage, and real-time", targets: ["docker"], website: "https://supabase.com" },
+            { name: "Syncthing", icon: "🔁", category: "Other", desc: "Peer-to-peer continuous file synchronization across devices", targets: ["docker"], website: "https://syncthing.net" },
+            { name: "Taiga", icon: "🐯", category: "Project Management", desc: "Agile project management with Scrum and Kanban boards", targets: ["docker"], website: "https://taiga.io" },
+            { name: "Traefik", icon: "🚦", category: "Networking", desc: "Modern reverse proxy and load balancer with auto SSL", targets: ["docker"], website: "https://traefik.io" },
+            { name: "Umami", icon: "📈", category: "Analytics", desc: "Simple, fast, privacy-focused web analytics", targets: ["docker"], website: "https://umami.is" },
+            { name: "Uptime Kuma", icon: "📡", category: "Monitoring", desc: "Self-hosted uptime monitoring with beautiful status pages", targets: ["docker"], website: "https://uptime.kuma.pet" },
+            { name: "Vaultwarden", icon: "🔐", category: "Security", desc: "Lightweight Bitwarden-compatible password manager server", targets: ["docker"], website: "https://github.com/dani-garcia/vaultwarden" },
+            { name: "WireGuard", icon: "🔒", category: "Networking", desc: "Fast, modern VPN tunnel with state-of-the-art cryptography", targets: ["docker", "host"], website: "https://www.wireguard.com" },
+            { name: "WolfDisk", icon: "🐺", category: "Wolf", desc: "Distributed filesystem for seamless storage across your cluster", targets: ["lxc", "host"], website: "https://wolf.uk.com" },
+            { name: "WolfProxy", icon: "🐺", category: "Wolf", desc: "Reverse proxy with built-in firewall and automatic SSL via Let's Encrypt", targets: ["lxc", "host"], website: "https://wolf.uk.com" },
+            { name: "WolfScale", icon: "🐺", category: "Wolf", desc: "MariaDB-compatible distributed database with automatic replication", targets: ["lxc", "host"], website: "https://wolf.uk.com" },
+            { name: "WolfServe", icon: "🐺", category: "Wolf", desc: "High-performance web server for static sites and applications", targets: ["lxc", "host"], website: "https://wolf.uk.com" },
+            { name: "Woodpecker CI", icon: "🐦", category: "CI/CD", desc: "Community fork of Drone — simple, container-native CI/CD", targets: ["docker"], website: "https://woodpecker-ci.org" },
+            { name: "WordPress", icon: "📝", category: "CMS", desc: "The world's most popular content management system", targets: ["docker", "lxc", "host"], website: "https://wordpress.org" },
+        ];
+
+        // Render apps
+        function renderApps(category) {
+            const grid = document.getElementById('app-grid');
+            const countEl = document.getElementById('app-count');
+            const filtered = category === 'all' ? apps : apps.filter(a => a.category === category);
+
+            countEl.textContent = `Showing ${filtered.length} application${filtered.length !== 1 ? 's' : ''}`;
+
+            grid.innerHTML = filtered.map(app => `
+                <div class="app-card" data-category="${app.category}">
+                    <div class="app-card-header">
+                        <span class="app-card-icon">${app.icon}</span>
+                        <div>
+                            <div class="app-card-title">${app.name}</div>
+                            <div class="app-card-category">${app.category}</div>
+                        </div>
+                    </div>
+                    <p class="app-card-desc">${app.desc}</p>
+                    <div class="app-card-targets">
+                        ${app.targets.map(t => {
+                if (t === 'docker') return '<span class="target-pill docker">🐳 Docker</span>';
+                if (t === 'lxc') return '<span class="target-pill lxc">📦 LXC</span>';
+                if (t === 'host') return '<span class="target-pill host">🖥️ Host</span>';
+            }).join('')}
+                    </div>
+                    ${app.website ? `<a href="${app.website}" target="_blank" class="app-card-link">Visit website →</a>` : ''}
+                </div>
+            `).join('');
+        }
+
+        // Filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                renderApps(this.dataset.category);
+            });
+        });
+
+        // Initial render
+        renderApps('all');
+    </script>
+</body>
+
+</html>
