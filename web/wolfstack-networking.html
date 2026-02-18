@@ -95,6 +95,7 @@
                     <div class="nav-section-title">Company</div>
                     <a href="https://wolf.uk.com" target="_blank">Wolf Software</a>
                     <a href="about.html">About</a>
+                    <a href="roadmap.html">Roadmap</a>
                     <a href="contact.html">Contact</a>
                     <a href="glossary.html">Glossary</a>
                     <a href="licensing.html">Licensing</a>
@@ -629,9 +630,13 @@ ip route add 10.10.10.50/32 dev lxcbr0</code></pre>
                             <li>Select your <strong>Public IP</strong> (auto-detected from the server)</li>
                             <li>Select the <strong>WolfNet IP</strong> of the container (<code>10.10.10.50</code> —
                                 containers appear in the dropdown)</li>
-                            <li>Set <strong>Ports</strong> to <code>80,443</code> and <strong>Protocol</strong> to
+                            <li>Set <strong>Source Port(s)</strong> to <code>80,443</code> and <strong>Protocol</strong>
+                                to
                                 <code>TCP</code>
                             </li>
+                            <li>Optionally set <strong>Destination Port(s)</strong> if the container listens on
+                                different ports
+                                (e.g. source <code>8080</code> → destination <code>80</code>)</li>
                             <li>Click <strong>Create Mapping</strong></li>
                         </ol>
                     </div>
@@ -649,7 +654,8 @@ ip route add 10.10.10.50/32 dev lxcbr0</code></pre>
                                     <th>Scenario</th>
                                     <th>Public IP</th>
                                     <th>WolfNet IP</th>
-                                    <th>Ports</th>
+                                    <th>Source Port(s)</th>
+                                    <th>Dest Port(s)</th>
                                     <th>Protocol</th>
                                 </tr>
                             </thead>
@@ -659,6 +665,15 @@ ip route add 10.10.10.50/32 dev lxcbr0</code></pre>
                                     <td>203.0.113.4</td>
                                     <td>10.10.10.50</td>
                                     <td>80,443</td>
+                                    <td><em>(same)</em></td>
+                                    <td>TCP</td>
+                                </tr>
+                                <tr>
+                                    <td>Port translation (e.g. dev server)</td>
+                                    <td>203.0.113.4</td>
+                                    <td>10.10.10.50</td>
+                                    <td>8080</td>
+                                    <td>80</td>
                                     <td>TCP</td>
                                 </tr>
                                 <tr>
@@ -666,6 +681,7 @@ ip route add 10.10.10.50/32 dev lxcbr0</code></pre>
                                     <td>203.0.113.4</td>
                                     <td>10.10.10.51</td>
                                     <td>25565</td>
+                                    <td><em>(same)</em></td>
                                     <td>TCP</td>
                                 </tr>
                                 <tr>
@@ -673,6 +689,7 @@ ip route add 10.10.10.50/32 dev lxcbr0</code></pre>
                                     <td>203.0.113.5</td>
                                     <td>10.10.10.52</td>
                                     <td><em>(blank)</em></td>
+                                    <td><em>—</em></td>
                                     <td>All</td>
                                 </tr>
                                 <tr>
@@ -680,6 +697,7 @@ ip route add 10.10.10.50/32 dev lxcbr0</code></pre>
                                     <td>203.0.113.4</td>
                                     <td>10.10.10.53</td>
                                     <td>53</td>
+                                    <td><em>(same)</em></td>
                                     <td>UDP</td>
                                 </tr>
                             </tbody>
@@ -762,17 +780,23 @@ ip route add 10.10.10.50/32 dev lxcbr0</code></pre>
                     <h3 style="margin-top: 2rem;">Live Port Scanning</h3>
                     <p>
                         In addition to the blocked list, WolfStack <strong>scans for all ports currently in
-                            use</strong> on the server (via <code>ss</code>). If a port is actively being used by
-                        a running service, the mapping will be rejected with a message telling you which
-                        process is using it. This prevents you from accidentally intercepting traffic meant
-                        for another application.
+                            use</strong> on the server (via <code>ss</code>). If a source port is already in use by
+                        another service, a <strong>soft warning</strong> is displayed — but the mapping is
+                        <strong>not rejected</strong>. Since DNAT rules are IP-specific, they won't necessarily
+                        conflict with services listening on other interfaces or addresses.
+                    </p>
+                    <p style="margin-top: 0.5rem;">
+                        <strong>Destination ports</strong> are not checked at all — these are ports on the remote
+                        container/VM, and it's expected they may already be in use (that's the service you're
+                        forwarding to).
                     </p>
 
                     <div class="info-box" style="margin-top: 1.5rem;">
-                        <strong>💡 Tip:</strong> When you type ports into the Create Mapping modal, warnings
-                        appear in real-time — <span style="color:#ef4444;">red</span> for blocked ports,
-                        <span style="color:#eab308;">yellow</span> for ports in use, and a
-                        <span style="color:#22c55e;">green ✓</span> when everything is safe.
+                        <strong>💡 Tip:</strong> When you type source ports into the mapping modal, status
+                        indicators appear in real-time — <span style="color:#ef4444;">red</span> for blocked system
+                        ports,
+                        <span style="color:#3b82f6;">blue ℹ️</span> for ports in use (informational only), and a
+                        <span style="color:#22c55e;">green ✓</span> when there are no conflicts.
                     </div>
                 </section>
 
@@ -824,13 +848,23 @@ ip route add 10.10.10.50/32 dev lxcbr0</code></pre>
                                     <td>10.10.10.104</td>
                                 </tr>
                                 <tr>
-                                    <td><strong>Ports</strong></td>
-                                    <td>Specific ports to forward (leave blank for all traffic)</td>
-                                    <td>80,443</td>
+                                    <td><strong>Source Port(s)</strong></td>
+                                    <td>The ports that incoming traffic arrives on (leave blank for all traffic).
+                                        Supports
+                                        individual ports and ranges.</td>
+                                    <td>80,443 or 8000:8100</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Destination Port(s)</strong></td>
+                                    <td>The ports on the container/VM to forward to. If left blank, traffic is forwarded
+                                        to the same port numbers as the source. When specified, must have the same
+                                        count as source ports (one-to-one mapping).</td>
+                                    <td>8080 → 80</td>
                                 </tr>
                                 <tr>
                                     <td><strong>Protocol</strong></td>
-                                    <td>TCP only, UDP only, or All (both)</td>
+                                    <td>TCP only, UDP only, or All (both). Must be TCP or UDP when ports are specified.
+                                    </td>
                                     <td>TCP</td>
                                 </tr>
                                 <tr>
@@ -842,6 +876,13 @@ ip route add 10.10.10.50/32 dev lxcbr0</code></pre>
                         </table>
                     </div>
 
+                    <h3 style="margin-top: 2rem;">Editing a Mapping</h3>
+                    <p>
+                        Existing mappings can be <strong>edited in-place</strong> — click the ✏️ button on any
+                        mapping in the list. WolfStack will remove the old iptables rules, validate your changes,
+                        and apply the new rules automatically. No need to delete and recreate.
+                    </p>
+
                     <h3 style="margin-top: 2rem;">Persistence</h3>
                     <p>
                         All mappings are saved to <code>/etc/wolfstack/ip-mappings.json</code> and
@@ -851,7 +892,8 @@ ip route add 10.10.10.50/32 dev lxcbr0</code></pre>
 
                     <h3 style="margin-top: 2rem;">Under the Hood</h3>
                     <div class="code-block">
-                        <div class="code-header"><span class="code-lang">What WolfStack runs</span></div>
+                        <div class="code-header"><span class="code-lang">Same-port mapping (source 80 → dest 80)</span>
+                        </div>
                         <pre><code># DNAT — redirect incoming traffic
 iptables -t nat -A PREROUTING -d 203.0.113.4 -p tcp --dport 80 -j DNAT --to-destination 10.10.10.104
 
@@ -859,6 +901,19 @@ iptables -t nat -A PREROUTING -d 203.0.113.4 -p tcp --dport 80 -j DNAT --to-dest
 iptables -t nat -A POSTROUTING -d 10.10.10.104 -p tcp --dport 80 -j SNAT --to-source 10.10.10.1
 
 # FORWARD — allow the DNAT'd traffic
+iptables -A FORWARD -d 10.10.10.104 -p tcp --dport 80 -m conntrack --ctstate DNAT -j ACCEPT</code></pre>
+                    </div>
+
+                    <div class="code-block" style="margin-top: 1rem;">
+                        <div class="code-header"><span class="code-lang">Port translation (source 8080 → dest 80)</span>
+                        </div>
+                        <pre><code># DNAT — redirect and translate port
+iptables -t nat -A PREROUTING -d 203.0.113.4 -p tcp --dport 8080 -j DNAT --to-destination 10.10.10.104:80
+
+# SNAT — match on the translated destination port (80)
+iptables -t nat -A POSTROUTING -d 10.10.10.104 -p tcp --dport 80 -j SNAT --to-source 10.10.10.1
+
+# FORWARD — match on translated destination port (80)
 iptables -A FORWARD -d 10.10.10.104 -p tcp --dport 80 -m conntrack --ctstate DNAT -j ACCEPT</code></pre>
                     </div>
 
@@ -1032,7 +1087,13 @@ curl -X POST http://localhost:8553/api/networking/dns \
                                     <td><code>POST</code></td>
                                     <td><code>/api/networking/ip-mappings</code></td>
                                     <td>Create IP mapping
-                                        (<code>{"public_ip":"...","wolfnet_ip":"...","protocol":"tcp"}</code>)</td>
+                                        (<code>{"public_ip":"...","wolfnet_ip":"...","ports":"80","dest_ports":"8080","protocol":"tcp"}</code>)
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><code>PUT</code></td>
+                                    <td><code>/api/networking/ip-mappings/{id}</code></td>
+                                    <td>Update an existing IP mapping (same body as POST)</td>
                                 </tr>
                                 <tr>
                                     <td><code>DELETE</code></td>
