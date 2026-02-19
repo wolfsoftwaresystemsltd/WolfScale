@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments) } gtag('js', new Date()); gtag('config', 'G-KK9NEE1S54');</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="WolfStack File Manager — browse, view, edit, upload, and download files on any node or inside containers from the web dashboard.">
+    <meta name="author" content="Wolf Software Systems Ltd">
+    <link rel="canonical" href="https://wolfscale.org/wolfstack-files.html">
+    <title>File Manager - WolfStack | WolfScale</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=9">
+</head>
+
+<body>
+    <div class="wiki-layout">
+        <aside class="sidebar" id="sidebar">
+            <a href="index.html" class="sidebar-logo"><img
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"></a>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span>
+                    </div>
+                    <a href="wolfstack.html">Overview &amp; Quick Start</a>
+                    <a href="wolfstack-containers.html">Container Management</a>
+                    <a href="wolfstack-storage.html">Storage Manager</a>
+                    <a href="wolfstack-files.html" class="active">File Manager</a>
+                    <a href="wolfstack-networking.html">Networking</a>
+                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
+                    <a href="wolfstack-mysql.html">MariaDB/MySQL Editor</a>
+                    <a href="wolfstack-security.html">Security</a>
+                    <a href="wolfstack-certificates.html">Certificates</a>
+                    <a href="wolfstack-cron.html">Cron Jobs</a>
+                    <a href="wolfstack-terminal.html">Terminal</a>
+                    <a href="wolfstack-issues.html">Issues Scanner</a>
+                    <a href="proxmox.html">Proxmox Integration</a>
+                    <a href="app-store.html">App Store</a>
+                    <a href="wolfstack-ai.html">AI Agent</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication &amp; Load
+                            Balancer</span></div>
+                    <a href="quickstart.html">Quick Start</a><a href="features.html">Features</a><a
+                        href="architecture.html">Architecture</a>
+                    <a href="how-it-works.html">How It Works</a><a href="binlog.html">Binlog Mode</a><a
+                        href="load-balancer.html">Load Balancer</a>
+                    <a href="configuration.html">Configuration</a><a href="performance.html">Performance</a><a
+                        href="cli.html">CLI Reference</a>
+                    <a href="troubleshooting.html">Troubleshooting</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication &amp; Sharing</span>
+                    </div><a href="wolfdisk.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div><a
+                        href="wolfnet.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
+                            Firewall</span></div><a href="wolfproxy.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
+                    </div><a href="wolfserve.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Company</div><a href="https://wolf.uk.com" target="_blank">Wolf
+                        Software</a><a href="about.html">About</a><a href="roadmap.html">Roadmap</a><a
+                        href="contact.html">Contact</a><a href="glossary.html">Glossary</a><a
+                        href="licensing.html">Licensing</a>
+                </div>
+            </nav>
+            <div class="theme-toggle-wrapper"><span class="theme-toggle-label">Theme</span><button class="theme-toggle"
+                    id="theme-toggle" aria-label="Toggle theme"><span class="theme-toggle-slider"></span></button></div>
+            <div class="sidebar-links"><a href="https://github.com/wolfsoftwaresystemsltd/WolfStack"
+                    target="_blank">GitHub</a><a href="https://www.patreon.com/15362110/join"
+                    target="_blank">Patreon</a><a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a></div>
+        </aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+        <main class="wiki-main">
+            <div class="mobile-header"><a href="index.html" class="nav-logo"><img
+                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
+                        class="logo-img"></a><button class="mobile-menu-btn"
+                    id="mobile-menu-btn"><span></span><span></span><span></span></button></div>
+            <div class="wiki-content">
+                <div class="content-header">
+                    <h1>📁 File Manager</h1>
+                    <p class="content-subtitle">Browse, view, edit, upload, and download files on any node or inside
+                        containers</p>
+                </div>
+
+                <section class="content-section">
+                    <h2>Overview</h2>
+                    <p>The <strong>File Manager</strong> provides a visual file browser for any server in your cluster.
+                        Navigate the filesystem, view and edit text files, upload files, download files, and create new
+                        directories — all through the web dashboard.</p>
+                    <p>The file manager also works <strong>inside LXC and Docker containers</strong> — browse a
+                        container's filesystem as if you were on the host.</p>
+                </section>
+
+                <section class="content-section">
+                    <h2>✨ Features</h2>
+                    <div
+                        style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1.5rem;margin-top:1rem;">
+                        <div class="feature-card" style="border-color:rgba(168,85,247,0.3);">
+                            <h3>📂 Directory Browser</h3>
+                            <p>Navigate the filesystem with a familiar folder/file list. Click folders to enter, use the
+                                breadcrumb trail to go back. Shows file size, permissions, and modification time.</p>
+                        </div>
+                        <div class="feature-card" style="border-color:rgba(59,130,246,0.3);">
+                            <h3>✏️ File Editor</h3>
+                            <p>Click any text file to open it in a built-in editor. Edit configuration files, scripts,
+                                or any text file directly — then save with one click.</p>
+                        </div>
+                        <div class="feature-card" style="border-color:rgba(16,185,129,0.3);">
+                            <h3>⬆️ Upload Files</h3>
+                            <p>Upload files from your computer to any directory on the server. Drag and drop or use the
+                                file picker.</p>
+                        </div>
+                        <div class="feature-card" style="border-color:rgba(245,158,11,0.3);">
+                            <h3>⬇️ Download Files</h3>
+                            <p>Download any file to your computer with a single click. Works for any file type.</p>
+                        </div>
+                        <div class="feature-card" style="border-color:rgba(239,68,68,0.3);">
+                            <h3>📦 Container Files</h3>
+                            <p>Browse files inside LXC and Docker containers. WolfStack accesses the container's
+                                filesystem directly — not the host's.</p>
+                        </div>
+                        <div class="feature-card" style="border-color:rgba(6,182,212,0.3);">
+                            <h3>🌐 Remote Nodes</h3>
+                            <p>Browse files on remote cluster nodes. All requests are proxied automatically through
+                                WolfStack's cluster layer.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="content-section">
+                    <h2>📋 File Details</h2>
+                    <p>Each file and directory in the browser shows:</p>
+                    <div class="table-wrapper" style="margin-top:1rem;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Column</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Name</strong></td>
+                                    <td>File or directory name with type icon</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Size</strong></td>
+                                    <td>Human-readable file size (e.g. 4.2 KB, 1.5 MB)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Permissions</strong></td>
+                                    <td>Unix permissions (e.g. <code>rwxr-xr-x</code>)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Modified</strong></td>
+                                    <td>Last modification timestamp</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Actions</strong></td>
+                                    <td>View, edit, download, or delete</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="content-section">
+                    <h2>🐳 Container File Browsing</h2>
+                    <p>When browsing a Docker or LXC container's page, the File Manager accesses the <strong>container's
+                            filesystem</strong>, not the host. For Docker containers, this uses <code>docker exec</code>
+                        to run commands inside the container. For LXC containers on Proxmox, it uses
+                        <code>pct exec</code>.</p>
+                    <p>This works for both local and remote containers — WolfStack handles the proxying transparently.
+                    </p>
+                </section>
+
+                <section class="content-section">
+                    <h2>🔧 API Endpoints</h2>
+                    <div class="table-wrapper" style="margin-top:1rem;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Endpoint</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/files?path=/etc</code></td>
+                                    <td>List directory contents</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/files/read?path=/etc/hosts</code></td>
+                                    <td>Read a file</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/files/write</code></td>
+                                    <td>Write/save a file</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/files/upload</code></td>
+                                    <td>Upload a file</td>
+                                </tr>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/files/download?path=...</code></td>
+                                    <td>Download a file</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/files/mkdir</code></td>
+                                    <td>Create a directory</td>
+                                </tr>
+                                <tr>
+                                    <td><code>DELETE</code></td>
+                                    <td><code>/api/files/delete</code></td>
+                                    <td>Delete a file or directory</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <div class="page-nav">
+                    <a href="wolfstack-storage.html" class="prev">← Storage Manager</a>
+                    <a href="wolfstack-networking.html" class="next">Networking →</a>
+                </div>
+            </div>
+            <footer class="wiki-footer"
+                style="margin-top:3rem;padding:2rem 0;border-top:1px solid rgba(255,255,255,0.1);text-align:center;opacity:0.7;font-size:0.875rem;">
+                <p>© 2026 <a href="https://wolf.uk.com" target="_blank"
+                        style="color:inherit;text-decoration:underline;">Wolf Software Systems Ltd</a> • FSL-1.1</p>
+                <p style="font-size:0.75rem;margin-top:0.5rem;">USE AT YOUR OWN RISK. This software is provided "as is"
+                    without warranty of any kind.</p>
+            </footer>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

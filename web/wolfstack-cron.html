@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments) } gtag('js', new Date()); gtag('config', 'G-KK9NEE1S54');</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="WolfStack Cron Jobs — manage scheduled tasks from the web dashboard with premade automation templates.">
+    <meta name="author" content="Wolf Software Systems Ltd">
+    <link rel="canonical" href="https://wolfscale.org/wolfstack-cron.html">
+    <title>Cron Jobs - WolfStack | WolfScale</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=9">
+</head>
+
+<body>
+    <div class="wiki-layout">
+        <aside class="sidebar" id="sidebar">
+            <a href="index.html" class="sidebar-logo"><img
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"></a>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span>
+                    </div>
+                    <a href="wolfstack.html">Overview &amp; Quick Start</a>
+                    <a href="wolfstack-containers.html">Container Management</a>
+                    <a href="wolfstack-storage.html">Storage Manager</a>
+                    <a href="wolfstack-files.html">File Manager</a>
+                    <a href="wolfstack-networking.html">Networking</a>
+                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
+                    <a href="wolfstack-mysql.html">MariaDB/MySQL Editor</a>
+                    <a href="wolfstack-security.html">Security</a>
+                    <a href="wolfstack-certificates.html">Certificates</a>
+                    <a href="wolfstack-cron.html" class="active">Cron Jobs</a>
+                    <a href="wolfstack-terminal.html">Terminal</a>
+                    <a href="wolfstack-issues.html">Issues Scanner</a>
+                    <a href="proxmox.html">Proxmox Integration</a>
+                    <a href="app-store.html">App Store</a>
+                    <a href="wolfstack-ai.html">AI Agent</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication &amp; Load
+                            Balancer</span></div>
+                    <a href="quickstart.html">Quick Start</a><a href="features.html">Features</a><a
+                        href="architecture.html">Architecture</a>
+                    <a href="how-it-works.html">How It Works</a><a href="binlog.html">Binlog Mode</a><a
+                        href="load-balancer.html">Load Balancer</a>
+                    <a href="configuration.html">Configuration</a><a href="performance.html">Performance</a><a
+                        href="cli.html">CLI Reference</a>
+                    <a href="troubleshooting.html">Troubleshooting</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication &amp; Sharing</span>
+                    </div><a href="wolfdisk.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div><a
+                        href="wolfnet.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
+                            Firewall</span></div><a href="wolfproxy.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
+                    </div><a href="wolfserve.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Company</div><a href="https://wolf.uk.com" target="_blank">Wolf
+                        Software</a><a href="about.html">About</a><a href="roadmap.html">Roadmap</a><a
+                        href="contact.html">Contact</a><a href="glossary.html">Glossary</a><a
+                        href="licensing.html">Licensing</a>
+                </div>
+            </nav>
+            <div class="theme-toggle-wrapper"><span class="theme-toggle-label">Theme</span><button class="theme-toggle"
+                    id="theme-toggle" aria-label="Toggle theme"><span class="theme-toggle-slider"></span></button></div>
+            <div class="sidebar-links"><a href="https://github.com/wolfsoftwaresystemsltd/WolfStack"
+                    target="_blank">GitHub</a><a href="https://www.patreon.com/15362110/join"
+                    target="_blank">Patreon</a><a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a></div>
+        </aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+        <main class="wiki-main">
+            <div class="mobile-header"><a href="index.html" class="nav-logo"><img
+                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
+                        class="logo-img"></a><button class="mobile-menu-btn"
+                    id="mobile-menu-btn"><span></span><span></span><span></span></button></div>
+            <div class="wiki-content">
+                <div class="content-header">
+                    <h1>⏰ Cron Jobs</h1>
+                    <p class="content-subtitle">Manage scheduled tasks from the web dashboard with premade automation
+                        templates</p>
+                </div>
+
+                <section class="content-section">
+                    <h2>Overview</h2>
+                    <p>The <strong>Cron Jobs</strong> page lets you view, add, edit, and delete cron jobs on any node —
+                        all from the web UI. WolfStack reads and writes the system crontab directly, so everything you
+                        configure here persists across reboots.</p>
+                </section>
+
+                <section class="content-section">
+                    <h2>📋 Viewing Cron Jobs</h2>
+                    <p>All existing cron entries are displayed in a table showing the schedule, command, and optional
+                        comment. Each entry can be individually enabled/disabled, edited, or deleted. A collapsible
+                        <strong>Raw Crontab</strong> section shows the complete raw file for advanced users.</p>
+                </section>
+
+                <section class="content-section">
+                    <h2>➕ Adding a Cron Job</h2>
+                    <p>Click <strong>Add Cron Job</strong> and either choose a preset schedule (hourly, daily, weekly,
+                        monthly) or enter custom cron syntax (<code>minute hour day month weekday</code>). Then specify
+                        the command and an optional comment.</p>
+                    <div class="code-block" style="margin-top:1rem;">
+                        <div class="code-header"><span class="code-lang">Cron Schedule Format</span></div>
+                        <pre><code># minute hour day month weekday
+0 3 * * *     # Daily at 3:00 AM
+0 */6 * * *   # Every 6 hours
+*/5 * * * *   # Every 5 minutes
+0 2 * * 1     # Weekly Monday 2:00 AM</code></pre>
+                    </div>
+                </section>
+
+                <section class="content-section">
+                    <h2>⚡ Premade Cron Jobs</h2>
+                    <p>Ready-made jobs for common tasks — click to add with one click:</p>
+                    <div class="table-wrapper" style="margin-top:1rem;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Job</th>
+                                    <th>Schedule</th>
+                                    <th>What It Does</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>🐺 Auto-Update WolfStack</strong></td>
+                                    <td>Daily 3 AM</td>
+                                    <td>Downloads and runs the latest <code>setup.sh</code> from GitHub</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>🐳 Docker Cleanup</strong></td>
+                                    <td>Weekly Sun 4 AM</td>
+                                    <td>Removes unused Docker images and resources</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>📦 System Updates</strong></td>
+                                    <td>Weekly Mon 2 AM</td>
+                                    <td>Runs <code>apt-get update && upgrade</code></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>🔒 Certbot Renewal</strong></td>
+                                    <td>Daily 5 AM</td>
+                                    <td>Runs <code>certbot renew --quiet</code></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>🧹 Temp Cleanup</strong></td>
+                                    <td>Daily 6 AM</td>
+                                    <td>Deletes <code>/tmp</code> files older than 7 days</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="content-section">
+                    <h2>✏️ Editing &amp; Deleting</h2>
+                    <ul>
+                        <li><strong>Toggle</strong> — enable or disable without deleting (comments it out in the
+                            crontab)</li>
+                        <li><strong>Edit</strong> — modify the schedule, command, or comment</li>
+                        <li><strong>Delete</strong> — permanently remove the entry</li>
+                    </ul>
+                </section>
+
+                <section class="content-section">
+                    <h2>🔧 API Endpoints</h2>
+                    <div class="table-wrapper" style="margin-top:1rem;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Endpoint</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/cron</code></td>
+                                    <td>List all cron entries</td>
+                                </tr>
+                                <tr>
+                                    <td><code>POST</code></td>
+                                    <td><code>/api/cron</code></td>
+                                    <td>Add a new cron job</td>
+                                </tr>
+                                <tr>
+                                    <td><code>PUT</code></td>
+                                    <td><code>/api/cron/{index}</code></td>
+                                    <td>Edit a cron job</td>
+                                </tr>
+                                <tr>
+                                    <td><code>DELETE</code></td>
+                                    <td><code>/api/cron/{index}</code></td>
+                                    <td>Delete a cron job</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <div class="page-nav">
+                    <a href="wolfstack-certificates.html" class="prev">← Certificates</a>
+                    <a href="wolfstack-terminal.html" class="next">Terminal →</a>
+                </div>
+            </div>
+            <footer class="wiki-footer"
+                style="margin-top:3rem;padding:2rem 0;border-top:1px solid rgba(255,255,255,0.1);text-align:center;opacity:0.7;font-size:0.875rem;">
+                <p>© 2026 <a href="https://wolf.uk.com" target="_blank"
+                        style="color:inherit;text-decoration:underline;">Wolf Software Systems Ltd</a> • FSL-1.1</p>
+                <p style="font-size:0.75rem;margin-top:0.5rem;">USE AT YOUR OWN RISK. This software is provided "as is"
+                    without warranty of any kind.</p>
+            </footer>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

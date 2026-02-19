@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments) } gtag('js', new Date()); gtag('config', 'G-KK9NEE1S54');</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="WolfStack Terminal — full web-based terminal with xterm.js for any node in your cluster. Run commands remotely through your browser.">
+    <meta name="author" content="Wolf Software Systems Ltd">
+    <link rel="canonical" href="https://wolfscale.org/wolfstack-terminal.html">
+    <title>Terminal - WolfStack | WolfScale</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=9">
+</head>
+
+<body>
+    <div class="wiki-layout">
+        <aside class="sidebar" id="sidebar">
+            <a href="index.html" class="sidebar-logo"><img
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"></a>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span>
+                    </div>
+                    <a href="wolfstack.html">Overview &amp; Quick Start</a>
+                    <a href="wolfstack-containers.html">Container Management</a>
+                    <a href="wolfstack-storage.html">Storage Manager</a>
+                    <a href="wolfstack-files.html">File Manager</a>
+                    <a href="wolfstack-networking.html">Networking</a>
+                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
+                    <a href="wolfstack-mysql.html">MariaDB/MySQL Editor</a>
+                    <a href="wolfstack-security.html">Security</a>
+                    <a href="wolfstack-certificates.html">Certificates</a>
+                    <a href="wolfstack-cron.html">Cron Jobs</a>
+                    <a href="wolfstack-terminal.html" class="active">Terminal</a>
+                    <a href="wolfstack-issues.html">Issues Scanner</a>
+                    <a href="proxmox.html">Proxmox Integration</a>
+                    <a href="app-store.html">App Store</a>
+                    <a href="wolfstack-ai.html">AI Agent</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication &amp; Load
+                            Balancer</span></div>
+                    <a href="quickstart.html">Quick Start</a><a href="features.html">Features</a><a
+                        href="architecture.html">Architecture</a>
+                    <a href="how-it-works.html">How It Works</a><a href="binlog.html">Binlog Mode</a><a
+                        href="load-balancer.html">Load Balancer</a>
+                    <a href="configuration.html">Configuration</a><a href="performance.html">Performance</a><a
+                        href="cli.html">CLI Reference</a>
+                    <a href="troubleshooting.html">Troubleshooting</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication &amp; Sharing</span>
+                    </div><a href="wolfdisk.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div><a
+                        href="wolfnet.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
+                            Firewall</span></div><a href="wolfproxy.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
+                    </div><a href="wolfserve.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Company</div><a href="https://wolf.uk.com" target="_blank">Wolf
+                        Software</a><a href="about.html">About</a><a href="roadmap.html">Roadmap</a><a
+                        href="contact.html">Contact</a><a href="glossary.html">Glossary</a><a
+                        href="licensing.html">Licensing</a>
+                </div>
+            </nav>
+            <div class="theme-toggle-wrapper"><span class="theme-toggle-label">Theme</span><button class="theme-toggle"
+                    id="theme-toggle" aria-label="Toggle theme"><span class="theme-toggle-slider"></span></button></div>
+            <div class="sidebar-links"><a href="https://github.com/wolfsoftwaresystemsltd/WolfStack"
+                    target="_blank">GitHub</a><a href="https://www.patreon.com/15362110/join"
+                    target="_blank">Patreon</a><a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a></div>
+        </aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+        <main class="wiki-main">
+            <div class="mobile-header"><a href="index.html" class="nav-logo"><img
+                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
+                        class="logo-img"></a><button class="mobile-menu-btn"
+                    id="mobile-menu-btn"><span></span><span></span><span></span></button></div>
+            <div class="wiki-content">
+                <div class="content-header">
+                    <h1>💻 Terminal</h1>
+                    <p class="content-subtitle">Full web-based terminal powered by xterm.js — run commands on any node
+                        from your browser</p>
+                </div>
+
+                <section class="content-section">
+                    <h2>Overview</h2>
+                    <p>WolfStack includes a fully interactive <strong>web terminal</strong> powered by
+                        <strong>xterm.js</strong>. Select any node from the sidebar and click <strong>Terminal</strong>
+                        to open a real shell session — no SSH client required. The terminal connects via WebSocket and
+                        provides a native-like experience right in your browser.</p>
+                </section>
+
+                <section class="content-section">
+                    <h2>✨ Features</h2>
+                    <div
+                        style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1.5rem;margin-top:1rem;">
+                        <div class="feature-card" style="border-color:rgba(168,85,247,0.3);">
+                            <h3>Full Shell Access</h3>
+                            <p>Runs as root — you have full access to the system, just like SSH. Run any command, edit
+                                files, install packages.</p>
+                        </div>
+                        <div class="feature-card" style="border-color:rgba(59,130,246,0.3);">
+                            <h3>Remote Nodes</h3>
+                            <p>Terminal works on remote cluster nodes too. WolfStack proxies the WebSocket connection
+                                through the local node automatically.</p>
+                        </div>
+                        <div class="feature-card" style="border-color:rgba(16,185,129,0.3);">
+                            <h3>Resizable</h3>
+                            <p>The terminal automatically resizes to fit the available space. Drag the browser window
+                                and the terminal adjusts.</p>
+                        </div>
+                        <div class="feature-card" style="border-color:rgba(245,158,11,0.3);">
+                            <h3>Copy &amp; Paste</h3>
+                            <p>Standard copy/paste works — select text to copy, right-click or Ctrl+Shift+V to paste.
+                                Works across all browsers.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="content-section">
+                    <h2>⚙️ How It Works</h2>
+                    <ol style="line-height:2;margin-top:1rem;">
+                        <li>You select a server and click <strong>Terminal</strong></li>
+                        <li>WolfStack opens a WebSocket connection to the server</li>
+                        <li>A <code>bash</code> shell is spawned as a pseudo-terminal (PTY)</li>
+                        <li>xterm.js renders the terminal in your browser with full ANSI support</li>
+                        <li>All input/output is streamed in real-time over the WebSocket</li>
+                    </ol>
+                    <p style="margin-top:1rem;">For remote nodes, the WebSocket connection is proxied through the local
+                        WolfStack instance, so you only need port <code>8553</code> open on the remote server.</p>
+                </section>
+
+                <section class="content-section">
+                    <h2>🛡️ Security</h2>
+                    <p>The terminal requires WolfStack authentication — you must be logged in. The WebSocket endpoint is
+                        protected by the same session cookie used by the rest of the dashboard.</p>
+                    <div class="info-box" style="margin-top:1.5rem;">
+                        <strong>⚠️ Important:</strong> The terminal runs as <strong>root</strong>. Be careful with
+                        destructive commands — there is no undo. Consider using the <strong>AI Agent</strong> for
+                        read-only investigations.
+                    </div>
+                </section>
+
+                <section class="content-section">
+                    <h2>🔧 API</h2>
+                    <div class="table-wrapper" style="margin-top:1rem;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Protocol</th>
+                                    <th>Endpoint</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>WebSocket</td>
+                                    <td><code>wss://host:8553/ws/terminal</code></td>
+                                    <td>Local terminal session</td>
+                                </tr>
+                                <tr>
+                                    <td>WebSocket</td>
+                                    <td><code>wss://host:8553/ws/terminal?node=ID</code></td>
+                                    <td>Remote node terminal (proxied)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <div class="page-nav">
+                    <a href="wolfstack-cron.html" class="prev">← Cron Jobs</a>
+                    <a href="wolfstack-issues.html" class="next">Issues Scanner →</a>
+                </div>
+            </div>
+            <footer class="wiki-footer"
+                style="margin-top:3rem;padding:2rem 0;border-top:1px solid rgba(255,255,255,0.1);text-align:center;opacity:0.7;font-size:0.875rem;">
+                <p>© 2026 <a href="https://wolf.uk.com" target="_blank"
+                        style="color:inherit;text-decoration:underline;">Wolf Software Systems Ltd</a> • FSL-1.1</p>
+                <p style="font-size:0.75rem;margin-top:0.5rem;">USE AT YOUR OWN RISK. This software is provided "as is"
+                    without warranty of any kind.</p>
+            </footer>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

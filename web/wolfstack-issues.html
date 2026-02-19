@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments) } gtag('js', new Date()); gtag('config', 'G-KK9NEE1S54');</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="WolfStack Issues Scanner — scan servers for problems including disk space, memory, zombie processes, failed services, and more. AI-powered analysis.">
+    <meta name="author" content="Wolf Software Systems Ltd">
+    <link rel="canonical" href="https://wolfscale.org/wolfstack-issues.html">
+    <title>Issues Scanner - WolfStack | WolfScale</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=9">
+</head>
+
+<body>
+    <div class="wiki-layout">
+        <aside class="sidebar" id="sidebar">
+            <a href="index.html" class="sidebar-logo"><img
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"></a>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span>
+                    </div>
+                    <a href="wolfstack.html">Overview &amp; Quick Start</a>
+                    <a href="wolfstack-containers.html">Container Management</a>
+                    <a href="wolfstack-storage.html">Storage Manager</a>
+                    <a href="wolfstack-files.html">File Manager</a>
+                    <a href="wolfstack-networking.html">Networking</a>
+                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
+                    <a href="wolfstack-mysql.html">MariaDB/MySQL Editor</a>
+                    <a href="wolfstack-security.html">Security</a>
+                    <a href="wolfstack-certificates.html">Certificates</a>
+                    <a href="wolfstack-cron.html">Cron Jobs</a>
+                    <a href="wolfstack-terminal.html">Terminal</a>
+                    <a href="wolfstack-issues.html" class="active">Issues Scanner</a>
+                    <a href="proxmox.html">Proxmox Integration</a>
+                    <a href="app-store.html">App Store</a>
+                    <a href="wolfstack-ai.html">AI Agent</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication &amp; Load
+                            Balancer</span></div>
+                    <a href="quickstart.html">Quick Start</a><a href="features.html">Features</a><a
+                        href="architecture.html">Architecture</a>
+                    <a href="how-it-works.html">How It Works</a><a href="binlog.html">Binlog Mode</a><a
+                        href="load-balancer.html">Load Balancer</a>
+                    <a href="configuration.html">Configuration</a><a href="performance.html">Performance</a><a
+                        href="cli.html">CLI Reference</a>
+                    <a href="troubleshooting.html">Troubleshooting</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication &amp; Sharing</span>
+                    </div><a href="wolfdisk.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div><a
+                        href="wolfnet.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
+                            Firewall</span></div><a href="wolfproxy.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
+                    </div><a href="wolfserve.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Company</div><a href="https://wolf.uk.com" target="_blank">Wolf
+                        Software</a><a href="about.html">About</a><a href="roadmap.html">Roadmap</a><a
+                        href="contact.html">Contact</a><a href="glossary.html">Glossary</a><a
+                        href="licensing.html">Licensing</a>
+                </div>
+            </nav>
+            <div class="theme-toggle-wrapper"><span class="theme-toggle-label">Theme</span><button class="theme-toggle"
+                    id="theme-toggle" aria-label="Toggle theme"><span class="theme-toggle-slider"></span></button></div>
+            <div class="sidebar-links"><a href="https://github.com/wolfsoftwaresystemsltd/WolfStack"
+                    target="_blank">GitHub</a><a href="https://www.patreon.com/15362110/join"
+                    target="_blank">Patreon</a><a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a></div>
+        </aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+        <main class="wiki-main">
+            <div class="mobile-header"><a href="index.html" class="nav-logo"><img
+                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
+                        class="logo-img"></a><button class="mobile-menu-btn"
+                    id="mobile-menu-btn"><span></span><span></span><span></span></button></div>
+            <div class="wiki-content">
+                <div class="content-header">
+                    <h1>🔍 Issues Scanner</h1>
+                    <p class="content-subtitle">Automated health checks that scan for problems across your cluster with
+                        optional AI analysis</p>
+                </div>
+
+                <section class="content-section">
+                    <h2>Overview</h2>
+                    <p>The <strong>Issues Scanner</strong> runs a comprehensive set of health checks on the selected
+                        server and reports any problems found. Click <strong>Scan</strong> to run all checks — results
+                        appear in seconds, grouped by severity.</p>
+                    <p>For multi-server clusters, the scanner can also reach remote nodes. If a remote node is
+                        unreachable, it's gracefully reported as offline rather than crashing the scan.</p>
+                </section>
+
+                <section class="content-section">
+                    <h2>🔎 What It Checks</h2>
+                    <div class="table-wrapper" style="margin-top:1rem;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Check</th>
+                                    <th>Triggers When</th>
+                                    <th>Severity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Disk Space</strong></td>
+                                    <td>Any partition is over 90% full</td>
+                                    <td>🔴 Critical</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Memory Usage</strong></td>
+                                    <td>RAM usage exceeds 90%</td>
+                                    <td>🟡 Warning</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Swap Usage</strong></td>
+                                    <td>Swap usage exceeds 50%</td>
+                                    <td>🟡 Warning</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Zombie Processes</strong></td>
+                                    <td>Any zombie (defunct) processes exist</td>
+                                    <td>🟡 Warning</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Failed Services</strong></td>
+                                    <td>Any systemd units are in failed state</td>
+                                    <td>🔴 Critical</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>High CPU Load</strong></td>
+                                    <td>Load average exceeds number of CPU cores</td>
+                                    <td>🟡 Warning</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>OOM Kills</strong></td>
+                                    <td>Out-of-memory kills detected in kernel logs</td>
+                                    <td>🔴 Critical</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Pending Updates</strong></td>
+                                    <td>System packages need updating</td>
+                                    <td>🔵 Info</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Uptime</strong></td>
+                                    <td>Server has been up for a very long time (needs restart)</td>
+                                    <td>🔵 Info</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="content-section">
+                    <h2>🤖 AI Analysis</h2>
+                    <p>After the scan completes, you can click <strong>Analyse with AI</strong> to send the issue report
+                        to the configured AI provider (Claude or Gemini). The AI will:</p>
+                    <ul>
+                        <li>Explain each issue in plain language</li>
+                        <li>Suggest specific remediation steps</li>
+                        <li>Prioritise which issues to fix first</li>
+                        <li>Flag any issues that might be related to each other</li>
+                    </ul>
+                    <div class="info-box" style="margin-top:1.5rem;">
+                        <strong>💡 Requires AI Key:</strong> AI analysis needs an API key configured in the AI Agent
+                        settings. Without it the scan still works — you just won't see the AI summary.
+                    </div>
+                </section>
+
+                <section class="content-section">
+                    <h2>🌐 Remote Node Scanning</h2>
+                    <p>When scanning a remote node, WolfStack proxies the scan request. If the remote node returns a
+                        <strong>404</strong> (e.g. running an older version without the issues endpoint), the scanner
+                        gracefully reports that the node doesn't support scanning instead of showing an error.</p>
+                </section>
+
+                <section class="content-section">
+                    <h2>🔧 API Endpoints</h2>
+                    <div class="table-wrapper" style="margin-top:1rem;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Endpoint</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>GET</code></td>
+                                    <td><code>/api/issues/scan</code></td>
+                                    <td>Run all health checks and return results</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <div class="page-nav">
+                    <a href="wolfstack-terminal.html" class="prev">← Terminal</a>
+                    <a href="proxmox.html" class="next">Proxmox Integration →</a>
+                </div>
+            </div>
+            <footer class="wiki-footer"
+                style="margin-top:3rem;padding:2rem 0;border-top:1px solid rgba(255,255,255,0.1);text-align:center;opacity:0.7;font-size:0.875rem;">
+                <p>© 2026 <a href="https://wolf.uk.com" target="_blank"
+                        style="color:inherit;text-decoration:underline;">Wolf Software Systems Ltd</a> • FSL-1.1</p>
+                <p style="font-size:0.75rem;margin-top:0.5rem;">USE AT YOUR OWN RISK. This software is provided "as is"
+                    without warranty of any kind.</p>
+            </footer>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
