@@ -6,21 +6,13 @@
     document.documentElement.setAttribute('data-theme', savedTheme);
 })();
 
-// ---- Site-wide Support Banner ----
-// One-liner banner on every page except support.html.
-// Dismissed state persists for 1 day via localStorage.
+// ---- Site-wide Support Banner (permanent) ----
 (function () {
-    const DISMISS_KEY = 'wolfstack-support-banner-v2';
-    const DISMISS_MS = 24 * 60 * 60 * 1000; // 1 day
     const isSupport = window.location.pathname.endsWith('support.html');
     if (isSupport) return;
 
-    const raw = localStorage.getItem(DISMISS_KEY);
-    if (raw && (Date.now() - parseInt(raw, 10)) < DISMISS_MS) return;
-
     const banner = document.createElement('div');
     banner.id = 'support-banner';
-    // Inline styles so nothing can accidentally hide/override it
     banner.style.cssText = [
         'background:#b91c1c',
         'color:#ffffff',
@@ -28,7 +20,7 @@
         'font-size:0.78rem',
         'font-weight:500',
         'line-height:1',
-        'padding:8px 40px 8px 16px',
+        'padding:8px 16px',
         'text-align:center',
         'position:relative',
         'z-index:9999',
@@ -39,22 +31,14 @@
     ].join(';');
     banner.innerHTML =
         '🐺 <strong>WolfStack is free &amp; open-source</strong> — help keep it alive &nbsp;' +
-        '<a href="support.html" style="color:#fde68a;font-weight:700;text-decoration:underline;">❤️ Become a Patron</a>' +
-        '<button id="banner-close-btn" aria-label="Dismiss" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.8);cursor:pointer;font-size:1rem;line-height:1;padding:2px 4px;">✕</button>';
+        '<a href="support.html" style="color:#fde68a;font-weight:700;text-decoration:underline;">❤️ Become a Patron</a>';
 
     document.body.insertBefore(banner, document.body.firstChild);
 
-    // Push the fixed sidebar down so it starts below the banner
-    var h = banner.offsetHeight;
     var sidebar = document.getElementById('sidebar');
-    if (sidebar) sidebar.style.top = h + 'px';
-
-    document.getElementById('banner-close-btn').addEventListener('click', function () {
-        banner.remove();
-        if (sidebar) sidebar.style.top = '0';
-        localStorage.setItem(DISMISS_KEY, String(Date.now()));
-    });
+    if (sidebar) sidebar.style.top = banner.offsetHeight + 'px';
 })();
+
 
 document.addEventListener('DOMContentLoaded', function () {
     // Theme toggle functionality
