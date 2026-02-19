@@ -1556,3 +1556,79 @@ section {
 [data-theme="light"] .theme-toggle-slider {
     transform: translateX(24px);
 }
+
+/* ============ SITE-WIDE SUPPORT BANNER ============ */
+.support-banner {
+    background: linear-gradient(90deg, #7f1d1d 0%, #991b1b 40%, #b91c1c 100%);
+    color: #fff;
+    text-align: center;
+    padding: 8px 16px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 200;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.support-banner a {
+    color: #fde68a;
+    font-weight: 700;
+    text-decoration: underline;
+    transition: color 0.2s ease;
+}
+
+.support-banner a:hover {
+    color: #fff;
+}
+
+.support-banner .banner-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 3px 12px;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 100px;
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.support-banner .banner-cta:hover {
+    background: rgba(255, 255, 255, 0.28);
+    transform: scale(1.03);
+}
+
+.support-banner .banner-close {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: color 0.2s ease;
+}
+
+.support-banner .banner-close:hover {
+    color: #fff;
+}
+
+/* When banner is present, sidebar starts lower on mobile */
+@media (max-width: 768px) {
+    .support-banner {
+        font-size: 0.72rem;
+    }
+}

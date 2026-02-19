@@ -6,6 +6,48 @@
     document.documentElement.setAttribute('data-theme', savedTheme);
 })();
 
+// ---- Site-wide Support Banner ----
+// Inject the banner on every page except support.html itself.
+// Dismissed state persists for 7 days via localStorage.
+(function () {
+    const DISMISS_KEY = 'wolfstack-support-banner-dismissed';
+    const DISMISS_DAYS = 7;
+    const isSupport = window.location.pathname.endsWith('support.html');
+    if (isSupport) return;
+
+    const raw = localStorage.getItem(DISMISS_KEY);
+    if (raw) {
+        try {
+            const ts = parseInt(raw, 10);
+            if (Date.now() - ts < DISMISS_DAYS * 86400 * 1000) return; // still dismissed
+        } catch (e) { /* ignore */ }
+    }
+
+    const banner = document.createElement('div');
+    banner.className = 'support-banner';
+    banner.id = 'support-banner';
+    banner.innerHTML =
+        '<span>🐺 <strong>WolfStack is free &amp; open-source</strong> — help keep it alive:</span>' +
+        '<a href="support.html" class="banner-cta">❤️ Become a Patron — See How</a>' +
+        '<button class="banner-close" id="banner-close-btn" aria-label="Dismiss">✕</button>';
+
+    // Insert before body content
+    document.body.insertBefore(banner, document.body.firstChild);
+
+    document.getElementById('banner-close-btn').addEventListener('click', function () {
+        banner.style.maxHeight = banner.offsetHeight + 'px';
+        banner.style.overflow = 'hidden';
+        requestAnimationFrame(function () {
+            banner.style.transition = 'max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease';
+            banner.style.maxHeight = '0';
+            banner.style.opacity = '0';
+            banner.style.padding = '0';
+        });
+        setTimeout(function () { banner.remove(); }, 350);
+        localStorage.setItem(DISMISS_KEY, Date.now().toString());
+    });
+})();
+
 document.addEventListener('DOMContentLoaded', function () {
     // Theme toggle functionality
     const themeToggle = document.getElementById('theme-toggle');
