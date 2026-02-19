@@ -44,8 +44,14 @@
 
     document.body.insertBefore(banner, document.body.firstChild);
 
+    // Push the fixed sidebar down so it starts below the banner
+    var h = banner.offsetHeight;
+    var sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.style.top = h + 'px';
+
     document.getElementById('banner-close-btn').addEventListener('click', function () {
         banner.remove();
+        if (sidebar) sidebar.style.top = '0';
         localStorage.setItem(DISMISS_KEY, String(Date.now()));
     });
 })();
