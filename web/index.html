@@ -327,6 +327,20 @@
             font-size: 0.8rem;
         }
 
+        /* Alternating row colours for the hero bullet list */
+        .hero-feature-list li {
+            padding: 0.35rem 0.6rem;
+            border-radius: 6px;
+        }
+
+        .hero-feature-list li:nth-child(odd) {
+            background: rgba(220, 38, 38, 0.07);
+        }
+
+        .hero-feature-list li:nth-child(even) {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
         .product-cta {
             display: inline-flex;
             align-items: center;
@@ -536,6 +550,7 @@
                     <a href="wolfstack-cron.html">Cron Jobs</a>
                     <a href="wolfstack-terminal.html">Terminal</a>
                     <a href="wolfstack-issues.html">Issues Scanner</a>
+                    <a href="wolfstack-alerting.html">Alerting &amp; Notifications</a>
                     <a href="proxmox.html">Proxmox Integration</a>
                     <a href="app-store.html">App Store</a>
                     <a href="wolfstack-ai.html">AI Agent</a>
@@ -561,7 +576,8 @@
                 </div>
                 <div class="nav-section">
                     <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
-                    <a href="wolfnet.html">Overview & Quick Start</a>
+                    <a href="wolfnet.html">Overview &amp; Quick Start</a>
+                    <a href="wolfnet-global.html">Global Network Access</a>
                 </div>
                 <div class="nav-section">
                     <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
@@ -628,19 +644,29 @@
                     </p>
                     <p class="hero-subtitle animate-fade-in animate-delay-3">
                         WolfStack is an all-in-one server and workstation management platform.<br />
-                    <ul style="display:inline-block; text-align:left; max-width:600px; margin:0.5rem auto 0;">
-                        <li>Create and manage WolfStack clusters on bare metal or existing servers, or just a tiny machine to try it out!</li>
-                        <li>Install on your existing Proxmox VE servers.</li>
+                    <ul class="hero-feature-list"
+                        style="display:inline-block; text-align:left; max-width:600px; margin:0.5rem auto 0;">
+                        <li>Create and manage WolfStack clusters on bare metal or existing servers, or just a tiny
+                            machine to try it out!</li>
+                        <li>Install on your existing Proxmox VE servers without affecting Proxmox.</li>
                         <li>View multiple clusters in one place, WolfStack clusters and Proxmox Clusters</li>
                         <li>Control everything from a single, beautiful dashboard.</li>
                         <li>Monitor metrics, manage Docker and LXC containers, VMs, R2 Cloud Storage, disk sharing, edit
                             configs across your entire fleet.</li>
-                        <li>Perfect for servers, Linux workstations, Rasperry PI, IBM Power.</li>
                         <li>Auto adapts to whatever brand of linux you are running.</li>
                         <li>Will manage one machine to hundreds.</li>
-                        <li>Built in secure WolfNet provides a military grade private network.</li>
-                        <li>Now with server issue scanner.</li>
+                        <li>Built in App Store deploy straght to any node.</li>
+                        <li>Now with server issue scanner. Find and solve issues.</li>
+                        <li>Comes with <a href="wolfnet.html" target="_blank">WolfNet</a> and installs it's own
+                            Encrypted Mesh network for you. Works even if machines are not on the same network, easy to
+                            manage and use. You can even have a WolfNet network running accross different clusters.</li>
+                        <li>Access <strong>all your servers across all clusters</strong> from your local machine on one
+                            encrypted network — <a href="wolfnet-global.html"
+                                style="color: var(--accent-primary); text-decoration: underline;">Global WolfNet Access
+                                →</a></li>
+                        <li>Please think about supporting us if you like the software.</li>
                     </ul>
+
                     </p>
                     <img src="images/screenshot.png" alt="WolfStack Screenshot" class="animate-fade-in animate-delay-3"
                         style="max-width: 60%; border-radius: 12px; margin-top: 1.5rem; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); border: 1px solid var(--border-color);">

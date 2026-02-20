@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-KK9NEE1S54');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="WolfStack Alerting & Notifications — monitor CPU, memory, and disk usage across all nodes with Discord, Slack, and Telegram alerts.">
+    <meta name="keywords"
+        content="WolfStack alerting, notifications, Discord webhook, Slack webhook, Telegram bot, CPU threshold, memory threshold, disk threshold, server monitoring alerts">
+    <meta name="author" content="Wolf Software Systems Ltd">
+    <link rel="canonical" href="https://wolfscale.org/wolfstack-alerting.html">
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://wolfscale.org/wolfstack-alerting.html">
+    <meta property="og:title" content="Alerting & Notifications - WolfStack | WolfScale">
+    <meta property="og:description"
+        content="Monitor CPU, memory, and disk usage across all nodes with real-time alerts via Discord, Slack, and Telegram.">
+    <meta property="og:image" content="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg">
+
+    <title>Alerting & Notifications - WolfStack | WolfScale</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=9">
+</head>
+
+<body>
+    <div class="wiki-layout">
+        <aside class="sidebar" id="sidebar">
+            <a href="index.html" class="sidebar-logo"><img
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"></a>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span>
+                    </div>
+                    <a href="wolfstack.html">Overview &amp; Quick Start</a>
+                    <a href="wolfstack-containers.html">Container Management</a>
+                    <a href="wolfstack-storage.html">Storage Manager</a>
+                    <a href="wolfstack-files.html">File Manager</a>
+                    <a href="wolfstack-networking.html">Networking</a>
+                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
+                    <a href="wolfstack-mysql.html">MariaDB/MySQL Editor</a>
+                    <a href="wolfstack-security.html">Security</a>
+                    <a href="wolfstack-certificates.html">Certificates</a>
+                    <a href="wolfstack-cron.html">Cron Jobs</a>
+                    <a href="wolfstack-terminal.html">Terminal</a>
+                    <a href="wolfstack-issues.html">Issues Scanner</a>
+                    <a href="wolfstack-alerting.html" class="active">Alerting &amp; Notifications</a>
+                    <a href="proxmox.html">Proxmox Integration</a>
+                    <a href="app-store.html">App Store</a>
+                    <a href="wolfstack-ai.html">AI Agent</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication &amp; Load
+                            Balancer</span></div>
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="features.html">Features</a>
+                    <a href="architecture.html">Architecture</a>
+                    <a href="how-it-works.html">How It Works</a>
+                    <a href="binlog.html">Binlog Mode</a>
+                    <a href="load-balancer.html">Load Balancer</a>
+                    <a href="configuration.html">Configuration</a>
+                    <a href="performance.html">Performance</a>
+                    <a href="cli.html">CLI Reference</a>
+                    <a href="troubleshooting.html">Troubleshooting</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication &amp; Sharing</span>
+                    </div>
+                    <a href="wolfdisk.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
+                    <a href="wolfnet.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
+                            Firewall</span></div>
+                    <a href="wolfproxy.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
+                    </div>
+                    <a href="wolfserve.html">Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Company</div>
+                    <a href="https://wolf.uk.com" target="_blank">Wolf Software</a>
+                    <a href="about.html">About</a>
+                    <a href="roadmap.html">Roadmap</a>
+                    <a href="contact.html">Contact</a>
+                    <a href="glossary.html">Glossary</a>
+                    <a href="licensing.html">Licensing</a>
+                    <a href="support.html" style="color: #ff424d; font-weight: 700;">❤️ Support Us</a>
+                </div>
+            </nav>
+            <div class="theme-toggle-wrapper">
+                <span class="theme-toggle-label">Theme</span>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-toggle-slider"></span>
+                </button>
+            </div>
+            <div class="sidebar-links">
+                <a href="https://github.com/wolfsoftwaresystemsltd/WolfStack" target="_blank">GitHub</a>
+                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+                <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+            </div>
+        </aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <main class="wiki-main">
+            <div class="mobile-header">
+                <a href="index.html" class="nav-logo"><img
+                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
+                        class="logo-img"></a>
+                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+            </div>
+
+            <div class="wiki-content">
+                <div class="content-header">
+                    <h1>🔔 Alerting &amp; Notifications</h1>
+                    <p class="content-subtitle">Monitor CPU, memory, and disk usage across all nodes with real-time
+                        alerts via Discord, Slack, and Telegram</p>
+                </div>
+
+                <!-- Overview -->
+                <section class="content-section">
+                    <h2>Overview</h2>
+                    <p>
+                        The <strong>Alerting &amp; Notifications</strong> system monitors all nodes in your WolfStack
+                        cluster — including the local server and every remote node — and sends instant notifications
+                        when resource usage exceeds your configured thresholds or when nodes go offline.
+                    </p>
+                    <p>
+                        Configure it from <strong>Settings → Alerting</strong> in the WolfStack dashboard. Alerts are
+                        delivered to <strong>Discord</strong>, <strong>Slack</strong>, and/or <strong>Telegram</strong>
+                        simultaneously.
+                    </p>
+
+                    <div
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                        <div class="feature-card" style="border-color: rgba(239, 68, 68, 0.3);">
+                            <h3>📊 Threshold Alerts</h3>
+                            <p>CPU, memory, and disk usage thresholds with configurable percentages for each metric.</p>
+                        </div>
+                        <div class="feature-card" style="border-color: rgba(245, 158, 11, 0.3);">
+                            <h3>🖥️ Node Status</h3>
+                            <p>Instant notifications when a node goes offline or comes back online.</p>
+                        </div>
+                        <div class="feature-card" style="border-color: rgba(34, 197, 94, 0.3);">
+                            <h3>✅ Recovery Alerts</h3>
+                            <p>Automatic "all clear" notifications when metrics drop back below threshold.</p>
+                        </div>
+                        <div class="feature-card" style="border-color: rgba(59, 130, 246, 0.3);">
+                            <h3>🛡️ Spam Prevention</h3>
+                            <p>15-minute cooldown per node per metric — no notification floods.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Notification Channels -->
+                <section class="content-section">
+                    <h2>📡 Notification Channels</h2>
+                    <p>
+                        WolfStack supports three notification channels. You can enable any combination — alerts are
+                        sent to all configured channels simultaneously.
+                    </p>
+
+                    <div class="table-wrapper" style="margin-top: 1rem;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Channel</th>
+                                    <th>What You Need</th>
+                                    <th>How to Get It</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Discord</strong></td>
+                                    <td>Webhook URL</td>
+                                    <td>Server Settings → Integrations → Webhooks → New Webhook → Copy URL</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Slack</strong></td>
+                                    <td>Webhook URL</td>
+                                    <td>Create an <a href="https://api.slack.com/messaging/webhooks"
+                                            target="_blank">Incoming Webhook</a> in your Slack workspace</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Telegram</strong></td>
+                                    <td>Bot Token + Chat ID</td>
+                                    <td>Create a bot via <a href="https://t.me/BotFather"
+                                            target="_blank">@BotFather</a>,
+                                        then get your Chat ID by messaging the bot and checking
+                                        <code>getUpdates</code>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>🧪 Test Alert:</strong> After entering your webhook URLs, click
+                        <strong>Send Test Alert</strong> to verify that notifications arrive on all configured channels.
+                    </div>
+                </section>
+
+                <!-- Threshold Configuration -->
+                <section class="content-section">
+                    <h2>📊 Threshold Configuration</h2>
+                    <p>
+                        Set the percentage at which each metric triggers an alert. The monitor checks
+                        <strong>all nodes</strong> in your cluster — both the local server and every remote WolfStack
+                        node.
+                    </p>
+
+                    <div class="table-wrapper" style="margin-top: 1rem;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Default</th>
+                                    <th>What It Monitors</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>CPU</strong></td>
+                                    <td><code>90%</code></td>
+                                    <td>Overall CPU usage percentage across all cores</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Memory</strong></td>
+                                    <td><code>90%</code></td>
+                                    <td>Physical RAM usage (excluding swap)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Disk</strong></td>
+                                    <td><code>90%</code></td>
+                                    <td>Highest usage percentage among all mounted disks</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <p style="margin-top: 1rem;">
+                        Use the sliders in the Alerting tab to adjust each threshold between 1% and 100%.
+                        Metrics are evaluated against these thresholds on every check cycle.
+                    </p>
+                </section>
+
+                <!-- Check Interval -->
+                <section class="content-section">
+                    <h2>⏱️ Check Interval</h2>
+                    <p>
+                        The <strong>Check Interval</strong> controls how often WolfStack evaluates all nodes against
+                        your thresholds. Choose a balance between responsiveness and resource usage:
+                    </p>
+
+                    <div class="table-wrapper" style="margin-top: 1rem;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Interval</th>
+                                    <th>Best For</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>30 seconds</code></td>
+                                    <td>Critical production systems where immediate response is essential</td>
+                                </tr>
+                                <tr>
+                                    <td><code>1 minute</code> (default)</td>
+                                    <td>Most setups — good balance of speed and low overhead</td>
+                                </tr>
+                                <tr>
+                                    <td><code>2 minutes</code></td>
+                                    <td>Larger clusters where you want to reduce polling load</td>
+                                </tr>
+                                <tr>
+                                    <td><code>5 minutes</code></td>
+                                    <td>Non-critical environments or clusters with many nodes</td>
+                                </tr>
+                                <tr>
+                                    <td><code>10 minutes</code></td>
+                                    <td>Low-priority monitoring or resource-constrained nodes</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>💡 Note:</strong> The check interval uses metrics that are already collected by
+                        WolfStack's existing monitoring — it does <strong>not</strong> generate extra API calls to
+                        remote nodes. The overhead is negligible at any interval.
+                    </div>
+                </section>
+
+                <!-- Event Types -->
+                <section class="content-section">
+                    <h2>🔔 Event Types</h2>
+                    <p>
+                        Each event type can be individually enabled or disabled. This lets you fine-tune which
+                        alerts you receive.
+                    </p>
+
+                    <div class="table-wrapper" style="margin-top: 1rem;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Event</th>
+                                    <th>Default</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Node goes offline</strong></td>
+                                    <td>✅ On</td>
+                                    <td>Fires when a remote node stops responding to health checks</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Node restored</strong></td>
+                                    <td>✅ On</td>
+                                    <td>Fires when a previously-offline node comes back online</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>High CPU</strong></td>
+                                    <td>✅ On</td>
+                                    <td>Fires when CPU usage exceeds the configured threshold</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>High memory</strong></td>
+                                    <td>✅ On</td>
+                                    <td>Fires when memory usage exceeds the configured threshold</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>High disk</strong></td>
+                                    <td>✅ On</td>
+                                    <td>Fires when any disk's usage exceeds the configured threshold</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Spam Prevention -->
+                <section class="content-section">
+                    <h2>🛡️ Spam Prevention</h2>
+                    <p>
+                        WolfStack includes several safeguards to prevent notification floods:
+                    </p>
+
+                    <div
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                        <div class="feature-card" style="border-color: rgba(168, 85, 247, 0.3);">
+                            <h3>⏳ 15-Minute Cooldown</h3>
+                            <p>After sending an alert for a specific metric on a specific node, the same alert won't
+                                fire again for 15 minutes — even if the metric stays above threshold.</p>
+                        </div>
+                        <div class="feature-card" style="border-color: rgba(34, 197, 94, 0.3);">
+                            <h3>✅ Recovery Notifications</h3>
+                            <p>When a metric drops back below its threshold, a recovery "OK" notification is sent and
+                                the cooldown is cleared — ready to alert again if needed.</p>
+                        </div>
+                        <div class="feature-card" style="border-color: rgba(59, 130, 246, 0.3);">
+                            <h3>👑 Primary Alerter</h3>
+                            <p>In multi-node clusters, only the node with the lowest ID sends threshold alerts. This
+                                prevents every node from sending duplicate notifications.</p>
+                        </div>
+                        <div class="feature-card" style="border-color: rgba(245, 158, 11, 0.3);">
+                            <h3>🔄 State-Change Detection</h3>
+                            <p>Node offline/restored alerts fire only on state transitions — a node that stays offline
+                                generates exactly one alert, not one per polling cycle.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- How It Works -->
+                <section class="content-section">
+                    <h2>⚙️ How It Works</h2>
+                    <p>
+                        The alerting system runs as a background task within WolfStack. Here's the monitoring flow:
+                    </p>
+
+                    <ol style="line-height: 2;">
+                        <li><strong>Startup:</strong> WolfStack waits 90 seconds after boot to let metrics stabilise
+                        </li>
+                        <li><strong>Config Load:</strong> The alerting configuration is re-read from
+                            <code>/etc/wolfstack/alerts.json</code> on every cycle (changes take effect immediately)
+                        </li>
+                        <li><strong>Node Scan:</strong> All online nodes (local + remote) are checked using their
+                            existing cached metrics — no extra network requests</li>
+                        <li><strong>Threshold Check:</strong> CPU, memory, and disk usage are compared against
+                            configured
+                            thresholds</li>
+                        <li><strong>Cooldown Check:</strong> If the alert is in the 15-minute cooldown window, it's
+                            suppressed</li>
+                        <li><strong>Alert Dispatch:</strong> Notifications are sent asynchronously to all configured
+                            channels</li>
+                        <li><strong>Recovery Check:</strong> If a previously-alerted metric has recovered, a recovery
+                            notification is sent</li>
+                        <li><strong>Sleep:</strong> Wait for the configured interval before the next cycle</li>
+                    </ol>
+
+                    <div class="code-block" style="margin-top: 1.5rem;">
+                        <div class="code-header"><span class="code-lang">Configuration File</span></div>
+                        <pre><code>/etc/wolfstack/alerts.json
+
+{
+  "enabled": true,
+  "discord_webhook": "https://discord.com/api/webhooks/...",
+  "slack_webhook": "",
+  "telegram_bot_token": "",
+  "telegram_chat_id": "",
+  "cpu_threshold": 90.0,
+  "memory_threshold": 90.0,
+  "disk_threshold": 90.0,
+  "alert_node_offline": true,
+  "alert_node_restored": true,
+  "alert_cpu": true,
+  "alert_memory": true,
+  "alert_disk": true,
+  "check_interval_secs": 60
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- Alert Message Format -->
+                <section class="content-section">
+                    <h2>📨 Alert Message Format</h2>
+                    <p>
+                        Alert messages include all the information you need to diagnose the issue at a glance:
+                    </p>
+
+                    <div
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                        <div class="feature-card" style="border-color: rgba(239, 68, 68, 0.3);">
+                            <h3 style="color: #ef4444;">⚠️ Threshold Alert</h3>
+                            <div class="code-block" style="margin-top: 0.75rem;">
+                                <pre style="font-size: 0.8rem;"><code>[WolfStack ALERT] CPU threshold exceeded at 94.2% on web-server-01
+
+⚠️ CPU Threshold Alert
+
+Hostname: web-server-01
+Metric: CPU usage
+Current: 94.2%
+Threshold: 90%
+Time: 2026-02-20 11:35:00 UTC
+
+This alert will not repeat for 15 minutes.</code></pre>
+                            </div>
+                        </div>
+
+                        <div class="feature-card" style="border-color: rgba(34, 197, 94, 0.3);">
+                            <h3 style="color: #22c55e;">✅ Recovery Alert</h3>
+                            <div class="code-block" style="margin-top: 0.75rem;">
+                                <pre style="font-size: 0.8rem;"><code>[WolfStack OK] CPU recovered on web-server-01
+
+✅ CPU Recovered
+
+Hostname: web-server-01
+Metric: CPU usage
+Current: 42.1%
+Time: 2026-02-20 11:50:00 UTC
+
+CPU usage has dropped below the threshold.</code></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p style="margin-top: 1.5rem;">
+                        Discord alerts use colour-coded embeds (red for alerts, green for recoveries). Slack uses
+                        rich block formatting. Telegram uses Markdown formatting.
+                    </p>
+                </section>
+
+                <!-- Quick Setup -->
+                <section class="content-section">
+                    <h2>🚀 Quick Setup</h2>
+                    <ol style="line-height: 2.2;">
+                        <li>Go to <strong>Settings → Alerting</strong> tab</li>
+                        <li>Toggle <strong>Enable Alerting</strong> on</li>
+                        <li>Paste your Discord/Slack webhook URL or Telegram bot credentials</li>
+                        <li>Click <strong>Send Test Alert</strong> to verify delivery</li>
+                        <li>Adjust thresholds with the sliders (default: 90% for each)</li>
+                        <li>Choose your preferred <strong>Check Interval</strong></li>
+                        <li>Enable/disable individual event types as needed</li>
+                        <li>Click <strong>Save Settings</strong> — you'll see a green ✓&nbsp;Saved! confirmation</li>
+                    </ol>
+
+                    <div class="info-box" style="margin-top: 1.5rem;">
+                        <strong>💡 Tip:</strong> For a quick test, set the CPU threshold to a very low value (e.g. 5%)
+                        and wait for one check cycle. You should receive a threshold alert. Then set it back to your
+                        desired value and you'll get a recovery notification.
+                    </div>
+                </section>
+
+                <div class="page-nav">
+                    <a href="wolfstack-issues.html" class="prev">← Issues Scanner</a>
+                    <a href="proxmox.html" class="next">Proxmox Integration →</a>
+                </div>
+            </div>
+
+            <footer class="wiki-footer"
+                style="margin-top: 3rem; padding: 2rem 0; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; opacity: 0.7; font-size: 0.875rem;">
+                <p>© 2026 <a href="https://wolf.uk.com" target="_blank"
+                        style="color: inherit; text-decoration: underline;">Wolf
+                        Software Systems Ltd</a> • FSL-1.1
+                </p>
+                <p style="font-size: 0.75rem; margin-top: 0.5rem;">
+                    USE AT YOUR OWN RISK. This software is provided "as is" without warranty of any kind.
+                </p>
+            </footer>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
