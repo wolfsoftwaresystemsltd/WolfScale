@@ -5,7 +5,7 @@
 
 use std::net::{UdpSocket, SocketAddr, Ipv4Addr};
 use std::sync::Arc;
-use tracing::{info, debug, warn};
+use tracing::{debug, warn};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 
 use crate::crypto::KeyPair;
@@ -234,7 +234,7 @@ pub fn send_peer_exchange(
                             if let Err(e) = socket.send_to(&pkt, endpoint) {
                                 debug!("PEX send error to {}: {}", ip, e);
                             } else {
-                                info!("PEX sent to {} at {} ({} bytes)", ip, endpoint, pex_packet.len());
+                                debug!("PEX sent to {} at {} ({} bytes)", ip, endpoint, pex_packet.len());
                             }
                         }
                         Err(e) => debug!("PEX encrypt error for {}: {}", ip, e),
@@ -263,7 +263,7 @@ pub fn run_discovery_broadcaster(
     let node_id = hostname.clone();
     let broadcast_addr: SocketAddr = format!("255.255.255.255:{}", DISCOVERY_PORT).parse().unwrap();
 
-    info!("Discovery broadcaster started");
+    debug!("Discovery broadcaster started");
     while running.load(std::sync::atomic::Ordering::Relaxed) {
         let msg = format_discovery(&node_id, &public_key, wolfnet_ip, listen_port, &hostname, is_gateway);
         let _ = socket.send_to(msg.as_bytes(), broadcast_addr);
@@ -284,7 +284,7 @@ pub fn run_discovery_listener(
     };
     socket.set_read_timeout(Some(std::time::Duration::from_secs(1))).ok();
 
-    info!("Discovery listener started on port {}", DISCOVERY_PORT);
+    debug!("Discovery listener started on port {}", DISCOVERY_PORT);
     let mut buf = [0u8; 512];
 
     while running.load(std::sync::atomic::Ordering::Relaxed) {

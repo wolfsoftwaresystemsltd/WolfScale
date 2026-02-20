@@ -199,7 +199,7 @@ impl PeerManager {
         if let Some(old_ip) = existing_ip {
             if old_ip != wolfnet_ip {
                 // Peer changed their WolfNet IP — migrate to new IP
-                info!("Peer {} ({}) changed IP: {} -> {}", hostname, hex::encode(KeyPair::peer_id(public_key)), old_ip, wolfnet_ip);
+                debug!("Peer {} ({}) changed IP: {} -> {}", hostname, hex::encode(KeyPair::peer_id(public_key)), old_ip, wolfnet_ip);
                 let mut peer = peers.remove(&old_ip).unwrap();
                 
                 // Update old endpoint mapping
@@ -233,7 +233,7 @@ impl PeerManager {
         self.endpoint_to_ip.write().unwrap().insert(endpoint, wolfnet_ip);
         self.id_to_ip.write().unwrap().insert(peer_id, wolfnet_ip);
         peers.insert(wolfnet_ip, peer);
-        info!("Discovered new peer: {} ({}) at {}", hostname, wolfnet_ip, endpoint);
+        debug!("Discovered new peer: {} ({}) at {}", hostname, wolfnet_ip, endpoint);
     }
 
     /// Get all peer IPs
@@ -294,7 +294,7 @@ impl PeerManager {
             }
         }
         if !routes.is_empty() {
-            info!("Loaded {} subnet route(s) from {}", routes.len(), path.display());
+            debug!("Loaded {} subnet route(s) from {}", routes.len(), path.display());
         }
     }
 
@@ -394,7 +394,7 @@ impl PeerManager {
 
             let peer_id = peer.peer_id;
             self.id_to_ip.write().unwrap().insert(peer_id, entry_ip);
-            info!("PEX: learned about {} ({}) via {}", entry.hostname, entry_ip, sender_ip);
+            debug!("PEX: learned about {} ({}) via {}", entry.hostname, entry_ip, sender_ip);
             peers.insert(entry_ip, peer);
         }
     }

@@ -164,7 +164,7 @@ fn resolve_endpoint(ep: &str) -> Option<SocketAddr> {
         Ok(mut addrs) => {
             let result = addrs.next();
             if let Some(addr) = result {
-                info!("Resolved endpoint '{}' -> {}", ep, addr);
+                debug!("Resolved endpoint '{}' -> {}", ep, addr);
             } else {
                 warn!("DNS resolution for '{}' returned no addresses", ep);
             }
@@ -478,7 +478,7 @@ fn run_daemon(config_path: &PathBuf) {
         if let Err(e) = std::fs::write("/proc/sys/net/ipv4/ip_forward", "1") {
             warn!("Failed to enable IP forwarding: {}", e);
         } else {
-            info!("IP forwarding enabled for relay");
+            debug!("IP forwarding enabled for relay");
         }
     }
 
@@ -542,7 +542,7 @@ fn run_daemon(config_path: &PathBuf) {
                 if let Ok(json) = serde_json::to_string_pretty(&status) {
                     let _ = std::fs::write(&status_path, json);
                 }
-                std::thread::sleep(Duration::from_secs(1));
+                std::thread::sleep(Duration::from_secs(5));
             }
         });
     }
@@ -792,14 +792,14 @@ fn run_daemon(config_path: &PathBuf) {
                                     // Update endpoint if it changed (roaming)
                                     let known_endpoint = peer_manager.with_peer_by_ip(&peer_ip, |peer| peer.endpoint);
                                     if known_endpoint != Some(Some(src)) {
-                                        info!("Peer {} roamed to new endpoint: {}", peer_ip, src);
+                                        debug!("Peer {} roamed to new endpoint: {}", peer_ip, src);
                                         peer_manager.update_endpoint(&peer_ip, src);
                                     }
 
                                     // Check if this is a PEX message
                                     if plaintext.len() > 1 && plaintext[0] == transport::PKT_PEER_EXCHANGE {
                                         if let Some(entries) = transport::parse_peer_exchange(&plaintext) {
-                                            info!("Received PEX from {} with {} peers", peer_ip, entries.len());
+                                            debug!("Received PEX from {} with {} peers", peer_ip, entries.len());
                                             peer_manager.add_from_pex(&entries, peer_ip, wolfnet_ip, &keypair);
 
                                             // Enable IP forwarding if we have multiple peers (we're a relay)
@@ -923,7 +923,7 @@ fn run_daemon(config_path: &PathBuf) {
                             peer_ip_opt = peer_manager.find_ip_by_id(&peer_id);
                             
                             if let Some(ip) = peer_ip_opt {
-                                info!("Peer {} recovered from unknown endpoint via keepalive: {}", ip, src);
+                                debug!("Peer {} recovered from unknown endpoint via keepalive: {}", ip, src);
                                 peer_manager.update_endpoint(&ip, src);
                             }
                         }
@@ -973,7 +973,7 @@ fn run_daemon(config_path: &PathBuf) {
                         if let Some(new_addr) = resolve_endpoint(&ep_str) {
                             let current = peer_manager.with_peer_by_ip(&ip, |peer| peer.endpoint).flatten();
                             if current != Some(new_addr) {
-                                info!("DNS re-resolve: {} endpoint changed to {}", ip, new_addr);
+                                debug!("DNS re-resolve: {} endpoint changed to {}", ip, new_addr);
                                 peer_manager.update_endpoint(&ip, new_addr);
                             }
                         }
