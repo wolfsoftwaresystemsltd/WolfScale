@@ -284,20 +284,17 @@ impl PeerManager {
             }
         };
         let mut routes = self.subnet_routes.write().unwrap();
-        let mut updated = 0;
+        routes.clear();
         for (container_ip_str, host_ip_str) in &map {
             if let (Ok(container_ip), Ok(host_ip)) = (
                 container_ip_str.parse::<Ipv4Addr>(),
                 host_ip_str.parse::<Ipv4Addr>(),
             ) {
-                if routes.get(&container_ip) != Some(&host_ip) {
-                    routes.insert(container_ip, host_ip);
-                    updated += 1;
-                }
+                routes.insert(container_ip, host_ip);
             }
         }
-        if updated > 0 {
-            debug!("Merged {} route update(s) from {} (total: {})", updated, path.display(), routes.len());
+        if !routes.is_empty() {
+            debug!("Loaded {} subnet route(s) from {}", routes.len(), path.display());
         }
     }
 
