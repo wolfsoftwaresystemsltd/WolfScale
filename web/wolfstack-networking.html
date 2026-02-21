@@ -1,1077 +1,132 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        gtag('js', new Date());
-        gtag('config', 'G-KK9NEE1S54');
-    </script>
-
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-KK9NEE1S54');</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description"
-        content="WolfStack Networking - Manage network interfaces, VLANs, WolfNet overlay, and DNS from the WolfStack dashboard. Full network visibility for every server.">
-    <meta name="keywords"
-        content="WolfStack networking, VLAN management, WolfNet, network interfaces, DNS, server networking, 802.1Q">
-    <meta name="author" content="Wolf Software Systems Ltd">
-    <link rel="canonical" href="https://wolfscale.org/wolfstack-networking.html">
-
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://wolfscale.org/wolfstack-networking.html">
-    <meta property="og:title" content="WolfStack Networking Guide">
-    <meta property="og:description"
-        content="Manage network interfaces, VLANs, WolfNet overlay, and DNS from the WolfStack web dashboard.">
-    <meta property="og:image" content="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg">
-
-    <title>Networking - WolfStack | WolfScale</title>
+    <meta name="description" content="IP management, WolfNet mesh, port forwarding, and firewall rules">
+    <title>🌐 Networking — WolfStack Docs</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=9">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=10">
 </head>
-
 <body>
-    <div class="wiki-layout">
-        <aside class="sidebar" id="sidebar">
-            <a href="index.html" class="sidebar-logo"><img
-                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"></a>
-            <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span>
-                    </div>
-                    <a href="wolfstack.html">Overview &amp; Quick Start</a>
-                    <a href="wolfstack-containers.html">Container Management</a>
-                    <a href="wolfstack-storage.html">Storage Manager</a>
-                    <a href="wolfstack-files.html">File Manager</a>
-                    <a href="wolfstack-networking.html" class="active">Networking</a>
-                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
-                    <a href="wolfstack-mysql.html">MariaDB/MySQL Editor</a>
-                    <a href="wolfstack-security.html">Security</a>
-                    <a href="wolfstack-certificates.html">Certificates</a>
-                    <a href="wolfstack-cron.html">Cron Jobs</a>
-                    <a href="wolfstack-terminal.html">Terminal</a>
-                    <a href="wolfstack-issues.html">Issues Scanner</a>
-                    <a href="wolfstack-alerting.html">Alerting &amp; Notifications</a>
-                    <a href="proxmox.html">Proxmox Integration</a>
-                    <a href="app-store.html">App Store</a>
-                    <a href="wolfstack-ai.html">AI Agent</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load
-                            Balancer</span></div>
-                    <a href="quickstart.html">Quick Start</a>
-                    <a href="features.html">Features</a>
-                    <a href="architecture.html">Architecture</a>
-                    <a href="how-it-works.html">How It Works</a>
-                    <a href="binlog.html">Binlog Mode</a>
-                    <a href="load-balancer.html">Load Balancer</a>
-                    <a href="configuration.html">Configuration</a>
-                    <a href="performance.html">Performance</a>
-                    <a href="cli.html">CLI Reference</a>
-                    <a href="troubleshooting.html">Troubleshooting</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication & Sharing</span>
-                    </div>
-                    <a href="wolfdisk.html">Overview & Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
-                    <a href="wolfnet.html">Overview & Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
-                            Firewall</span></div>
-                    <a href="wolfproxy.html">Overview & Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
-                    </div>
-                    <a href="wolfserve.html">Overview & Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">Company</div>
-                    <a href="https://wolf.uk.com" target="_blank">Wolf Software</a>
-                    <a href="about.html">About</a>
-                    <a href="roadmap.html">Roadmap</a>
-                    <a href="contact.html">Contact</a>
-                    <a href="glossary.html">Glossary</a>
-                    <a href="licensing.html">Licensing</a>
-                    <a href="support.html" style="color: #ff424d; font-weight: 700;">❤️ Support Us</a>
-                </div>
-            </nav>
-            <div class="theme-toggle-wrapper">
-                <span class="theme-toggle-label">Theme</span>
-                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
-                    <span class="theme-toggle-slider"></span>
-                </button>
+<div class="wiki-layout">
+<aside class="sidebar" id="sidebar">
+    <a href="index.html" class="sidebar-logo"><img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
+            alt="Wolf"></a>
+    <nav class="sidebar-nav">
+        <div class="nav-section">
+            <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span></div>
+            <a href="wolfstack.html">📊 Overview &amp; Quick Start</a>
+            <a href="wolfstack-containers.html">📦 Container Management</a>
+            <a href="wolfstack-storage.html">💾 Storage Manager</a>
+            <a href="wolfstack-files.html">📁 File Manager</a>
+            <a href="wolfstack-networking.html" class="active">🌐 Networking</a>
+            <a href="wolfstack-clustering.html">🔗 Multi-Server Clustering</a>
+            <a href="wolfstack-mysql.html">🗄️ MariaDB/MySQL Editor</a>
+            <a href="wolfstack-security.html">🔒 Security</a>
+            <a href="wolfstack-certificates.html">📜 Certificates</a>
+            <a href="wolfstack-cron.html">⏰ Cron Jobs</a>
+            <a href="wolfstack-terminal.html">💻 Terminal</a>
+            <a href="wolfstack-issues.html">🔍 Issues Scanner</a>
+            <a href="wolfstack-alerting.html">🔔 Alerting &amp; Notifications</a>
+            <a href="wolfrun.html">🐺 WolfRun Orchestration</a>
+            <a href="proxmox.html">🟠 Proxmox Integration</a>
+            <a href="app-store.html">🛍️ App Store</a>
+            <a href="wolfstack-ai.html">🤖 AI Agent</a>
+            <a href="wolfstack-settings.html">⚙️ Settings</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication &amp; Load
+                    Balancer</span></div>
+            <a href="quickstart.html">⚡ Quick Start</a>
+            <a href="features.html">✨ Features</a>
+            <a href="architecture.html">🏗️ Architecture</a>
+            <a href="how-it-works.html">⚙️ How It Works</a>
+            <a href="binlog.html">📋 Binlog Mode</a>
+            <a href="load-balancer.html">⚖️ Load Balancer</a>
+            <a href="configuration.html">🔧 Configuration</a>
+            <a href="performance.html">📈 Performance</a>
+            <a href="cli.html">🖥️ CLI Reference</a>
+            <a href="troubleshooting.html">🔧 Troubleshooting</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication &amp; Sharing</span></div>
+            <a href="wolfdisk.html">💿 Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
+            <a href="wolfnet.html">🌐 Overview &amp; Quick Start</a>
+            <a href="wolfnet-global.html">🌍 Global Network Access</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with Firewall</span>
             </div>
-            <div class="sidebar-links">
-                <a href="https://github.com/wolfsoftwaresystemsltd/WolfStack" target="_blank">GitHub</a>
-                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
-                <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
-            </div>
-        </aside>
-        <div class="sidebar-overlay" id="sidebar-overlay"></div>
-
-        <main class="wiki-main">
-            <div class="mobile-header">
-                <a href="index.html" class="nav-logo"><img
-                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
-                        class="logo-img"></a>
-                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
-            </div>
-
-            <div class="wiki-content">
-                <div class="content-header">                    <h1>🌐 Networking</h1>
-                    <p class="content-subtitle">Manage network interfaces, VLANs, WolfNet overlay, and DNS from the
-                        dashboard</p>
-                </div>
-
-                <!-- Overview -->
-                <section class="content-section">
-                    <h2>Overview</h2>
-                    <p>
-                        WolfStack gives you <strong>full visibility and control</strong> over every server's network
-                        configuration — right from the web dashboard. No more SSH-ing into machines to check IP
-                        addresses or create VLANs.
-                    </p>
-                    <p>
-                        This guide covers the full networking stack — from physical interfaces to private
-                        overlays to exposing containers on the internet:
-                    </p>
-                    <ul>
-                        <li><strong>🌐 Network Interfaces</strong> — All interfaces with IPs, state, speed, and actions
-                        </li>
-                        <li><strong>🏷️ VLAN Management</strong> — Create and manage 802.1Q VLANs</li>
-                        <li><strong>🔗 WolfNet Overlay</strong> — Status of your private mesh network</li>
-                        <li><strong>🧩 Network Layers</strong> — How vSwitches, WolfNet, bridges, and public IPs
-                            relate</li>
-                        <li><strong>🔌 Hetzner vSwitch</strong> — Using Hetzner's private VLAN with WolfNet</li>
-                        <li><strong>🖥️ Proxmox Networking</strong> — Container bridges, wn0 interfaces, and
-                            WolfNet IPs</li>
-                        <li><strong>🚀 Exposing Containers</strong> — Step-by-step guide to making containers
-                            internet-accessible</li>
-                        <li><strong>🛡️ Port Safety</strong> — Blocked ports and live port scanning</li>
-                        <li><strong>🌍 Public IP Mappings</strong> — Route public IPs to WolfNet containers and VMs
-                        </li>
-                        <li><strong>🔤 DNS Configuration</strong> — Nameservers and search domains</li>
-                    </ul>
-                </section>
-
-                <!-- Network Interfaces -->
-                <section class="content-section">
-                    <h2>🌐 Network Interfaces</h2>
-                    <p>
-                        The interface table shows every network interface on the server (excluding loopback), with
-                        real-time information:
-                    </p>
-
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Column</th>
-                                    <th>Description</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>Interface</strong></td>
-                                    <td>Interface name with type badges — <span
-                                            style="background:rgba(168,85,247,0.15); color:#a855f7; padding:2px 6px; border-radius:4px; font-size:12px;">VLAN
-                                            100</span>, <span
-                                            style="background:rgba(59,130,246,0.15); color:#60a5fa; padding:2px 6px; border-radius:4px; font-size:12px;">Docker</span>,
-                                        <span
-                                            style="background:rgba(34,197,94,0.15); color:#22c55e; padding:2px 6px; border-radius:4px; font-size:12px;">WolfNet</span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>State</strong></td>
-                                    <td><span style="color:#22c55e;">UP</span> or <span
-                                            style="color:#ef4444;">DOWN</span> — current interface state</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Addresses</strong></td>
-                                    <td>All IPv4 and IPv6 addresses with CIDR notation. Each address has a remove
-                                        button.</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>MAC</strong></td>
-                                    <td>Hardware MAC address</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Speed</strong></td>
-                                    <td>Link speed (e.g. "1Gb/s", "10Gb/s") — read from
-                                        <code>/sys/class/net</code>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>MTU</strong></td>
-                                    <td>Maximum transmission unit size (typically 1500, or 9000 for jumbo frames)</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Driver</strong></td>
-                                    <td>Kernel driver (e.g. "e1000e", "igb", "virtio_net")</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <h3 style="margin-top: 2rem;">Interface Actions</h3>
-                    <p>Each interface has action buttons:</p>
-                    <ul>
-                        <li><strong>⏸️ / ▶️ Toggle</strong> — Bring an interface up or down
-                            (<code>ip link set {name} up/down</code>)</li>
-                        <li><strong>➕ Add IP</strong> — Add an IP address to the interface with a specified prefix
-                            length</li>
-                        <li><strong>✕ Remove IP</strong> — Remove a specific IP address from the interface
-                            (click the ✕ next to any address)</li>
-                    </ul>
-
-                    <div class="info-box" style="margin-top: 1.5rem;">
-                        <strong>⚠️ Warning:</strong> Bringing down a network interface or removing its IP address can
-                        disconnect you from the server. Be careful with changes to the interface you're connected
-                        through. WolfStack will prompt for confirmation before any destructive action.
-                    </div>
-                </section>
-
-                <!-- VLANs -->
-                <section class="content-section">
-                    <h2>🏷️ VLAN Management</h2>
-                    <p>
-                        WolfStack supports creating and managing <strong>802.1Q VLANs</strong> directly from the
-                        dashboard. VLANs allow you to segment your network traffic on a shared physical connection.
-                    </p>
-
-                    <h3>Creating a VLAN</h3>
-                    <p>Click <strong>"+ Add VLAN"</strong> and configure:</p>
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Field</th>
-                                    <th>Description</th>
-                                    <th>Example</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>Parent Interface</strong></td>
-                                    <td>The physical interface to create the VLAN on</td>
-                                    <td>eth0</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>VLAN ID</strong></td>
-                                    <td>802.1Q VLAN tag (1–4094)</td>
-                                    <td>100</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Name</strong></td>
-                                    <td>Optional custom name (defaults to <code>parent.vlanid</code>)</td>
-                                    <td>mgmt-vlan</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <p style="margin-top: 1rem;">
-                        Under the hood, WolfStack runs:
-                    </p>
-                    <div class="code-block">
-                        <div class="code-header"><span class="code-lang">What happens</span></div>
-                        <pre><code># Create the VLAN interface
-ip link add link eth0 name eth0.100 type vlan id 100
-
-# Bring it up
-ip link set eth0.100 up
-
-# Then assign an IP through the dashboard
-ip addr add 192.168.100.1/24 dev eth0.100</code></pre>
-                    </div>
-
-                    <h3 style="margin-top: 2rem;">Deleting a VLAN</h3>
-                    <p>
-                        VLAN interfaces show a <strong>🗑️ Delete</strong> button. Clicking it removes the VLAN
-                        interface immediately (<code>ip link delete</code>). All IPs and routes on that
-                        interface are lost.
-                    </p>
-
-                    <h3 style="margin-top: 2rem;">VLAN Detection</h3>
-                    <p>
-                        WolfStack auto-detects existing VLANs in two ways:
-                    </p>
-                    <ul>
-                        <li><strong>Kernel info</strong> — Reads <code>ip -j link show</code> to detect
-                            <code>vlan</code> link type
-                        </li>
-                        <li><strong>Name convention</strong> — Recognises interfaces named
-                            <code>{parent}.{id}</code> (e.g. <code>eth0.100</code>)
-                        </li>
-                    </ul>
-
-                    <div class="info-box" style="margin-top: 1.5rem;">
-                        <strong>💡 Tip:</strong> VLANs created through WolfStack are <em>non-persistent</em> by
-                        default — they survive until the next reboot. To make them permanent, configure them through
-                        your system's network manager (netplan, NetworkManager, or
-                        <code>/etc/network/interfaces</code>).
-                    </div>
-                </section>
-
-                <!-- WolfNet -->
-                <section class="content-section">
-                    <h2>🔗 WolfNet Overlay</h2>
-                    <p>
-                        The WolfNet card shows the status of <a href="wolfnet.html">WolfNet</a> — Wolf Software's
-                        private mesh networking overlay. It displays:
-                    </p>
-                    <ul>
-                        <li><strong>Status</strong> — Whether the WolfNet service is running or stopped</li>
-                        <li><strong>Interface</strong> — The tunnel interface name (e.g. <code>wn0</code>)</li>
-                        <li><strong>IP</strong> — This node's WolfNet IP address (e.g. <code>10.10.10.1/24</code>)</li>
-                        <li><strong>Peers</strong> — Table of configured peers with name, IP, endpoint, and live
-                            connectivity status</li>
-                    </ul>
-
-                    <h3 style="margin-top: 2rem;">Peer Connectivity</h3>
-                    <p>
-                        WolfStack checks peer connectivity by pinging each peer's WolfNet IP
-                        (<code>ping -c 1 -W 1</code>). This gives you instant visibility into which
-                        peers are reachable:
-                    </p>
-                    <ul>
-                        <li><span
-                                style="background:rgba(34,197,94,0.15); color:#22c55e; padding:2px 8px; border-radius:4px; font-size:12px;">Connected</span>
-                            — Peer responded to ping</li>
-                        <li><span
-                                style="background:rgba(239,68,68,0.15); color:#ef4444; padding:2px 8px; border-radius:4px; font-size:12px;">Unreachable</span>
-                            — No response. Check the peer's WolfNet service and network path.</li>
-                    </ul>
-
-                    <h3 style="margin-top: 2rem;">Service Control</h3>
-                    <p>
-                        From the WolfNet card you can:
-                    </p>
-                    <ul>
-                        <li><strong>▶️ Start</strong> — Start the WolfNet service if it's stopped</li>
-                        <li><strong>🔄 Restart</strong> — Restart WolfNet to reload configuration changes</li>
-                    </ul>
-
-                    <p style="margin-top: 1rem;">
-                        If WolfNet is not installed, the card will show a message directing you to the
-                        <strong>Components</strong> page where you can install it with one click.
-                    </p>
-
-                    <div class="info-box" style="margin-top: 1.5rem;">
-                        <strong>📖 Learn more:</strong> For full WolfNet setup and configuration, see the
-                        <a href="wolfnet.html">WolfNet documentation</a>.
-                    </div>
-                </section>
-
-                <!-- Understanding Network Layers -->
-                <section class="content-section">
-                    <h2>🧩 Understanding the Network Layers</h2>
-                    <p>
-                        WolfStack environments typically have <strong>several network layers</strong> working together.
-                        Understanding how they connect is key to routing traffic correctly.
-                    </p>
-
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Layer</th>
-                                    <th>Interface</th>
-                                    <th>IP Range (typical)</th>
-                                    <th>What it connects</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>Public Internet</strong></td>
-                                    <td><code>eth0</code> / <code>ens18</code></td>
-                                    <td>Your public IPs</td>
-                                    <td>Server to the internet</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Hetzner vSwitch</strong></td>
-                                    <td><code>enp7s0.4000</code> (VLAN)</td>
-                                    <td><code>10.0.0.0/24</code></td>
-                                    <td>Dedicated servers within Hetzner DC (private, Layer 2)</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>WolfNet Overlay</strong></td>
-                                    <td><code>wg0</code> / <code>wn0</code></td>
-                                    <td><code>10.10.10.0/24</code></td>
-                                    <td>All servers across any provider (encrypted tunnel)</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Proxmox Bridge</strong></td>
-                                    <td><code>vmbr0</code></td>
-                                    <td>(same as public)</td>
-                                    <td>VMs/containers to the physical NIC</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Container Bridge</strong></td>
-                                    <td><code>lxcbr0</code> / <code>docker0</code></td>
-                                    <td><code>10.10.10.0/24</code></td>
-                                    <td>Container WolfNet interfaces on a single host</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="code-block" style="margin-top: 1.5rem;">
-                        <div class="code-header"><span class="code-lang">Traffic flow: Internet → Container</span></div>
-                        <pre><code>Internet
-  │
-  ▼
-┌─────────────────────────────────────────────┐
-│  eth0 / ens18  (Public IP: 203.0.113.4)     │
-│                                             │
-│  iptables DNAT: 203.0.113.4:80 ──────┐     │
-│                                      │     │
-│  wg0 / wn0  (WolfNet: 10.10.10.1)   │     │
-│       │                              │     │
-│       │    ◄─────────────────────────┘     │
-│       │                                     │
-│  lxcbr0 / docker0                           │
-│       │                                     │
-│  ┌────▼─────────────┐                       │
-│  │ Container         │                       │
-│  │ WolfNet: 10.10.10.50                     │
-│  │ nginx on port 80  │                       │
-│  └───────────────────┘                       │
-└─────────────────────────────────────────────┘</code></pre>
-                    </div>
-                </section>
-
-                <!-- Hetzner vSwitch -->
-                <section class="content-section">
-                    <h2>🔌 Hetzner vSwitch Integration</h2>
-                    <p>
-                        A <strong>Hetzner vSwitch</strong> is a free Layer 2 VLAN service that connects your
-                        dedicated servers within Hetzner's data centre via a private network. Traffic on the
-                        vSwitch <strong>never touches the public internet</strong>.
-                    </p>
-
-                    <h3>Setting Up a vSwitch</h3>
-                    <ol>
-                        <li><strong>Create a vSwitch</strong> in the Hetzner Robot panel — choose a VLAN ID (e.g.
-                            4000) and add your servers to it</li>
-                        <li>In WolfStack, go to <strong>Networking</strong> → click <strong>"+ Add VLAN"</strong></li>
-                        <li>Select the <strong>Parent Interface</strong> (e.g. <code>enp7s0</code> — the NIC connected
-                            to Hetzner's VLAN switch)</li>
-                        <li>Enter the <strong>VLAN ID</strong> (must match what you set in Hetzner Robot, e.g.
-                            <code>4000</code>)
-                        </li>
-                        <li>Click <strong>Create</strong> — WolfStack creates the VLAN interface and brings it up</li>
-                        <li>Click <strong>"+ Add IP"</strong> on the new VLAN interface and assign a private IP
-                            (e.g. <code>10.0.0.1/24</code>)</li>
-                        <li><strong>Repeat</strong> on each server with a unique IP from the same subnet</li>
-                    </ol>
-
-                    <div class="info-box" style="margin-top: 1rem;">
-                        <strong>💡 No terminal needed:</strong> Everything above is done through the WolfStack web
-                        dashboard. WolfStack handles the <code>ip link add</code>, <code>ip link set up</code>,
-                        and <code>ip addr add</code> commands automatically behind the scenes.
-                    </div>
-
-                    <h3 style="margin-top: 2rem;">Using vSwitch IPs with WolfNet</h3>
-                    <p>
-                        By default, WolfNet peers connect using <strong>public IPs</strong> as endpoints. If your
-                        servers are all at Hetzner, you can use <strong>vSwitch IPs as WolfNet endpoints</strong>
-                        instead — this keeps WolfNet traffic on the private VLAN for better performance and lower
-                        latency.
-                    </p>
-
-                    <h4 style="margin-top: 1.5rem;">Option 1: Set endpoint when adding a peer</h4>
-                    <p>
-                        In WolfStack, go to the <strong>WolfNet</strong> page → click <strong>"+ Add Peer"</strong>.
-                        In the <strong>Endpoint</strong> field, enter the peer's <strong>vSwitch IP</strong> instead
-                        of its public IP:
-                    </p>
-                    <div
-                        style="background: rgba(59,130,246,0.05); border: 1px solid rgba(59,130,246,0.15); border-radius: 8px; padding: 12px 16px; margin: 0.5rem 0;">
-                        <strong>Endpoint:</strong> <code>10.0.0.2:9600</code> (vSwitch IP instead of public IP)
-                    </div>
-
-                    <h4 style="margin-top: 1.5rem;">Option 2: Edit an existing peer's endpoint</h4>
-                    <p>
-                        Already have a peer configured with its public IP? You can change it to the vSwitch IP
-                        <strong>right in your browser</strong>:
-                    </p>
-                    <ol>
-                        <li>In the WolfStack dashboard, go to the <strong>WolfNet</strong> page</li>
-                        <li>Scroll down and expand the <strong>📄 Raw Configuration</strong> section — this is a
-                            live text editor for the WolfNet config built into the dashboard</li>
-                        <li>Find the peer's <code>endpoint = "203.0.113.5:9600"</code> line</li>
-                        <li>Change it to the vSwitch IP: <code>endpoint = "10.0.0.2:9600"</code></li>
-                        <li>Click <strong>💾 Save &amp; Apply</strong> — WolfStack writes the config and
-                            restarts WolfNet automatically</li>
-                    </ol>
-
-                    <div class="info-box" style="margin-top: 1.5rem;">
-                        <strong>💡 When to use vSwitch vs public endpoints:</strong>
-                        <ul style="margin-top: 8px; margin-bottom: 0;">
-                            <li><strong>All servers at Hetzner</strong> → Use vSwitch IPs (faster, no bandwidth
-                                cost)</li>
-                            <li><strong>Mixed providers</strong> → Use public IPs (vSwitch only works within
-                                Hetzner)</li>
-                            <li><strong>Hybrid</strong> → Use vSwitch for Hetzner-to-Hetzner peers, public IPs
-                                for external peers</li>
-                        </ul>
-                    </div>
-                </section>
-
-                <!-- Proxmox Networking -->
-                <section class="content-section">
-                    <h2>🖥️ Proxmox Networking</h2>
-                    <p>
-                        On <strong>Proxmox</strong> hosts, networking has an extra layer — the Proxmox bridge
-                        (<code>vmbr0</code>) sits between the physical NIC and your VMs/containers. WolfStack
-                        integrates with this seamlessly.
-                    </p>
-
-                    <h3>How Proxmox Container Networking Works</h3>
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Interface</th>
-                                    <th>Location</th>
-                                    <th>Purpose</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>vmbr0</code></td>
-                                    <td>Host</td>
-                                    <td>Main bridge — connects VMs/containers to the physical NIC for public/external
-                                        access</td>
-                                </tr>
-                                <tr>
-                                    <td><code>lxcbr0</code></td>
-                                    <td>Host</td>
-                                    <td>WolfNet bridge — containers with WolfNet IPs get a <code>wn0</code> interface
-                                        on this bridge</td>
-                                </tr>
-                                <tr>
-                                    <td><code>eth0</code></td>
-                                    <td>Inside container</td>
-                                    <td>Main network (connected to <code>vmbr0</code>)</td>
-                                </tr>
-                                <tr>
-                                    <td><code>wn0</code></td>
-                                    <td>Inside container</td>
-                                    <td>WolfNet network (connected to <code>lxcbr0</code>, has WolfNet IP)</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <h3 style="margin-top: 2rem;">Assigning a WolfNet IP to a Container</h3>
-                    <p>In WolfStack:</p>
-                    <ol>
-                        <li>Go to <strong>Containers</strong> → click the ⚙️ settings gear on your container</li>
-                        <li>In the <strong>Network</strong> tab, enter a WolfNet IP (e.g. <code>10.10.10.50</code>)
-                        </li>
-                        <li>Click <strong>Save</strong> — WolfStack will:
-                            <ul>
-                                <li>Create a <code>wn0</code> NIC on <code>lxcbr0</code> in the Proxmox config</li>
-                                <li>Assign the IP inside the container</li>
-                                <li>Add routes so other WolfNet nodes can reach it</li>
-                            </ul>
-                        </li>
-                    </ol>
-
-                    <div class="code-block" style="margin-top: 1rem;">
-                        <div class="code-header"><span class="code-lang">What WolfStack configures (Proxmox)</span>
-                        </div>
-                        <pre><code># In /etc/pve/lxc/100.conf:
-net0: name=eth0,bridge=vmbr0,ip=dhcp,type=veth
-net1: name=wn0,bridge=lxcbr0,ip=10.10.10.50/24,type=veth
-
-# Routes added on the host:
-ip route add 10.10.10.50/32 dev lxcbr0</code></pre>
-                    </div>
-
-                    <div class="info-box" style="margin-top: 1.5rem;">
-                        <strong>📖 Docker containers:</strong> Docker containers can also get WolfNet IPs.
-                        When creating a Docker container in WolfStack, enter a WolfNet IP and the container
-                        will be connected to a WolfNet bridge network. The IP is stored as a Docker label
-                        (<code>wolfnet.ip</code>).
-                    </div>
-                </section>
-
-                <!-- Exposing Containers to the Internet -->
-                <section class="content-section">
-                    <h2>🚀 Exposing Containers to the Internet</h2>
-                    <p>
-                        A container with a WolfNet IP is on a <strong>private overlay network</strong> — it's not
-                        directly reachable from the internet. To make a container's service (like a web server)
-                        publicly accessible, you use <strong>IP Mapping</strong>.
-                    </p>
-
-                    <h3>Step-by-Step: Expose a Web Server</h3>
-                    <div
-                        style="background: rgba(59,130,246,0.05); border: 1px solid rgba(59,130,246,0.15); border-radius: 8px; padding: 16px; margin: 1rem 0;">
-                        <ol style="margin: 0; padding-left: 20px; line-height: 2;">
-                            <li><strong>Create a container</strong> (LXC or Docker) with a WolfNet IP, e.g.
-                                <code>10.10.10.50</code>
-                            </li>
-                            <li><strong>Install your service</strong> inside the container (e.g. nginx on port 80)
-                            </li>
-                            <li>Go to <strong>Networking</strong> → <strong>Public IP Mappings</strong> → click
-                                <strong>+ Add Mapping</strong>
-                            </li>
-                            <li>Select your <strong>Public IP</strong> (auto-detected from the server)</li>
-                            <li>Select the <strong>WolfNet IP</strong> of the container (<code>10.10.10.50</code> —
-                                containers appear in the dropdown)</li>
-                            <li>Set <strong>Source Port(s)</strong> to <code>80,443</code> and <strong>Protocol</strong>
-                                to
-                                <code>TCP</code>
-                            </li>
-                            <li>Optionally set <strong>Destination Port(s)</strong> if the container listens on
-                                different ports
-                                (e.g. source <code>8080</code> → destination <code>80</code>)</li>
-                            <li>Click <strong>Create Mapping</strong></li>
-                        </ol>
-                    </div>
-
-                    <p style="margin-top: 1rem;">
-                        That's it — internet users can now reach <code>http://your-public-ip</code> and it will be
-                        forwarded to the container's nginx on port 80.
-                    </p>
-
-                    <h3 style="margin-top: 2rem;">Common Scenarios</h3>
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Scenario</th>
-                                    <th>Public IP</th>
-                                    <th>WolfNet IP</th>
-                                    <th>Source Port(s)</th>
-                                    <th>Dest Port(s)</th>
-                                    <th>Protocol</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Web server (HTTP + HTTPS)</td>
-                                    <td>203.0.113.4</td>
-                                    <td>10.10.10.50</td>
-                                    <td>80,443</td>
-                                    <td><em>(same)</em></td>
-                                    <td>TCP</td>
-                                </tr>
-                                <tr>
-                                    <td>Port translation (e.g. dev server)</td>
-                                    <td>203.0.113.4</td>
-                                    <td>10.10.10.50</td>
-                                    <td>8080</td>
-                                    <td>80</td>
-                                    <td>TCP</td>
-                                </tr>
-                                <tr>
-                                    <td>Game server</td>
-                                    <td>203.0.113.4</td>
-                                    <td>10.10.10.51</td>
-                                    <td>25565</td>
-                                    <td><em>(same)</em></td>
-                                    <td>TCP</td>
-                                </tr>
-                                <tr>
-                                    <td>Full IP passthrough</td>
-                                    <td>203.0.113.5</td>
-                                    <td>10.10.10.52</td>
-                                    <td><em>(blank)</em></td>
-                                    <td><em>—</em></td>
-                                    <td>All</td>
-                                </tr>
-                                <tr>
-                                    <td>DNS server</td>
-                                    <td>203.0.113.4</td>
-                                    <td>10.10.10.53</td>
-                                    <td>53</td>
-                                    <td><em>(same)</em></td>
-                                    <td>UDP</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <h3 style="margin-top: 2rem;">Cross-Interface Routing</h3>
-                    <p>
-                        Don't worry about the public IP and WolfNet IP being on different network interfaces —
-                        the Linux kernel handles cross-interface routing automatically. WolfStack:
-                    </p>
-                    <ul>
-                        <li>Enables <code>net.ipv4.ip_forward</code> (required for routing between interfaces)
-                        </li>
-                        <li>Sets up <strong>conntrack</strong> rules so return traffic flows back correctly</li>
-                        <li>Uses <strong>SNAT</strong> to ensure reply packets route through this server (not
-                            directly to the client)</li>
-                    </ul>
-                </section>
-
-                <!-- Port Safety -->
-                <section class="content-section">
-                    <h2>🛡️ Port Safety</h2>
-                    <p>
-                        WolfStack <strong>prevents you from accidentally breaking critical services</strong> by
-                        blocking certain ports from being mapped. This applies to both the web UI and the API.
-                    </p>
-
-                    <h3>Blocked Ports</h3>
-                    <p>The following ports are always rejected when creating an IP mapping:</p>
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Port</th>
-                                    <th>Service</th>
-                                    <th>Why it's blocked</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>22</code></td>
-                                    <td>SSH</td>
-                                    <td>Mapping this would lock you out of the server</td>
-                                </tr>
-                                <tr>
-                                    <td><code>111</code>, <code>2049</code></td>
-                                    <td>NFS</td>
-                                    <td>Breaking NFS can disconnect mounted storage</td>
-                                </tr>
-                                <tr>
-                                    <td><code>3128</code></td>
-                                    <td>Proxmox CONNECT proxy</td>
-                                    <td>Used by Proxmox for console access</td>
-                                </tr>
-                                <tr>
-                                    <td><code>5900–5903</code></td>
-                                    <td>Proxmox VNC</td>
-                                    <td>Used for VM console display</td>
-                                </tr>
-                                <tr>
-                                    <td><code>8006</code>, <code>8443</code></td>
-                                    <td>Proxmox Web UI / API</td>
-                                    <td>Mapping these breaks Proxmox access entirely</td>
-                                </tr>
-                                <tr>
-                                    <td><code>8552</code>, <code>8553</code></td>
-                                    <td>WolfStack</td>
-                                    <td>WolfStack's own API and cluster communication</td>
-                                </tr>
-                                <tr>
-                                    <td><code>9600</code></td>
-                                    <td>WolfNet</td>
-                                    <td>WolfNet's tunnel communication port</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <h3 style="margin-top: 2rem;">Live Port Scanning</h3>
-                    <p>
-                        In addition to the blocked list, WolfStack <strong>scans for all ports currently in
-                            use</strong> on the server (via <code>ss</code>). If a source port is already in use by
-                        another service, a <strong>soft warning</strong> is displayed — but the mapping is
-                        <strong>not rejected</strong>. Since DNAT rules are IP-specific, they won't necessarily
-                        conflict with services listening on other interfaces or addresses.
-                    </p>
-                    <p style="margin-top: 0.5rem;">
-                        <strong>Destination ports</strong> are not checked at all — these are ports on the remote
-                        container/VM, and it's expected they may already be in use (that's the service you're
-                        forwarding to).
-                    </p>
-
-                    <div class="info-box" style="margin-top: 1.5rem;">
-                        <strong>💡 Tip:</strong> When you type source ports into the mapping modal, status
-                        indicators appear in real-time — <span style="color:#ef4444;">red</span> for blocked system
-                        ports,
-                        <span style="color:#3b82f6;">blue ℹ️</span> for ports in use (informational only), and a
-                        <span style="color:#22c55e;">green ✓</span> when there are no conflicts.
-                    </div>
-                </section>
-
-                <!-- Public IP Mappings -->
-                <section class="content-section">
-                    <h2>🌍 Public IP Mappings</h2>
-                    <p>
-                        The <strong>Public IP Mappings</strong> card lets you route internet traffic arriving at a
-                        public IP address directly to a container, VM, or LXC instance on your WolfNet mesh.
-                        WolfStack handles all the iptables rules automatically.
-                    </p>
-
-                    <h3>How It Works</h3>
-                    <p>When you create a mapping, WolfStack sets up three iptables rules:</p>
-                    <ul>
-                        <li><strong>DNAT (Destination NAT)</strong> — Redirects incoming traffic on the public IP to
-                            the
-                            WolfNet IP</li>
-                        <li><strong>SNAT (Source NAT)</strong> — Rewrites return traffic so it routes back through
-                            the
-                            gateway</li>
-                        <li><strong>FORWARD</strong> — Explicitly allows DNAT'd traffic through the firewall</li>
-                    </ul>
-                    <p>IP forwarding (<code>net.ipv4.ip_forward</code>) is enabled automatically.</p>
-
-                    <h3 style="margin-top: 2rem;">Creating a Mapping</h3>
-                    <p>Click <strong>"+ Add Mapping"</strong> and configure:</p>
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Field</th>
-                                    <th>Description</th>
-                                    <th>Example</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>Public IP</strong></td>
-                                    <td>A public IP assigned to this server. Auto-detected IPs appear in a dropdown.
-                                    </td>
-                                    <td>203.0.113.4</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>WolfNet IP</strong></td>
-                                    <td>The WolfNet IP of the target container, VM, or LXC instance. Known peers
-                                        appear
-                                        in a dropdown.</td>
-                                    <td>10.10.10.104</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Source Port(s)</strong></td>
-                                    <td>The ports that incoming traffic arrives on (leave blank for all traffic).
-                                        Supports
-                                        individual ports and ranges.</td>
-                                    <td>80,443 or 8000:8100</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Destination Port(s)</strong></td>
-                                    <td>The ports on the container/VM to forward to. If left blank, traffic is forwarded
-                                        to the same port numbers as the source. When specified, must have the same
-                                        count as source ports (one-to-one mapping).</td>
-                                    <td>8080 → 80</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Protocol</strong></td>
-                                    <td>TCP only, UDP only, or All (both). Must be TCP or UDP when ports are specified.
-                                    </td>
-                                    <td>TCP</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Label</strong></td>
-                                    <td>A friendly name for the mapping</td>
-                                    <td>Web server</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <h3 style="margin-top: 2rem;">Editing a Mapping</h3>
-                    <p>
-                        Existing mappings can be <strong>edited in-place</strong> — click the ✏️ button on any
-                        mapping in the list. WolfStack will remove the old iptables rules, validate your changes,
-                        and apply the new rules automatically. No need to delete and recreate.
-                    </p>
-
-                    <h3 style="margin-top: 2rem;">Persistence</h3>
-                    <p>
-                        All mappings are saved to <code>/etc/wolfstack/ip-mappings.json</code> and
-                        <strong>automatically restored on reboot</strong>. Mappings also survive container
-                        migration between servers — the destination server just needs the same mapping configured.
-                    </p>
-
-                    <h3 style="margin-top: 2rem;">Under the Hood</h3>
-                    <div class="code-block">
-                        <div class="code-header"><span class="code-lang">Same-port mapping (source 80 → dest 80)</span>
-                        </div>
-                        <pre><code># DNAT — redirect incoming traffic
-iptables -t nat -A PREROUTING -d 203.0.113.4 -p tcp --dport 80 -j DNAT --to-destination 10.10.10.104
-
-# SNAT — rewrite return path
-iptables -t nat -A POSTROUTING -d 10.10.10.104 -p tcp --dport 80 -j SNAT --to-source 10.10.10.1
-
-# FORWARD — allow the DNAT'd traffic
-iptables -A FORWARD -d 10.10.10.104 -p tcp --dport 80 -m conntrack --ctstate DNAT -j ACCEPT</code></pre>
-                    </div>
-
-                    <div class="code-block" style="margin-top: 1rem;">
-                        <div class="code-header"><span class="code-lang">Port translation (source 8080 → dest 80)</span>
-                        </div>
-                        <pre><code># DNAT — redirect and translate port
-iptables -t nat -A PREROUTING -d 203.0.113.4 -p tcp --dport 8080 -j DNAT --to-destination 10.10.10.104:80
-
-# SNAT — match on the translated destination port (80)
-iptables -t nat -A POSTROUTING -d 10.10.10.104 -p tcp --dport 80 -j SNAT --to-source 10.10.10.1
-
-# FORWARD — match on translated destination port (80)
-iptables -A FORWARD -d 10.10.10.104 -p tcp --dport 80 -m conntrack --ctstate DNAT -j ACCEPT</code></pre>
-                    </div>
-
-                    <div class="info-box" style="margin-top: 1.5rem;">
-                        <strong>💡 Tip:</strong> To forward <em>all</em> traffic (every port and protocol), leave
-                        the
-                        Ports field blank and set Protocol to "All". This is useful for giving a container or VM
-                        its own dedicated public IP.
-                    </div>
-                </section>
-
-                <!-- DNS -->
-                <section class="content-section">
-                    <h2>🔤 DNS Configuration</h2>
-                    <p>
-                        The DNS card displays the server's current DNS configuration and lets you
-                        <strong>add, edit, and remove</strong> nameservers and search domains directly
-                        from the dashboard.
-                    </p>
-                    <ul>
-                        <li><strong>Nameservers</strong> — The DNS servers this machine uses for name resolution.
-                            Click <strong>+ Add</strong> to add a new one, or <strong>✕</strong> to remove.</li>
-                        <li><strong>Search Domains</strong> — Domain suffixes automatically appended to
-                            short hostnames. Add or remove with the same controls.</li>
-                    </ul>
-
-                    <h3 style="margin-top: 2rem;">Multi-Distro Support</h3>
-                    <p>
-                        WolfStack <strong>auto-detects</strong> how your system manages DNS and writes to the
-                        correct configuration. The detected method is shown at the bottom of the DNS card.
-                    </p>
-
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Method</th>
-                                    <th>Distros</th>
-                                    <th>What WolfStack Does</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>Netplan</strong></td>
-                                    <td>Ubuntu Server 18+</td>
-                                    <td>Writes <code>/etc/netplan/99-wolfstack-dns.yaml</code> then runs
-                                        <code>netplan apply</code>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>systemd-resolved</strong></td>
-                                    <td>Ubuntu Desktop, Fedora 33+, modern Debian</td>
-                                    <td>Writes a drop-in to
-                                        <code>/etc/systemd/resolved.conf.d/wolfstack-dns.conf</code>
-                                        then restarts <code>systemd-resolved</code>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>NetworkManager</strong></td>
-                                    <td>Fedora, RHEL, CentOS, IBM Power (RHEL)</td>
-                                    <td>Runs <code>nmcli connection modify</code> on the primary ethernet
-                                        connection,
-                                        then reactivates it</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>/etc/resolv.conf</strong></td>
-                                    <td>Debian (no systemd-resolved), IBM Power (SLES), older systems</td>
-                                    <td>Writes directly to <code>/etc/resolv.conf</code>, preserving comments and
-                                        options</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="info-box" style="margin-top: 1.5rem;">
-                        <strong>🖥️ IBM Power:</strong> WolfStack works on IBM Power (ppc64le). DNS management
-                        uses NetworkManager on RHEL-based Power systems and direct <code>/etc/resolv.conf</code>
-                        on SLES-based systems. Detection is automatic.
-                    </div>
-
-
-
-                </section>
-
-
-                <!-- Troubleshooting -->
-                <section class="content-section">
-                    <h2>🔧 Troubleshooting</h2>
-
-                    <h3>Interface shows "UNKNOWN" state</h3>
-                    <p>
-                        Virtual interfaces (bridges, tunnels, VPNs) may report "unknown" as their operstate.
-                        This is normal — it doesn't mean the interface is broken. Check if it has an IP address
-                        and can send traffic.
-                    </p>
-
-                    <h3 style="margin-top: 1.5rem;">VLAN interface has no traffic</h3>
-                    <p>
-                        Ensure the upstream switch port is configured as a trunk port and allows the VLAN ID you
-                        created. Untagged (access) ports will drop VLAN-tagged frames.
-                    </p>
-                    <div class="code-block">
-                        <div class="code-header"><span class="code-lang">bash</span></div>
-                        <pre><code># Verify the VLAN interface exists
-ip -d link show eth0.100
-
-# Check for traffic
-tcpdump -i eth0 vlan 100 -c 10
-
-# Verify switch configuration — VLAN must be
-# allowed on the trunk port connected to this server</code></pre>
-                    </div>
-
-                    <h3 style="margin-top: 1.5rem;">WolfNet peer shows "Unreachable"</h3>
-                    <p>Common causes:</p>
-                    <ul>
-                        <li>Remote peer's WolfNet service is stopped — start it</li>
-                        <li>Firewall blocking UDP port 51820 — check <code>iptables</code> /
-                            <code>nft</code>
-                        </li>
-                        <li>Endpoint address changed — update the peer's endpoint in
-                            <code>/etc/wolfnet/config.toml</code>
-                        </li>
-                        <li>NAT traversal failing — ensure at least one side has a public
-                            endpoint</li>
-                    </ul>
-
-                    <h3 style="margin-top: 1.5rem;">Speed shows "—" for an interface</h3>
-                    <p>
-                        Speed is read from <code>/sys/class/net/{name}/speed</code>. Virtual interfaces
-                        (bridges, tunnels, VLANs) don't report speed. This is normal.
-                    </p>
-                </section>
-
-                <div class="page-nav">
-                    <a href="wolfstack-storage.html" class="prev">← Storage Manager</a>
-                    <a href="wolfstack-clustering.html" class="next">Multi-Server Clustering →</a>
-                </div>
-            </div>
-
-            <footer class="wiki-footer"
-                style="margin-top: 3rem; padding: 2rem 0; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; opacity: 0.7; font-size: 0.875rem;">
-                <p>© 2026 <a href="https://wolf.uk.com" target="_blank"
-                        style="color: inherit; text-decoration: underline;">Wolf
-                        Software Systems Ltd</a> • FSL-1.1
-                </p>
-                <p style="font-size: 0.75rem; margin-top: 0.5rem;">
-                    USE AT YOUR OWN RISK. This software is provided "as is" without warranty of any kind.
-                </p>
-            </footer>
-        </main>
+            <a href="wolfproxy.html">🛡️ Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span></div>
+            <a href="wolfserve.html">🌎 Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Company</div>
+            <a href="https://wolf.uk.com" target="_blank">🐺 Wolf Software</a>
+            <a href="about.html">ℹ️ About</a>
+            <a href="roadmap.html">🗺️ Roadmap</a>
+            <a href="contact.html">📧 Contact</a>
+            <a href="glossary.html">📖 Glossary</a>
+            <a href="licensing.html">📄 Licensing</a>
+            <a href="support.html" style="color:#ff424d;font-weight:700;">&#10084;&#65039; Support Us</a>
+        </div>
+    </nav>
+    <div class="theme-toggle-wrapper">
+        <span class="theme-toggle-label">Theme</span>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme"><span
+                class="theme-toggle-slider"></span></button>
     </div>
-    <script src="script.js"></script>
-</body>
+    <div class="sidebar-links">
+        <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
+        <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+        <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+        <a href="https://www.reddit.com/r/WolfStack/" target="_blank">Reddit</a>
+        <a href="https://wolf.uk.com" target="_blank">wolf.uk.com</a>
+    </div>
+</aside>    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <main class="wiki-main">
+        <div class="mobile-header">
+            <a href="index.html" class="nav-logo"><img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf" class="logo-img"></a>
+            <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+        </div>
+        <div class="page-header"><h1>🌐 Networking</h1><p>IP management, WolfNet mesh, port forwarding, and firewall rules</p></div>
+        <div class="wiki-content">
 
+            <div class="content-section">
+                <h2>Overview</h2>
+                <p>WolfStack includes comprehensive networking tools for managing IPs, WolfNet mesh connections, and container networking across your fleet.</p>
+                <h3>Global WolfNet</h3>
+                <p>The Global WolfNet view shows all WolfNet IPs and peer connections across your entire infrastructure. See which IPs belong to nodes, LXC containers, Docker containers, and VMs at a glance.</p>
+                <h3>Container Networking</h3>
+                <ul>
+                    <li>Each LXC container gets a bridge IP on <code>lxcbr0</code> for local communication</li>
+                    <li>WolfNet IPs (10.10.10.x) enable encrypted cross-node communication</li>
+                    <li>Automatic route management &mdash; containers can ping each other across nodes</li>
+                    <li>VIP (Virtual IP) support for load balancing</li>
+                </ul>
+                <h3>WolfNet Mesh</h3>
+                <p>WolfNet creates an encrypted mesh network between all your nodes automatically. Uses X25519 + ChaCha20-Poly1305 encryption (WireGuard-class). Works even if machines are on different networks or behind NAT.</p>
+            </div>
+
+<div class="page-nav"><a href="wolfstack-files.html" class="prev">&larr; File Manager</a><a href="wolfstack-clustering.html" class="next">Clustering &rarr;</a></div>
+        </div>
+        <footer class="wiki-footer" style="margin-top:3rem;padding:2rem 0;border-top:1px solid rgba(255,255,255,0.1);text-align:center;opacity:0.7;font-size:0.875rem;">
+            <p>&copy; 2026 <a href="https://wolf.uk.com" target="_blank" style="color:inherit;text-decoration:underline;">Wolf Software Systems Ltd</a> &bull; FSL-1.1</p>
+        </footer>
+    </main>
+</div>
+<script src="script.js"></script>
+</body>
 </html>

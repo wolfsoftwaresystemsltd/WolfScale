@@ -1,526 +1,130 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        gtag('js', new Date());
-        gtag('config', 'G-KK9NEE1S54');
-    </script>
-
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-KK9NEE1S54');</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description"
-        content="WolfStack AI Agent — built-in AI assistant with command execution across your cluster. Powered by Claude and Gemini with strict read-only safety controls.">
-    <meta name="keywords"
-        content="WolfStack AI, AI agent, cluster commands, Claude, Gemini, server assistant, read-only commands, AI chat">
-    <meta name="author" content="Wolf Software Systems Ltd">
-    <link rel="canonical" href="https://wolfscale.org/wolfstack-ai.html">
-
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://wolfscale.org/wolfstack-ai.html">
-    <meta property="og:title" content="AI Agent - WolfStack | WolfScale">
-    <meta property="og:description"
-        content="Built-in AI assistant that can answer questions AND run read-only commands across your entire cluster.">
-    <meta property="og:image" content="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg">
-
-    <title>AI Agent - WolfStack | WolfScale</title>
+    <meta name="description" content="Natural language infrastructure queries and automated actions">
+    <title>🤖 AI Agent — WolfStack Docs</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=9">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=10">
 </head>
-
 <body>
-    <div class="wiki-layout">
-        <aside class="sidebar" id="sidebar">
-            <a href="index.html" class="sidebar-logo"><img
-                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"></a>
-            <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span>
-                    </div>
-                    <a href="wolfstack.html">Overview &amp; Quick Start</a>
-                    <a href="wolfstack-containers.html">Container Management</a>
-                    <a href="wolfstack-storage.html">Storage Manager</a>
-                    <a href="wolfstack-files.html">File Manager</a>
-                    <a href="wolfstack-networking.html">Networking</a>
-                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
-                    <a href="wolfstack-mysql.html">MariaDB/MySQL Editor</a>
-                    <a href="wolfstack-security.html">Security</a>
-                    <a href="wolfstack-certificates.html">Certificates</a>
-                    <a href="wolfstack-cron.html">Cron Jobs</a>
-                    <a href="wolfstack-terminal.html">Terminal</a>
-                    <a href="wolfstack-issues.html">Issues Scanner</a>
-                    <a href="wolfstack-alerting.html">Alerting &amp; Notifications</a>
-                    <a href="proxmox.html">Proxmox Integration</a>
-                    <a href="app-store.html">App Store</a>
-                    <a href="wolfstack-ai.html" class="active">AI Agent</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication &amp; Load
-                            Balancer</span></div>
-                    <a href="quickstart.html">Quick Start</a>
-                    <a href="features.html">Features</a>
-                    <a href="architecture.html">Architecture</a>
-                    <a href="how-it-works.html">How It Works</a>
-                    <a href="binlog.html">Binlog Mode</a>
-                    <a href="load-balancer.html">Load Balancer</a>
-                    <a href="configuration.html">Configuration</a>
-                    <a href="performance.html">Performance</a>
-                    <a href="cli.html">CLI Reference</a>
-                    <a href="troubleshooting.html">Troubleshooting</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication &amp; Sharing</span>
-                    </div>
-                    <a href="wolfdisk.html">Overview &amp; Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
-                    <a href="wolfnet.html">Overview &amp; Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
-                            Firewall</span></div>
-                    <a href="wolfproxy.html">Overview &amp; Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
-                    </div>
-                    <a href="wolfserve.html">Overview &amp; Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">Company</div>
-                    <a href="https://wolf.uk.com" target="_blank">Wolf Software</a>
-                    <a href="about.html">About</a>
-                    <a href="roadmap.html">Roadmap</a>
-                    <a href="contact.html">Contact</a>
-                    <a href="glossary.html">Glossary</a>
-                    <a href="licensing.html">Licensing</a>
-                    <a href="support.html" style="color: #ff424d; font-weight: 700;">❤️ Support Us</a>
-                </div>
-            </nav>
-            <div class="theme-toggle-wrapper">
-                <span class="theme-toggle-label">Theme</span>
-                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
-                    <span class="theme-toggle-slider"></span>
-                </button>
+<div class="wiki-layout">
+<aside class="sidebar" id="sidebar">
+    <a href="index.html" class="sidebar-logo"><img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
+            alt="Wolf"></a>
+    <nav class="sidebar-nav">
+        <div class="nav-section">
+            <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span></div>
+            <a href="wolfstack.html">📊 Overview &amp; Quick Start</a>
+            <a href="wolfstack-containers.html">📦 Container Management</a>
+            <a href="wolfstack-storage.html">💾 Storage Manager</a>
+            <a href="wolfstack-files.html">📁 File Manager</a>
+            <a href="wolfstack-networking.html">🌐 Networking</a>
+            <a href="wolfstack-clustering.html">🔗 Multi-Server Clustering</a>
+            <a href="wolfstack-mysql.html">🗄️ MariaDB/MySQL Editor</a>
+            <a href="wolfstack-security.html">🔒 Security</a>
+            <a href="wolfstack-certificates.html">📜 Certificates</a>
+            <a href="wolfstack-cron.html">⏰ Cron Jobs</a>
+            <a href="wolfstack-terminal.html">💻 Terminal</a>
+            <a href="wolfstack-issues.html">🔍 Issues Scanner</a>
+            <a href="wolfstack-alerting.html">🔔 Alerting &amp; Notifications</a>
+            <a href="wolfrun.html">🐺 WolfRun Orchestration</a>
+            <a href="proxmox.html">🟠 Proxmox Integration</a>
+            <a href="app-store.html">🛍️ App Store</a>
+            <a href="wolfstack-ai.html" class="active">🤖 AI Agent</a>
+            <a href="wolfstack-settings.html">⚙️ Settings</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication &amp; Load
+                    Balancer</span></div>
+            <a href="quickstart.html">⚡ Quick Start</a>
+            <a href="features.html">✨ Features</a>
+            <a href="architecture.html">🏗️ Architecture</a>
+            <a href="how-it-works.html">⚙️ How It Works</a>
+            <a href="binlog.html">📋 Binlog Mode</a>
+            <a href="load-balancer.html">⚖️ Load Balancer</a>
+            <a href="configuration.html">🔧 Configuration</a>
+            <a href="performance.html">📈 Performance</a>
+            <a href="cli.html">🖥️ CLI Reference</a>
+            <a href="troubleshooting.html">🔧 Troubleshooting</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication &amp; Sharing</span></div>
+            <a href="wolfdisk.html">💿 Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
+            <a href="wolfnet.html">🌐 Overview &amp; Quick Start</a>
+            <a href="wolfnet-global.html">🌍 Global Network Access</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with Firewall</span>
             </div>
-            <div class="sidebar-links">
-                <a href="https://github.com/wolfsoftwaresystemsltd/WolfStack" target="_blank">GitHub</a>
-                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
-                <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
-            </div>
-        </aside>
-        <div class="sidebar-overlay" id="sidebar-overlay"></div>
-
-        <main class="wiki-main">
-            <div class="mobile-header">
-                <a href="index.html" class="nav-logo"><img
-                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
-                        class="logo-img"></a>
-                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
-            </div>
-
-            <div class="wiki-content">
-                <div class="content-header">                    <h1>🤖 AI Agent</h1>
-                    <p class="content-subtitle">Built-in AI assistant that can answer questions and run commands
-                        across your cluster</p>
-                </div>
-
-                <!-- Overview -->
-                <section class="content-section">
-                    <h2>Overview</h2>
-                    <p>
-                        Every WolfStack node includes a built-in <strong>AI operations assistant</strong> powered by
-                        <strong>Claude</strong> (Anthropic) or <strong>Gemini</strong> (Google). The AI agent lives
-                        in the bottom-right corner of the dashboard as a pulsing <strong>"AI"</strong> button — click
-                        it to open a chat panel and ask anything about your servers.
-                    </p>
-                    <p>
-                        What makes WolfStack's AI different is that it doesn't just <em>tell you</em> commands to run —
-                        it <strong>runs them for you</strong>, locally or across your entire cluster, and presents a
-                        clear summary of the results. Need to know what CPU every server runs? Ask — the AI will query
-                        every node and report back.
-                    </p>
-
-                    <div class="info-box" style="margin-top: 1.5rem;">
-                        <strong>🛡️ Safety First:</strong> The AI can only execute <strong>read-only</strong> commands.
-                        It cannot delete files, stop services, install software, or make any destructive changes.
-                    </div>
-                </section>
-
-                <!-- What It Can Do -->
-                <section class="content-section">
-                    <h2>💬 What It Can Do</h2>
-
-                    <div
-                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
-                        <div class="feature-card" style="border-color: rgba(168, 85, 247, 0.3);">
-                            <h3>Ask Questions</h3>
-                            <p>Ask about WolfStack, WolfNet, WolfDisk, WolfProxy, WolfServe, or WolfScale.
-                                The AI has the full documentation loaded as its knowledge base.</p>
-                        </div>
-                        <div class="feature-card" style="border-color: rgba(59, 130, 246, 0.3);">
-                            <h3>Run Local Commands</h3>
-                            <p>The AI can run read-only commands on the server you're connected to.
-                                Ask "what's our disk usage?" and it'll run <code>df -h</code> and summarize.</p>
-                        </div>
-                        <div class="feature-card" style="border-color: rgba(16, 185, 129, 0.3);">
-                            <h3>Run Cluster Commands</h3>
-                            <p>Ask about <em>all</em> your servers and the AI will execute commands across
-                                every online node in your cluster and present a combined report.</p>
-                        </div>
-                        <div class="feature-card" style="border-color: rgba(245, 158, 11, 0.3);">
-                            <h3>Health Monitoring</h3>
-                            <p>Background health checks run on a configurable interval. When issues are detected,
-                                the AI can send email alerts and log them to the alert history.</p>
-                        </div>
-                        <div class="feature-card" style="border-color: rgba(239, 68, 68, 0.3);">
-                            <h3>Troubleshooting</h3>
-                            <p>Describe a problem and the AI will investigate — checking processes, logs,
-                                network status, and container health to help diagnose the issue.</p>
-                        </div>
-                        <div class="feature-card" style="border-color: rgba(6, 182, 212, 0.3);">
-                            <h3>Update Checking</h3>
-                            <p>The AI knows the current WolfStack version and can check GitHub
-                                for newer releases, so you always know if an update is available.</p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- How It Works -->
-                <section class="content-section">
-                    <h2>⚙️ How Command Execution Works</h2>
-                    <p>
-                        When you ask the AI a question that requires live data, it follows a
-                        <strong>multi-turn execution loop</strong>:
-                    </p>
-
-                    <ol style="margin-top: 1rem; line-height: 2;">
-                        <li>You type a question like <em>"What CPUs are we running across the cluster?"</em></li>
-                        <li>WolfStack sends your message to the LLM (Claude or Gemini)</li>
-                        <li>The AI responds with command tags: <code>[EXEC_ALL]lscpu[/EXEC_ALL]</code></li>
-                        <li>WolfStack executes <code>lscpu</code> on the local server</li>
-                        <li>WolfStack proxies the command to every online cluster node
-                        </li>
-                        <li>All command output is collected and sent <em>back</em> to the AI</li>
-                        <li>The AI analyses the results and presents a clear human-readable summary</li>
-                    </ol>
-
-                    <p style="margin-top: 1rem;">
-                        There are two command modes:
-                    </p>
-                    <div class="table-wrapper" style="margin-top: 1rem;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Tag</th>
-                                    <th>Scope</th>
-                                    <th>Example</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[EXEC]…[/EXEC]</code></td>
-                                    <td>This server only</td>
-                                    <td><code>[EXEC]df -h[/EXEC]</code></td>
-                                </tr>
-                                <tr>
-                                    <td><code>[EXEC_ALL]…[/EXEC_ALL]</code></td>
-                                    <td>All cluster nodes</td>
-                                    <td><code>[EXEC_ALL]free -h[/EXEC_ALL]</code></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <p style="margin-top: 1rem;">
-                        The AI can request up to <strong>3 rounds</strong> of command execution per question to prevent
-                        infinite loops. Each round is analysed before deciding whether more data is needed.
-                    </p>
-                </section>
-
-                <!-- Safety & Restrictions -->
-                <section class="content-section">
-                    <h2>🛡️ Safety &amp; Restrictions</h2>
-                    <p>
-                        Command execution is locked down with a <strong>defence-in-depth</strong> approach. The AI can
-                        only
-                        run commands that pass <em>all</em> of the following checks:
-                    </p>
-
-                    <h3 style="margin-top: 1.5rem;">✅ Allowed Commands (Whitelist)</h3>
-                    <p>Only these command families are permitted:</p>
-                    <div class="table-wrapper" style="margin-top: 1rem;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Category</th>
-                                    <th>Commands</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>System info</strong></td>
-                                    <td><code>uname</code> <code>hostname</code> <code>uptime</code>
-                                        <code>lscpu</code> <code>lsblk</code> <code>lsmem</code>
-                                        <code>free</code> <code>df</code> <code>du</code> <code>arch</code>
-                                        <code>nproc</code>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Proc info</strong></td>
-                                    <td><code>cat /proc/cpuinfo</code> <code>cat /proc/meminfo</code>
-                                        <code>cat /etc/os-release</code> <code>cat /etc/hostname</code>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Processes</strong></td>
-                                    <td><code>ps</code> <code>top -bn1</code> <code>systemctl status</code>
-                                        <code>systemctl list-units</code> <code>journalctl</code>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Network</strong></td>
-                                    <td><code>ip addr</code> <code>ip route</code> <code>ss</code>
-                                        <code>netstat</code> <code>ping -c</code> <code>dig</code>
-                                        <code>nslookup</code> <code>traceroute</code>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Containers</strong></td>
-                                    <td><code>docker ps</code> <code>docker stats</code> <code>docker inspect</code>
-                                        <code>docker logs</code> <code>docker images</code>
-                                        <code>lxc-ls</code> <code>lxc-info</code>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Files (read)</strong></td>
-                                    <td><code>ls</code> <code>cat</code> <code>head</code> <code>tail</code>
-                                        <code>wc</code> <code>find</code> <code>stat</code>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Misc</strong></td>
-                                    <td><code>date</code> <code>env</code> <code>timedatectl</code>
-                                        <code>hostnamectl</code> <code>sensors</code> <code>smartctl</code>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <h3 style="margin-top: 2rem;">🚫 Blocked Commands</h3>
-                    <p>The following are <strong>always blocked</strong>, even if piped through an allowed command:</p>
-
-                    <div class="table-wrapper" style="margin-top: 1rem;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Category</th>
-                                    <th>Blocked</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>Destructive</strong></td>
-                                    <td><code>rm</code> <code>rmdir</code> <code>unlink</code> <code>dd</code>
-                                        <code>mkfs</code> <code>fdisk</code> <code>parted</code>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>System control</strong></td>
-                                    <td><code>shutdown</code> <code>reboot</code> <code>poweroff</code>
-                                        <code>halt</code> <code>kill</code> <code>killall</code> <code>pkill</code>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>File modification</strong></td>
-                                    <td><code>mv</code> <code>cp</code> <code>chmod</code> <code>chown</code>
-                                        <code>nano</code> <code>vim</code> <code>sed -i</code> <code>tee</code>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>User management</strong></td>
-                                    <td><code>useradd</code> <code>userdel</code> <code>passwd</code>
-                                        <code>visudo</code>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Service control</strong></td>
-                                    <td><code>systemctl start/stop/restart/enable/disable</code></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Package managers</strong></td>
-                                    <td><code>apt</code> <code>yum</code> <code>dnf</code> <code>pip</code>
-                                        <code>npm</code> <code>cargo</code>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Container ops</strong></td>
-                                    <td><code>docker rm/rmi/stop/kill/exec/run/pull/push/build</code></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Firewall</strong></td>
-                                    <td><code>iptables</code> (modify rules), <code>nft</code>,
-                                        <code>firewall-cmd</code>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <h3 style="margin-top: 2rem;">🔒 Additional Safeguards</h3>
-                    <ul>
-                        <li><strong>No output redirection</strong> — <code>></code>, <code>>></code>, and
-                            <code>2></code> are blocked
-                        </li>
-                        <li><strong>No command substitution</strong> — backticks (<code>`</code>) and
-                            <code>$()</code> are blocked
-                        </li>
-                        <li><strong>Pipe safety</strong> — every segment of a piped command is checked against the
-                            blocklist</li>
-                        <li><strong>Output limit</strong> — command output is truncated at <strong>10,000
-                                characters</strong></li>
-                        <li><strong>Timeout</strong> — commands that take longer than <strong>10 seconds</strong> are
-                            terminated</li>
-                        <li><strong>Max rounds</strong> — the AI is limited to <strong>3 command rounds</strong> per
-                            question</li>
-                        <li><strong>Authentication required</strong> — all endpoints require a valid WolfStack session
-                        </li>
-                    </ul>
-                </section>
-
-                <!-- Configuration -->
-                <section class="content-section">
-                    <h2>🔧 Configuration</h2>
-                    <p>
-                        Open the AI chat panel and click the <strong>⚙️ Settings</strong> button to configure:
-                    </p>
-
-                    <div class="table-wrapper" style="margin-top: 1rem;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Setting</th>
-                                    <th>Description</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>Provider</strong></td>
-                                    <td>Choose between <strong>Claude</strong> (Anthropic) or <strong>Gemini</strong>
-                                        (Google)</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>API Key</strong></td>
-                                    <td>Your API key for the chosen provider. Stored securely on the server at
-                                        <code>/etc/wolfstack/ai-config.json</code>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Model</strong></td>
-                                    <td>The model list is fetched dynamically from the provider's API.
-                                        Select your preferred model.</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Email Alerts</strong></td>
-                                    <td>Enable SMTP email alerts for health check findings. Configure your SMTP
-                                        server, port, username, password, and recipient address.</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Check Interval</strong></td>
-                                    <td>How often the background health check runs (default: 60 minutes)</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="code-block" style="margin-top: 1.5rem;">
-                        <div class="code-header"><span class="code-lang">/etc/wolfstack/ai-config.json</span></div>
-                        <pre><code>{
-  "provider": "claude",
-  "claude_api_key": "sk-ant-...",
-  "gemini_api_key": "",
-  "model": "claude-sonnet-4-20250514",
-  "email_enabled": true,
-  "email_to": "ops@example.com",
-  "smtp_host": "smtp.gmail.com",
-  "smtp_port": 587,
-  "smtp_user": "alerts@example.com",
-  "smtp_pass": "app-password",
-  "check_interval_minutes": 60
-}</code></pre>
-                    </div>
-                </section>
-
-
-                <!-- Example Conversations -->
-                <section class="content-section">
-                    <h2>💡 Example Questions</h2>
-                    <p>Here are some things you can ask the AI:</p>
-
-                    <div style="display: grid; gap: 1rem; margin-top: 1rem;">
-                        <div class="code-block">
-                            <div class="code-header"><span class="code-lang">System Info</span></div>
-                            <pre><code>"What CPU and how much RAM does this server have?"
-"How much disk space is left?"
-"What operating system are we running?"
-"Show me the top 10 processes by memory"</code></pre>
-                        </div>
-
-                        <div class="code-block">
-                            <div class="code-header"><span class="code-lang">Cluster-Wide</span></div>
-                            <pre><code>"What processors are running across the cluster?"
-"How much free memory does each server have?"
-"What containers are running on all nodes?"
-"Show me uptime across the cluster"</code></pre>
-                        </div>
-
-                        <div class="code-block">
-                            <div class="code-header"><span class="code-lang">Troubleshooting</span></div>
-                            <pre><code>"Why is the server running slowly?"
-"Are any services failing?"
-"Check if port 443 is open and listening"
-"Show me recent WolfStack error logs"</code></pre>
-                        </div>
-
-                        <div class="code-block">
-                            <div class="code-header"><span class="code-lang">Knowledge</span></div>
-                            <pre><code>"How do I set up WolfNet between two servers?"
-"What's the difference between WolfDisk and NFS?"
-"How do I configure SMTP for email alerts?"
-"How do I set up IP port mapping for a container?"</code></pre>
-                        </div>
-                    </div>
-                </section>
-
-                <div class="page-nav">
-                    <a href="wolfstack-clustering.html" class="prev">← Multi-Server Clustering</a>
-                </div>
-            </div>
-
-            <footer class="wiki-footer"
-                style="margin-top: 3rem; padding: 2rem 0; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; opacity: 0.7; font-size: 0.875rem;">
-                <p>© 2026 <a href="https://wolf.uk.com" target="_blank"
-                        style="color: inherit; text-decoration: underline;">Wolf
-                        Software Systems Ltd</a> • FSL-1.1
-                </p>
-                <p style="font-size: 0.75rem; margin-top: 0.5rem;">
-                    USE AT YOUR OWN RISK. This software is provided "as is" without warranty of any kind.
-                </p>
-            </footer>
-        </main>
+            <a href="wolfproxy.html">🛡️ Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span></div>
+            <a href="wolfserve.html">🌎 Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Company</div>
+            <a href="https://wolf.uk.com" target="_blank">🐺 Wolf Software</a>
+            <a href="about.html">ℹ️ About</a>
+            <a href="roadmap.html">🗺️ Roadmap</a>
+            <a href="contact.html">📧 Contact</a>
+            <a href="glossary.html">📖 Glossary</a>
+            <a href="licensing.html">📄 Licensing</a>
+            <a href="support.html" style="color:#ff424d;font-weight:700;">&#10084;&#65039; Support Us</a>
+        </div>
+    </nav>
+    <div class="theme-toggle-wrapper">
+        <span class="theme-toggle-label">Theme</span>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme"><span
+                class="theme-toggle-slider"></span></button>
     </div>
-    <script src="script.js"></script>
-</body>
+    <div class="sidebar-links">
+        <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
+        <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+        <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+        <a href="https://www.reddit.com/r/WolfStack/" target="_blank">Reddit</a>
+        <a href="https://wolf.uk.com" target="_blank">wolf.uk.com</a>
+    </div>
+</aside>    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <main class="wiki-main">
+        <div class="mobile-header">
+            <a href="index.html" class="nav-logo"><img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf" class="logo-img"></a>
+            <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+        </div>
+        <div class="page-header"><h1>🤖 AI Agent</h1><p>Natural language infrastructure queries and automated actions</p></div>
+        <div class="wiki-content">
 
+            <div class="content-section">
+                <h2>Overview</h2>
+                <p>WolfStack&rsquo;s AI Agent lets you ask questions about your infrastructure in natural language. Get intelligent answers about server health, resource usage, and configuration.</p>
+                <h3>Capabilities</h3>
+                <ul>
+                    <li>Ask questions like &ldquo;Which node has the most free disk space?&rdquo;</li>
+                    <li>Get summaries of fleet health</li>
+                    <li>Troubleshoot issues with AI-assisted diagnostics</li>
+                    <li>Query metrics across your entire cluster</li>
+                </ul>
+                <h3>Configuration</h3>
+                <p>The AI Agent can be configured in <strong>Settings &rarr; AI Agent</strong>. Supports integration with various AI providers.</p>
+            </div>
+
+<div class="page-nav"><a href="app-store.html" class="prev">&larr; App Store</a><a href="wolfdisk.html" class="next">WolfDisk &rarr;</a></div>
+        </div>
+        <footer class="wiki-footer" style="margin-top:3rem;padding:2rem 0;border-top:1px solid rgba(255,255,255,0.1);text-align:center;opacity:0.7;font-size:0.875rem;">
+            <p>&copy; 2026 <a href="https://wolf.uk.com" target="_blank" style="color:inherit;text-decoration:underline;">Wolf Software Systems Ltd</a> &bull; FSL-1.1</p>
+        </footer>
+    </main>
+</div>
+<script src="script.js"></script>
+</body>
 </html>

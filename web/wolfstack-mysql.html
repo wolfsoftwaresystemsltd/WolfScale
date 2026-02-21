@@ -1,534 +1,130 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        gtag('js', new Date());
-        gtag('config', 'G-KK9NEE1S54');
-    </script>
-
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-KK9NEE1S54');</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description"
-        content="WolfStack MariaDB/MySQL Editor - Browse databases, view and edit table data, manage columns, indexes, and triggers from the web dashboard.">
-    <meta name="keywords"
-        content="WolfStack MySQL, MariaDB editor, database management, SQL editor, index management, trigger management, table structure">
-    <meta name="author" content="Wolf Software Systems Ltd">
-    <link rel="canonical" href="https://wolfscale.org/wolfstack-mysql.html">
-
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://wolfscale.org/wolfstack-mysql.html">
-    <meta property="og:title" content="MariaDB/MySQL Editor - WolfStack | WolfScale">
-    <meta property="og:description"
-        content="Browse databases, view and edit table data, manage columns, indexes, and triggers from the WolfStack web dashboard.">
-    <meta property="og:image" content="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg">
-
-    <title>MariaDB/MySQL Editor - WolfStack | WolfScale</title>
+    <meta name="description" content="Browse tables, run queries, and manage databases from the web dashboard">
+    <title>🗄️ MariaDB/MySQL Editor — WolfStack Docs</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=9">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=10">
 </head>
-
 <body>
-    <div class="wiki-layout">
-        <aside class="sidebar" id="sidebar">
-            <a href="index.html" class="sidebar-logo"><img
-                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"></a>
-            <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span>
-                    </div>
-                    <a href="wolfstack.html">Overview &amp; Quick Start</a>
-                    <a href="wolfstack-containers.html">Container Management</a>
-                    <a href="wolfstack-storage.html">Storage Manager</a>
-                    <a href="wolfstack-files.html">File Manager</a>
-                    <a href="wolfstack-networking.html">Networking</a>
-                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
-                    <a href="wolfstack-mysql.html" class="active">MariaDB/MySQL Editor</a>
-                    <a href="wolfstack-security.html">Security</a>
-                    <a href="wolfstack-certificates.html">Certificates</a>
-                    <a href="wolfstack-cron.html">Cron Jobs</a>
-                    <a href="wolfstack-terminal.html">Terminal</a>
-                    <a href="wolfstack-issues.html">Issues Scanner</a>
-                    <a href="wolfstack-alerting.html">Alerting &amp; Notifications</a>
-                    <a href="proxmox.html">Proxmox Integration</a>
-                    <a href="app-store.html">App Store</a>
-                    <a href="wolfstack-ai.html">AI Agent</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load
-                            Balancer</span></div>
-                    <a href="quickstart.html">Quick Start</a>
-                    <a href="features.html">Features</a>
-                    <a href="architecture.html">Architecture</a>
-                    <a href="how-it-works.html">How It Works</a>
-                    <a href="binlog.html">Binlog Mode</a>
-                    <a href="load-balancer.html">Load Balancer</a>
-                    <a href="configuration.html">Configuration</a>
-                    <a href="performance.html">Performance</a>
-                    <a href="cli.html">CLI Reference</a>
-                    <a href="troubleshooting.html">Troubleshooting</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication & Sharing</span>
-                    </div>
-                    <a href="wolfdisk.html">Overview & Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
-                    <a href="wolfnet.html">Overview & Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
-                            Firewall</span></div>
-                    <a href="wolfproxy.html">Overview & Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
-                    </div>
-                    <a href="wolfserve.html">Overview & Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">Company</div>
-                    <a href="https://wolf.uk.com" target="_blank">Wolf Software</a>
-                    <a href="about.html">About</a>
-                    <a href="roadmap.html">Roadmap</a>
-                    <a href="contact.html">Contact</a>
-                    <a href="glossary.html">Glossary</a>
-                    <a href="licensing.html">Licensing</a>
-                    <a href="support.html" style="color: #ff424d; font-weight: 700;">❤️ Support Us</a>
-                </div>
-            </nav>
-            <div class="theme-toggle-wrapper">
-                <span class="theme-toggle-label">Theme</span>
-                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
-                    <span class="theme-toggle-slider"></span>
-                </button>
+<div class="wiki-layout">
+<aside class="sidebar" id="sidebar">
+    <a href="index.html" class="sidebar-logo"><img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
+            alt="Wolf"></a>
+    <nav class="sidebar-nav">
+        <div class="nav-section">
+            <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span></div>
+            <a href="wolfstack.html">📊 Overview &amp; Quick Start</a>
+            <a href="wolfstack-containers.html">📦 Container Management</a>
+            <a href="wolfstack-storage.html">💾 Storage Manager</a>
+            <a href="wolfstack-files.html">📁 File Manager</a>
+            <a href="wolfstack-networking.html">🌐 Networking</a>
+            <a href="wolfstack-clustering.html">🔗 Multi-Server Clustering</a>
+            <a href="wolfstack-mysql.html" class="active">🗄️ MariaDB/MySQL Editor</a>
+            <a href="wolfstack-security.html">🔒 Security</a>
+            <a href="wolfstack-certificates.html">📜 Certificates</a>
+            <a href="wolfstack-cron.html">⏰ Cron Jobs</a>
+            <a href="wolfstack-terminal.html">💻 Terminal</a>
+            <a href="wolfstack-issues.html">🔍 Issues Scanner</a>
+            <a href="wolfstack-alerting.html">🔔 Alerting &amp; Notifications</a>
+            <a href="wolfrun.html">🐺 WolfRun Orchestration</a>
+            <a href="proxmox.html">🟠 Proxmox Integration</a>
+            <a href="app-store.html">🛍️ App Store</a>
+            <a href="wolfstack-ai.html">🤖 AI Agent</a>
+            <a href="wolfstack-settings.html">⚙️ Settings</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication &amp; Load
+                    Balancer</span></div>
+            <a href="quickstart.html">⚡ Quick Start</a>
+            <a href="features.html">✨ Features</a>
+            <a href="architecture.html">🏗️ Architecture</a>
+            <a href="how-it-works.html">⚙️ How It Works</a>
+            <a href="binlog.html">📋 Binlog Mode</a>
+            <a href="load-balancer.html">⚖️ Load Balancer</a>
+            <a href="configuration.html">🔧 Configuration</a>
+            <a href="performance.html">📈 Performance</a>
+            <a href="cli.html">🖥️ CLI Reference</a>
+            <a href="troubleshooting.html">🔧 Troubleshooting</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication &amp; Sharing</span></div>
+            <a href="wolfdisk.html">💿 Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
+            <a href="wolfnet.html">🌐 Overview &amp; Quick Start</a>
+            <a href="wolfnet-global.html">🌍 Global Network Access</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with Firewall</span>
             </div>
-            <div class="sidebar-links">
-                <a href="https://github.com/wolfsoftwaresystemsltd/WolfStack" target="_blank">GitHub</a>
-                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
-                <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
-            </div>
-        </aside>
-        <div class="sidebar-overlay" id="sidebar-overlay"></div>
-
-        <main class="wiki-main">
-            <div class="mobile-header">
-                <a href="index.html" class="nav-logo"><img
-                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
-                        class="logo-img"></a>
-                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
-            </div>
-
-            <div class="wiki-content">
-                <div class="content-header">                    <h1>🗄️ MariaDB/MySQL Editor</h1>
-                    <p class="content-subtitle">Browse databases, view and edit table data, manage columns, indexes,
-                        and triggers — all from your browser</p>
-                </div>
-
-                <!-- Overview -->
-                <section class="content-section">
-                    <h2>Overview</h2>
-                    <p>
-                        WolfStack includes a built-in <strong>MariaDB/MySQL database editor</strong> — a Navicat-style
-                        tool that lets you connect to any MariaDB or MySQL server, browse databases and tables, view and
-                        edit data, inspect table structure, manage indexes and triggers, and run arbitrary SQL queries.
-                    </p>
-                    <p>
-                        The editor connects through the WolfStack API, so it works with local databases on the same
-                        server as well as remote databases accessible over WolfNet or your network. No additional
-                        software or drivers are needed.
-                    </p>
-
-                    <div class="info-box" style="margin-top: 1.5rem;">
-                        <strong>💡 Tip:</strong> The editor auto-detects local MySQL/MariaDB installations and Docker
-                        containers running MySQL, so you can connect with a single click.
-                    </div>
-                </section>
-
-                <!-- Connecting -->
-                <section class="content-section">
-                    <h2>🔌 Connecting to a Database</h2>
-                    <p>
-                        Click <strong>"MariaDB/MySQL"</strong> in the sidebar to open the editor. The connection bar at
-                        the top lets you enter your credentials:
-                    </p>
-
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Field</th>
-                                    <th>Description</th>
-                                    <th>Default</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>Host</strong></td>
-                                    <td>Hostname or IP of the MySQL/MariaDB server</td>
-                                    <td>127.0.0.1</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Port</strong></td>
-                                    <td>MySQL port number</td>
-                                    <td>3306</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>User</strong></td>
-                                    <td>MySQL username</td>
-                                    <td>root</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Password</strong></td>
-                                    <td>MySQL password</td>
-                                    <td>(empty)</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <h3 style="margin-top: 2rem;">Auto-Detection</h3>
-                    <p>
-                        WolfStack automatically scans for:
-                    </p>
-                    <ul>
-                        <li><strong>Local installations</strong> — detects if <code>mysql</code> or
-                            <code>mariadb</code> is installed on the system
-                        </li>
-                        <li><strong>Docker containers</strong> — finds running Docker containers with MySQL or MariaDB
-                            images and pre-fills connection details</li>
-                    </ul>
-                    <p>
-                        Detected databases appear as clickable badges in the connection bar, so you can connect with one
-                        click.
-                    </p>
-
-                    <div class="info-box" style="margin-top: 1.5rem;">
-                        <strong>🔐 Security:</strong> Database credentials are sent to the WolfStack API over the
-                        authenticated session and are never stored on the server. Each connection is established
-                        per-request.
-                    </div>
-                </section>
-
-                <!-- Database Browser -->
-                <section class="content-section">
-                    <h2>🌳 Database Browser</h2>
-                    <p>
-                        Once connected, the <strong>left panel</strong> shows a tree of all databases and their tables.
-                        System databases (<code>information_schema</code>, <code>mysql</code>,
-                        <code>performance_schema</code>, <code>sys</code>) are shown but collapsed by default.
-                    </p>
-                    <ul>
-                        <li>Click a database name to expand it and see its tables</li>
-                        <li>Click a table name to load its data in the main panel</li>
-                        <li>The table count is shown next to each database name</li>
-                    </ul>
-                </section>
-
-                <!-- Tabs -->
-                <section class="content-section">
-                    <h2>📑 Editor Tabs</h2>
-                    <p>
-                        The main panel has three tabs:
-                    </p>
-
-                    <div
-                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
-                        <div class="feature-card">
-                            <h3>📊 Data</h3>
-                            <p>View and browse table data in a scrollable grid. Shows row count and supports pagination
-                                for large tables. Columns are sized to fit their content.</p>
-                        </div>
-                        <div class="feature-card">
-                            <h3>🏗️ Structure</h3>
-                            <p>Inspect and modify the table schema. Has sub-tabs for <strong>Columns</strong>,
-                                <strong>Indexes</strong>, and <strong>Triggers</strong> with full management
-                                capabilities.
-                            </p>
-                        </div>
-                        <div class="feature-card">
-                            <h3>⚡ Query</h3>
-                            <p>Write and execute arbitrary SQL queries. Results are displayed in a table grid. Supports
-                                SELECT, INSERT, UPDATE, DELETE, and DDL statements.</p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Structure Tab -->
-                <section class="content-section">
-                    <h2>🏗️ Structure Tab</h2>
-                    <p>
-                        The Structure tab provides a detailed view of your table's schema, organized into three
-                        sub-tabs:
-                    </p>
-
-                    <h3>📋 Columns</h3>
-                    <p>
-                        Lists all columns in the table with their properties:
-                    </p>
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Property</th>
-                                    <th>Description</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>Name</strong></td>
-                                    <td>Column name</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Type</strong></td>
-                                    <td>Data type (e.g. <code>varchar(255)</code>, <code>int(11)</code>,
-                                        <code>datetime</code>)
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Nullable</strong></td>
-                                    <td>Whether the column allows NULL values</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Key</strong></td>
-                                    <td>Key type — PRI (primary), UNI (unique), MUL (index)</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Default</strong></td>
-                                    <td>Default value for the column</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Extra</strong></td>
-                                    <td>Additional attributes (e.g. <code>auto_increment</code>,
-                                        <code>on update CURRENT_TIMESTAMP</code>)
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <p style="margin-top: 1rem;">
-                        The Columns sub-tab also includes a toolbar for managing columns and the table itself:
-                    </p>
-                    <ul>
-                        <li><strong>➕ Add Column</strong> — opens a dialog to define a new column (name, type,
-                            nullable, default value)</li>
-                        <li><strong>✏️ Rename Table</strong> — rename the current table</li>
-                        <li><strong>🗑️ Drop Column</strong> — remove a column from the table (with confirmation)</li>
-                    </ul>
-
-                    <h3 style="margin-top: 2rem;">🔑 Indexes</h3>
-                    <p>
-                        Lists all indexes on the table, grouped by index name. For each index you can see:
-                    </p>
-                    <ul>
-                        <li><strong>Name</strong> — the index name (e.g. <code>PRIMARY</code>,
-                            <code>idx_email</code>)
-                        </li>
-                        <li><strong>Columns</strong> — which columns are included in the index, in order</li>
-                        <li><strong>Type</strong> — the index algorithm (BTREE, HASH, FULLTEXT)</li>
-                        <li><strong>Unique</strong> — whether the index enforces uniqueness (PRIMARY, UNIQUE badges)
-                        </li>
-                    </ul>
-
-                    <p style="margin-top: 1rem;">
-                        Index management actions:
-                    </p>
-                    <ul>
-                        <li><strong>➕ Add Index</strong> — create a new INDEX, UNIQUE, or FULLTEXT index. Enter the
-                            index name and comma-separated column list.</li>
-                        <li><strong>🗑️ Drop Index</strong> — remove an index (with destructive confirmation dialog).
-                            The PRIMARY key cannot be dropped from this interface.</li>
-                    </ul>
-
-                    <div class="info-box" style="margin-top: 1.5rem;">
-                        <strong>⚡ Non-Blocking:</strong> Index operations run asynchronously with a progress spinner
-                        overlay, so the UI stays responsive even on large tables where index creation may take time.
-                    </div>
-
-                    <h3 style="margin-top: 2rem;">⚡ Triggers</h3>
-                    <p>
-                        Lists all triggers defined on the current table. For each trigger:
-                    </p>
-                    <ul>
-                        <li><strong>Name</strong> — the trigger name</li>
-                        <li><strong>Timing</strong> — BEFORE or AFTER (shown as coloured badges)</li>
-                        <li><strong>Event</strong> — INSERT, UPDATE, or DELETE</li>
-                        <li><strong>Statement</strong> — the trigger body (SQL code that runs when the trigger fires)
-                        </li>
-                    </ul>
-
-                    <p style="margin-top: 1rem;">
-                        Trigger management actions:
-                    </p>
-                    <ul>
-                        <li><strong>➕ Add Trigger</strong> — create a new trigger with a dialog that lets you set the
-                            name, timing (BEFORE/AFTER), event (INSERT/UPDATE/DELETE), and write the SQL body</li>
-                        <li><strong>🗑️ Drop Trigger</strong> — remove a trigger (with destructive confirmation dialog)
-                        </li>
-                    </ul>
-
-                    <div class="code-block" style="margin-top: 1rem;">
-                        <div class="code-header"><span class="code-lang">Example: Creating a trigger</span></div>
-                        <pre><code>Name:     trg_update_timestamp
-Timing:   BEFORE
-Event:    UPDATE
-Body:
-  BEGIN
-    SET NEW.updated_at = NOW();
-  END</code></pre>
-                    </div>
-                </section>
-
-                <!-- Query Tab -->
-                <section class="content-section">
-                    <h2>⚡ Query Tab</h2>
-                    <p>
-                        The Query tab provides a SQL editor where you can write and execute any SQL statement. Results
-                        are displayed in a table grid below the editor.
-                    </p>
-                    <ul>
-                        <li>Write <code>SELECT</code> queries to browse data with custom filters and joins</li>
-                        <li>Run <code>INSERT</code>, <code>UPDATE</code>, and <code>DELETE</code> statements</li>
-                        <li>Execute DDL statements like <code>CREATE TABLE</code>, <code>ALTER TABLE</code>, etc.</li>
-                        <li>Results show column names and row data in a scrollable grid</li>
-                        <li>Non-SELECT queries show the number of affected rows</li>
-                    </ul>
-
-                    <div class="code-block" style="margin-top: 1rem;">
-                        <div class="code-header"><span class="code-lang">Example Queries</span></div>
-                        <pre><code>-- Browse data with a filter
-SELECT * FROM users WHERE created_at > '2026-01-01' ORDER BY id DESC LIMIT 100;
-
--- Check table sizes
-SELECT table_name, table_rows, ROUND(data_length/1024/1024, 2) AS size_mb
-FROM information_schema.TABLES
-WHERE table_schema = 'mydb'
-ORDER BY data_length DESC;
-
--- Create an index
-CREATE INDEX idx_email ON users(email);
-
--- Add a column
-ALTER TABLE orders ADD COLUMN tracking_number VARCHAR(50) AFTER status;</code></pre>
-                    </div>
-                </section>
-
-                <!-- Destructive Confirmations -->
-                <section class="content-section">
-                    <h2>🛡️ Safety Features</h2>
-                    <p>
-                        All destructive operations (dropping columns, indexes, triggers, renaming tables) require a
-                        <strong>confirmation dialog</strong> where you must type <code>YES</code> to proceed. The dialog
-                        shows the exact SQL statement that will be executed, so you can verify the operation before
-                        confirming.
-                    </p>
-                    <p>
-                        This prevents accidental data loss and gives you full visibility into what the editor is doing
-                        behind the scenes.
-                    </p>
-                </section>
-
-                <!-- Compatibility -->
-                <section class="content-section">
-                    <h2>🔧 Compatibility</h2>
-                    <p>
-                        The MariaDB/MySQL editor works with:
-                    </p>
-                    <ul>
-                        <li><strong>MariaDB</strong> 10.x and 11.x (recommended)</li>
-                        <li><strong>MySQL</strong> 5.7 and 8.x</li>
-                        <li><strong>Percona Server</strong> 5.7 and 8.x</li>
-                        <li><strong>Amazon RDS</strong> (MySQL and Aurora)</li>
-                    </ul>
-                    <p style="margin-top: 1rem;">
-                        The editor uses standard SQL and <code>information_schema</code> queries, so it's compatible
-                        with any MySQL-protocol database. WolfStack connects using the
-                        <code>mysql_async</code> Rust crate with full TLS support.
-                    </p>
-                </section>
-
-
-                <!-- Troubleshooting -->
-                <section class="content-section">
-                    <h2>🔧 Troubleshooting</h2>
-
-                    <h3>Connection refused</h3>
-                    <p>
-                        Make sure MySQL/MariaDB is running and listening on the specified host and port. For local
-                        connections, use <code>127.0.0.1</code> instead of <code>localhost</code> to force TCP
-                        connection (MySQL defaults to socket when using <code>localhost</code>).
-                    </p>
-
-                    <h3 style="margin-top: 1.5rem;">Access denied</h3>
-                    <p>
-                        Verify the username and password are correct. Check that the user has permission to connect from
-                        the WolfStack server's IP address:
-                    </p>
-                    <div class="code-block">
-                        <div class="code-header"><span class="code-lang">SQL</span></div>
-                        <pre><code>-- Check user permissions
-SELECT user, host FROM mysql.user WHERE user = 'myuser';
-
--- Grant access from any host (if needed)
-GRANT ALL PRIVILEGES ON mydb.* TO 'myuser'@'%' IDENTIFIED BY 'password';
-FLUSH PRIVILEGES;</code></pre>
-                    </div>
-
-                    <h3 style="margin-top: 1.5rem;">Connection timeout</h3>
-                    <p>
-                        Connections have a 20-second timeout. If the database is on a remote server, check that:
-                    </p>
-                    <ul>
-                        <li>The MySQL port (default 3306) is open in the firewall</li>
-                        <li>The server is reachable from the WolfStack node</li>
-                        <li>MySQL's <code>bind-address</code> allows connections from the WolfStack server</li>
-                    </ul>
-                    <div class="code-block" style="margin-top: 1rem;">
-                        <div class="code-header"><span class="code-lang">bash</span></div>
-                        <pre><code># Check if MySQL is listening on all interfaces
-sudo grep bind-address /etc/mysql/mariadb.conf.d/50-server.cnf
-
-# Test connectivity
-nc -zv 192.168.1.50 3306</code></pre>
-                    </div>
-
-                    <h3 style="margin-top: 1.5rem;">Docker MySQL not detected</h3>
-                    <p>
-                        The auto-detection looks for running Docker containers with images containing "mysql" or
-                        "mariadb". Make sure the container is running and Docker is accessible to the WolfStack process.
-                    </p>
-                </section>
-
-                <div class="page-nav">
-                    <a href="wolfstack-clustering.html" class="prev">← Multi-Server Clustering</a>
-                    <a href="proxmox.html" class="next">Proxmox Integration →</a>
-                </div>
-            </div>
-
-            <footer class="wiki-footer"
-                style="margin-top: 3rem; padding: 2rem 0; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; opacity: 0.7; font-size: 0.875rem;">
-                <p>© 2026 <a href="https://wolf.uk.com" target="_blank"
-                        style="color: inherit; text-decoration: underline;">Wolf
-                        Software Systems Ltd</a> • FSL-1.1
-                </p>
-                <p style="font-size: 0.75rem; margin-top: 0.5rem;">
-                    USE AT YOUR OWN RISK. This software is provided "as is" without warranty of any kind.
-                </p>
-            </footer>
-        </main>
+            <a href="wolfproxy.html">🛡️ Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span></div>
+            <a href="wolfserve.html">🌎 Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Company</div>
+            <a href="https://wolf.uk.com" target="_blank">🐺 Wolf Software</a>
+            <a href="about.html">ℹ️ About</a>
+            <a href="roadmap.html">🗺️ Roadmap</a>
+            <a href="contact.html">📧 Contact</a>
+            <a href="glossary.html">📖 Glossary</a>
+            <a href="licensing.html">📄 Licensing</a>
+            <a href="support.html" style="color:#ff424d;font-weight:700;">&#10084;&#65039; Support Us</a>
+        </div>
+    </nav>
+    <div class="theme-toggle-wrapper">
+        <span class="theme-toggle-label">Theme</span>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme"><span
+                class="theme-toggle-slider"></span></button>
     </div>
-    <script src="script.js"></script>
-</body>
+    <div class="sidebar-links">
+        <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
+        <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+        <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+        <a href="https://www.reddit.com/r/WolfStack/" target="_blank">Reddit</a>
+        <a href="https://wolf.uk.com" target="_blank">wolf.uk.com</a>
+    </div>
+</aside>    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <main class="wiki-main">
+        <div class="mobile-header">
+            <a href="index.html" class="nav-logo"><img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf" class="logo-img"></a>
+            <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+        </div>
+        <div class="page-header"><h1>🗄️ MariaDB/MySQL Editor</h1><p>Browse tables, run queries, and manage databases from the web dashboard</p></div>
+        <div class="wiki-content">
 
+            <div class="content-section">
+                <h2>Overview</h2>
+                <p>WolfStack includes a built-in MariaDB/MySQL database editor that lets you browse tables, run queries, and manage databases on any node from the web dashboard.</p>
+                <h3>Features</h3>
+                <ul>
+                    <li>Browse databases and tables</li>
+                    <li>View table structure and data</li>
+                    <li>Run raw SQL queries with syntax highlighting</li>
+                    <li>Export query results</li>
+                    <li>Manage users and permissions</li>
+                    <li>Works with MariaDB, MySQL, and Percona</li>
+                </ul>
+            </div>
+
+<div class="page-nav"><a href="wolfstack-clustering.html" class="prev">&larr; Clustering</a><a href="wolfstack-security.html" class="next">Security &rarr;</a></div>
+        </div>
+        <footer class="wiki-footer" style="margin-top:3rem;padding:2rem 0;border-top:1px solid rgba(255,255,255,0.1);text-align:center;opacity:0.7;font-size:0.875rem;">
+            <p>&copy; 2026 <a href="https://wolf.uk.com" target="_blank" style="color:inherit;text-decoration:underline;">Wolf Software Systems Ltd</a> &bull; FSL-1.1</p>
+        </footer>
+    </main>
+</div>
+<script src="script.js"></script>
+</body>
 </html>

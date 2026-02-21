@@ -1,1202 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        gtag('js', new Date());
-        gtag('config', 'G-KK9NEE1S54');
-    </script>
-
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-KK9NEE1S54');</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description"
-        content="Support WolfStack — Help keep free, open-source server management alive. Become a Patron and get exclusive benefits, early access, and priority support.">
-    <meta name="keywords" content="WolfStack support, Patreon, open source, sponsor, wolf software">
-    <meta name="author" content="Wolf Software Systems Ltd">
-    <link rel="canonical" href="https://wolfscale.org/support.html">
-
-    <!-- Open Graph -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://wolfscale.org/support.html">
-    <meta property="og:title" content="Support WolfStack — Keep Open-Source Alive">
-    <meta property="og:description"
-        content="WolfStack is free and open-source, but infrastructure costs money. Become a patron and help keep the project growing.">
-    <meta property="og:image" content="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg">
-
-    <title>Support WolfStack — Become a Patron</title>
+    <meta name="description" content="Help keep WolfStack free and open-source by supporting development">
+    <title>❤️ Support Us — WolfStack Docs</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=9">
-    <style>
-        /* ============ PAGE-SPECIFIC STYLES ============ */
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(24px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes pulse-glow {
-
-            0%,
-            100% {
-                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
-            }
-
-            50% {
-                box-shadow: 0 0 0 8px rgba(220, 38, 38, 0.15);
-            }
-        }
-
-        @keyframes shimmer {
-            0% {
-                background-position: -200% center;
-            }
-
-            100% {
-                background-position: 200% center;
-            }
-        }
-
-        @keyframes wolf-bounce {
-
-            0%,
-            100% {
-                transform: translateY(0) rotate(-2deg);
-            }
-
-            50% {
-                transform: translateY(-6px) rotate(2deg);
-            }
-        }
-
-        .fade-in {
-            animation: fadeInUp 0.7s ease-out both;
-        }
-
-        .delay-1 {
-            animation-delay: 0.1s;
-        }
-
-        .delay-2 {
-            animation-delay: 0.2s;
-        }
-
-        .delay-3 {
-            animation-delay: 0.3s;
-        }
-
-        .delay-4 {
-            animation-delay: 0.4s;
-        }
-
-        .delay-5 {
-            animation-delay: 0.5s;
-        }
-
-        /* ---- HERO ---- */
-        .support-hero {
-            text-align: center;
-            padding: 2.5rem 1rem 1.5rem;
-            position: relative;
-        }
-
-        .support-hero::before {
-            content: '';
-            position: absolute;
-            top: -20%;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 700px;
-            height: 700px;
-            background: radial-gradient(circle, rgba(220, 38, 38, 0.1) 0%, transparent 70%);
-            pointer-events: none;
-        }
-
-        .hero-wolf {
-            font-size: 4rem;
-            display: block;
-            margin-bottom: 0.5rem;
-            animation: wolf-bounce 3s ease-in-out infinite;
-        }
-
-        .hero-eyebrow {
-            display: inline-block;
-            padding: 5px 16px;
-            background: rgba(220, 38, 38, 0.12);
-            border: 1px solid rgba(220, 38, 38, 0.3);
-            border-radius: 100px;
-            font-size: 0.72rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--accent-secondary);
-            margin-bottom: 1rem;
-        }
-
-        .hero-title {
-            font-size: clamp(1.8rem, 4vw, 2.8rem);
-            font-weight: 800;
-            line-height: 1.15;
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, #fff 0%, #ff9999 50%, #dc2626 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero-sub {
-            font-size: 1rem;
-            color: var(--text-secondary);
-            max-width: 620px;
-            margin: 0 auto 1.5rem;
-            line-height: 1.7;
-        }
-
-        .hero-sub strong {
-            color: var(--text-primary);
-        }
-
-        .hero-cta-group {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-bottom: 2rem;
-        }
-
-        /* Main Patreon CTA */
-        .btn-patreon-main {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.6rem;
-            padding: 14px 30px;
-            background: linear-gradient(135deg, #ff424d 0%, #e8374a 100%);
-            color: #fff;
-            border-radius: 50px;
-            font-weight: 700;
-            font-size: 1rem;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 20px rgba(255, 66, 77, 0.4);
-            animation: pulse-glow 2.5s ease-in-out infinite;
-        }
-
-        .btn-patreon-main:hover {
-            transform: translateY(-3px) scale(1.03);
-            box-shadow: 0 8px 30px rgba(255, 66, 77, 0.55);
-            color: #fff;
-        }
-
-        .btn-ghost {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 13px 24px;
-            background: transparent;
-            color: var(--text-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            text-decoration: none;
-            transition: all 0.3s ease;
-        }
-
-        .btn-ghost:hover {
-            border-color: var(--accent-primary);
-            color: var(--text-primary);
-        }
-
-        /* ---- MISSION / WHY ---- */
-        .mission-card {
-            background: linear-gradient(135deg, var(--bg-card) 0%, rgba(220, 38, 38, 0.05) 100%);
-            border: 1px solid rgba(220, 38, 38, 0.2);
-            border-radius: 16px;
-            padding: 2rem 2.5rem;
-            margin-bottom: 1.5rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .mission-card::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            background: var(--accent-gradient);
-        }
-
-        .mission-card h2 {
-            font-size: 1.2rem;
-            font-weight: 700;
-            margin-bottom: 0.75rem;
-            color: var(--text-primary);
-        }
-
-        .mission-card p {
-            color: var(--text-secondary);
-            font-size: 0.92rem;
-            line-height: 1.75;
-            margin-bottom: 0.75rem;
-        }
-
-        .mission-card p:last-child {
-            margin-bottom: 0;
-        }
-
-        .always-free-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            padding: 4px 14px;
-            background: rgba(34, 197, 94, 0.12);
-            border: 1px solid rgba(34, 197, 94, 0.3);
-            border-radius: 100px;
-            color: #22c55e;
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin-top: 0.75rem;
-        }
-
-        /* ---- TRANSPARENCY / WHERE MONEY GOES ---- */
-        .section-title {
-            font-size: 1.3rem;
-            font-weight: 700;
-            margin-bottom: 0.4rem;
-            color: var(--text-primary);
-        }
-
-        .section-subtitle {
-            font-size: 0.88rem;
-            color: var(--text-muted);
-            margin-bottom: 1.5rem;
-        }
-
-        .money-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .money-item {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1.25rem;
-            transition: all 0.3s ease;
-        }
-
-        .money-item:hover {
-            border-color: rgba(220, 38, 38, 0.3);
-            transform: translateY(-2px);
-        }
-
-        .money-icon {
-            font-size: 1.6rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .money-item h4 {
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 0.3rem;
-        }
-
-        .money-item p {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            line-height: 1.5;
-        }
-
-        /* ---- TIERS ---- */
-        .tiers-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 1.25rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .tier-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 1.75rem;
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .tier-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--tier-color, var(--accent-gradient));
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .tier-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
-        }
-
-        .tier-card:hover::before {
-            opacity: 1;
-        }
-
-        .tier-card.featured {
-            border-color: rgba(255, 66, 77, 0.4);
-            box-shadow: 0 4px 30px rgba(255, 66, 77, 0.12);
-        }
-
-        .tier-card.featured::before {
-            opacity: 1;
-        }
-
-        .tier-badge {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            padding: 3px 10px;
-            background: linear-gradient(135deg, #ff424d, #e8374a);
-            color: #fff;
-            font-size: 0.65rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border-radius: 100px;
-        }
-
-        .tier-emoji {
-            font-size: 2rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .tier-name {
-            font-size: 1.1rem;
-            font-weight: 700;
-            margin-bottom: 0.15rem;
-        }
-
-        .tier-target {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            margin-bottom: 0.75rem;
-        }
-
-        .tier-price {
-            font-size: 1.6rem;
-            font-weight: 800;
-            color: var(--accent-secondary);
-            margin-bottom: 0.25rem;
-        }
-
-        .tier-per {
-            font-size: 0.72rem;
-            color: var(--text-muted);
-            margin-bottom: 1rem;
-        }
-
-        .tier-perks {
-            list-style: none;
-            flex: 1;
-            margin-bottom: 1.25rem;
-        }
-
-        .tier-perks li {
-            font-size: 0.82rem;
-            color: var(--text-secondary);
-            padding: 0.3rem 0;
-            display: flex;
-            align-items: flex-start;
-            gap: 0.5rem;
-        }
-
-        .tier-perks li::before {
-            content: '✦';
-            color: var(--accent-primary);
-            font-size: 0.65rem;
-            margin-top: 3px;
-            flex-shrink: 0;
-        }
-
-        .tier-btn {
-            display: block;
-            text-align: center;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.85rem;
-            text-decoration: none;
-            transition: all 0.3s ease;
-        }
-
-        .tier-btn-primary {
-            background: linear-gradient(135deg, #ff424d, #e8374a);
-            color: #fff;
-            box-shadow: 0 2px 12px rgba(255, 66, 77, 0.35);
-        }
-
-        .tier-btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 20px rgba(255, 66, 77, 0.5);
-            color: #fff;
-        }
-
-        .tier-btn-secondary {
-            background: var(--bg-tertiary);
-            color: var(--text-secondary);
-            border: 1px solid var(--border-color);
-        }
-
-        .tier-btn-secondary:hover {
-            border-color: var(--border-glow);
-            color: var(--text-primary);
-        }
-
-        /* ---- SOCIAL PROOF / WALL OF FAME ---- */
-        .wall-section {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 2rem;
-            margin-bottom: 1.5rem;
-            text-align: center;
-        }
-
-        .avatar-wall {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.6rem;
-            justify-content: center;
-            margin: 1.25rem 0;
-        }
-
-        .avatar {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-            border: 2px solid var(--border-color);
-            background: var(--bg-tertiary);
-            transition: all 0.3s ease;
-            cursor: default;
-            position: relative;
-        }
-
-        .avatar:hover {
-            border-color: var(--accent-primary);
-            transform: scale(1.15);
-            z-index: 1;
-        }
-
-        .avatar-placeholder {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            border: 2px dashed var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-muted);
-            font-size: 0.8rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .avatar-placeholder:hover {
-            border-color: var(--accent-primary);
-            color: var(--accent-primary);
-        }
-
-        .wall-cta-text {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-top: 0.5rem;
-        }
-
-        .wall-cta-text a {
-            color: var(--accent-secondary);
-            text-decoration: underline;
-            font-weight: 600;
-        }
-
-        /* ---- ALTERNATIVE SUPPORT ---- */
-        .alt-support {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-            margin-bottom: 1.5rem;
-        }
-
-        .alt-card {
-            flex: 1;
-            min-width: 200px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1.5rem;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-
-        .alt-card:hover {
-            border-color: rgba(220, 38, 38, 0.3);
-            transform: translateY(-2px);
-        }
-
-        .alt-card .alt-icon {
-            font-size: 1.75rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .alt-card h4 {
-            font-size: 0.92rem;
-            font-weight: 700;
-            margin-bottom: 0.3rem;
-        }
-
-        .alt-card p {
-            font-size: 0.78rem;
-            color: var(--text-muted);
-            margin-bottom: 1rem;
-            line-height: 1.5;
-        }
-
-        .alt-btn {
-            display: inline-block;
-            padding: 7px 18px;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            text-decoration: none;
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            transition: all 0.2s ease;
-        }
-
-        .alt-btn:hover {
-            border-color: var(--accent-primary);
-            color: var(--text-primary);
-        }
-
-        .alt-btn.gh-btn {
-            background: var(--bg-tertiary);
-        }
-
-        /* ---- FAQ ---- */
-        .faq-list {
-            margin-bottom: 1.5rem;
-        }
-
-        .faq-item {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            margin-bottom: 0.75rem;
-            overflow: hidden;
-        }
-
-        .faq-q {
-            padding: 1rem 1.25rem;
-            font-weight: 600;
-            font-size: 0.88rem;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: background 0.2s ease;
-            user-select: none;
-        }
-
-        .faq-q:hover {
-            background: var(--bg-tertiary);
-        }
-
-        .faq-chevron {
-            font-size: 0.7rem;
-            transition: transform 0.25s ease;
-            color: var(--text-muted);
-        }
-
-        .faq-item.open .faq-chevron {
-            transform: rotate(180deg);
-        }
-
-        .faq-a {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-
-        .faq-item.open .faq-a {
-            max-height: 400px;
-        }
-
-        .faq-a-inner {
-            padding: 0 1.25rem 1rem;
-            font-size: 0.83rem;
-            color: var(--text-secondary);
-            line-height: 1.7;
-            border-top: 1px solid var(--border-color);
-            padding-top: 0.75rem;
-        }
-
-        .faq-a-inner a {
-            color: var(--accent-secondary);
-            text-decoration: underline;
-        }
-
-        /* ---- BOTTOM CTA BANNER ---- */
-        .bottom-cta {
-            background: linear-gradient(135deg, rgba(220, 38, 38, 0.12) 0%, rgba(185, 28, 28, 0.06) 100%);
-            border: 1px solid rgba(220, 38, 38, 0.25);
-            border-radius: 16px;
-            padding: 2.5rem 2rem;
-            text-align: center;
-            margin-bottom: 2rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .bottom-cta::before {
-            content: '🐺';
-            position: absolute;
-            font-size: 8rem;
-            opacity: 0.05;
-            right: -1rem;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-
-        .bottom-cta h2 {
-            font-size: 1.4rem;
-            font-weight: 800;
-            margin-bottom: 0.5rem;
-        }
-
-        .bottom-cta p {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            margin-bottom: 1.5rem;
-            max-width: 500px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        /* Responsive */
-        @media (max-width: 600px) {
-            .tiers-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .money-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-
-            .alt-support {
-                flex-direction: column;
-            }
-
-            .hero-title {
-                font-size: 1.7rem;
-            }
-        }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=10">
 </head>
-
 <body>
-    <div class="wiki-layout">
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <a href="index.html" class="sidebar-logo"><img
-                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"></a>
-            <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span>
-                    </div>
-                    <a href="wolfstack.html">Overview &amp; Quick Start</a>
-                    <a href="wolfstack-containers.html">Container Management</a>
-                    <a href="wolfstack-storage.html">Storage Manager</a>
-                    <a href="wolfstack-files.html">File Manager</a>
-                    <a href="wolfstack-networking.html">Networking</a>
-                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
-                    <a href="wolfstack-mysql.html">MariaDB/MySQL Editor</a>
-                    <a href="wolfstack-security.html">Security</a>
-                    <a href="wolfstack-certificates.html">Certificates</a>
-                    <a href="wolfstack-cron.html">Cron Jobs</a>
-                    <a href="wolfstack-terminal.html">Terminal</a>
-                    <a href="wolfstack-issues.html">Issues Scanner</a>
-                    <a href="wolfstack-alerting.html">Alerting &amp; Notifications</a>
-                    <a href="proxmox.html">Proxmox Integration</a>
-                    <a href="app-store.html">App Store</a>
-                    <a href="wolfstack-ai.html">AI Agent</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication &amp; Load
-                            Balancer</span></div>
-                    <a href="quickstart.html">Quick Start</a>
-                    <a href="features.html">Features</a>
-                    <a href="architecture.html">Architecture</a>
-                    <a href="how-it-works.html">How It Works</a>
-                    <a href="binlog.html">Binlog Mode</a>
-                    <a href="load-balancer.html">Load Balancer</a>
-                    <a href="configuration.html">Configuration</a>
-                    <a href="performance.html">Performance</a>
-                    <a href="cli.html">CLI Reference</a>
-                    <a href="troubleshooting.html">Troubleshooting</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication &amp; Sharing</span>
-                    </div>
-                    <a href="wolfdisk.html">Overview &amp; Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
-                    <a href="wolfnet.html">Overview &amp; Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
-                            Firewall</span></div>
-                    <a href="wolfproxy.html">Overview &amp; Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
-                    </div>
-                    <a href="wolfserve.html">Overview &amp; Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">Company</div>
-                    <a href="https://wolf.uk.com" target="_blank">Wolf Software</a>
-                    <a href="about.html">About</a>
-                    <a href="roadmap.html">Roadmap</a>
-                    <a href="contact.html">Contact</a>
-                    <a href="glossary.html">Glossary</a>
-                    <a href="licensing.html">Licensing</a>
-                    <a href="support.html" class="active" style="color: var(--accent-primary);">❤️ Support Us</a>
-                </div>
-            </nav>
-            <div class="theme-toggle-wrapper">
-                <span class="theme-toggle-label">Theme</span>
-                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
-                    <span class="theme-toggle-slider"></span>
-                </button>
+<div class="wiki-layout">
+<aside class="sidebar" id="sidebar">
+    <a href="index.html" class="sidebar-logo"><img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
+            alt="Wolf"></a>
+    <nav class="sidebar-nav">
+        <div class="nav-section">
+            <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span></div>
+            <a href="wolfstack.html">📊 Overview &amp; Quick Start</a>
+            <a href="wolfstack-containers.html">📦 Container Management</a>
+            <a href="wolfstack-storage.html">💾 Storage Manager</a>
+            <a href="wolfstack-files.html">📁 File Manager</a>
+            <a href="wolfstack-networking.html">🌐 Networking</a>
+            <a href="wolfstack-clustering.html">🔗 Multi-Server Clustering</a>
+            <a href="wolfstack-mysql.html">🗄️ MariaDB/MySQL Editor</a>
+            <a href="wolfstack-security.html">🔒 Security</a>
+            <a href="wolfstack-certificates.html">📜 Certificates</a>
+            <a href="wolfstack-cron.html">⏰ Cron Jobs</a>
+            <a href="wolfstack-terminal.html">💻 Terminal</a>
+            <a href="wolfstack-issues.html">🔍 Issues Scanner</a>
+            <a href="wolfstack-alerting.html">🔔 Alerting &amp; Notifications</a>
+            <a href="wolfrun.html">🐺 WolfRun Orchestration</a>
+            <a href="proxmox.html">🟠 Proxmox Integration</a>
+            <a href="app-store.html">🛍️ App Store</a>
+            <a href="wolfstack-ai.html">🤖 AI Agent</a>
+            <a href="wolfstack-settings.html">⚙️ Settings</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication &amp; Load
+                    Balancer</span></div>
+            <a href="quickstart.html">⚡ Quick Start</a>
+            <a href="features.html">✨ Features</a>
+            <a href="architecture.html">🏗️ Architecture</a>
+            <a href="how-it-works.html">⚙️ How It Works</a>
+            <a href="binlog.html">📋 Binlog Mode</a>
+            <a href="load-balancer.html">⚖️ Load Balancer</a>
+            <a href="configuration.html">🔧 Configuration</a>
+            <a href="performance.html">📈 Performance</a>
+            <a href="cli.html">🖥️ CLI Reference</a>
+            <a href="troubleshooting.html">🔧 Troubleshooting</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication &amp; Sharing</span></div>
+            <a href="wolfdisk.html">💿 Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
+            <a href="wolfnet.html">🌐 Overview &amp; Quick Start</a>
+            <a href="wolfnet-global.html">🌍 Global Network Access</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with Firewall</span>
             </div>
-            <div class="sidebar-links">
-                <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
-                <a href="https://www.patreon.com/15362110/join" target="_blank"
-                    style="color: #ff424d; font-weight: 700;">❤️ Patreon</a>
-                <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
-                <a href="https://www.reddit.com/r/WolfStack/" target="_blank">Reddit</a>
-                <a href="https://wolf.uk.com" target="_blank">wolf.uk.com</a>
-            </div>
-        </aside>
-        <div class="sidebar-overlay" id="sidebar-overlay"></div>
-
-        <main class="wiki-main">
-            <div class="mobile-header">
-                <a href="index.html" class="nav-logo"><img
-                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
-                        class="logo-img"></a>
-                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
-            </div>
-
-            <div class="wiki-content">
-
-                <!-- ======== HERO ======== -->
-                <section class="support-hero fade-in">
-                    <span class="hero-wolf">🐺</span>
-                    <div class="hero-eyebrow">Open Source · Community Powered</div>                    <h1 class="hero-title fade-in delay-1">Help Keep WolfStack<br>Free &amp; Thriving</h1>
-                    <p class="hero-sub fade-in delay-2">
-                        WolfStack is <strong>free, open-source, and always will be</strong>. But "free" software still
-                        costs real money to build, host, and keep secure. If WolfStack saves you time,
-                        consider partnering with us to make sure it never disappears.
-                    </p>
-                    <div class="hero-cta-group fade-in delay-3">
-                        <a href="https://www.patreon.com/15362110/join" target="_blank" id="hero-patreon-btn"
-                            class="btn-patreon-main">
-                            <svg width="18" height="18" viewBox="0 0 256 256" fill="white"
-                                xmlns="http://www.w3.org/2000/svg">
-                                <path
-                                    d="M232.3 25.63c-29.45-22.29-73.6-22.15-104.94 2.52C102.06 48.12 94.34 78.36 99.6 106.5c-36.94 4.56-66.44 25.6-82.18 55.46C.98 193.24-.24 231.72 15.48 256H38.2c-20.74-28.46-19.78-72.22 6.7-99.5 22.02-22.7 55.14-31.26 84.34-20.18-5.78 38.28 15.04 77.32 51.4 92.9 21.94 9.4 47.84 9.76 69.1-2.96 24.18-14.48 39.76-42.02 39.76-70.6V69.6c.76-17.1-7.8-33.72-21.14-44h-36.08v.03zM216 155.66c0 18.7-10.14 36.34-26.14 45.48-13.68 7.82-31.26 8.92-47.96.44-25.44-12.92-38.94-43.46-30.2-70.84 25.18 14.14 56.62 16.52 84.06 4.58 7.48-3.28 14.26-8.02 20.24-13.44v33.78zM216 92.18c-20.5 22.34-55.04 29.76-83.7 16.38-18.06-8.44-31.92-24.58-36.2-44.3-4.92-22.56 2.58-47.2 21.56-62 24.32-18.94 59.78-20.68 84.2-5.44l.14.1c8.54 5.82 14.02 16.46 14 27.1v68.16z" />
-                            </svg>
-                            Become a Patron - help our tiny company grow WolfStack
-                        </a>
-                        <a href="#tiers" class="btn-ghost">See the Tiers ↓</a>
-                    </div>
-                    <div class="always-free-badge fade-in delay-4">
-                        <span>✓</span> WolfStack will ALWAYS be open-source. No rug-pull. Ever.
-                    </div>
-                </section>
-
-                <!-- ======== MISSION ======== -->
-                <section class="fade-in delay-2">
-                    <div class="mission-card">
-                        <h2>🎯 The Mission</h2>
-                        <p>
-                            We set out to build the server management tool we always wanted — one that treats developers
-                            and
-                            sysadmins as professionals, not as consumers of a SaaS product. WolfStack lets you run your
-                            own infrastructure your own way, without locked-in subscriptions or
-                            vendor control.
-                        </p>
-                        <p>
-                            The vision is simple: <strong>any server, any distro, any scale — managed from one beautiful
-                                dashboard</strong>. Whether you're running a Raspberry Pi homelab or a 200-node Proxmox
-                            cluster, WolfStack should just work.
-                        </p>
-                        <p>
-                            That vision takes time. Your support lets us buy that time back.
-                        </p>
-                    </div>
-                </section>
-
-                <!-- ======== WHERE MONEY GOES ======== -->
-                <section class="fade-in delay-3">
-                    <h2 class="section-title">💰 Where Your Money Actually Goes</h2>
-                    <p class="section-subtitle">No mystery. Here's exactly how patron funds are used:</p>
-
-                    <div class="money-grid">
-                        <div class="money-item">
-                            <div class="money-icon">🖥️</div>
-                            <h4>Infrastructure</h4>
-                            <p>Server costs, domain renewals, CDN, CI/CD pipelines and test environments.</p>
-                        </div>
-                        <div class="money-item">
-                            <div class="money-icon">⏱️</div>
-                            <h4>Development Time</h4>
-                            <p>Every dollar of support buys back hours from a day job so more time goes into new
-                                features.</p>
-                        </div>
-                        <div class="money-item">
-                            <div class="money-icon">🔒</div>
-                            <h4>Security</h4>
-                            <p>Regular dependency audits, penetration testing, and keeping your data safe.</p>
-                        </div>
-                        <div class="money-item">
-                            <div class="money-icon">📖</div>
-                            <h4>Documentation</h4>
-                            <p>Better docs, tutorials, and video guides so the tool stays accessible to everyone.</p>
-                        </div>
-                        <div class="money-item">
-                            <div class="money-icon">🧪</div>
-                            <h4>Testing Hardware</h4>
-                            <p>Real hardware for testing across ARM, x86, IBM Power, Raspberry Pi and more distros.</p>
-                        </div>
-                        <div class="money-item">
-                            <div class="money-icon">🚀</div>
-                            <h4>New Features</h4>
-                            <p>Roadmap items like the AI Agent, advanced monitoring, and more platform integrations.</p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- ======== TIERS ======== -->
-                <section id="tiers" class="fade-in delay-3">
-                    <h2 class="section-title">🏆 Sponsorship Tiers</h2>
-                    <p class="section-subtitle">This isn't charity — it's a partnership. Pick the level that fits you.
-                    </p>
-
-                    <div class="tiers-grid">
-                        <!-- Tier 1: HomeLab -->
-                        <div class="tier-card" style="--tier-color: linear-gradient(135deg, #22c55e, #16a34a);">
-                            <div class="tier-emoji">🏠</div>
-                            <div class="tier-name">HomeLab</div>
-                            <div class="tier-target">Cooking up servers at home</div>
-                            <div class="tier-price">£3.99</div>
-                            <div class="tier-per">per month + VAT</div>
-                            <ul class="tier-perks">
-                                <li>For HomeLab use — just want to give a little</li>
-                                <li>Helps keep WolfStack free and open-source</li>
-                            </ul>
-                            <a href="https://www.patreon.com/15362110/join" target="_blank"
-                                class="tier-btn tier-btn-secondary">Join as HomeLab →</a>
-                        </div>
-
-                        <!-- Tier 2: A few servers -->
-                        <div class="tier-card featured"
-                            style="--tier-color: linear-gradient(135deg, #ff424d, #dc2626);">
-                            <div class="tier-badge">Most Popular</div>
-                            <div class="tier-emoji">�️</div>
-                            <div class="tier-name">A few servers</div>
-                            <div class="tier-target">Giving a bit more</div>
-                            <div class="tier-price">£12.99</div>
-                            <div class="tier-per">per month + VAT</div>
-                            <ul class="tier-perks">
-                                <li>Helps fund ongoing software development</li>
-                                <li>Special Status role on Discord</li>
-                                <li>Access to extra features</li>
-                                <li>WolfStack private chat access</li>
-                            </ul>
-                            <a href="https://www.patreon.com/15362110/join" target="_blank"
-                                class="tier-btn tier-btn-primary">Join — A few servers →</a>
-                        </div>
-
-                        <!-- Tier 3: Getting Serious -->
-                        <div class="tier-card" style="--tier-color: linear-gradient(135deg, #3b82f6, #1d4ed8);">
-                            <div class="tier-emoji">🔗</div>
-                            <div class="tier-name">Getting Serious</div>
-                            <div class="tier-target">Link on the Website</div>
-                            <div class="tier-price">£114.77</div>
-                            <div class="tier-per">per month + VAT</div>
-                            <ul class="tier-perks">
-                                <li>Text mention on the website</li>
-                                <li>Special Status on Discord</li>
-                                <li>Directly supports open-source development</li>
-                            </ul>
-                            <a href="https://www.patreon.com/15362110/join" target="_blank"
-                                class="tier-btn tier-btn-secondary">Join — Getting Serious →</a>
-                        </div>
-
-                        <!-- Tier 4: Enterprise -->
-                        <div class="tier-card" style="--tier-color: linear-gradient(135deg, #f59e0b, #d97706);">
-                            <div class="tier-emoji">🏢</div>
-                            <div class="tier-name">Enterprise</div>
-                            <div class="tier-target">Small Image Link &amp; Support</div>
-                            <div class="tier-price">£1,000</div>
-                            <div class="tier-per">per month + VAT</div>
-                            <ul class="tier-perks">
-                                <li>Small logo on the website as a supporter</li>
-                                <li>Credited supporter of open-source development</li>
-                                <li>Supports long-term sustainability of the project</li>
-                            </ul>
-                            <a href="https://www.patreon.com/15362110/join" target="_blank"
-                                class="tier-btn tier-btn-secondary">Join as Enterprise →</a>
-                        </div>
-
-                        <!-- Tier 5: Corporate -->
-                        <div class="tier-card" style="--tier-color: linear-gradient(135deg, #8b5cf6, #6d28d9);">
-                            <div class="tier-emoji">🌐</div>
-                            <div class="tier-name">Corporate</div>
-                            <div class="tier-target">Large Image Link &amp; Support</div>
-                            <div class="tier-price">£5,000</div>
-                            <div class="tier-per">per month + VAT</div>
-                            <ul class="tier-perks">
-                                <li><strong>Large logo</strong> prominently on the website</li>
-                                <li>Commercial support via tickets</li>
-                                <li>Fund the open-source tools your business relies on</li>
-                            </ul>
-                            <a href="https://www.patreon.com/15362110/join" target="_blank"
-                                class="tier-btn tier-btn-secondary">Join as Corporate →</a>
-                        </div>
-                    </div>
-
-                </section>
-
-                <!-- ======== WALL OF FAME ======== -->
-                <section class="fade-in delay-4">
-                    <div class="wall-section">
-                        <h2 class="section-title" style="margin-bottom: 0.4rem;">🌟 Wall of Fame</h2>
-                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">
-                            These legends are keeping WolfStack alive. Be one of them.
-                        </p>
-
-                        <div class="avatar-wall">
-                            <!-- Real patrons will appear here. For now show placeholder spots. -->
-                            <div class="avatar" title="🐺 Wolf Team">🐺</div>
-                            <div class="avatar-placeholder" title="Your spot!">+</div>
-                            <div class="avatar-placeholder" title="Your spot!">+</div>
-                            <div class="avatar-placeholder" title="Your spot!">+</div>
-                            <div class="avatar-placeholder" title="Your spot!">+</div>
-                            <div class="avatar-placeholder" title="Your spot!">+</div>
-                            <div class="avatar-placeholder" title="Your spot!">+</div>
-                            <div class="avatar-placeholder" title="Your spot!">+</div>
-                        </div>
-
-                        <p class="wall-cta-text">
-                            These spots are waiting to be filled.
-                            <a href="https://www.patreon.com/15362110/join" target="_blank">Claim yours on Patreon →</a>
-                        </p>
-                    </div>
-                </section>
-
-                <!-- ======== ALTERNATIVE WAYS TO SUPPORT ======== -->
-                <section class="fade-in delay-4">
-                    <h2 class="section-title">💫 Other Ways to Help</h2>
-                    <p class="section-subtitle">Not ready for a subscription? Here are still-meaningful ways to
-                        contribute:</p>
-
-                    <div class="alt-support">
-                        <div class="alt-card">
-                            <div class="alt-icon">⭐</div>
-                            <h4>Star on GitHub</h4>
-                            <p>A GitHub star costs nothing and helps others discover the project. Takes 2 seconds.</p>
-                            <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank"
-                                class="alt-btn gh-btn">⭐ Star the Repo</a>
-                        </div>
-                        <div class="alt-card">
-                            <div class="alt-icon">💬</div>
-                            <h4>Spread the Word</h4>
-                            <p>Tell your team, post on Reddit, share on LinkedIn. Word of mouth is our biggest growth
-                                driver.</p>
-                            <a href="https://www.reddit.com/r/WolfStack/" target="_blank" class="alt-btn">🔥
-                                r/WolfStack</a>
-                        </div>
-                        <div class="alt-card">
-                            <div class="alt-icon">🐛</div>
-                            <h4>Report Bugs</h4>
-                            <p>Found an issue? Filing a detailed bug report is one of the most valuable things you can
-                                do.</p>
-                            <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale/issues" target="_blank"
-                                class="alt-btn">Open an Issue</a>
-                        </div>
-                        <div class="alt-card">
-                            <div class="alt-icon">📺</div>
-                            <h4>Watch &amp; Subscribe</h4>
-                            <p>Subscribe to our YouTube channel for tutorials and product updates.</p>
-                            <a href="https://www.youtube.com/@wolfsoftwaresystems" target="_blank" class="alt-btn"
-                                style="background: linear-gradient(135deg,#ff0000,#cc0000); color: #fff; border-color: transparent;">▶
-                                YouTube</a>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- ======== FAQ ======== -->
-                <section class="fade-in delay-5">
-                    <h2 class="section-title">❓ FAQ</h2>
-                    <p class="section-subtitle">Answers to common questions about sponsorship.</p>
-
-                    <div class="faq-list">
-                        <div class="faq-item">
-                            <div class="faq-q" onclick="toggleFaq(this)">
-                                Will WolfStack ever go closed-source?
-                                <span class="faq-chevron">▼</span>
-                            </div>
-                            <div class="faq-a">
-                                <div class="faq-a-inner">
-                                    <strong>No.</strong> WolfStack is licensed under the Functional Source License
-                                    (FSL-1.1) and will remain so permanently. The licence will never change —
-                                    we will never "rug-pull" the community and lock the project behind a paywall,
-                                    nor will we flip to a fully permissive licence. Sponsor support helps us
-                                    keep building under the same terms, forever.
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="faq-item">
-                            <div class="faq-q" onclick="toggleFaq(this)">
-                                Can I cancel my Patreon at any time?
-                                <span class="faq-chevron">▼</span>
-                            </div>
-                            <div class="faq-a">
-                                <div class="faq-a-inner">
-                                    Yes, absolutely. Patreon subscriptions are month-to-month with no lock-in.
-                                    You can upgrade, downgrade, or cancel at any point from your Patreon dashboard.
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="faq-item">
-                            <div class="faq-q" onclick="toggleFaq(this)">
-                                My company wants to sponsor — can we get an invoice?
-                                <span class="faq-chevron">▼</span>
-                            </div>
-                            <div class="faq-a">
-                                <div class="faq-a-inner">
-                                    Yes! We can provide a proper invoice for accounting and compliance purposes.
-                                    Please <a href="contact.html">contact us</a> and we'll arrange a direct billing
-                                    setup
-                                    that works for your finance team.
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="faq-item">
-                            <div class="faq-q" onclick="toggleFaq(this)">
-                                What is "priority support" for Partner tier?
-                                <span class="faq-chevron">▼</span>
-                            </div>
-                            <div class="faq-a">
-                                <div class="faq-a-inner">
-                                    Partner-tier sponsors get their bug reports and feature requests queued ahead of
-                                    the general community. If you file a critical issue and you're a Partner, we'll
-                                    triage it within 48 hours and give you a direct update on timelines.
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="faq-item">
-                            <div class="faq-q" onclick="toggleFaq(this)">
-                                Do I need a Patreon account to give a one-time tip?
-                                <span class="faq-chevron">▼</span>
-                            </div>
-                            <div class="faq-a">
-                                <div class="faq-a-inner">
-                                    Patreon does require an account, but you can sign up in under a minute and pledge
-                                    the minimum tier for a single month. Every little bit genuinely helps — even a
-                                    single month's contribution goes toward server costs.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- ======== BOTTOM CTA ======== -->
-                <section class="fade-in delay-5">
-                    <div class="bottom-cta">
-                        <h2>Ready to Join the Pack? 🐺</h2>
-                        <p>
-                            Every patron — at every tier — makes a real difference. You're not buying a pizza.
-                            You're investing in a tool you rely on and helping keep the open-source ecosystem healthy.
-                        </p>
-                        <div class="hero-cta-group">
-                            <a href="https://www.patreon.com/15362110/join" target="_blank" id="bottom-patreon-btn"
-                                class="btn-patreon-main">
-                                <svg width="16" height="16" viewBox="0 0 256 256" fill="white"
-                                    xmlns="http://www.w3.org/2000/svg">
-                                    <path
-                                        d="M232.3 25.63c-29.45-22.29-73.6-22.15-104.94 2.52C102.06 48.12 94.34 78.36 99.6 106.5c-36.94 4.56-66.44 25.6-82.18 55.46C.98 193.24-.24 231.72 15.48 256H38.2c-20.74-28.46-19.78-72.22 6.7-99.5 22.02-22.7 55.14-31.26 84.34-20.18-5.78 38.28 15.04 77.32 51.4 92.9 21.94 9.4 47.84 9.76 69.1-2.96 24.18-14.48 39.76-42.02 39.76-70.6V69.6c.76-17.1-7.8-33.72-21.14-44h-36.08v.03zM216 155.66c0 18.7-10.14 36.34-26.14 45.48-13.68 7.82-31.26 8.92-47.96.44-25.44-12.92-38.94-43.46-30.2-70.84 25.18 14.14 56.62 16.52 84.06 4.58 7.48-3.28 14.26-8.02 20.24-13.44v33.78zM216 92.18c-20.5 22.34-55.04 29.76-83.7 16.38-18.06-8.44-31.92-24.58-36.2-44.3-4.92-22.56 2.58-47.2 21.56-62 24.32-18.94 59.78-20.68 84.2-5.44l.14.1c8.54 5.82 14.02 16.46 14 27.1v68.16z" />
-                                </svg>
-                                Become a Patron Now
-                            </a>
-                            <a href="https://discord.gg/q9qMjHjUQY" target="_blank" class="btn-ghost">
-                                💬 Chat on Discord
-                            </a>
-                        </div>
-                    </div>
-                </section>
-
-            </div><!-- /wiki-content -->
-        </main>
+            <a href="wolfproxy.html">🛡️ Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span></div>
+            <a href="wolfserve.html">🌎 Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Company</div>
+            <a href="https://wolf.uk.com" target="_blank">🐺 Wolf Software</a>
+            <a href="about.html">ℹ️ About</a>
+            <a href="roadmap.html">🗺️ Roadmap</a>
+            <a href="contact.html">📧 Contact</a>
+            <a href="glossary.html">📖 Glossary</a>
+            <a href="licensing.html">📄 Licensing</a>
+            <a href="support.html" class="active" style="color:#ff424d;font-weight:700;">&#10084;&#65039; Support Us</a>
+        </div>
+    </nav>
+    <div class="theme-toggle-wrapper">
+        <span class="theme-toggle-label">Theme</span>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme"><span
+                class="theme-toggle-slider"></span></button>
     </div>
+    <div class="sidebar-links">
+        <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
+        <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+        <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+        <a href="https://www.reddit.com/r/WolfStack/" target="_blank">Reddit</a>
+        <a href="https://wolf.uk.com" target="_blank">wolf.uk.com</a>
+    </div>
+</aside>    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <main class="wiki-main">
+        <div class="mobile-header">
+            <a href="index.html" class="nav-logo"><img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf" class="logo-img"></a>
+            <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+        </div>
+        <div class="page-header"><h1>❤️ Support Us</h1><p>Help keep WolfStack free and open-source by supporting development</p></div>
+        <div class="wiki-content">
 
-    <script src="script.js"></script>
-    <script>
-        function toggleFaq(el) {
-            const item = el.parentElement;
-            const wasOpen = item.classList.contains('open');
-            // Close all
-            document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
-            // Toggle current
-            if (!wasOpen) item.classList.add('open');
-        }
-    </script>
+            <div class="content-section">
+                <h2>Support WolfStack Development</h2>
+                <p>WolfStack is free and open-source software built by a small team. Your support helps us dedicate more time to development, fix bugs faster, and add new features.</p>
+                <h3>Patreon</h3>
+                <p>The best way to support us is through Patreon. Patrons get early access to new features and priority support.</p>
+                <p style="text-align:center;margin:1.5rem 0;">
+                    <a href="https://www.patreon.com/15362110/join" target="_blank" style="display:inline-flex;align-items:center;gap:0.5rem;padding:14px 28px;background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;text-decoration:none;border-radius:10px;font-weight:700;font-size:1rem;box-shadow:0 4px 20px rgba(34,197,94,0.4);transition:all 0.3s ease;">
+                        <svg width="20" height="20" viewBox="0 0 256 256" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M232.3 25.63c-29.45-22.29-73.6-22.15-104.94 2.52C102.06 48.12 94.34 78.36 99.6 106.5c-36.94 4.56-66.44 25.6-82.18 55.46C.98 193.24-.24 231.72 15.48 256H38.2c-20.74-28.46-19.78-72.22 6.7-99.5 22.02-22.7 55.14-31.26 84.34-20.18-5.78 38.28 15.04 77.32 51.4 92.9 21.94 9.4 47.84 9.76 69.1-2.96 24.18-14.48 39.76-42.02 39.76-70.6V69.6c.76-17.1-7.8-33.72-21.14-44h-36.08v.03zM216 155.66c0 18.7-10.14 36.34-26.14 45.48-13.68 7.82-31.26 8.92-47.96.44-25.44-12.92-38.94-43.46-30.2-70.84 25.18 14.14 56.62 16.52 84.06 4.58 7.48-3.28 14.26-8.02 20.24-13.44v33.78zM216 92.18c-20.5 22.34-55.04 29.76-83.7 16.38-18.06-8.44-31.92-24.58-36.2-44.3-4.92-22.56 2.58-47.2 21.56-62 24.32-18.94 59.78-20.68 84.2-5.44l.14.1c8.54 5.82 14.02 16.46 14 27.1v68.16z"/></svg>
+                        Become a Patron
+                    </a>
+                </p>
+                <h3>Other Ways to Help</h3>
+                <ul>
+                    <li>⭐ <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">Star us on GitHub</a></li>
+                    <li>💬 <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Join our Discord community</a></li>
+                    <li>🔥 <a href="https://www.reddit.com/r/WolfStack/" target="_blank">Discuss on r/WolfStack</a></li>
+                    <li>▶ <a href="https://www.youtube.com/@wolfsoftwaresystems" target="_blank">Subscribe on YouTube</a></li>
+                    <li>📣 Spread the word &mdash; tell others about WolfStack!</li>
+                    <li>🐛 <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale/issues" target="_blank">Report bugs</a></li>
+                </ul>
+            </div>
+
+<div class="page-nav"><a href="licensing.html" class="prev">&larr; Licensing</a><a href="index.html" class="next">Home &rarr;</a></div>
+        </div>
+        <footer class="wiki-footer" style="margin-top:3rem;padding:2rem 0;border-top:1px solid rgba(255,255,255,0.1);text-align:center;opacity:0.7;font-size:0.875rem;">
+            <p>&copy; 2026 <a href="https://wolf.uk.com" target="_blank" style="color:inherit;text-decoration:underline;">Wolf Software Systems Ltd</a> &bull; FSL-1.1</p>
+        </footer>
+    </main>
+</div>
+<script src="script.js"></script>
 </body>
-
 </html>

@@ -1,373 +1,137 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-KK9NEE1S54');
-    </script>
-
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-KK9NEE1S54');</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Features - WolfScale</title>
+    <meta name="description" content="Complete feature list for WolfScale database replication and load balancing">
+    <title>✨ WolfScale Features — WolfStack Docs</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=9">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=10">
 </head>
-
 <body>
-    <div class="wiki-layout">
-        <aside class="sidebar" id="sidebar">
-            <a href="index.html" class="sidebar-logo"><img
-                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
-                    alt="Wolf"></a>
-                        <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span></div>
-                    <a href="wolfstack.html">Overview &amp; Quick Start</a>
-                    <a href="wolfstack-containers.html">Container Management</a>
-                    <a href="wolfstack-storage.html">Storage Manager</a>
-                    <a href="wolfstack-files.html">File Manager</a>
-                    <a href="wolfstack-networking.html">Networking</a>
-                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
-                    <a href="wolfstack-mysql.html">MariaDB/MySQL Editor</a>
-                    <a href="wolfstack-security.html">Security</a>
-                    <a href="wolfstack-certificates.html">Certificates</a>
-                    <a href="wolfstack-cron.html">Cron Jobs</a>
-                    <a href="wolfstack-terminal.html">Terminal</a>
-                    <a href="wolfstack-issues.html">Issues Scanner</a>
-                    <a href="wolfstack-alerting.html">Alerting &amp; Notifications</a>
-                    <a href="proxmox.html">Proxmox Integration</a>
-                    <a href="app-store.html">App Store</a>
-                    <a href="wolfstack-ai.html">AI Agent</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load Balancer</span></div>
-                    <a href="quickstart.html">Quick Start</a>
-                    <a href="features.html">Features</a>
-                    <a href="architecture.html">Architecture</a>
-                    <a href="how-it-works.html">How It Works</a>
-                    <a href="binlog.html">Binlog Mode</a>
-                    <a href="load-balancer.html">Load Balancer</a>
-                    <a href="configuration.html">Configuration</a>
-                    <a href="performance.html">Performance</a>
-                    <a href="cli.html">CLI Reference</a>
-                    <a href="troubleshooting.html">Troubleshooting</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication & Sharing</span></div>
-                    <a href="wolfdisk.html">Overview & Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with Firewall</span></div>
-                    <a href="wolfproxy.html">Overview & Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span></div>
-                    <a href="wolfserve.html">Overview & Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">Company</div>
-                    <a href="about.html">About</a>
-                    <a href="roadmap.html">Roadmap</a>
-                    <a href="contact.html">Contact</a>
-                    <a href="glossary.html">Glossary</a>
-                    <a href="licensing.html">Licensing</a>
-                    <a href="support.html" style="color: #ff424d; font-weight: 700;">❤️ Support Us</a>
-                </div>
-            </nav>
-            <div class="theme-toggle-wrapper">
-                <span class="theme-toggle-label">Theme</span>
-                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
-                    <span class="theme-toggle-slider"></span>
-                </button>
+<div class="wiki-layout">
+<aside class="sidebar" id="sidebar">
+    <a href="index.html" class="sidebar-logo"><img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
+            alt="Wolf"></a>
+    <nav class="sidebar-nav">
+        <div class="nav-section">
+            <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span></div>
+            <a href="wolfstack.html">📊 Overview &amp; Quick Start</a>
+            <a href="wolfstack-containers.html">📦 Container Management</a>
+            <a href="wolfstack-storage.html">💾 Storage Manager</a>
+            <a href="wolfstack-files.html">📁 File Manager</a>
+            <a href="wolfstack-networking.html">🌐 Networking</a>
+            <a href="wolfstack-clustering.html">🔗 Multi-Server Clustering</a>
+            <a href="wolfstack-mysql.html">🗄️ MariaDB/MySQL Editor</a>
+            <a href="wolfstack-security.html">🔒 Security</a>
+            <a href="wolfstack-certificates.html">📜 Certificates</a>
+            <a href="wolfstack-cron.html">⏰ Cron Jobs</a>
+            <a href="wolfstack-terminal.html">💻 Terminal</a>
+            <a href="wolfstack-issues.html">🔍 Issues Scanner</a>
+            <a href="wolfstack-alerting.html">🔔 Alerting &amp; Notifications</a>
+            <a href="wolfrun.html">🐺 WolfRun Orchestration</a>
+            <a href="proxmox.html">🟠 Proxmox Integration</a>
+            <a href="app-store.html">🛍️ App Store</a>
+            <a href="wolfstack-ai.html">🤖 AI Agent</a>
+            <a href="wolfstack-settings.html">⚙️ Settings</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication &amp; Load
+                    Balancer</span></div>
+            <a href="quickstart.html">⚡ Quick Start</a>
+            <a href="features.html" class="active">✨ Features</a>
+            <a href="architecture.html">🏗️ Architecture</a>
+            <a href="how-it-works.html">⚙️ How It Works</a>
+            <a href="binlog.html">📋 Binlog Mode</a>
+            <a href="load-balancer.html">⚖️ Load Balancer</a>
+            <a href="configuration.html">🔧 Configuration</a>
+            <a href="performance.html">📈 Performance</a>
+            <a href="cli.html">🖥️ CLI Reference</a>
+            <a href="troubleshooting.html">🔧 Troubleshooting</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication &amp; Sharing</span></div>
+            <a href="wolfdisk.html">💿 Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
+            <a href="wolfnet.html">🌐 Overview &amp; Quick Start</a>
+            <a href="wolfnet-global.html">🌍 Global Network Access</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with Firewall</span>
             </div>
-            <div class="sidebar-links">
-                <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
-                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
-                <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
-            </div>
-        </aside>
-        <div class="sidebar-overlay" id="sidebar-overlay"></div>
-
-        <main class="wiki-main">
-            <div class="mobile-header">
-                <a href="index.html" class="nav-logo"><img
-                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
-                        class="logo-img"><span class="logo-text">WolfScale</span></a>
-                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
-            </div>
-
-            <div class="page-header">                \2Features</h1>
-                <p>Enterprise-grade database replication without the complexity</p>
-            </div>
-
-            <div class="wiki-content">
-                <section class="content-section">
-                    <h2>Key Features</h2>
-                    <div class="table-wrapper">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Category</th>
-                                    <th>Feature</th>
-                                    <th>Description</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td rowspan="3">Deployment</td>
-                                    <td><strong>Single Binary</strong></td>
-                                    <td>One Rust binary—no JVM, no dependencies, just drop and run</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Built-in Load Balancer</strong></td>
-                                    <td>No need for external load balancers—included out of the box</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Auto-Discovery</strong></td>
-                                    <td>Nodes automatically find each other on the network</td>
-                                </tr>
-                                <tr>
-                                    <td rowspan="3">Replication</td>
-                                    <td>WAL-Based Sync</td>
-                                    <td>LZ4-compressed Write-Ahead Log for strong consistency</td>
-                                </tr>
-                                <tr>
-                                    <td>Automatic Read/Write Splitting</td>
-                                    <td>Writes go to leader, reads balanced across all nodes</td>
-                                </tr>
-                                <tr>
-                                    <td>Write Forwarding</td>
-                                    <td>Followers automatically forward writes to leader</td>
-                                </tr>
-                                <tr>
-                                    <td rowspan="3">High Availability</td>
-                                    <td>Deterministic Leader Election</td>
-                                    <td>Lowest node ID wins—predictable, instant failover</td>
-                                </tr>
-                                <tr>
-                                    <td>Sub-2 Second Failover</td>
-                                    <td>Automatic failover without manual intervention</td>
-                                </tr>
-                                <tr>
-                                    <td>Health Monitoring</td>
-                                    <td>Leader monitors database, auto-demotes on failure</td>
-                                </tr>
-                                <tr>
-                                    <td rowspan="3">Connectivity</td>
-                                    <td>MySQL Proxy</td>
-                                    <td>Native MySQL protocol on port 3307</td>
-                                </tr>
-                                <tr>
-                                    <td>HTTP API</td>
-                                    <td>RESTful API for writes and cluster management</td>
-                                </tr>
-                                <tr>
-                                    <td>wolfctl CLI</td>
-                                    <td>list servers, stats, migrate, binlog-setup</td>
-                                </tr>
-                                <tr>
-                                    <td rowspan="2">Configuration</td>
-                                    <td>Zero Config Required</td>
-                                    <td>Auto-detects database, peers, and network—just run it</td>
-                                </tr>
-                                <tr>
-                                    <td>Session State Preservation</td>
-                                    <td>USE database and session context preserved across queries</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Optional Binlog Mode -->
-                    <div
-                        style="margin-top: 2rem; padding: 1rem; background: var(--bg-tertiary); border-radius: 8px; border-left: 4px solid var(--accent-blue);">
-                        <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem;">Optional: Binlog Replication Mode</h3>
-                        <p style="margin: 0; color: var(--text-secondary); font-size: 0.9rem;">
-                            For keeping WolfScale in sync with <strong>other cluster solutions</strong> (e.g., existing
-                            Galera clusters),
-                            WolfScale can operate as a binlog client—capturing writes from an external MySQL/MariaDB
-                            source.
-                            <a href="binlog.html" style="color: var(--accent-blue);">Learn more →</a>
-                        </p>
-                    </div>
-                </section>
-
-                <section id="comparison" class="content-section">
-                    <h2>WolfScale vs Other Solutions</h2>
-                    <div class="table-wrapper">
-                        <table class="comparison-table">
-                            <thead>
-                                <tr>
-                                    <th>Aspect</th>
-                                    <th>WolfScale</th>
-                                    <th>Other Solutions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Replication Model</td>
-                                    <td class="highlight">Leader-based (single writer)</td>
-                                    <td>Multi-master</td>
-                                </tr>
-                                <tr>
-                                    <td>Conflict Handling</td>
-                                    <td class="highlight">No conflicts</td>
-                                    <td>Certification-based</td>
-                                </tr>
-                                <tr>
-                                    <td>Minimum Cluster Size</td>
-                                    <td class="highlight">1 node</td>
-                                    <td>3 nodes (quorum)</td>
-                                </tr>
-                                <tr>
-                                    <td>Write Latency</td>
-                                    <td class="highlight">Low (local commit)</td>
-                                    <td>Higher (sync cert)</td>
-                                </tr>
-                                <tr>
-                                    <td>Implementation</td>
-                                    <td class="highlight">Standalone binary</td>
-                                    <td>Patched MariaDB</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="two-column">
-                        <div class="column-card success">
-                            <h3>WolfScale Advantages</h3>
-                            <ul>
-                                <li><strong>No Write Conflicts</strong> — Single leader</li>
-                                <li><strong>Simpler Recovery</strong> — WAL-based catch-up</li>
-                                <li><strong>Flexible Sizing</strong> — 1, 2, or 100 nodes</li>
-                                <li><strong>Lightweight</strong> — Pure Rust binary</li>
-                            </ul>
-                        </div>
-                        <div class="column-card">
-                            <h3>When to Choose Other Solutions</h3>
-                            <ul>
-                                <li>True multi-master writes required</li>
-                                <li>Cannot modify application</li>
-                                <li>Need transparent drop-in replication</li>
-                            </ul>
-                            <p
-                                style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; font-style: italic;">
-                                Note: In practice, most users end up writing to a single "Master Node" anyway to avoid
-                                conflicts.
-                            </p>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="sizing" class="content-section">
-                    <h2>Flexible Cluster Sizing</h2>
-
-                    <div class="highlight-box">
-                        <h3>Why WolfScale Supports 2-Node Clusters</h3>
-                        <p>Traditional solutions like Galera require <strong>3 nodes minimum</strong> for quorum-based
-                            consensus.</p>
-                        <p>WolfScale uses <strong>deterministic leader election</strong>—lowest ID wins. No voting, no
-                            split-brain.</p>
-                        <ul>
-                            <li><strong>2-node clusters</strong> work perfectly</li>
-                            <li><strong>Single-node</strong> valid for dev/edge</li>
-                            <li><strong>Scale to any size</strong></li>
-                        </ul>
-                    </div>
-
-                    <div class="sizing-grid">
-                        <div class="sizing-card">
-                            <div class="sizing-nodes">1</div>
-                            <div class="sizing-label">Single Node</div>
-                            <div class="sizing-desc">Dev & Testing</div>
-                        </div>
-                        <div class="sizing-card featured">
-                            <div class="badge">Works</div>
-                            <div class="sizing-nodes">2</div>
-                            <div class="sizing-label">Simple HA</div>
-                            <div class="sizing-desc">1 node tolerance</div>
-                        </div>
-                        <div class="sizing-card featured">
-                            <div class="badge">Recommended</div>
-                            <div class="sizing-nodes">3</div>
-                            <div class="sizing-label">Production</div>
-                            <div class="sizing-desc">2 node tolerance</div>
-                        </div>
-                        <div class="sizing-card">
-                            <div class="sizing-nodes">5+</div>
-                            <div class="sizing-label">High Availability</div>
-                            <div class="sizing-desc">N-1 tolerance</div>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="content-section">
-                    <h2>Binlog Replication Mode (v3.0+)</h2>
-                    <p>Capture writes from existing databases without routing through the proxy.</p>
-
-                    <div class="table-wrapper">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Database</th>
-                                    <th>Supported</th>
-                                    <th>Notes</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>MariaDB standalone</td>
-                                    <td class="check">✓</td>
-                                    <td>Enable log_bin</td>
-                                </tr>
-                                <tr>
-                                    <td>MariaDB Galera</td>
-                                    <td class="check">✓</td>
-                                    <td>Connect to any node</td>
-                                </tr>
-                                <tr>
-                                    <td>MySQL standalone</td>
-                                    <td class="check">✓</td>
-                                    <td>Standard replication</td>
-                                </tr>
-                                <tr>
-                                    <td>Percona Server</td>
-                                    <td class="check">✓</td>
-                                    <td>MySQL-compatible</td>
-                                </tr>
-                                <tr>
-                                    <td>Amazon RDS MySQL</td>
-                                    <td class="check">✓</td>
-                                    <td>Enable binlog retention</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="code-block">
-                        <div class="code-header"><span>Auto-detect binlog position</span></div>
-                        <pre><code>wolfctl binlog-setup</code></pre>
-                    </div>
-                </section>
-
-                <div class="page-nav">
-                    <a href="index.html" class="prev">← Home</a>
-                    <a href="architecture.html" class="next">Architecture →</a>
-                </div>
-            </div>
-        </main>
+            <a href="wolfproxy.html">🛡️ Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span></div>
+            <a href="wolfserve.html">🌎 Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Company</div>
+            <a href="https://wolf.uk.com" target="_blank">🐺 Wolf Software</a>
+            <a href="about.html">ℹ️ About</a>
+            <a href="roadmap.html">🗺️ Roadmap</a>
+            <a href="contact.html">📧 Contact</a>
+            <a href="glossary.html">📖 Glossary</a>
+            <a href="licensing.html">📄 Licensing</a>
+            <a href="support.html" style="color:#ff424d;font-weight:700;">&#10084;&#65039; Support Us</a>
+        </div>
+    </nav>
+    <div class="theme-toggle-wrapper">
+        <span class="theme-toggle-label">Theme</span>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme"><span
+                class="theme-toggle-slider"></span></button>
     </div>
-    <script src="script.js"></script>
-</body>
+    <div class="sidebar-links">
+        <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
+        <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+        <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+        <a href="https://www.reddit.com/r/WolfStack/" target="_blank">Reddit</a>
+        <a href="https://wolf.uk.com" target="_blank">wolf.uk.com</a>
+    </div>
+</aside>    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <main class="wiki-main">
+        <div class="mobile-header">
+            <a href="index.html" class="nav-logo"><img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf" class="logo-img"></a>
+            <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+        </div>
+        <div class="page-header"><h1>✨ WolfScale Features</h1><p>Complete feature list for WolfScale database replication and load balancing</p></div>
+        <div class="wiki-content">
 
+            <div class="content-section">
+                <h2>Core Features</h2>
+                <ul>
+                    <li><strong>Multi-Master Replication</strong> &mdash; Write to any node, changes propagate everywhere</li>
+                    <li><strong>Automatic Failover</strong> &mdash; Nodes detect failures and reroute traffic</li>
+                    <li><strong>Built-in Load Balancer</strong> &mdash; Distribute queries across nodes with read/write splitting</li>
+                    <li><strong>Binary Log Replication</strong> &mdash; Uses MySQL binlog for efficient, low-latency sync</li>
+                    <li><strong>Conflict Resolution</strong> &mdash; Automatic handling of write conflicts</li>
+                    <li><strong>Geographic Distribution</strong> &mdash; Run nodes across data centres</li>
+                    <li><strong>Zero Configuration</strong> &mdash; Auto-discovery of peers via WolfNet</li>
+                    <li><strong>Health Monitoring</strong> &mdash; Real-time node health and lag monitoring</li>
+                </ul>
+                <h3>Supported Databases</h3>
+                <ul>
+                    <li>MariaDB 10.3+</li>
+                    <li>MySQL 5.7+ / 8.0+</li>
+                    <li>Percona Server</li>
+                    <li>Amazon RDS for MySQL</li>
+                </ul>
+            </div>
+
+<div class="page-nav"><a href="quickstart.html" class="prev">&larr; Quick Start</a><a href="architecture.html" class="next">Architecture &rarr;</a></div>
+        </div>
+        <footer class="wiki-footer" style="margin-top:3rem;padding:2rem 0;border-top:1px solid rgba(255,255,255,0.1);text-align:center;opacity:0.7;font-size:0.875rem;">
+            <p>&copy; 2026 <a href="https://wolf.uk.com" target="_blank" style="color:inherit;text-decoration:underline;">Wolf Software Systems Ltd</a> &bull; FSL-1.1</p>
+        </footer>
+    </main>
+</div>
+<script src="script.js"></script>
+</body>
 </html>

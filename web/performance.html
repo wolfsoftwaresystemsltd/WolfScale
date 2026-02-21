@@ -1,385 +1,135 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-KK9NEE1S54');
-    </script>
-
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-KK9NEE1S54');</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Performance Tuning - WolfScale</title>
+    <meta name="description" content="Performance tuning and benchmarks for WolfScale">
+    <title>🚀 WolfScale Performance — WolfStack Docs</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=9">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=10">
 </head>
-
 <body>
-    <div class="wiki-layout">
-        <aside class="sidebar" id="sidebar">
-            <a href="index.html" class="sidebar-logo"><img
-                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
-                    alt="Wolf"></a>
-                        <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span></div>
-                    <a href="wolfstack.html">Overview &amp; Quick Start</a>
-                    <a href="wolfstack-containers.html">Container Management</a>
-                    <a href="wolfstack-storage.html">Storage Manager</a>
-                    <a href="wolfstack-files.html">File Manager</a>
-                    <a href="wolfstack-networking.html">Networking</a>
-                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
-                    <a href="wolfstack-mysql.html">MariaDB/MySQL Editor</a>
-                    <a href="wolfstack-security.html">Security</a>
-                    <a href="wolfstack-certificates.html">Certificates</a>
-                    <a href="wolfstack-cron.html">Cron Jobs</a>
-                    <a href="wolfstack-terminal.html">Terminal</a>
-                    <a href="wolfstack-issues.html">Issues Scanner</a>
-                    <a href="wolfstack-alerting.html">Alerting &amp; Notifications</a>
-                    <a href="proxmox.html">Proxmox Integration</a>
-                    <a href="app-store.html">App Store</a>
-                    <a href="wolfstack-ai.html">AI Agent</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load Balancer</span></div>
-                    <a href="quickstart.html">Quick Start</a>
-                    <a href="features.html">Features</a>
-                    <a href="architecture.html">Architecture</a>
-                    <a href="how-it-works.html">How It Works</a>
-                    <a href="binlog.html">Binlog Mode</a>
-                    <a href="load-balancer.html">Load Balancer</a>
-                    <a href="configuration.html">Configuration</a>
-                    <a href="performance.html">Performance</a>
-                    <a href="cli.html">CLI Reference</a>
-                    <a href="troubleshooting.html">Troubleshooting</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication & Sharing</span></div>
-                    <a href="wolfdisk.html">Overview & Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with Firewall</span></div>
-                    <a href="wolfproxy.html">Overview & Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span></div>
-                    <a href="wolfserve.html">Overview & Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">Company</div>
-                    <a href="about.html">About</a>
-                    <a href="roadmap.html">Roadmap</a>
-                    <a href="contact.html">Contact</a>
-                    <a href="glossary.html">Glossary</a>
-                    <a href="licensing.html">Licensing</a>
-                    <a href="support.html" style="color: #ff424d; font-weight: 700;">❤️ Support Us</a>
-                </div>
-            </nav>
-            <div class="theme-toggle-wrapper">
-                <span class="theme-toggle-label">Theme</span>
-                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
-                    <span class="theme-toggle-slider"></span>
-                </button>
+<div class="wiki-layout">
+<aside class="sidebar" id="sidebar">
+    <a href="index.html" class="sidebar-logo"><img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
+            alt="Wolf"></a>
+    <nav class="sidebar-nav">
+        <div class="nav-section">
+            <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span></div>
+            <a href="wolfstack.html">📊 Overview &amp; Quick Start</a>
+            <a href="wolfstack-containers.html">📦 Container Management</a>
+            <a href="wolfstack-storage.html">💾 Storage Manager</a>
+            <a href="wolfstack-files.html">📁 File Manager</a>
+            <a href="wolfstack-networking.html">🌐 Networking</a>
+            <a href="wolfstack-clustering.html">🔗 Multi-Server Clustering</a>
+            <a href="wolfstack-mysql.html">🗄️ MariaDB/MySQL Editor</a>
+            <a href="wolfstack-security.html">🔒 Security</a>
+            <a href="wolfstack-certificates.html">📜 Certificates</a>
+            <a href="wolfstack-cron.html">⏰ Cron Jobs</a>
+            <a href="wolfstack-terminal.html">💻 Terminal</a>
+            <a href="wolfstack-issues.html">🔍 Issues Scanner</a>
+            <a href="wolfstack-alerting.html">🔔 Alerting &amp; Notifications</a>
+            <a href="wolfrun.html">🐺 WolfRun Orchestration</a>
+            <a href="proxmox.html">🟠 Proxmox Integration</a>
+            <a href="app-store.html">🛍️ App Store</a>
+            <a href="wolfstack-ai.html">🤖 AI Agent</a>
+            <a href="wolfstack-settings.html">⚙️ Settings</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication &amp; Load
+                    Balancer</span></div>
+            <a href="quickstart.html">⚡ Quick Start</a>
+            <a href="features.html">✨ Features</a>
+            <a href="architecture.html">🏗️ Architecture</a>
+            <a href="how-it-works.html">⚙️ How It Works</a>
+            <a href="binlog.html">📋 Binlog Mode</a>
+            <a href="load-balancer.html">⚖️ Load Balancer</a>
+            <a href="configuration.html">🔧 Configuration</a>
+            <a href="performance.html" class="active">📈 Performance</a>
+            <a href="cli.html">🖥️ CLI Reference</a>
+            <a href="troubleshooting.html">🔧 Troubleshooting</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication &amp; Sharing</span></div>
+            <a href="wolfdisk.html">💿 Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
+            <a href="wolfnet.html">🌐 Overview &amp; Quick Start</a>
+            <a href="wolfnet-global.html">🌍 Global Network Access</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with Firewall</span>
             </div>
-            <div class="sidebar-links">
-                <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
-                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
-            </div>
-        </aside>
-        <div class="sidebar-overlay" id="sidebar-overlay"></div>
-        <main class="wiki-main">
-            <div class="mobile-header">
-                <a href="index.html" class="nav-logo"><img
-                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
-                        class="logo-img"></a>
-                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
-            </div>
-            <div class="page-header">                \2Performance Tuning</h1>
-                <p>Optimize MariaDB and WolfScale for maximum performance</p>
-            </div>
-            <div class="wiki-content">
-                <section class="content-section">
-                    <h2>Quick Auto-Tune</h2>
-                    <p>The easiest way to optimize MariaDB is to run the auto-tuner, which detects your system's RAM and
-                        CPU cores automatically:</p>
-                    <div class="code-block">
-                        <div class="code-header"><span>Terminal</span></div>
-                        <pre><code>sudo wolfctl tune-mariadb</code></pre>
-                    </div>
-                    <p>This command will:</p>
-                    <ul>
-                        <li>Detect your system's RAM and calculate optimal buffer pool size (70%)</li>
-                        <li>Detect CPU cores for thread pool configuration</li>
-                        <li>Create <code>/etc/mysql/mariadb.conf.d/99-wolfscale.cnf</code></li>
-                        <li>Restart MariaDB automatically</li>
-                    </ul>
-                    <p>Use <code>--dry-run</code> to preview changes without applying them.</p>
-                </section>
-
-                <section class="content-section">
-                    <h2>⚡ Sub-Millisecond Replication</h2>
-                    <p>WolfScale uses <strong>push-based replication</strong> that triggers immediately when writes are
-                        committed, rather than polling. This gives you the fastest replication available:</p>
-                    <div class="table-wrapper">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>System</th>
-                                    <th>Typical Replication Lag</th>
-                                    <th>Method</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>MySQL Async</td>
-                                    <td>100ms - seconds</td>
-                                    <td>Slave polls master binlog</td>
-                                </tr>
-                                <tr>
-                                    <td>MySQL Semi-Sync</td>
-                                    <td>10-50ms</td>
-                                    <td>Wait for 1 slave ACK</td>
-                                </tr>
-                                <tr>
-                                    <td>MariaDB Galera</td>
-                                    <td>10-20ms</td>
-                                    <td>Synchronous certification</td>
-                                </tr>
-                                <tr style="background: linear-gradient(90deg, rgba(34, 197, 94, 0.1), transparent);">
-                                    <td><strong>WolfScale</strong></td>
-                                    <td><strong>&lt;1ms ⚡</strong></td>
-                                    <td>Event-driven push</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <p>How it works: When a write is committed to the leader's WAL, a notification immediately triggers
-                        replication to all followers. No polling delay, no waiting.</p>
-                </section>
-
-                <section class="content-section">
-                    <h2>Manual MariaDB Tuning</h2>
-                    <p>If you prefer manual configuration, create
-                        <code>/etc/mysql/mariadb.conf.d/99-wolfscale.cnf</code>:
-                    </p>
-                    <div class="code-block large">
-                        <div class="code-header"><span>99-wolfscale.cnf</span></div>
-                        <pre><code>[mariadb]
-# Buffer pool - 70-80% of available RAM
-innodb_buffer_pool_size = 4G
-innodb_buffer_pool_instances = 4
-
-# Write performance (2 = balanced speed/durability)
-innodb_flush_log_at_trx_commit = 2
-innodb_flush_method = O_DIRECT
-sync_binlog = 0
-
-# Connections
-max_connections = 500
-thread_pool_size = 16
-thread_handling = pool-of-threads
-
-# Disable query cache (WolfScale handles consistency)
-query_cache_type = 0
-query_cache_size = 0
-
-# Bulk operations
-innodb_autoinc_lock_mode = 2
-bulk_insert_buffer_size = 256M</code></pre>
-                    </div>
-                    <p>After editing, restart MariaDB: <code>sudo systemctl restart mariadb</code></p>
-                </section>
-
-                <section class="content-section">
-                    <h2>Key MariaDB Settings Explained</h2>
-                    <div class="table-wrapper">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Setting</th>
-                                    <th>Impact</th>
-                                    <th>Tradeoff</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>innodb_buffer_pool_size</td>
-                                    <td><strong>High</strong></td>
-                                    <td>RAM usage</td>
-                                </tr>
-                                <tr>
-                                    <td>innodb_flush_log_at_trx_commit = 2</td>
-                                    <td><strong>High</strong></td>
-                                    <td>~1s data loss on crash</td>
-                                </tr>
-                                <tr>
-                                    <td>sync_binlog = 0</td>
-                                    <td><strong>High</strong></td>
-                                    <td>Only if using WolfScale replication</td>
-                                </tr>
-                                <tr>
-                                    <td>thread_handling = pool-of-threads</td>
-                                    <td>Medium</td>
-                                    <td>Better for many connections</td>
-                                </tr>
-                                <tr>
-                                    <td>innodb_autoinc_lock_mode = 2</td>
-                                    <td>Medium</td>
-                                    <td>Best for bulk inserts</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-
-                <section class="content-section">
-                    <h2>WolfScale Auto-Tuning</h2>
-                    <p>WolfScale automatically detects your hardware and optimizes its settings at startup. This is
-                        enabled by default.</p>
-
-                    <h3>How It Works</h3>
-                    <p>At startup, WolfScale detects:</p>
-                    <ul>
-                        <li><strong>CPU cores</strong> — Uses 25% for WolfScale workers (min 1, max 8), leaving 75% for
-                            MariaDB</li>
-                        <li><strong>RAM</strong> — Allocates 15% for buffers, leaving majority for MariaDB's InnoDB
-                            buffer pool</li>
-                    </ul>
-
-                    <h3>Scaling Table</h3>
-                    <div class="table-wrapper">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Server</th>
-                                    <th>Cores</th>
-                                    <th>RAM</th>
-                                    <th>WolfScale Threads</th>
-                                    <th>Batch Size</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Small</td>
-                                    <td>4</td>
-                                    <td>8GB</td>
-                                    <td>1</td>
-                                    <td>1,000</td>
-                                </tr>
-                                <tr>
-                                    <td>Medium</td>
-                                    <td>8</td>
-                                    <td>16GB</td>
-                                    <td>2</td>
-                                    <td>2,000</td>
-                                </tr>
-                                <tr>
-                                    <td>Large</td>
-                                    <td>16</td>
-                                    <td>32GB</td>
-                                    <td>4</td>
-                                    <td>4,000</td>
-                                </tr>
-                                <tr>
-                                    <td>XL</td>
-                                    <td>32</td>
-                                    <td>64GB</td>
-                                    <td>8</td>
-                                    <td>8,000</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <h3>Disable Auto-Tuning</h3>
-                    <p>To use manual settings instead:</p>
-                    <div class="code-block">
-                        <div class="code-header"><span>wolfscale.toml</span></div>
-                        <pre><code>[performance]
-auto_tune = false</code></pre>
-                    </div>
-                </section>
-
-                <section class="content-section">
-                    <h2>Manual WolfScale Tuning</h2>
-                    <p>Optimize <code>wolfscale.toml</code> for your workload:</p>
-                    <div class="code-block large">
-                        <div class="code-header"><span>wolfscale.toml (performance settings)</span></div>
-                        <pre><code>[wal]
-# Increase for bulk operations
-batch_size = 5000            # Default: 1000
-flush_interval_ms = 500      # Default: 100
-
-# Disable for speed (tradeoff: durability on crash)
-fsync = false                # Default: true
-
-[database]
-# Increase for high-concurrency workloads
-pool_size = 50               # Default: 10
-
-[cluster]
-# Larger batches to followers
-max_batch_entries = 5000     # Default: 1000</code></pre>
-                    </div>
-                </section>
-
-                <section class="content-section">
-                    <h2>Performance Tips Summary</h2>
-                    <div class="table-wrapper">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Optimization</th>
-                                    <th>Impact</th>
-                                    <th>Tradeoff</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>innodb_buffer_pool_size</td>
-                                    <td><strong>High</strong></td>
-                                    <td>RAM usage</td>
-                                </tr>
-                                <tr>
-                                    <td>innodb_flush_log_at_trx_commit = 2</td>
-                                    <td><strong>High</strong></td>
-                                    <td>~1s data on crash</td>
-                                </tr>
-                                <tr>
-                                    <td>fsync = false</td>
-                                    <td><strong>High</strong></td>
-                                    <td>Durability on crash</td>
-                                </tr>
-                                <tr>
-                                    <td>batch_size increase</td>
-                                    <td>Medium</td>
-                                    <td>Write latency</td>
-                                </tr>
-                                <tr>
-                                    <td>pool_size increase</td>
-                                    <td>Medium</td>
-                                    <td>Connection overhead</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-
-                        →</a>
-                </div>
-            </div>
-        </main>
+            <a href="wolfproxy.html">🛡️ Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span></div>
+            <a href="wolfserve.html">🌎 Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Company</div>
+            <a href="https://wolf.uk.com" target="_blank">🐺 Wolf Software</a>
+            <a href="about.html">ℹ️ About</a>
+            <a href="roadmap.html">🗺️ Roadmap</a>
+            <a href="contact.html">📧 Contact</a>
+            <a href="glossary.html">📖 Glossary</a>
+            <a href="licensing.html">📄 Licensing</a>
+            <a href="support.html" style="color:#ff424d;font-weight:700;">&#10084;&#65039; Support Us</a>
+        </div>
+    </nav>
+    <div class="theme-toggle-wrapper">
+        <span class="theme-toggle-label">Theme</span>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme"><span
+                class="theme-toggle-slider"></span></button>
     </div>
-    <script src="script.js"></script>
-</body>
+    <div class="sidebar-links">
+        <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
+        <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+        <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+        <a href="https://www.reddit.com/r/WolfStack/" target="_blank">Reddit</a>
+        <a href="https://wolf.uk.com" target="_blank">wolf.uk.com</a>
+    </div>
+</aside>    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <main class="wiki-main">
+        <div class="mobile-header">
+            <a href="index.html" class="nav-logo"><img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf" class="logo-img"></a>
+            <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+        </div>
+        <div class="page-header"><h1>🚀 WolfScale Performance</h1><p>Performance tuning and benchmarks for WolfScale</p></div>
+        <div class="wiki-content">
 
+            <div class="content-section">
+                <h2>Performance</h2>
+                <p>WolfScale is built in Rust for maximum performance. The replication engine is asynchronous and non-blocking, with minimal overhead on the database.</p>
+                <h3>Benchmarks</h3>
+                <ul>
+                    <li>Replication lag: &lt; 100ms typical</li>
+                    <li>Throughput: 10,000+ transactions/second</li>
+                    <li>Memory usage: ~50MB base</li>
+                    <li>CPU overhead: &lt; 1% on modern hardware</li>
+                </ul>
+                <h3>Tuning Tips</h3>
+                <ul>
+                    <li>Use ROW-based binlog format for best performance</li>
+                    <li>Enable GTID mode for efficient failover</li>
+                    <li>Place WolfScale nodes close to their database for low latency</li>
+                    <li>Use WolfNet for encrypted inter-node communication</li>
+                </ul>
+            </div>
+
+<div class="page-nav"><a href="configuration.html" class="prev">&larr; Configuration</a><a href="cli.html" class="next">CLI Reference &rarr;</a></div>
+        </div>
+        <footer class="wiki-footer" style="margin-top:3rem;padding:2rem 0;border-top:1px solid rgba(255,255,255,0.1);text-align:center;opacity:0.7;font-size:0.875rem;">
+            <p>&copy; 2026 <a href="https://wolf.uk.com" target="_blank" style="color:inherit;text-decoration:underline;">Wolf Software Systems Ltd</a> &bull; FSL-1.1</p>
+        </footer>
+    </main>
+</div>
+<script src="script.js"></script>
+</body>
 </html>

@@ -5,8 +5,8 @@
     <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-KK9NEE1S54');</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Discord, Slack, and Telegram notifications for infrastructure events">
-    <title>🔔 Alerting &amp; Notifications — WolfStack Docs</title>
+    <meta name="description" content="Configure themes, alerting, Docker registries, node settings, and more">
+    <title>⚙️ Settings — WolfStack Docs</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,12 +33,12 @@
             <a href="wolfstack-cron.html">⏰ Cron Jobs</a>
             <a href="wolfstack-terminal.html">💻 Terminal</a>
             <a href="wolfstack-issues.html">🔍 Issues Scanner</a>
-            <a href="wolfstack-alerting.html" class="active">🔔 Alerting &amp; Notifications</a>
+            <a href="wolfstack-alerting.html">🔔 Alerting &amp; Notifications</a>
             <a href="wolfrun.html">🐺 WolfRun Orchestration</a>
             <a href="proxmox.html">🟠 Proxmox Integration</a>
             <a href="app-store.html">🛍️ App Store</a>
             <a href="wolfstack-ai.html">🤖 AI Agent</a>
-            <a href="wolfstack-settings.html">⚙️ Settings</a>
+            <a href="wolfstack-settings.html" class="active">⚙️ Settings</a>
         </div>
         <div class="nav-section">
             <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication &amp; Load
@@ -101,31 +101,68 @@
             <a href="index.html" class="nav-logo"><img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf" class="logo-img"></a>
             <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
         </div>
-        <div class="page-header"><h1>🔔 Alerting &amp; Notifications</h1><p>Discord, Slack, and Telegram notifications for infrastructure events</p></div>
+        <div class="page-header"><h1>⚙️ Settings</h1><p>Configure themes, alerting, Docker registries, node settings, and more</p></div>
         <div class="wiki-content">
 
             <div class="content-section">
                 <h2>Overview</h2>
-                <p>WolfStack can send alerts to Discord, Slack, or Telegram when resource thresholds are exceeded. Configure alert rules from the Settings page.</p>
-                <h3>Supported Channels</h3>
+                <p>The Settings page is your central configuration hub for WolfStack. Access it from the gear icon in the bottom-left of the sidebar.</p>
+                <img src="images/settings-themes.png" alt="WolfStack Settings" style="width:100%;border-radius:10px;margin:1.5rem 0;border:1px solid var(--border-color);box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+            </div>
+            <div class="content-section">
+                <h2>Themes</h2>
+                <p>WolfStack includes multiple beautiful themes. Switch between them on the Themes tab:</p>
                 <ul>
-                    <li><strong>Discord</strong> &mdash; Webhook integration</li>
-                    <li><strong>Slack</strong> &mdash; Webhook integration</li>
-                    <li><strong>Telegram</strong> &mdash; Bot API integration</li>
+                    <li><strong>WolfStack Dark</strong> &mdash; The default dark theme with red accents</li>
+                    <li><strong>Midnight</strong> &mdash; Deep blue/black theme</li>
+                    <li><strong>Glass</strong> &mdash; Glassmorphism with frosted effects and deep shadows</li>
+                    <li><strong>Amber Terminal</strong> &mdash; Retro amber-on-black terminal aesthetic</li>
+                    <li><strong>Light</strong> &mdash; Clean light theme</li>
                 </ul>
-                <h3>Alert Types</h3>
+            </div>
+            <div class="content-section">
+                <h2>Alerting &amp; Notifications</h2>
+                <p>Configure alert thresholds and notification channels from the <strong>Alerting</strong> tab in Settings.</p>
+                <h3>Notification Channels</h3>
                 <ul>
-                    <li>CPU usage exceeds threshold</li>
-                    <li>Memory usage exceeds threshold</li>
-                    <li>Disk usage exceeds threshold</li>
-                    <li>Node goes offline</li>
-                    <li>Container stops unexpectedly</li>
+                    <li><strong>Discord</strong> &mdash; Send alerts to a Discord channel via webhook URL</li>
+                    <li><strong>Slack</strong> &mdash; Send alerts to a Slack channel via webhook URL</li>
+                    <li><strong>Telegram</strong> &mdash; Send alerts via Telegram Bot API</li>
                 </ul>
-                <h3>Configuration</h3>
-                <p>Go to <strong>Settings &rarr; Alerting</strong> to configure webhook URLs and thresholds. You can test your alerting configuration before enabling it.</p>
+                <h3>Alert Thresholds</h3>
+                <ul>
+                    <li><strong>CPU</strong> &mdash; Alert when CPU usage exceeds a percentage</li>
+                    <li><strong>Memory</strong> &mdash; Alert when memory usage exceeds a percentage</li>
+                    <li><strong>Disk</strong> &mdash; Alert when disk usage exceeds a percentage</li>
+                </ul>
+                <p>Alerts are checked on a configurable interval (default: 60 seconds). One node in the cluster is automatically elected as the primary alerter to avoid duplicate notifications.</p>
+                <p>You can <strong>test</strong> your configuration before enabling it to verify webhooks are working correctly.</p>
+            </div>
+            <div class="content-section">
+                <h2>Docker Registry</h2>
+                <p>Configure private Docker registry credentials so WolfStack can pull images from your private registries. Add registry URLs, usernames, and passwords/tokens from the <strong>Docker</strong> tab.</p>
+            </div>
+            <div class="content-section">
+                <h2>Node Settings</h2>
+                <p>Per-node configuration is available by clicking the gear icon on any node in the sidebar. Node settings include:</p>
+                <ul>
+                    <li><strong>Hostname &amp; Address</strong> &mdash; View and modify node connection details</li>
+                    <li><strong>Cluster assignment</strong> &mdash; Move nodes between clusters</li>
+                    <li><strong>WolfStack version</strong> &mdash; View installed and latest versions, upgrade from the dashboard</li>
+                    <li><strong>WolfNet configuration</strong> &mdash; View and manage WolfNet peer details</li>
+                    <li><strong>Delete node</strong> &mdash; Remove a node from the cluster</li>
+                </ul>
+            </div>
+            <div class="content-section">
+                <h2>Cluster Settings</h2>
+                <ul>
+                    <li><strong>Cluster name</strong> &mdash; Rename your cluster</li>
+                    <li><strong>WolfNet connections</strong> &mdash; Click <strong>🔗 Update WolfNet Connections</strong> to automatically configure encrypted mesh networking between all nodes in the cluster</li>
+                    <li><strong>Cluster secret</strong> &mdash; View or regenerate the cluster authentication secret</li>
+                </ul>
             </div>
 
-<div class="page-nav"><a href="wolfstack-issues.html" class="prev">&larr; Issues Scanner</a><a href="proxmox.html" class="next">Proxmox &rarr;</a></div>
+<div class="page-nav"><a href="wolfstack-ai.html" class="prev">&larr; AI Agent</a><a href="index.html" class="next">Home &rarr;</a></div>
         </div>
         <footer class="wiki-footer" style="margin-top:3rem;padding:2rem 0;border-top:1px solid rgba(255,255,255,0.1);text-align:center;opacity:0.7;font-size:0.875rem;">
             <p>&copy; 2026 <a href="https://wolf.uk.com" target="_blank" style="color:inherit;text-decoration:underline;">Wolf Software Systems Ltd</a> &bull; FSL-1.1</p>

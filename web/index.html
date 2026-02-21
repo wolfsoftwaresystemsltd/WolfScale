@@ -42,7 +42,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=9">
+    <link rel="stylesheet" href="styles.css?v=10">
     <style>
         /* Hero Animations */
         @keyframes fadeInUp {
@@ -79,6 +79,18 @@
             }
         }
 
+        @keyframes glow-pulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 20px rgba(220, 38, 38, 0.15);
+            }
+
+            50% {
+                box-shadow: 0 0 40px rgba(220, 38, 38, 0.3);
+            }
+        }
+
         .animate-fade-in {
             animation: fadeInUp 0.8s ease-out both;
         }
@@ -110,7 +122,7 @@
         /* Hero Section */
         .hero-section {
             text-align: center;
-            padding: 1.5rem 0 1rem;
+            padding: 2rem 0 1rem;
             position: relative;
         }
 
@@ -120,25 +132,25 @@
             top: -40%;
             left: 50%;
             transform: translateX(-50%);
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(220, 38, 38, 0.12) 0%, transparent 70%);
+            width: 700px;
+            height: 700px;
+            background: radial-gradient(circle, rgba(220, 38, 38, 0.1) 0%, transparent 70%);
             pointer-events: none;
         }
 
         .hero-logo {
-            width: 300px;
-            height: 300px;
-            margin-top: -80px;
-            margin-bottom: -100px;
+            width: 220px;
+            height: 220px;
+            margin-top: -40px;
+            margin-bottom: -60px;
             animation: float 4s ease-in-out infinite;
             filter: drop-shadow(0 10px 40px rgba(220, 38, 38, 0.3));
         }
 
         .hero-title {
-            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            font-size: clamp(2rem, 5vw, 3rem);
             font-weight: 800;
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.5rem;
             background: linear-gradient(135deg, #fff 0%, #ff6b6b 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -146,25 +158,14 @@
         }
 
         .hero-tagline {
-            font-size: 1rem;
+            font-size: 1.1rem;
             color: var(--text-secondary);
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.5rem;
             font-weight: 400;
-            max-width: 650px;
+            max-width: 700px;
             margin-left: auto;
             margin-right: auto;
-            line-height: 1.6;
-        }
-
-        .hero-tagline strong {
-            color: var(--accent-primary);
-            font-weight: 600;
-        }
-
-        .hero-subtitle {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-bottom: 1rem;
+            line-height: 1.7;
         }
 
         .hero-badges {
@@ -172,7 +173,7 @@
             gap: 0.75rem;
             justify-content: center;
             flex-wrap: wrap;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
         }
 
         .hero-badge {
@@ -188,7 +189,70 @@
             text-transform: uppercase;
         }
 
-        /* Product Cards */
+        /* Screenshot showcase */
+        .screenshot-showcase {
+            position: relative;
+            max-width: 900px;
+            margin: 2rem auto;
+        }
+
+        .screenshot-main {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            animation: glow-pulse 4s ease-in-out infinite;
+        }
+
+        .screenshot-caption {
+            text-align: center;
+            margin-top: 0.75rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* Feature highlights */
+        .feature-highlights {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+            text-align: left;
+        }
+
+        .highlight-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.25rem;
+            transition: all 0.3s ease;
+        }
+
+        .highlight-card:hover {
+            border-color: rgba(220, 38, 38, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .highlight-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .highlight-card h3 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+        }
+
+        .highlight-card p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* Products Section */
         .products-section {
             padding: 2rem 0;
         }
@@ -252,20 +316,6 @@
             opacity: 1;
         }
 
-        .product-card.coming-soon {
-            opacity: 0.6;
-        }
-
-        .product-card.coming-soon:hover {
-            transform: none;
-            border-color: var(--border-color);
-            box-shadow: none;
-        }
-
-        .product-card.coming-soon::before {
-            display: none;
-        }
-
         .product-icon {
             font-size: 2.5rem;
             margin-bottom: 1rem;
@@ -294,12 +344,6 @@
             border: 1px solid rgba(34, 197, 94, 0.3);
         }
 
-        .product-status.coming {
-            background: rgba(234, 179, 8, 0.15);
-            color: #eab308;
-            border: 1px solid rgba(234, 179, 8, 0.3);
-        }
-
         .product-description {
             color: var(--text-secondary);
             font-size: 0.9rem;
@@ -326,20 +370,6 @@
             color: var(--success);
             font-weight: bold;
             font-size: 0.8rem;
-        }
-
-        /* Alternating row colours for the hero bullet list */
-        .hero-feature-list li {
-            padding: 0.35rem 0.6rem;
-            border-radius: 6px;
-        }
-
-        .hero-feature-list li:nth-child(odd) {
-            background: rgba(220, 38, 38, 0.07);
-        }
-
-        .hero-feature-list li:nth-child(even) {
-            background: rgba(255, 255, 255, 0.04);
         }
 
         .product-cta {
@@ -452,21 +482,46 @@
             color: white;
         }
 
-
-
-        /* Quick Links */
-        .quick-links {
-            padding: 2rem 0;
+        /* Screenshot gallery */
+        .screenshot-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
         }
 
-        .quick-links-title {
-            text-align: center;
-            font-size: 1.25rem;
+        .screenshot-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .screenshot-card:hover {
+            border-color: rgba(220, 38, 38, 0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .screenshot-card img {
+            width: 100%;
+            display: block;
+        }
+
+        .screenshot-card .screenshot-label {
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
             font-weight: 600;
-            margin-bottom: 1.5rem;
-            color: var(--text-secondary);
         }
 
+        .screenshot-card .screenshot-desc {
+            padding: 0 1rem 0.75rem;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        /* Quick links */
         .quick-links-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -500,8 +555,7 @@
             color: var(--text-muted);
         }
 
-        /* Responsive */
-        /* Sidebar nav descriptions */
+        /* Sidebar descriptions */
         .nav-desc {
             display: block;
             font-size: 0.7rem;
@@ -512,17 +566,53 @@
             opacity: 0.7;
         }
 
+        /* Community buttons row */
+        .community-row {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .community-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 10px 20px;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+
+        .community-btn:hover {
+            transform: translateY(-2px);
+            color: white;
+        }
+
         @media (max-width: 768px) {
             .products-grid {
                 grid-template-columns: 1fr;
             }
 
             .hero-logo {
-                width: 80px;
-                height: 80px;
+                width: 140px;
+                height: 140px;
+            }
+
+            .screenshot-gallery {
+                grid-template-columns: 1fr;
             }
 
             .support-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .community-row {
                 flex-direction: column;
                 align-items: center;
             }
@@ -539,65 +629,67 @@
                 <div class="nav-section">
                     <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span>
                     </div>
-                    <a href="wolfstack.html">Overview &amp; Quick Start</a>
-                    <a href="wolfstack-containers.html">Container Management</a>
-                    <a href="wolfstack-storage.html">Storage Manager</a>
-                    <a href="wolfstack-files.html">File Manager</a>
-                    <a href="wolfstack-networking.html">Networking</a>
-                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
-                    <a href="wolfstack-mysql.html">MariaDB/MySQL Editor</a>
-                    <a href="wolfstack-security.html">Security</a>
-                    <a href="wolfstack-certificates.html">Certificates</a>
-                    <a href="wolfstack-cron.html">Cron Jobs</a>
-                    <a href="wolfstack-terminal.html">Terminal</a>
-                    <a href="wolfstack-issues.html">Issues Scanner</a>
-                    <a href="wolfstack-alerting.html">Alerting &amp; Notifications</a>
-                    <a href="proxmox.html">Proxmox Integration</a>
-                    <a href="app-store.html">App Store</a>
-                    <a href="wolfstack-ai.html">AI Agent</a>
+                    <a href="wolfstack.html">📊 Overview &amp; Quick Start</a>
+                    <a href="wolfstack-containers.html">📦 Container Management</a>
+                    <a href="wolfstack-storage.html">💾 Storage Manager</a>
+                    <a href="wolfstack-files.html">📁 File Manager</a>
+                    <a href="wolfstack-networking.html">🌐 Networking</a>
+                    <a href="wolfstack-clustering.html">🔗 Multi-Server Clustering</a>
+                    <a href="wolfstack-mysql.html">🗄️ MariaDB/MySQL Editor</a>
+                    <a href="wolfstack-security.html">🔒 Security</a>
+                    <a href="wolfstack-certificates.html">📜 Certificates</a>
+                    <a href="wolfstack-cron.html">⏰ Cron Jobs</a>
+                    <a href="wolfstack-terminal.html">💻 Terminal</a>
+                    <a href="wolfstack-issues.html">🔍 Issues Scanner</a>
+                    <a href="wolfstack-alerting.html">🔔 Alerting &amp; Notifications</a>
+                    <a href="wolfrun.html">🐺 WolfRun Orchestration</a>
+                    <a href="proxmox.html">🟠 Proxmox Integration</a>
+                    <a href="app-store.html">🛍️ App Store</a>
+                    <a href="wolfstack-ai.html">🤖 AI Agent</a>
+                    <a href="wolfstack-settings.html">⚙️ Settings</a>
                 </div>
                 <div class="nav-section">
                     <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load
                             Balancer</span></div>
-                    <a href="quickstart.html">Quick Start</a>
-                    <a href="features.html">Features</a>
-                    <a href="architecture.html">Architecture</a>
-                    <a href="how-it-works.html">How It Works</a>
-                    <a href="binlog.html">Binlog Mode</a>
-                    <a href="load-balancer.html">Load Balancer</a>
-                    <a href="configuration.html">Configuration</a>
-                    <a href="performance.html">Performance</a>
-                    <a href="cli.html">CLI Reference</a>
-                    <a href="troubleshooting.html">Troubleshooting</a>
+                    <a href="quickstart.html">⚡ Quick Start</a>
+                    <a href="features.html">✨ Features</a>
+                    <a href="architecture.html">🏗️ Architecture</a>
+                    <a href="how-it-works.html">⚙️ How It Works</a>
+                    <a href="binlog.html">📋 Binlog Mode</a>
+                    <a href="load-balancer.html">⚖️ Load Balancer</a>
+                    <a href="configuration.html">🔧 Configuration</a>
+                    <a href="performance.html">📈 Performance</a>
+                    <a href="cli.html">🖥️ CLI Reference</a>
+                    <a href="troubleshooting.html">🔧 Troubleshooting</a>
                 </div>
                 <div class="nav-section">
                     <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication & Sharing</span>
                     </div>
-                    <a href="wolfdisk.html">Overview & Quick Start</a>
+                    <a href="wolfdisk.html">💿 Overview & Quick Start</a>
                 </div>
                 <div class="nav-section">
                     <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
-                    <a href="wolfnet.html">Overview &amp; Quick Start</a>
-                    <a href="wolfnet-global.html">Global Network Access</a>
+                    <a href="wolfnet.html">🌐 Overview &amp; Quick Start</a>
+                    <a href="wolfnet-global.html">🌍 Global Network Access</a>
                 </div>
                 <div class="nav-section">
                     <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
                             Firewall</span></div>
-                    <a href="wolfproxy.html">Overview & Quick Start</a>
+                    <a href="wolfproxy.html">🛡️ Overview & Quick Start</a>
                 </div>
                 <div class="nav-section">
                     <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
                     </div>
-                    <a href="wolfserve.html">Overview & Quick Start</a>
+                    <a href="wolfserve.html">🌎 Overview & Quick Start</a>
                 </div>
                 <div class="nav-section">
                     <div class="nav-section-title">Company</div>
-                    <a href="https://wolf.uk.com" target="_blank">Wolf Software</a>
-                    <a href="about.html">About</a>
-                    <a href="roadmap.html">Roadmap</a>
-                    <a href="contact.html">Contact</a>
-                    <a href="glossary.html">Glossary</a>
-                    <a href="licensing.html">Licensing</a>
+                    <a href="https://wolf.uk.com" target="_blank">🐺 Wolf Software</a>
+                    <a href="about.html">ℹ️ About</a>
+                    <a href="roadmap.html">🗺️ Roadmap</a>
+                    <a href="contact.html">📧 Contact</a>
+                    <a href="glossary.html">📖 Glossary</a>
+                    <a href="licensing.html">📄 Licensing</a>
                     <a href="support.html" style="color: #ff424d; font-weight: 700;">❤️ Support Us</a>
                 </div>
             </nav>
@@ -631,7 +723,7 @@
                     <div class="hero-badges animate-fade-in">
                         <span class="hero-badge">Open Source</span>
                         <span class="hero-badge">FSL-1.1 License</span>
-                        <span class="hero-badge">Built with Rust</span>
+                        <span class="hero-badge">Built with Rust 🦀</span>
                     </div>
 
                     <img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf Logo"
@@ -639,42 +731,17 @@
 
                     <h1 class="hero-title animate-fade-in animate-delay-2">WolfStack</h1>
                     <p class="hero-tagline animate-fade-in animate-delay-2">
-                        from <a href="https://wolf.uk.com" target="_blank"
+                        The <strong style="color: var(--accent-primary);">all-in-one</strong> server and workstation
+                        management platform from
+                        <a href="https://wolf.uk.com" target="_blank"
                             style="color: var(--accent-primary); text-decoration: underline;">Wolf Software Systems
                             Ltd</a>
                     </p>
-                    <p class="hero-subtitle animate-fade-in animate-delay-3">
-                        WolfStack is an all-in-one server and workstation management platform.<br />
-                    <ul class="hero-feature-list"
-                        style="display:inline-block; text-align:left; max-width:600px; margin:0.5rem auto 0;">
-                        <li>Create and manage WolfStack clusters on bare metal or existing servers, or just a tiny
-                            machine to try it out!</li>
-                        <li>Install on your existing Proxmox VE servers without affecting Proxmox.</li>
-                        <li>View multiple clusters in one place, WolfStack clusters and Proxmox Clusters</li>
-                        <li>Control everything from a single, beautiful dashboard.</li>
-                        <li>Monitor metrics, manage Docker and LXC containers, VMs, R2 Cloud Storage, disk sharing, edit
-                            configs across your entire fleet.</li>
-                        <li>Auto adapts to whatever brand of linux you are running.</li>
-                        <li>Will manage one machine to hundreds.</li>
-                        <li>Built in App Store deploy straght to any node.</li>
-                        <li>Now with server issue scanner. Find and solve issues.</li>
-                        <li>Comes with <a href="wolfnet.html" target="_blank">WolfNet</a> and installs it's own
-                            Encrypted Mesh network for you. Works even if machines are not on the same network, easy to
-                            manage and use. You can even have a WolfNet network running accross different clusters.</li>
-                        <li>Access <strong>all your servers across all clusters</strong> from your local machine on one
-                            encrypted network — <a href="wolfnet-global.html"
-                                style="color: var(--accent-primary); text-decoration: underline;">Global WolfNet Access
-                                →</a></li>
-                        <li>Please think about supporting us if you like the software.</li>
-                    </ul>
 
-                    </p>
-                    <img src="images/screenshot.png" alt="WolfStack Screenshot" class="animate-fade-in animate-delay-3"
-                        style="max-width: 60%; border-radius: 12px; margin-top: 1.5rem; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); border: 1px solid var(--border-color);">
-                    <br>
+                    <!-- Patreon CTA -->
                     <a href="https://www.patreon.com/15362110/join" target="_blank"
-                        class="animate-fade-in animate-delay-4"
-                        style="display: inline-flex; align-items: center; gap: 0.5rem; margin-top: 1.5rem; padding: 0.6rem 1.5rem; background: linear-gradient(135deg, #16a34a, #22c55e); color: #fff; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 0.85rem; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);"
+                        class="animate-fade-in animate-delay-3"
+                        style="display: inline-flex; align-items: center; gap: 0.5rem; margin: 1rem auto; padding: 0.6rem 1.5rem; background: linear-gradient(135deg, #16a34a, #22c55e); color: #fff; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 0.85rem; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);"
                         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 25px rgba(34, 197, 94, 0.5)'"
                         onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(34, 197, 94, 0.4)'">
                         <svg width="16" height="16" viewBox="0 0 256 256" fill="white"
@@ -682,30 +749,71 @@
                             <path
                                 d="M232.3 25.63c-29.45-22.29-73.6-22.15-104.94 2.52C102.06 48.12 94.34 78.36 99.6 106.5c-36.94 4.56-66.44 25.6-82.18 55.46C.98 193.24-.24 231.72 15.48 256H38.2c-20.74-28.46-19.78-72.22 6.7-99.5 22.02-22.7 55.14-31.26 84.34-20.18-5.78 38.28 15.04 77.32 51.4 92.9 21.94 9.4 47.84 9.76 69.1-2.96 24.18-14.48 39.76-42.02 39.76-70.6V69.6c.76-17.1-7.8-33.72-21.14-44h-36.08v.03zM216 155.66c0 18.7-10.14 36.34-26.14 45.48-13.68 7.82-31.26 8.92-47.96.44-25.44-12.92-38.94-43.46-30.2-70.84 25.18 14.14 56.62 16.52 84.06 4.58 7.48-3.28 14.26-8.02 20.24-13.44v33.78zM216 92.18c-20.5 22.34-55.04 29.76-83.7 16.38-18.06-8.44-31.92-24.58-36.2-44.3-4.92-22.56 2.58-47.2 21.56-62 24.32-18.94 59.78-20.68 84.2-5.44l.14.1c8.54 5.82 14.02 16.46 14 27.1v68.16z" />
                         </svg>
-                        Support us on Patreon</a>
+                        Support us on Patreon
+                    </a>
                 </section>
 
                 <!-- Community Links -->
-                <div
-                    style="text-align: center; margin-bottom: 1.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                    <a href="https://www.youtube.com/@wolfsoftwaresystems" target="_blank"
-                        style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 10px 20px; background: linear-gradient(135deg, #FF0000, #CC0000); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 0.85rem; transition: all 0.3s ease; box-shadow: 0 2px 12px rgba(255, 0, 0, 0.3);"
-                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 20px rgba(255,0,0,0.4)'"
-                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 12px rgba(255,0,0,0.3)'">
+                <div class="community-row animate-fade-in animate-delay-4">
+                    <a href="https://www.youtube.com/@wolfsoftwaresystems" target="_blank" class="community-btn"
+                        style="background: linear-gradient(135deg, #FF0000, #CC0000); box-shadow: 0 2px 12px rgba(255, 0, 0, 0.3);">
                         ▶ YouTube Channel
                     </a>
-                    <a href="https://discord.gg/q9qMjHjUQY" target="_blank"
-                        style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 10px 20px; background: linear-gradient(135deg, #5865F2, #4752C4); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 0.85rem; transition: all 0.3s ease; box-shadow: 0 2px 12px rgba(88, 101, 242, 0.3);"
-                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 20px rgba(88,101,242,0.4)'"
-                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 12px rgba(88,101,242,0.3)'">
+                    <a href="https://discord.gg/q9qMjHjUQY" target="_blank" class="community-btn"
+                        style="background: linear-gradient(135deg, #5865F2, #4752C4); box-shadow: 0 2px 12px rgba(88, 101, 242, 0.3);">
                         💬 Join Discord
                     </a>
-                    <a href="https://www.reddit.com/r/WolfStack/" target="_blank"
-                        style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 10px 20px; background: linear-gradient(135deg, #FF4500, #FF5722); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 0.85rem; transition: all 0.3s ease; box-shadow: 0 2px 12px rgba(255, 69, 0, 0.3);"
-                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 20px rgba(255,69,0,0.4)'"
-                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 12px rgba(255,69,0,0.3)'">
+                    <a href="https://www.reddit.com/r/WolfStack/" target="_blank" class="community-btn"
+                        style="background: linear-gradient(135deg, #FF4500, #FF5722); box-shadow: 0 2px 12px rgba(255, 69, 0, 0.3);">
                         🔥 r/WolfStack
                     </a>
+                </div>
+
+                <!-- Main Dashboard Screenshot -->
+                <div class="screenshot-showcase animate-fade-in animate-delay-3">
+                    <img src="images/dashboard-overview.png" alt="WolfStack Dashboard" class="screenshot-main">
+                    <p class="screenshot-caption">WolfStack Datacenter — manage your entire fleet from a single
+                        dashboard</p>
+                </div>
+
+                <!-- Feature Highlights -->
+                <div class="feature-highlights animate-fade-in animate-delay-4">
+                    <div class="highlight-card">
+                        <div class="highlight-icon">🏠</div>
+                        <h3>Unified Dashboard</h3>
+                        <p>Monitor all servers, clusters, containers, and VMs from a single beautiful web interface with
+                            real-time metrics.</p>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-icon">📦</div>
+                        <h3>Container Management</h3>
+                        <p>Create, clone, migrate, and manage Docker and LXC containers across your entire fleet.
+                            Built-in App Store.</p>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-icon">🌐</div>
+                        <h3>Encrypted Mesh Network</h3>
+                        <p>WolfNet creates an encrypted mesh network between all your servers automatically. Works
+                            across data centres.</p>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-icon">🟠</div>
+                        <h3>Proxmox Integration</h3>
+                        <p>Install WolfStack on top of Proxmox to manage your entire VE cluster from the WolfStack
+                            dashboard.</p>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-icon">🤖</div>
+                        <h3>AI Agent</h3>
+                        <p>Ask questions about your infrastructure in natural language. Get intelligent answers and
+                            automated actions.</p>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-icon">🎨</div>
+                        <h3>Beautiful Themes</h3>
+                        <p>Multiple built-in themes including dark mode, glass effect, amber terminal, and midnight.
+                            Fully customisable.</p>
+                    </div>
                 </div>
 
                 <!-- Quick Start -->
@@ -737,10 +845,8 @@
                                 and log in. You only need to log in to one server.
                             </li>
                             <li><strong>Add your other nodes</strong> — click the <strong>+</strong> button to add each
-                                server or
-                                Proxmox server. You're done!</li>
-                            <li><strong>Once you have added all the nodes, update WolfNet connections</strong> — go into
-                                your cluster settings and click
+                                server or Proxmox server. You're done!</li>
+                            <li><strong>Update WolfNet connections</strong> — go into your cluster settings and click
                                 <strong>🔗 Update WolfNet Connections</strong> to automatically set up peer-to-peer
                                 networking between all your nodes.
                             </li>
@@ -749,7 +855,6 @@
                             <strong>Note:</strong> You can add multiple WolfStack or Proxmox clusters to WolfStack's
                             dashboard for a one-stop server management shop.
                         </p>
-
                         <p
                             style="margin-top: 1.25rem; color: var(--text-secondary); font-size: 0.95rem; font-weight: 500;">
                             Enjoy! 🐺 — Please don't forget my
@@ -763,72 +868,303 @@
                     </div>
                 </section>
 
+                <!-- ── Comparison Chart ── -->
+                <section style="margin-bottom: 3rem;">
+                    <h2 style="text-align:center;font-size:2rem;font-weight:800;margin-bottom:0.5rem;">How Does
+                        WolfStack Compare?</h2>
+                    <p
+                        style="text-align:center;color:var(--text-secondary);margin-bottom:2rem;max-width:700px;margin-left:auto;margin-right:auto;">
+                        WolfStack replaces multiple tools with one unified platform. Here&rsquo;s how it stacks up.
+                    </p>
+                    <div
+                        style="overflow-x:auto;border-radius:12px;border:1px solid var(--border-color);box-shadow:0 4px 24px rgba(0,0,0,0.2);">
+                        <table style="width:100%;border-collapse:collapse;font-size:0.9rem;min-width:800px;">
+                            <thead>
+                                <tr style="background:rgba(255,66,77,0.1);border-bottom:2px solid var(--border-color);">
+                                    <th
+                                        style="padding:14px 16px;text-align:left;font-weight:700;color:var(--text-primary);">
+                                        Feature</th>
+                                    <th style="padding:14px 16px;text-align:center;font-weight:700;color:#ff424d;">
+                                        WolfStack</th>
+                                    <th
+                                        style="padding:14px 16px;text-align:center;font-weight:600;color:var(--text-secondary);">
+                                        Proxmox</th>
+                                    <th
+                                        style="padding:14px 16px;text-align:center;font-weight:600;color:var(--text-secondary);">
+                                        Kubernetes</th>
+                                    <th
+                                        style="padding:14px 16px;text-align:center;font-weight:600;color:var(--text-secondary);">
+                                        Portainer</th>
+                                    <th
+                                        style="padding:14px 16px;text-align:center;font-weight:600;color:var(--text-secondary);">
+                                        CasaOS</th>
+                                    <th
+                                        style="padding:14px 16px;text-align:center;font-weight:600;color:var(--text-secondary);">
+                                        Cockpit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="border-bottom:1px solid var(--border-color);">
+                                    <td style="padding:12px 16px;font-weight:600;">Docker Containers</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;font-weight:700;">
+                                        &#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;">&#x26A0;&#xFE0F; Limited</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;">&#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;">&#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;">&#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;">&#x26A0;&#xFE0F; Plugin</td>
+                                </tr>
+                                <tr
+                                    style="border-bottom:1px solid var(--border-color);background:rgba(255,255,255,0.02);">
+                                    <td style="padding:12px 16px;font-weight:600;">LXC Containers</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;font-weight:700;">
+                                        &#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;">&#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                </tr>
+                                <tr style="border-bottom:1px solid var(--border-color);">
+                                    <td style="padding:12px 16px;font-weight:600;">VM Management</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;font-weight:700;">
+                                        &#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;">&#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;">&#x26A0;&#xFE0F; Basic</td>
+                                </tr>
+                                <tr
+                                    style="border-bottom:1px solid var(--border-color);background:rgba(255,255,255,0.02);">
+                                    <td style="padding:12px 16px;font-weight:600;">Container Orchestration</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;font-weight:700;">
+                                        &#x2705; WolfRun</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;">&#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;">&#x26A0;&#xFE0F; Swarm</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                </tr>
+                                <tr style="border-bottom:1px solid var(--border-color);">
+                                    <td style="padding:12px 16px;font-weight:600;">Multi-Server Clustering</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;font-weight:700;">
+                                        &#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;">&#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;">&#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;">&#x26A0;&#xFE0F; Paid</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                </tr>
+                                <tr
+                                    style="border-bottom:1px solid var(--border-color);background:rgba(255,255,255,0.02);">
+                                    <td style="padding:12px 16px;font-weight:600;">Encrypted Mesh Networking</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;font-weight:700;">
+                                        &#x2705; WolfNet</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;">&#x26A0;&#xFE0F; CNI plugins</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                </tr>
+                                <tr style="border-bottom:1px solid var(--border-color);">
+                                    <td style="padding:12px 16px;font-weight:600;">Web Terminal</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;font-weight:700;">
+                                        &#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;">&#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;">&#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;">&#x2705;</td>
+                                </tr>
+                                <tr
+                                    style="border-bottom:1px solid var(--border-color);background:rgba(255,255,255,0.02);">
+                                    <td style="padding:12px 16px;font-weight:600;">File Manager</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;font-weight:700;">
+                                        &#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;">&#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                </tr>
+                                <tr style="border-bottom:1px solid var(--border-color);">
+                                    <td style="padding:12px 16px;font-weight:600;">App Store</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;font-weight:700;">
+                                        &#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;">&#x26A0;&#xFE0F; Helm</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;">&#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;">&#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                </tr>
+                                <tr
+                                    style="border-bottom:1px solid var(--border-color);background:rgba(255,255,255,0.02);">
+                                    <td style="padding:12px 16px;font-weight:600;">AI Agent</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;font-weight:700;">
+                                        &#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                </tr>
+                                <tr style="border-bottom:1px solid var(--border-color);">
+                                    <td style="padding:12px 16px;font-weight:600;">Alerting (Discord/Slack/Telegram)
+                                    </td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;font-weight:700;">
+                                        &#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;">&#x26A0;&#xFE0F; Add-ons</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                </tr>
+                                <tr
+                                    style="border-bottom:1px solid var(--border-color);background:rgba(255,255,255,0.02);">
+                                    <td style="padding:12px 16px;font-weight:600;">Database Editor</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;font-weight:700;">
+                                        &#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                </tr>
+                                <tr style="border-bottom:1px solid var(--border-color);">
+                                    <td style="padding:12px 16px;font-weight:600;">Issues Scanner</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;font-weight:700;">
+                                        &#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                </tr>
+                                <tr
+                                    style="border-bottom:1px solid var(--border-color);background:rgba(255,255,255,0.02);">
+                                    <td style="padding:12px 16px;font-weight:600;">Install Complexity</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;font-weight:700;">1
+                                        command</td>
+                                    <td style="padding:12px 16px;text-align:center;">ISO install</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">Very complex</td>
+                                    <td style="padding:12px 16px;text-align:center;">Moderate</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;">1 command</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;">1 command</td>
+                                </tr>
+                                <tr style="border-bottom:1px solid var(--border-color);">
+                                    <td style="padding:12px 16px;font-weight:600;">Written In</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;font-weight:700;">Rust
+                                        &#x1F980;</td>
+                                    <td style="padding:12px 16px;text-align:center;">Perl/C</td>
+                                    <td style="padding:12px 16px;text-align:center;">Go</td>
+                                    <td style="padding:12px 16px;text-align:center;">Go</td>
+                                    <td style="padding:12px 16px;text-align:center;">Go</td>
+                                    <td style="padding:12px 16px;text-align:center;">Python/C</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:12px 16px;font-weight:600;">Price</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;font-weight:700;">Free
+                                        &amp; Open Source<br><a href="https://www.patreon.com/15362110/join"
+                                            target="_blank"
+                                            style="color:#22c55e;font-size:0.8rem;font-weight:500;text-decoration:underline;">Supported
+                                            by Your Donations</a></td>
+                                    <td style="padding:12px 16px;text-align:center;">Free + Paid</td>
+                                    <td style="padding:12px 16px;text-align:center;">Free</td>
+                                    <td style="padding:12px 16px;text-align:center;">Free + Paid</td>
+                                    <td style="padding:12px 16px;text-align:center;">Free</td>
+                                    <td style="padding:12px 16px;text-align:center;">Free</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
 
+                <!-- Screenshot Gallery -->
+                <h2 style="text-align: center; font-size: 1.3rem; font-weight: 700; margin: 2rem 0 0.5rem;">Screenshots
+                </h2>
+                <p style="text-align: center; color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">
+                    See WolfStack in action</p>
 
-
-
-
+                <div class="screenshot-gallery">
+                    <div class="screenshot-card">
+                        <img src="images/node-detail.png" alt="Node Monitoring">
+                        <div class="screenshot-label">📊 Node Monitoring</div>
+                        <div class="screenshot-desc">Real-time CPU, memory, disk, and network metrics with interactive
+                            graphs</div>
+                    </div>
+                    <div class="screenshot-card">
+                        <img src="images/app-store.png" alt="App Store">
+                        <div class="screenshot-label">🛍️ App Store</div>
+                        <div class="screenshot-desc">Deploy containers and applications to any node with one click</div>
+                    </div>
+                    <div class="screenshot-card">
+                        <img src="images/settings-themes.png" alt="Theme Engine">
+                        <div class="screenshot-label">🎨 Theme Engine</div>
+                        <div class="screenshot-desc">Multiple beautiful themes — Dark, Midnight, Glass, Amber Terminal,
+                            and more</div>
+                    </div>
+                </div>
 
                 <!-- Products Section -->
                 <section class="products-section">
-                    <h2 class="products-section-title animate-fade-in animate-delay-3">The Wolf Toolkit</h2>
-                    <p class="products-section-subtitle animate-fade-in animate-delay-3">
+                    <h2 class="products-section-title animate-fade-in">The Wolf Toolkit</h2>
+                    <p class="products-section-subtitle animate-fade-in">
                         Everything you need to build robust, clustered server infrastructure
                     </p>
 
                     <div class="products-grid">
-                        <!-- WolfStack — Flagship Product -->
-                        <div class="product-card animate-fade-in animate-delay-3"
+                        <!-- WolfStack — Flagship -->
+                        <div class="product-card"
                             style="border-color: rgba(220, 38, 38, 0.3); box-shadow: 0 4px 24px rgba(220, 38, 38, 0.1);">
                             <div class="product-icon">📊</div>
                             <div class="product-name">WolfStack</div>
                             <span class="product-status available">⭐ Flagship</span>
                             <p class="product-description">
-                                The central management platform for your entire infrastructure. Beautiful Proxmox-like
-                                dashboard with real-time monitoring, <strong>Docker & LXC container management</strong>,
-                                component control, config editing, multi-server clustering, and live logs — all from one
-                                premium web interface with Linux authentication.
+                                The central management platform for your entire infrastructure. Beautiful dashboard with
+                                real-time monitoring,
+                                <strong>Docker & LXC container management</strong>, component control, config editing,
+                                multi-server clustering,
+                                and live logs — all from one premium web interface.
                             </p>
                             <ul class="product-features">
                                 <li>Real-time CPU, memory, disk & network monitoring</li>
-                                <li>Docker container management with live stats</li>
-                                <li>LXC container management with config editor</li>
+                                <li>Docker & LXC container management with live stats</li>
                                 <li>Clone & migrate containers between servers</li>
-                                <li>S3, NFS & WolfDisk storage manager (rust-s3)</li>
+                                <li>S3, NFS & WolfDisk storage manager</li>
                                 <li>Multi-server clustering & fleet management</li>
+                                <li>Built-in App Store, Issues Scanner, AI Agent</li>
                             </ul>
                             <a href="wolfstack.html" class="product-cta">Get Started →</a>
                         </div>
 
                         <!-- Proxmox Integration -->
-                        <div class="product-card animate-fade-in animate-delay-3"
-                            style="border-color: rgba(255, 107, 107, 0.3); box-shadow: 0 4px 24px rgba(255, 107, 107, 0.1);">
+                        <div class="product-card" style="border-color: rgba(255, 107, 107, 0.3);">
                             <div class="product-icon">🟠</div>
                             <div class="product-name">Proxmox Integration</div>
-                            <span class="product-status available">New Feature</span>
+                            <span class="product-status available">Built In</span>
                             <p class="product-description">
-                                Seamlessly manage your Proxmox VE clusters alongside WolfStack nodes. View VMs, LXC
-                                containers, and storage in a unified dashboard.
+                                Install WolfStack on top of your Proxmox servers. WolfStack automatically detects
+                                Proxmox and manages your entire VE cluster from the dashboard.
                             </p>
                             <ul class="product-features">
-                                <li>Unified dashboard for Proxmox & WolfStack</li>
-                                <li><strong>No agent required</strong> — uses Proxmox API</li>
-                                <li>VM & LXC start/stop/console access</li>
-                                <li>Automatic cluster grouping & discovery</li>
+                                <li>Install directly on Proxmox VE nodes</li>
+                                <li><strong>Auto-detects</strong> Proxmox — no configuration needed</li>
+                                <li>VM & LXC management from WolfStack</li>
+                                <li>Mix Proxmox and non-Proxmox nodes in one cluster</li>
                             </ul>
-                            <a href="wolfstack-mysql.html">MariaDB/MySQL Editor</a>
                             <a href="proxmox.html" class="product-cta">View Integration →</a>
                         </div>
 
                         <!-- WolfScale -->
-                        <div class="product-card animate-fade-in animate-delay-3">
+                        <div class="product-card">
                             <div class="product-icon">🗄️</div>
                             <div class="product-name">WolfScale</div>
                             <span class="product-status available">Available Now</span>
                             <p class="product-description">
                                 Database replication, clustering and load balancing — the easy way. WolfScale keeps your
                                 MariaDB and MySQL databases synchronised across any number of servers, with automatic
-                                failover and a built-in load balancer. One binary, one config file, done.
+                                failover.
                             </p>
                             <ul class="product-features">
                                 <li>MariaDB, MySQL, Percona & Amazon RDS support</li>
@@ -843,33 +1179,34 @@
                         </div>
 
                         <!-- WolfDisk -->
-                        <div class="product-card animate-fade-in animate-delay-4">
+                        <div class="product-card">
                             <div class="product-icon">💾</div>
                             <div class="product-name">WolfDisk</div>
                             <span class="product-status available">Available Now</span>
                             <p class="product-description">
                                 Distributed filesystem that shares and replicates files across your network. Mount a
-                                shared directory on any number of Linux machines and have your data automatically
-                                synchronised. Supports leader, follower and client modes for flexible deployments.
+                                shared
+                                directory on any number of Linux machines with automatic synchronisation.
                             </p>
                             <ul class="product-features">
                                 <li>FUSE-based — works as a regular Linux directory</li>
                                 <li>Content-addressed deduplication with SHA256</li>
-                                <li>S3-compatible API — mount from WolfStack via rust-s3</li>
+                                <li>S3-compatible API — mount from WolfStack</li>
                                 <li>Multiple independent drives per node</li>
                             </ul>
                             <a href="wolfdisk.html" class="product-cta">Get Started →</a>
                         </div>
 
                         <!-- WolfNet -->
-                        <div class="product-card animate-fade-in animate-delay-5">
+                        <div class="product-card">
                             <div class="product-icon">🌐</div>
                             <div class="product-name">WolfNet</div>
                             <span class="product-status available">Available Now</span>
                             <p class="product-description">
                                 Create a secure private network across the internet. Connect servers across data
-                                centres, cloud providers and on-premises infrastructure as if they were on the same
-                                local network. X25519 + ChaCha20-Poly1305 encrypted.
+                                centres,
+                                cloud providers and on-premises infrastructure as if they were on the same local
+                                network.
                             </p>
                             <ul class="product-features">
                                 <li>Encrypted mesh networking (WireGuard-class crypto)</li>
@@ -881,14 +1218,14 @@
                         </div>
 
                         <!-- WolfProxy -->
-                        <div class="product-card animate-fade-in animate-delay-5">
+                        <div class="product-card">
                             <div class="product-icon">🔀</div>
                             <div class="product-name">WolfProxy</div>
                             <span class="product-status available">Available Now</span>
                             <p class="product-description">
                                 NGINX-compatible reverse proxy with a built-in firewall. Reads your existing nginx
-                                configuration directly — just stop nginx, start WolfProxy. Auto-bans malicious IPs,
-                                supports load balancing, health checking, and a monitoring dashboard.
+                                configuration
+                                directly — just stop nginx, start WolfProxy.
                             </p>
                             <ul class="product-features">
                                 <li>Drop-in nginx replacement — reads sites-enabled</li>
@@ -900,14 +1237,14 @@
                         </div>
 
                         <!-- WolfServe -->
-                        <div class="product-card animate-fade-in animate-delay-6">
-                            <div class="product-icon">🌐</div>
+                        <div class="product-card">
+                            <div class="product-icon">🌍</div>
                             <div class="product-name">WolfServe</div>
                             <span class="product-status available">Available Now</span>
                             <p class="product-description">
                                 Apache2-compatible web server that serves PHP via FastCGI. Reads your existing Apache
-                                vhost configs directly. Includes a PHP FFI bridge to call Rust from PHP, multi-server
-                                session sharing, and an admin dashboard.
+                                vhost
+                                configs directly. Includes a PHP FFI bridge to call Rust from PHP.
                             </p>
                             <ul class="product-features">
                                 <li>Drop-in Apache2 replacement — reads vhosts</li>
@@ -919,14 +1256,13 @@
                         </div>
 
                         <!-- CodeWolf -->
-                        <div class="product-card animate-fade-in animate-delay-6">
+                        <div class="product-card">
                             <div class="product-icon">🐺</div>
                             <div class="product-name">CodeWolf</div>
                             <span class="product-status available">Available Now</span>
                             <p class="product-description">
                                 Software migration service — we migrate your projects from one platform to another,
-                                including full documentation builds. Let us handle the heavy lifting so you can focus on
-                                your business.
+                                including full documentation builds. Let us handle the heavy lifting.
                             </p>
                             <ul class="product-features">
                                 <li>Cross-platform project migration</li>
@@ -936,10 +1272,8 @@
                             </ul>
                             <a href="mailto:sales@wolf.uk.com" class="product-cta">Contact Sales →</a>
                         </div>
-
                     </div>
                 </section>
-
 
                 <!-- Support Section -->
                 <section class="support-section">
@@ -965,25 +1299,27 @@
                     </div>
                 </section>
 
-                <!-- Docs Quick Links -->
-                <section class="quick-links">
-                    <h2 class="quick-links-title">Documentation</h2>
+                <!-- Documentation Quick Links -->
+                <section style="padding: 2rem 0;">
+                    <h2
+                        style="text-align: center; font-size: 1.25rem; font-weight: 600; margin-bottom: 1.5rem; color: var(--text-secondary);">
+                        Documentation</h2>
                     <div class="quick-links-grid">
+                        <a href="wolfstack.html" class="quick-link">
+                            <h4>WolfStack</h4>
+                            <p>Overview</p>
+                        </a>
                         <a href="quickstart.html" class="quick-link">
                             <h4>Quick Start</h4>
                             <p>Install & setup</p>
                         </a>
-                        <a href="architecture.html" class="quick-link">
-                            <h4>Architecture</h4>
-                            <p>How it works</p>
+                        <a href="wolfstack-containers.html" class="quick-link">
+                            <h4>Containers</h4>
+                            <p>Docker & LXC</p>
                         </a>
-                        <a href="load-balancer.html" class="quick-link">
-                            <h4>Load Balancer</h4>
-                            <p>Configuration</p>
-                        </a>
-                        <a href="wolfdisk.html" class="quick-link">
-                            <h4>WolfDisk</h4>
-                            <p>Disk sharing</p>
+                        <a href="wolfnet.html" class="quick-link">
+                            <h4>WolfNet</h4>
+                            <p>Private network</p>
                         </a>
                         <a href="features.html" class="quick-link">
                             <h4>Features</h4>
@@ -994,7 +1330,7 @@
 
                 <div class="page-nav">
                     <span></span>
-                    <a href="quickstart.html" class="next">Quick Start →</a>
+                    <a href="wolfstack.html" class="next">WolfStack Overview →</a>
                 </div>
             </div>
 

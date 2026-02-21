@@ -1,987 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        gtag('js', new Date());
-        gtag('config', 'G-KK9NEE1S54');
-    </script>
-
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-KK9NEE1S54');</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description"
-        content="Global WolfNet — access every server across all your WolfStack clusters from your local machine on one unified encrypted private network.">
-    <meta name="keywords"
-        content="WolfNet, global network, mesh VPN, private network, multi-cluster, WolfStack, encrypted tunnel">
-    <meta name="author" content="Wolf Software Systems Ltd">
-    <link rel="canonical" href="https://wolfscale.org/wolfnet-global.html">
-
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://wolfscale.org/wolfnet-global.html">
-    <meta property="og:title" content="Global WolfNet — One Network, Every Server">
-    <meta property="og:description"
-        content="Access every server across all your WolfStack clusters from your local machine on one unified encrypted private network.">
-    <meta property="og:image" content="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg">
-
-    <title>Global WolfNet — One Network, Every Server | WolfScale</title>
+    <meta name="description" content="Access all your servers across all clusters from your local machine on one encrypted network">
+    <title>🌍 Global WolfNet Access — WolfStack Docs</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=9">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=10">
 </head>
-
 <body>
-    <div class="wiki-layout">
-        <aside class="sidebar" id="sidebar">
-            <a href="index.html" class="sidebar-logo"><img
-                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"></a>
-            <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span>
-                    </div>
-                    <a href="wolfstack.html">Overview &amp; Quick Start</a>
-                    <a href="wolfstack-containers.html">Container Management</a>
-                    <a href="wolfstack-storage.html">Storage Manager</a>
-                    <a href="wolfstack-files.html">File Manager</a>
-                    <a href="wolfstack-networking.html">Networking</a>
-                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
-                    <a href="wolfstack-mysql.html">MariaDB/MySQL Editor</a>
-                    <a href="wolfstack-security.html">Security</a>
-                    <a href="wolfstack-certificates.html">Certificates</a>
-                    <a href="wolfstack-cron.html">Cron Jobs</a>
-                    <a href="wolfstack-terminal.html">Terminal</a>
-                    <a href="wolfstack-issues.html">Issues Scanner</a>
-                    <a href="wolfstack-alerting.html">Alerting &amp; Notifications</a>
-                    <a href="proxmox.html">Proxmox Integration</a>
-                    <a href="app-store.html">App Store</a>
-                    <a href="wolfstack-ai.html">AI Agent</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication &amp; Load
-                            Balancer</span></div>
-                    <a href="quickstart.html">Quick Start</a>
-                    <a href="features.html">Features</a>
-                    <a href="architecture.html">Architecture</a>
-                    <a href="how-it-works.html">How It Works</a>
-                    <a href="binlog.html">Binlog Mode</a>
-                    <a href="load-balancer.html">Load Balancer</a>
-                    <a href="configuration.html">Configuration</a>
-                    <a href="performance.html">Performance</a>
-                    <a href="cli.html">CLI Reference</a>
-                    <a href="troubleshooting.html">Troubleshooting</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication &amp; Sharing</span>
-                    </div>
-                    <a href="wolfdisk.html">Overview &amp; Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
-                    <a href="wolfnet.html">Overview &amp; Quick Start</a>
-                    <a href="wolfnet-global.html" class="active">Global Network Access</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
-                            Firewall</span></div>
-                    <a href="wolfproxy.html">Overview &amp; Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
-                    </div>
-                    <a href="wolfserve.html">Overview &amp; Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">Company</div>
-                    <a href="https://wolf.uk.com" target="_blank">Wolf Software</a>
-                    <a href="about.html">About</a>
-                    <a href="roadmap.html">Roadmap</a>
-                    <a href="contact.html">Contact</a>
-                    <a href="glossary.html">Glossary</a>
-                    <a href="licensing.html">Licensing</a>
-                    <a href="support.html" style="color: #ff424d; font-weight: 700;">❤️ Support Us</a>
-                </div>
-            </nav>
-            <div class="theme-toggle-wrapper">
-                <span class="theme-toggle-label">Theme</span>
-                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
-                    <span class="theme-toggle-slider"></span>
-                </button>
+<div class="wiki-layout">
+<aside class="sidebar" id="sidebar">
+    <a href="index.html" class="sidebar-logo"><img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
+            alt="Wolf"></a>
+    <nav class="sidebar-nav">
+        <div class="nav-section">
+            <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span></div>
+            <a href="wolfstack.html">📊 Overview &amp; Quick Start</a>
+            <a href="wolfstack-containers.html">📦 Container Management</a>
+            <a href="wolfstack-storage.html">💾 Storage Manager</a>
+            <a href="wolfstack-files.html">📁 File Manager</a>
+            <a href="wolfstack-networking.html">🌐 Networking</a>
+            <a href="wolfstack-clustering.html">🔗 Multi-Server Clustering</a>
+            <a href="wolfstack-mysql.html">🗄️ MariaDB/MySQL Editor</a>
+            <a href="wolfstack-security.html">🔒 Security</a>
+            <a href="wolfstack-certificates.html">📜 Certificates</a>
+            <a href="wolfstack-cron.html">⏰ Cron Jobs</a>
+            <a href="wolfstack-terminal.html">💻 Terminal</a>
+            <a href="wolfstack-issues.html">🔍 Issues Scanner</a>
+            <a href="wolfstack-alerting.html">🔔 Alerting &amp; Notifications</a>
+            <a href="wolfrun.html">🐺 WolfRun Orchestration</a>
+            <a href="proxmox.html">🟠 Proxmox Integration</a>
+            <a href="app-store.html">🛍️ App Store</a>
+            <a href="wolfstack-ai.html">🤖 AI Agent</a>
+            <a href="wolfstack-settings.html">⚙️ Settings</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication &amp; Load
+                    Balancer</span></div>
+            <a href="quickstart.html">⚡ Quick Start</a>
+            <a href="features.html">✨ Features</a>
+            <a href="architecture.html">🏗️ Architecture</a>
+            <a href="how-it-works.html">⚙️ How It Works</a>
+            <a href="binlog.html">📋 Binlog Mode</a>
+            <a href="load-balancer.html">⚖️ Load Balancer</a>
+            <a href="configuration.html">🔧 Configuration</a>
+            <a href="performance.html">📈 Performance</a>
+            <a href="cli.html">🖥️ CLI Reference</a>
+            <a href="troubleshooting.html">🔧 Troubleshooting</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication &amp; Sharing</span></div>
+            <a href="wolfdisk.html">💿 Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
+            <a href="wolfnet.html">🌐 Overview &amp; Quick Start</a>
+            <a href="wolfnet-global.html" class="active">🌍 Global Network Access</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with Firewall</span>
             </div>
-            <div class="sidebar-links">
-                <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
-                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
-                <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
-                <a href="https://www.reddit.com/r/WolfStack/" target="_blank">Reddit</a>
-                <a href="https://wolf.uk.com" target="_blank">wolf.uk.com</a>
-            </div>
-        </aside>
-        <div class="sidebar-overlay" id="sidebar-overlay"></div>
-
-        <main class="wiki-main">
-            <div class="mobile-header">
-                <a href="index.html" class="nav-logo"><img
-                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
-                        class="logo-img"></a>
-                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
-            </div>
-
-            <div class="wiki-content">
-                <div class="content-header">                    <h1>🌐 Global WolfNet Access</h1>
-                    <p class="content-subtitle">One network. Every server. Wherever they are.</p>
-                </div>
-
-                <!-- What is Global WolfNet -->
-                <section class="content-section">
-                    <h2>What Is Global WolfNet?</h2>
-                    <p>
-                        WolfStack automatically sets up a WolfNet encrypted mesh network <em>within</em> each cluster.
-                        But WolfNet itself doesn't care about clusters — it's a pure network-layer mesh. That means you
-                        can extend any cluster's WolfNet to include your <strong>local machine</strong>, and from there
-                        reach every server across every cluster as if they were all on the same LAN.
-                    </p>
-                    <p style="margin-top: 1rem;">
-                        The result is a single flat private network that spans your entire infrastructure. You SSH,
-                        ping, query databases, and access services using stable <strong>WolfNet IP addresses</strong>
-                        — regardless of where the physical servers are hosted, what their public IPs are, or whether
-                        they're behind NAT.
-                    </p>
-
-                    <div
-                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
-                        <div class="feature-card">
-                            <div class="feature-icon">🖥️</div>
-                            <h3>Access All Servers</h3>
-                            <p>Reach every node across every cluster from your local machine using their WolfNet IPs.
-                            </p>
-                        </div>
-                        <div class="feature-card">
-                            <div class="feature-icon">🔐</div>
-                            <h3>Always Encrypted</h3>
-                            <p>Every byte is encrypted with X25519 + ChaCha20-Poly1305 — the same crypto as WireGuard.
-                            </p>
-                        </div>
-                        <div class="feature-card">
-                            <div class="feature-icon">🌍</div>
-                            <h3>Cross-Provider</h3>
-                            <p>Works across Hetzner, OVH, DigitalOcean, AWS — any server with a public IP joins the
-                                mesh.</p>
-                        </div>
-                        <div class="feature-card">
-                            <div class="feature-icon">🔀</div>
-                            <h3>NAT-Transparent</h3>
-                            <p>No port forwarding needed. Relay forwarding automatically handles machines behind NAT.
-                            </p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- How it Works -->
-                <section class="content-section">
-                    <h2>How It Works</h2>
-
-                    <div class="code-block">
-                        <div class="code-header"><span class="code-lang">text</span></div>
-                        <pre><code>
-  YOUR LOCAL MACHINE
-  (WolfNet IP: 10.0.10.100)
-          │
-          │  Encrypted WolfNet tunnel
-          │
-          ▼
-  ┌───────────────────────────────────────────────────────────────────┐
-  │                    GLOBAL WOLFNET MESH                            │
-  │                                                                   │
-  │   Cluster A            Cluster B           Cluster C             │
-  │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐        │
-  │  │ node-a1 .1   │    │ node-b1 .10  │    │ node-c1 .20  │        │
-  │  │ node-a2 .2   │    │ node-b2 .11  │    │ node-c2 .21  │        │
-  │  │ node-a3 .3   │    │ node-b3 .12  │    │ node-c3 .22  │        │
-  │  │ node-a4 .4   │    │ node-b4 .13  │    │ node-c4 .23  │        │
-  │  │ node-a5 .5   │    │ node-b5 .14  │    │ node-c5 .24  │        │
-  │  └──────────────┘    └──────────────┘    └──────────────┘        │
-  │                                                                   │
-  │  All servers already peer with each other within their cluster.   │
-  │  Adding your local machine peers you with the entire mesh.        │
-  └───────────────────────────────────────────────────────────────────┘
-
-  Result: ssh 10.0.10.3   ← connects to node-a3 directly, encrypted</code></pre>
-                    </div>
-
-                    <h3 style="margin-top: 2rem;">Why This Works</h3>
-                    <p>WolfNet uses <strong>Peer Exchange (PEX)</strong> — once your local machine peers with any one
-                        node in the mesh, every other node in the mesh automatically learns about your machine within
-                        ~30 seconds. You don't have to manually add all 17+ servers to your local config. You only
-                        need to peer with <strong>one reachable node per cluster</strong> as an entry point.</p>
-                </section>
-
-                <!-- Node Reference Table -->
-                <section class="content-section">
-                    <h2>Server Reference Table</h2>
-                    <p>This table lists the WolfNet IP address assigned to each server. Use these IPs to SSH, ping, or
-                        connect to any service on that machine from your local machine once you have joined the global
-                        mesh.</p>
-
-                    <div class="info-box" style="margin-bottom: 1.5rem;">
-                        <strong>💡 Finding a node's WolfNet IP:</strong> On any node, run
-                        <code>wolfnetctl status</code> or check the WolfStack dashboard → Networking → WolfNet tab.
-                        You can also run <code>ip addr show wolfnet0</code>.
-                    </div>
-
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Cluster</th>
-                                    <th>Hostname / Label</th>
-                                    <th>WolfNet IP</th>
-                                    <th>Public Endpoint</th>
-                                    <th>Role</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr style="background: rgba(220,38,38,0.06);">
-                                    <td><strong>Cluster A</strong></td>
-                                    <td>node-a1</td>
-                                    <td><code>10.0.10.1</code></td>
-                                    <td><em>your-server-ip:9600</em></td>
-                                    <td>Entry point ⭐</td>
-                                </tr>
-                                <tr>
-                                    <td>Cluster A</td>
-                                    <td>node-a2</td>
-                                    <td><code>10.0.10.2</code></td>
-                                    <td>—</td>
-                                    <td>Worker</td>
-                                </tr>
-                                <tr>
-                                    <td>Cluster A</td>
-                                    <td>node-a3</td>
-                                    <td><code>10.0.10.3</code></td>
-                                    <td>—</td>
-                                    <td>Worker</td>
-                                </tr>
-                                <tr>
-                                    <td>Cluster A</td>
-                                    <td>node-a4</td>
-                                    <td><code>10.0.10.4</code></td>
-                                    <td>—</td>
-                                    <td>Worker</td>
-                                </tr>
-                                <tr style="background: rgba(220,38,38,0.06);">
-                                    <td><strong>Cluster B</strong></td>
-                                    <td>node-b1</td>
-                                    <td><code>10.0.10.10</code></td>
-                                    <td><em>your-server-ip:9600</em></td>
-                                    <td>Entry point ⭐</td>
-                                </tr>
-                                <tr>
-                                    <td>Cluster B</td>
-                                    <td>node-b2</td>
-                                    <td><code>10.0.10.11</code></td>
-                                    <td>—</td>
-                                    <td>Worker</td>
-                                </tr>
-                                <tr>
-                                    <td>Cluster B</td>
-                                    <td>node-b3</td>
-                                    <td><code>10.0.10.12</code></td>
-                                    <td>—</td>
-                                    <td>Worker</td>
-                                </tr>
-                                <tr>
-                                    <td>Cluster B</td>
-                                    <td>node-b4</td>
-                                    <td><code>10.0.10.13</code></td>
-                                    <td>—</td>
-                                    <td>Worker</td>
-                                </tr>
-                                <tr style="background: rgba(220,38,38,0.06);">
-                                    <td><strong>Cluster C</strong></td>
-                                    <td>node-c1</td>
-                                    <td><code>10.0.10.20</code></td>
-                                    <td><em>your-server-ip:9600</em></td>
-                                    <td>Entry point ⭐</td>
-                                </tr>
-                                <tr>
-                                    <td>Cluster C</td>
-                                    <td>node-c2</td>
-                                    <td><code>10.0.10.21</code></td>
-                                    <td>—</td>
-                                    <td>Worker</td>
-                                </tr>
-                                <tr>
-                                    <td>Cluster C</td>
-                                    <td>node-c3</td>
-                                    <td><code>10.0.10.22</code></td>
-                                    <td>—</td>
-                                    <td>Worker</td>
-                                </tr>
-                                <tr>
-                                    <td>Cluster C</td>
-                                    <td>node-c4</td>
-                                    <td><code>10.0.10.23</code></td>
-                                    <td>—</td>
-                                    <td>Worker</td>
-                                </tr>
-                                <tr style="background: rgba(220,38,38,0.06);">
-                                    <td><strong>Cluster D</strong></td>
-                                    <td>node-d1</td>
-                                    <td><code>10.0.10.30</code></td>
-                                    <td><em>your-server-ip:9600</em></td>
-                                    <td>Entry point ⭐</td>
-                                </tr>
-                                <tr>
-                                    <td>Cluster D</td>
-                                    <td>node-d2</td>
-                                    <td><code>10.0.10.31</code></td>
-                                    <td>—</td>
-                                    <td>Worker</td>
-                                </tr>
-                                <tr>
-                                    <td>Cluster D</td>
-                                    <td>node-d3</td>
-                                    <td><code>10.0.10.32</code></td>
-                                    <td>—</td>
-                                    <td>Worker</td>
-                                </tr>
-                                <tr>
-                                    <td>Cluster D</td>
-                                    <td>node-d4</td>
-                                    <td><code>10.0.10.33</code></td>
-                                    <td>—</td>
-                                    <td>Worker</td>
-                                </tr>
-                                <tr>
-                                    <td>Cluster D</td>
-                                    <td>node-d5</td>
-                                    <td><code>10.0.10.34</code></td>
-                                    <td>—</td>
-                                    <td>Worker</td>
-                                </tr>
-                                <tr style="background: rgba(88,101,242,0.08);">
-                                    <td><strong>Local Machine</strong></td>
-                                    <td>my-laptop</td>
-                                    <td><code>10.0.10.100</code></td>
-                                    <td>—</td>
-                                    <td>You 💻</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="info-box" style="margin-top: 1rem;">
-                        <strong>📝 This table is a template.</strong> Replace the hostnames, WolfNet IPs, and
-                        public endpoints with the real values from your servers. The WolfNet IP scheme shown
-                        here (grouping clusters in blocks of 10) is just a suggestion — your servers may already
-                        have IPs assigned. Run <code>wolfnetctl peers</code> on any node to see the real layout.
-                    </div>
-                </section>
-
-                <!-- Local Machine Config -->
-                <section class="content-section">
-                    <h2>Local Machine Config File</h2>
-                    <p>Install WolfNet on your local machine, then replace
-                        <code>/etc/wolfnet/config.toml</code> with the config below. You only need to specify
-                        <strong>one entry-point node per cluster</strong> — WolfNet's Peer Exchange (PEX) will
-                        automatically discover all other nodes in the mesh within ~30 seconds of connecting.
-                    </p>
-
-                    <div class="info-box" style="margin-bottom: 1.5rem;">
-                        <strong>💡 How to get a node's public key:</strong> On that server run
-                        <code>wolfnet pubkey</code> or check the WolfStack dashboard → Networking → WolfNet.
-                    </div>
-
-                    <div class="code-block">
-                        <div class="code-header">
-                            <span class="code-lang">toml</span>
-                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                        </div>
-                        <pre><code># /etc/wolfnet/config.toml
-# Local machine — global mesh access
-# Replace public_key and endpoint values with your real server details.
-# Run `wolfnet pubkey` on each server to get its public key.
-# Run `wolfnetctl status` on each server to confirm its WolfNet IP.
-
-[network]
-address = "10.0.10.100"    # WolfNet IP for YOUR local machine (pick a free one)
-listen_port = 9600
-
-# ─── Cluster A entry point ───────────────────────────────────────────────────
-[[peers]]
-name        = "cluster-a-node1"
-public_key  = "PASTE_NODE_A1_PUBLIC_KEY_HERE"
-endpoint    = "PASTE_NODE_A1_PUBLIC_IP:9600"
-allowed_ip  = "10.0.10.1"
-# PEX will discover node-a2, node-a3, node-a4, etc. automatically.
-
-# ─── Cluster B entry point ───────────────────────────────────────────────────
-[[peers]]
-name        = "cluster-b-node1"
-public_key  = "PASTE_NODE_B1_PUBLIC_KEY_HERE"
-endpoint    = "PASTE_NODE_B1_PUBLIC_IP:9600"
-allowed_ip  = "10.0.10.10"
-
-# ─── Cluster C entry point ───────────────────────────────────────────────────
-[[peers]]
-name        = "cluster-c-node1"
-public_key  = "PASTE_NODE_C1_PUBLIC_KEY_HERE"
-endpoint    = "PASTE_NODE_C1_PUBLIC_IP:9600"
-allowed_ip  = "10.0.10.20"
-
-# ─── Cluster D entry point ───────────────────────────────────────────────────
-[[peers]]
-name        = "cluster-d-node1"
-public_key  = "PASTE_NODE_D1_PUBLIC_KEY_HERE"
-endpoint    = "PASTE_NODE_D1_PUBLIC_IP:9600"
-allowed_ip  = "10.0.10.30"</code></pre>
-                    </div>
-
-                    <div class="info-box" style="margin-top: 1.5rem;">
-                        <strong>💡 No port forwarding needed on your local machine.</strong> Your machine initiates
-                        outbound connections to the servers. As long as the servers are reachable at their public IPs
-                        on UDP port 9600, everything works — even if your local machine is behind a home router with
-                        no port forwarding.
-                    </div>
-                </section>
-
-                <!-- Step-by-step setup -->
-                <section class="content-section">
-                    <h2>Step-by-Step Setup</h2>
-
-                    <h3>Step 1 — Install WolfNet on your local machine</h3>
-                    <div class="code-block">
-                        <div class="code-header">
-                            <span class="code-lang">bash</span>
-                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                        </div>
-                        <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/wolfnet/setup.sh | sudo bash</code></pre>
-                    </div>
-                    <p style="margin-top: 1rem;">When prompted, choose a WolfNet IP that isn't already in use on your
-                        servers (e.g. <code>10.0.10.100</code>). You can leave gateway mode off.</p>
-
-                    <h3 style="margin-top: 2rem;">Step 2 — Find each entry-point node's public key</h3>
-                    <p>On each cluster's entry-point server, run:</p>
-                    <div class="code-block">
-                        <div class="code-header">
-                            <span class="code-lang">bash</span>
-                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                        </div>
-                        <pre><code># Run this on node-a1, node-b1, node-c1, node-d1 etc.
-wolfnet pubkey
-
-# Also note its public IP:
-curl -s ifconfig.me</code></pre>
-                    </div>
-
-                    <h3 style="margin-top: 2rem;">Step 3 — Replace your local config</h3>
-                    <p>Edit <code>/etc/wolfnet/config.toml</code> on your local machine and fill in the public keys
-                        and IPs you collected above, using the template in the section above.</p>
-
-                    <h3 style="margin-top: 2rem;">Step 4 — Add your local machine as a peer on each entry-point node
-                    </h3>
-                    <p>On each entry node (node-a1, node-b1, etc.) you need to tell WolfNet about your local machine.
-                        The easiest way is the invite/join flow:</p>
-                    <div class="code-block">
-                        <div class="code-header">
-                            <span class="code-lang">bash</span>
-                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                        </div>
-                        <pre><code># On the server (node-a1):
-sudo wolfnet invite
-
-# Copy the output command to your LOCAL machine and run it:
-sudo wolfnet --config /etc/wolfnet/config.toml join eyJwa...
-
-# Copy the reverse token back to the server and run it:
-sudo wolfnet --config /etc/wolfnet/config.toml join eyJlc...
-
-# Restart WolfNet on the server:
-sudo systemctl restart wolfnet
-
-# Repeat for node-b1, node-c1, node-d1 etc.</code></pre>
-                    </div>
-                    <p style="margin-top: 1rem;">Alternatively, manually append a <code>[[peers]]</code> block for
-                        your local machine to each server's config, then restart WolfNet. Either method works.</p>
-
-                    <h3 style="margin-top: 2rem;">Step 5 — Restart WolfNet on your local machine</h3>
-                    <div class="code-block">
-                        <div class="code-header">
-                            <span class="code-lang">bash</span>
-                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                        </div>
-                        <pre><code>sudo systemctl restart wolfnet</code></pre>
-                    </div>
-
-                    <h3 style="margin-top: 2rem;">Step 6 — Verify</h3>
-                    <div class="code-block">
-                        <div class="code-header">
-                            <span class="code-lang">bash</span>
-                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                        </div>
-                        <pre><code># See all peers discovered so far (PEX propagates within ~30s):
-wolfnetctl peers
-
-# Ping a server in Cluster A:
-ping 10.0.10.1
-
-# Ping a server in Cluster D:
-ping 10.0.10.30
-
-# SSH into any server by WolfNet IP:
-ssh user@10.0.10.12</code></pre>
-                    </div>
-
-                    <div class="info-box" style="margin-top: 1.5rem;">
-                        <strong>✅ Within about 30 seconds</strong> of restarting, WolfNet's Peer Exchange will
-                        propagate your local machine's details to every node across all clusters — and you'll see
-                        all 17 servers appear in <code>wolfnetctl peers</code> automatically.
-                    </div>
-                </section>
-
-                <!-- IP Allocation Registry — Dynamic -->
-                <section class="content-section" id="ip-registry-section">
-                    <h2>📋 Live IP Allocation Registry</h2>
-                    <p>
-                        All IPs across your fleet — WolfNet node IPs, LXC containers, Docker containers, and VMs —
-                        pulled live from your WolfStack API. Use this to spot conflicts before they happen.
-                    </p>
-
-                    <style>
-                        .ip-registry-toolbar { display:flex; align-items:center; gap:1rem; margin-bottom:1rem; flex-wrap:wrap; }
-                        .ip-registry-toolbar input { flex:1; min-width:180px; padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-tertiary); color:var(--text-primary); font-size:0.875rem; }
-                        .ip-registry-toolbar input:focus { outline:none; border-color:var(--accent-primary); }
-                        .ip-registry-btn { padding:8px 16px; border-radius:8px; border:none; cursor:pointer; font-size:0.85rem; font-weight:600; transition:all 0.2s; background:var(--accent-gradient,#dc2626); color:white; }
-                        .ip-registry-btn:hover { opacity:0.9; transform:translateY(-1px); }
-                        .ip-registry-btn:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
-                        .ip-registry-status { font-size:0.8rem; color:var(--text-muted); margin-left:auto; }
-                        .ip-sortable-table th { cursor:pointer; user-select:none; white-space:nowrap; }
-                        .ip-sortable-table th:hover { color:var(--accent-primary); }
-                        .ip-sortable-table th.sort-asc::after  { content:' ▲'; font-size:0.7em; }
-                        .ip-sortable-table th.sort-desc::after { content:' ▼'; font-size:0.7em; }
-                        .ip-reg-loading { text-align:center; padding:2rem; color:var(--text-muted); font-size:0.9rem; }
-                        .ip-reg-error { padding:1rem 1.25rem; border-radius:8px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); color:var(--text-primary); font-size:0.9rem; margin:0.5rem 0 1rem; }
-                        .ip-reg-subsection { margin-top:2rem; }
-                        .ip-reg-subsection h3 { margin-bottom:0.5rem; }
-                        .ip-sortable-table td code { font-size:0.82rem; }
-                    </style>
-
-                    <div id="ip-auth-error" class="ip-reg-error" style="display:none;">
-                        ⚠️ <strong>Not authenticated with WolfStack.</strong>
-                        Open this page while logged into your WolfStack dashboard, or
-                        <a href="/api/auth/login" style="color:var(--accent-primary);text-decoration:underline;">log in →</a>
-                    </div>
-
-                    <div class="ip-registry-toolbar">
-                        <input type="text" id="ip-filter" placeholder="🔍 Filter by cluster, hostname, IP…" oninput="filterIpTable()">
-                        <button class="ip-registry-btn" id="ip-refresh-btn" onclick="loadIpRegistry()">⟳ Refresh</button>
-                        <span class="ip-registry-status" id="ip-registry-status">Not loaded</span>
-                    </div>
-
-                    <div id="ip-loading" class="ip-reg-loading">Loading IP data from WolfStack…</div>
-
-                    <div id="ip-registry-tables" style="display:none;">
-                        <div class="ip-reg-subsection">
-                            <h3>🌐 WolfNet Node IPs</h3>
-                            <p style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:0.75rem;">
-                                Each node's WolfNet interface IP. <strong>Never reuse these in containers or VMs.</strong>
-                            </p>
-                            <div class="table-wrapper">
-                                <table class="ip-sortable-table" id="tbl-wolfnet">
-                                    <thead><tr>
-                                        <th onclick="sortIpTable('tbl-wolfnet',0)">Cluster</th>
-                                        <th onclick="sortIpTable('tbl-wolfnet',1)">Node / Hostname</th>
-                                        <th onclick="sortIpTable('tbl-wolfnet',2)">WolfNet IP</th>
-                                        <th onclick="sortIpTable('tbl-wolfnet',3)">Status</th>
-                                        <th onclick="sortIpTable('tbl-wolfnet',4)">Public Endpoint</th>
-                                    </tr></thead>
-                                    <tbody id="tbl-wolfnet-body"><tr><td colspan="5" class="ip-reg-loading">Loading…</td></tr></tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div class="ip-reg-subsection">
-                            <h3>📦 LXC Container IPs</h3>
-                            <p style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:0.75rem;">
-                                Container IPs per host node. Ensure these don't overlap with the WolfNet subnet.
-                            </p>
-                            <div class="table-wrapper">
-                                <table class="ip-sortable-table" id="tbl-lxc">
-                                    <thead><tr>
-                                        <th onclick="sortIpTable('tbl-lxc',0)">Cluster</th>
-                                        <th onclick="sortIpTable('tbl-lxc',1)">Host Node</th>
-                                        <th onclick="sortIpTable('tbl-lxc',2)">Container Name</th>
-                                        <th onclick="sortIpTable('tbl-lxc',3)">IP Address</th>
-                                        <th onclick="sortIpTable('tbl-lxc',4)">State</th>
-                                    </tr></thead>
-                                    <tbody id="tbl-lxc-body"><tr><td colspan="5" class="ip-reg-loading">Loading…</td></tr></tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div class="ip-reg-subsection">
-                            <h3>🐳 Docker Container IPs</h3>
-                            <p style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:0.75rem;">
-                                Docker's default bridge is <code>172.17.0.0/16</code> — ensure it doesn't clash with WolfNet.
-                            </p>
-                            <div class="table-wrapper">
-                                <table class="ip-sortable-table" id="tbl-docker">
-                                    <thead><tr>
-                                        <th onclick="sortIpTable('tbl-docker',0)">Cluster</th>
-                                        <th onclick="sortIpTable('tbl-docker',1)">Host Node</th>
-                                        <th onclick="sortIpTable('tbl-docker',2)">Container Name</th>
-                                        <th onclick="sortIpTable('tbl-docker',3)">IP Address</th>
-                                        <th onclick="sortIpTable('tbl-docker',4)">Network</th>
-                                        <th onclick="sortIpTable('tbl-docker',5)">State</th>
-                                    </tr></thead>
-                                    <tbody id="tbl-docker-body"><tr><td colspan="6" class="ip-reg-loading">Loading…</td></tr></tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div class="ip-reg-subsection">
-                            <h3>🖥️ Virtual Machine IPs (KVM / Proxmox)</h3>
-                            <p style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:0.75rem;">
-                                Guest IPs reported by VMs running on your nodes.
-                            </p>
-                            <div class="table-wrapper">
-                                <table class="ip-sortable-table" id="tbl-vms">
-                                    <thead><tr>
-                                        <th onclick="sortIpTable('tbl-vms',0)">Cluster</th>
-                                        <th onclick="sortIpTable('tbl-vms',1)">Host Node</th>
-                                        <th onclick="sortIpTable('tbl-vms',2)">VM Name / ID</th>
-                                        <th onclick="sortIpTable('tbl-vms',3)">IP Address</th>
-                                        <th onclick="sortIpTable('tbl-vms',4)">State</th>
-                                    </tr></thead>
-                                    <tbody id="tbl-vms-body"><tr><td colspan="5" class="ip-reg-loading">Loading…</td></tr></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="info-box" style="margin-top:1.5rem;">
-                        <strong>⚠️ Clash rules:</strong>
-                        <ul style="margin-top:0.5rem;margin-bottom:0;">
-                            <li>Never allocate IPs from the WolfNet subnet (e.g. <code>10.0.10.x</code>) to containers or VMs.</li>
-                            <li>Docker's default bridge (<code>172.17.0.0/16</code>) must not overlap with WolfNet peer routes.</li>
-                            <li>Check Proxmox SDN/VLAN subnets — ensure they don't overlap with the WolfNet range.</li>
-                        </ul>
-                    </div>
-                </section>
-
-                <script>
-                (function () {
-                    // ── Sort ──────────────────────────────────────────────────
-                    const _ipSort = {};
-                    function sortIpTable(tableId, col) {
-                        const tbl = document.getElementById(tableId);
-                        if (!tbl) return;
-                        const key = tableId + ':' + col;
-                        _ipSort[key] = _ipSort[key] === 'asc' ? 'desc' : 'asc';
-                        const dir = _ipSort[key];
-                        tbl.querySelectorAll('th').forEach((th, i) => {
-                            th.classList.remove('sort-asc', 'sort-desc');
-                            if (i === col) th.classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
-                        });
-                        const tbody = tbl.querySelector('tbody');
-                        Array.from(tbody.querySelectorAll('tr')).sort((a, b) => {
-                            const aT = (a.cells[col] ? a.cells[col].textContent : '').trim().toLowerCase();
-                            const bT = (b.cells[col] ? b.cells[col].textContent : '').trim().toLowerCase();
-                            const ipRe = /^(\d+)\.(\d+)\.(\d+)\.(\d+)/;
-                            const aIp = aT.match(ipRe), bIp = bT.match(ipRe);
-                            if (aIp && bIp) {
-                                for (let i = 1; i <= 4; i++) {
-                                    const d = parseInt(aIp[i]) - parseInt(bIp[i]);
-                                    if (d !== 0) return dir === 'asc' ? d : -d;
-                                }
-                                return 0;
-                            }
-                            return dir === 'asc' ? aT.localeCompare(bT) : bT.localeCompare(aT);
-                        }).forEach(r => tbody.appendChild(r));
-                    }
-                    window.sortIpTable = sortIpTable;
-
-                    // ── Filter ────────────────────────────────────────────────
-                    function filterIpTable() {
-                        const q = (document.getElementById('ip-filter').value || '').toLowerCase();
-                        ['tbl-wolfnet', 'tbl-lxc', 'tbl-docker', 'tbl-vms'].forEach(id => {
-                            const tbl = document.getElementById(id);
-                            if (tbl) tbl.querySelectorAll('tbody tr').forEach(row => {
-                                row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
-                            });
-                        });
-                    }
-                    window.filterIpTable = filterIpTable;
-
-                    // ── Helpers ───────────────────────────────────────────────
-                    function esc(s) {
-                        return String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-                    }
-                    function ipCell(s) {
-                        const v = (s || '').split('/')[0].trim();
-                        return v ? '<code>' + esc(v) + '</code>' : '<span style="color:var(--text-muted)">—</span>';
-                    }
-                    function emptyRow(cols, msg) {
-                        const tr = document.createElement('tr');
-                        const td = document.createElement('td');
-                        td.colSpan = cols;
-                        td.style.cssText = 'text-align:center;color:var(--text-muted);font-size:0.85rem;padding:1.2rem';
-                        td.textContent = msg;
-                        tr.appendChild(td);
-                        return tr;
-                    }
-                    function makeRow(cells) {
-                        const tr = document.createElement('tr');
-                        cells.forEach(c => {
-                            const td = document.createElement('td');
-                            td.innerHTML = c;
-                            tr.appendChild(td);
-                        });
-                        return tr;
-                    }
-
-                    // ── Loader ────────────────────────────────────────────────
-                    async function loadIpRegistry() {
-                        const btn    = document.getElementById('ip-refresh-btn');
-                        const status = document.getElementById('ip-registry-status');
-                        const loader = document.getElementById('ip-loading');
-                        const tables = document.getElementById('ip-registry-tables');
-                        const authEl = document.getElementById('ip-auth-error');
-
-                        btn.disabled = true;
-                        btn.textContent = '⟳ Loading…';
-                        loader.style.display = 'block';
-                        tables.style.display = 'none';
-                        authEl.style.display = 'none';
-                        status.textContent = 'Fetching…';
-
-                        try {
-                            const base = window.location.origin;
-
-                            // Fetch node list
-                            const nodesResp = await fetch(base + '/api/nodes', { credentials: 'include' });
-                            if (nodesResp.status === 401 || nodesResp.status === 403) {
-                                throw Object.assign(new Error('auth'), { auth: true });
-                            }
-                            const nodesData = await nodesResp.json();
-                            const nodes = nodesData.nodes || [];
-                            const selfNode = nodes.find(n => n.is_self) || {};
-
-                            const wnRows = [], lxcRows = [], dockerRows = [], vmRows = [];
-
-                            // ── WolfNet status ────────────────────────────────
-                            try {
-                                const wn = await fetch(base + '/api/networking/wolfnet', { credentials: 'include' }).then(r => r.json());
-                                const selfCluster = esc(selfNode.cluster_name || 'Default');
-                                const selfHost    = esc(selfNode.hostname || 'localhost');
-                                const selfIp      = (wn.ip || '').split('/')[0];
-                                if (selfIp) {
-                                    wnRows.push({ cluster: selfCluster, hostname: selfHost, ip: selfIp,
-                                        status: wn.running ? '🟢 Running' : '🔴 Stopped',
-                                        endpoint: esc(selfNode.address || ''), sort: selfCluster + selfHost });
-                                }
-                                // Peers = all other nodes visible to the mesh
-                                (wn.peers || []).forEach(peer => {
-                                    const matched = nodes.find(n => n.hostname === peer.name);
-                                    const cluster = esc((matched && matched.cluster_name) || 'Mesh');
-                                    wnRows.push({
-                                        cluster, hostname: esc(peer.name || ''),
-                                        ip: (peer.ip || '').split('/')[0],
-                                        status: peer.connected ? '🟢 Connected' : '⚪ Known',
-                                        endpoint: esc(peer.endpoint || ''),
-                                        sort: cluster + (peer.name || '')
-                                    });
-                                });
-                            } catch (e) { /* wolfnet not running */ }
-
-                            // ── LXC containers ────────────────────────────────
-                            try {
-                                const lxcData = await fetch(base + '/api/containers/lxc', { credentials: 'include' }).then(r => r.json());
-                                const list = Array.isArray(lxcData) ? lxcData : (lxcData.containers || []);
-                                const cluster  = esc(selfNode.cluster_name || 'Default');
-                                const hostname = esc(selfNode.hostname || 'localhost');
-                                list.forEach(c => {
-                                    const ips = [];
-                                    if (c.ip)   ips.push(c.ip);
-                                    if (c.ipv4) ips.push(c.ipv4);
-                                    if (c.interfaces) c.interfaces.forEach(iface => { if (iface.address) ips.push(iface.address); });
-                                    if (ips.length === 0) ips.push('');
-                                    [...new Set(ips)].forEach(ip => {
-                                        lxcRows.push({ cluster, hostname,
-                                            name: esc(c.name || c.id || '?'),
-                                            ip, state: esc(c.state || c.status || '?'),
-                                            sort: cluster + hostname + (c.name || '') });
-                                    });
-                                });
-                            } catch (e) { /* lxc not running */ }
-
-                            // ── Docker containers ─────────────────────────────
-                            try {
-                                const dockerData = await fetch(base + '/api/containers/docker', { credentials: 'include' }).then(r => r.json());
-                                const list = Array.isArray(dockerData) ? dockerData : (dockerData.containers || []);
-                                const cluster  = esc(selfNode.cluster_name || 'Default');
-                                const hostname = esc(selfNode.hostname || 'localhost');
-                                list.forEach(c => {
-                                    const name  = esc(((c.names && c.names[0]) || c.name || c.id || '?').replace(/^\//, ''));
-                                    const state = esc(c.state || c.status || '?');
-                                    const nets  = (c.networks || (c.NetworkSettings && c.NetworkSettings.Networks) || {});
-                                    const entries = Object.entries(nets);
-                                    if (entries.length === 0) {
-                                        dockerRows.push({ cluster, hostname, name, ip: c.ip || '', network: '', state, sort: cluster + hostname + name });
-                                    } else {
-                                        entries.forEach(([netName, netInfo]) => {
-                                            const ip = ((netInfo && (netInfo.IPAddress || netInfo.ip_address)) || c.ip || '').split('/')[0];
-                                            dockerRows.push({ cluster, hostname, name, ip, network: esc(netName), state, sort: cluster + hostname + name });
-                                        });
-                                    }
-                                });
-                            } catch (e) { /* docker not running */ }
-
-                            // ── VMs ───────────────────────────────────────────
-                            try {
-                                const vmData = await fetch(base + '/api/vms', { credentials: 'include' }).then(r => r.json());
-                                const list = Array.isArray(vmData) ? vmData : (vmData.vms || []);
-                                const cluster  = esc(selfNode.cluster_name || 'Default');
-                                const hostname = esc(selfNode.hostname || 'localhost');
-                                list.forEach(v => {
-                                    const raw = v.ips || v.ip_addresses || (v.ip ? [v.ip] : ['']);
-                                    const ips = Array.isArray(raw) ? raw : [raw];
-                                    (ips.length ? ips : ['']).filter(x => !String(x).startsWith('127.')).forEach(ip => {
-                                        vmRows.push({ cluster, hostname,
-                                            name: esc(v.name || v.vmid || v.id || '?'),
-                                            ip: String(ip || '').split('/')[0],
-                                            state: esc(v.state || v.status || '?'),
-                                            sort: cluster + hostname + (v.name || '') });
-                                    });
-                                });
-                            } catch (e) { /* vms not available */ }
-
-                            // ── Render helpers ────────────────────────────────
-                            function renderTable(bodyId, dataRows, colMap, cols, emptyMsg) {
-                                dataRows.sort((a, b) => a.sort.localeCompare(b.sort));
-                                const tbody = document.getElementById(bodyId);
-                                tbody.innerHTML = '';
-                                if (dataRows.length === 0) { tbody.appendChild(emptyRow(cols, emptyMsg)); return; }
-                                dataRows.forEach(r => tbody.appendChild(makeRow(colMap(r))));
-                            }
-
-                            renderTable('tbl-wolfnet-body', wnRows,
-                                r => [esc(r.cluster), esc(r.hostname), ipCell(r.ip), r.status, r.endpoint || '—'],
-                                5, 'No WolfNet data — is WolfNet installed and running on this node?');
-
-                            renderTable('tbl-lxc-body', lxcRows,
-                                r => [esc(r.cluster), esc(r.hostname), r.name, ipCell(r.ip), r.state],
-                                5, 'No LXC containers found (LXC not installed, or no containers exist)');
-
-                            renderTable('tbl-docker-body', dockerRows,
-                                r => [esc(r.cluster), esc(r.hostname), r.name, ipCell(r.ip), r.network || '—', r.state],
-                                6, 'No Docker containers found (Docker not installed, or no containers running)');
-
-                            renderTable('tbl-vms-body', vmRows,
-                                r => [esc(r.cluster), esc(r.hostname), r.name, ipCell(r.ip), r.state],
-                                5, 'No VMs found');
-
-                            loader.style.display = 'none';
-                            tables.style.display = 'block';
-                            status.textContent = 'Last updated: ' + new Date().toLocaleTimeString();
-
-                        } catch (err) {
-                            loader.style.display = 'none';
-                            if (err.auth) {
-                                authEl.style.display = 'block';
-                                status.textContent = 'Not authenticated';
-                            } else {
-                                status.textContent = 'Error: ' + err.message;
-                                loader.style.display = 'block';
-                                loader.textContent = 'Failed to load: ' + err.message;
-                            }
-                        }
-
-                        btn.disabled = false;
-                        btn.textContent = '⟳ Refresh';
-                    }
-                    window.loadIpRegistry = loadIpRegistry;
-
-                    document.addEventListener('DOMContentLoaded', loadIpRegistry);
-                })();
-                </script>
-
-            <!-- Tips -->
-            <section class="content-section">
-                <h2>Tips &amp; Tricks</h2>
-
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Tip</th>
-                                <th>Details</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><strong>Use <code>/etc/hosts</code> aliases</strong></td>
-                                <td>Add entries like <code>10.0.10.1  node-a1</code> to your local
-                                    <code>/etc/hosts</code> so you can <code>ssh node-a1</code> instead of
-                                    remembering IPs.
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><strong>Only one entry point per cluster needed</strong></td>
-                                <td>PEX automatically distributes peer info. You don't need to manually
-                                    add all 17 servers — just one reachable node per cluster.</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Dynamic home IP?</strong></td>
-                                <td>Your local machine initiates outbound connections, so it doesn't need a
-                                    static IP or port forwarding. The servers need reachable public endpoints.</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Laptop on the go</strong></td>
-                                <td>WolfNet handles endpoint roaming automatically. Switch from WiFi to mobile
-                                    data and your connections recover within ~30 seconds.</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Multiple local machines</strong></td>
-                                <td>Give each device its own WolfNet IP (e.g. <code>10.0.10.100</code>,
-                                    <code>10.0.10.101</code>, …) and repeat the invite process.
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><strong>Confirm WolfNet IPs on servers</strong></td>
-                                <td>Run <code>wolfnetctl status</code> or <code>ip addr show wolfnet0</code>
-                                    on any server to see its WolfNet IP.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <div class="page-nav">
-                <a href="wolfnet.html" class="prev">← WolfNet Overview</a>
-                <span></span>
-            </div>
+            <a href="wolfproxy.html">🛡️ Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span></div>
+            <a href="wolfserve.html">🌎 Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Company</div>
+            <a href="https://wolf.uk.com" target="_blank">🐺 Wolf Software</a>
+            <a href="about.html">ℹ️ About</a>
+            <a href="roadmap.html">🗺️ Roadmap</a>
+            <a href="contact.html">📧 Contact</a>
+            <a href="glossary.html">📖 Glossary</a>
+            <a href="licensing.html">📄 Licensing</a>
+            <a href="support.html" style="color:#ff424d;font-weight:700;">&#10084;&#65039; Support Us</a>
+        </div>
+    </nav>
+    <div class="theme-toggle-wrapper">
+        <span class="theme-toggle-label">Theme</span>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme"><span
+                class="theme-toggle-slider"></span></button>
     </div>
+    <div class="sidebar-links">
+        <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
+        <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+        <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+        <a href="https://www.reddit.com/r/WolfStack/" target="_blank">Reddit</a>
+        <a href="https://wolf.uk.com" target="_blank">wolf.uk.com</a>
+    </div>
+</aside>    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <main class="wiki-main">
+        <div class="mobile-header">
+            <a href="index.html" class="nav-logo"><img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf" class="logo-img"></a>
+            <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+        </div>
+        <div class="page-header"><h1>🌍 Global WolfNet Access</h1><p>Access all your servers across all clusters from your local machine on one encrypted network</p></div>
+        <div class="wiki-content">
 
-    <footer class="wiki-footer"
-        style="margin-top: 3rem; padding: 2rem 0; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; opacity: 0.7; font-size: 0.875rem;">
-        <p>© 2026 <a href="https://wolf.uk.com" target="_blank" style="color: inherit; text-decoration: underline;">Wolf
-                Software Systems Ltd</a> •
-            FSL-1.1
-        </p>
-        <p style="font-size: 0.75rem; margin-top: 0.5rem;">
-            USE AT YOUR OWN RISK. This software is provided "as is" without warranty of any kind.
-        </p>
-    </footer>
+            <div class="content-section">
+                <h2>Overview</h2>
+                <p>Global WolfNet Access lets you connect your local workstation to your entire WolfStack infrastructure. Once connected, you can reach any server, container, or VM on the WolfNet as if you were on the same local network.</p>
+                <h3>How It Works</h3>
+                <ol>
+                    <li>Install WolfNet on your local machine</li>
+                    <li>Join the WolfNet network using a token from any WolfStack node</li>
+                    <li>Your machine receives a WolfNet IP (10.10.10.x)</li>
+                    <li>You can now access all servers, containers, and VMs directly</li>
+                </ol>
+                <h3>Features</h3>
+                <ul>
+                    <li>Access all WolfNet IPs from your workstation</li>
+                    <li>Encrypted end-to-end with X25519 + ChaCha20-Poly1305</li>
+                    <li>Works from anywhere &mdash; home, office, travelling</li>
+                    <li>No VPN configuration needed &mdash; just <code>wolfnet join</code></li>
+                    <li>Cross-cluster access &mdash; reach servers in different clusters</li>
+                </ul>
+                <h3>Dashboard View</h3>
+                <p>The Global WolfNet page in the WolfStack dashboard shows all WolfNet peers, IPs, and connection status across your entire infrastructure.</p>
+            </div>
+
+<div class="page-nav"><a href="wolfnet.html" class="prev">&larr; WolfNet</a><a href="wolfproxy.html" class="next">WolfProxy &rarr;</a></div>
+        </div>
+        <footer class="wiki-footer" style="margin-top:3rem;padding:2rem 0;border-top:1px solid rgba(255,255,255,0.1);text-align:center;opacity:0.7;font-size:0.875rem;">
+            <p>&copy; 2026 <a href="https://wolf.uk.com" target="_blank" style="color:inherit;text-decoration:underline;">Wolf Software Systems Ltd</a> &bull; FSL-1.1</p>
+        </footer>
     </main>
-    </div>
-    <script src="script.js"></script>
+</div>
+<script src="script.js"></script>
 </body>
-
 </html>

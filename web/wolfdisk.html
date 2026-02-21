@@ -1,723 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        gtag('js', new Date());
-        gtag('config', 'G-KK9NEE1S54');
-    </script>
-
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-KK9NEE1S54');</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description"
-        content="WolfDisk - Distributed File System for Linux. Share and replicate files across servers with FUSE integration and content-addressed deduplication.">
-    <meta name="keywords"
-        content="distributed file system, Linux, FUSE, file replication, shared storage, WolfDisk, WolfScale">
-    <meta name="author" content="Wolf Software Systems Ltd">
-    <link rel="canonical" href="https://wolfscale.org/wolfdisk.html">
-
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://wolfscale.org/wolfdisk.html">
-    <meta property="og:title" content="WolfDisk - Distributed File System for Linux">
-    <meta property="og:description"
-        content="Share and replicate files across Linux servers. FUSE integration, content-addressed storage, easy setup.">
-    <meta property="og:image" content="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg">
-
-    <title>WolfDisk - Distributed File System | WolfScale</title>
+    <meta name="description" content="Distributed filesystem for sharing and replicating files across your network">
+    <title>💾 WolfDisk — WolfStack Docs</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=9">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=10">
 </head>
-
 <body>
-    <div class="wiki-layout">
-        <aside class="sidebar" id="sidebar">
-            <a href="index.html" class="sidebar-logo"><img
-                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"></a>
-            <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span>
-                    </div>
-                    <a href="wolfstack.html">Overview &amp; Quick Start</a>
-                    <a href="wolfstack-containers.html">Container Management</a>
-                    <a href="wolfstack-storage.html">Storage Manager</a>
-                    <a href="wolfstack-files.html">File Manager</a>
-                    <a href="wolfstack-networking.html">Networking</a>
-                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
-                    <a href="wolfstack-mysql.html">MariaDB/MySQL Editor</a>
-                    <a href="wolfstack-security.html">Security</a>
-                    <a href="wolfstack-certificates.html">Certificates</a>
-                    <a href="wolfstack-cron.html">Cron Jobs</a>
-                    <a href="wolfstack-terminal.html">Terminal</a>
-                    <a href="wolfstack-issues.html">Issues Scanner</a>
-                    <a href="wolfstack-alerting.html">Alerting &amp; Notifications</a>
-                    <a href="proxmox.html">Proxmox Integration</a>
-                    <a href="app-store.html">App Store</a>
-                    <a href="wolfstack-ai.html">AI Agent</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load
-                            Balancer</span></div>
-                    <a href="quickstart.html">Quick Start</a>
-                    <a href="features.html">Features</a>
-                    <a href="architecture.html">Architecture</a>
-                    <a href="how-it-works.html">How It Works</a>
-                    <a href="binlog.html">Binlog Mode</a>
-                    <a href="load-balancer.html">Load Balancer</a>
-                    <a href="configuration.html">Configuration</a>
-                    <a href="performance.html">Performance</a>
-                    <a href="cli.html">CLI Reference</a>
-                    <a href="troubleshooting.html">Troubleshooting</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication & Sharing</span>
-                    </div>
-                    <a href="wolfdisk.html">Overview & Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
-                    <a href="wolfnet.html">Overview & Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
-                            Firewall</span></div>
-                    <a href="wolfproxy.html">Overview & Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
-                    </div>
-                    <a href="wolfserve.html">Overview & Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">Company</div>
-                    <a href="about.html">About</a>
-                    <a href="roadmap.html">Roadmap</a>
-                    <a href="contact.html">Contact</a>
-                    <a href="glossary.html">Glossary</a>
-                    <a href="licensing.html">Licensing</a>
-                    <a href="support.html" style="color: #ff424d; font-weight: 700;">❤️ Support Us</a>
-                </div>
-            </nav>
-            <div class="theme-toggle-wrapper">
-                <span class="theme-toggle-label">Theme</span>
-                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
-                    <span class="theme-toggle-slider"></span>
-                </button>
+<div class="wiki-layout">
+<aside class="sidebar" id="sidebar">
+    <a href="index.html" class="sidebar-logo"><img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
+            alt="Wolf"></a>
+    <nav class="sidebar-nav">
+        <div class="nav-section">
+            <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span></div>
+            <a href="wolfstack.html">📊 Overview &amp; Quick Start</a>
+            <a href="wolfstack-containers.html">📦 Container Management</a>
+            <a href="wolfstack-storage.html">💾 Storage Manager</a>
+            <a href="wolfstack-files.html">📁 File Manager</a>
+            <a href="wolfstack-networking.html">🌐 Networking</a>
+            <a href="wolfstack-clustering.html">🔗 Multi-Server Clustering</a>
+            <a href="wolfstack-mysql.html">🗄️ MariaDB/MySQL Editor</a>
+            <a href="wolfstack-security.html">🔒 Security</a>
+            <a href="wolfstack-certificates.html">📜 Certificates</a>
+            <a href="wolfstack-cron.html">⏰ Cron Jobs</a>
+            <a href="wolfstack-terminal.html">💻 Terminal</a>
+            <a href="wolfstack-issues.html">🔍 Issues Scanner</a>
+            <a href="wolfstack-alerting.html">🔔 Alerting &amp; Notifications</a>
+            <a href="wolfrun.html">🐺 WolfRun Orchestration</a>
+            <a href="proxmox.html">🟠 Proxmox Integration</a>
+            <a href="app-store.html">🛍️ App Store</a>
+            <a href="wolfstack-ai.html">🤖 AI Agent</a>
+            <a href="wolfstack-settings.html">⚙️ Settings</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication &amp; Load
+                    Balancer</span></div>
+            <a href="quickstart.html">⚡ Quick Start</a>
+            <a href="features.html">✨ Features</a>
+            <a href="architecture.html">🏗️ Architecture</a>
+            <a href="how-it-works.html">⚙️ How It Works</a>
+            <a href="binlog.html">📋 Binlog Mode</a>
+            <a href="load-balancer.html">⚖️ Load Balancer</a>
+            <a href="configuration.html">🔧 Configuration</a>
+            <a href="performance.html">📈 Performance</a>
+            <a href="cli.html">🖥️ CLI Reference</a>
+            <a href="troubleshooting.html">🔧 Troubleshooting</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication &amp; Sharing</span></div>
+            <a href="wolfdisk.html" class="active">💿 Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
+            <a href="wolfnet.html">🌐 Overview &amp; Quick Start</a>
+            <a href="wolfnet-global.html">🌍 Global Network Access</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with Firewall</span>
             </div>
-            <div class="sidebar-links">
-                <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
-                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
-                <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
-            </div>
-        </aside>
-        <div class="sidebar-overlay" id="sidebar-overlay"></div>
-
-        <main class="wiki-main">
-            <div class="mobile-header">
-                <a href="index.html" class="nav-logo"><img
-                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
-                        class="logo-img"></a>
-                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
-            </div>
-
-            <div class="wiki-content">
-                <div class="content-header">                    <h1>🐺💾 WolfDisk</h1>
-                    <p class="content-subtitle">Distributed File System for Linux</p>
-                </div>
-
-                <!-- Overview Section -->
-                <section class="content-section">
-                    <h2>Overview</h2>
-                    <p>
-                        <strong>WolfDisk</strong> is a distributed file system that uses the same proven consensus
-                        infrastructure as WolfScale to replicate files across Linux machines. Mount a shared directory
-                        and have your data automatically synchronized across all nodes.
-                    </p>
-
-                    <div class="info-box"
-                        style="background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.3);">
-                        <strong>✅ Status:</strong> WolfDisk Phase 2 is complete! Clustering infrastructure including
-                        node roles, leader election, and auto-discovery is ready for testing.
-                    </div>
-
-                    <div
-                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
-                        <div class="feature-card">
-                            <div class="feature-icon">📁</div>
-                            <h3>FUSE Integration</h3>
-                            <p>Mount as a regular Linux directory. All standard file operations work seamlessly.</p>
-                        </div>
-                        <div class="feature-card">
-                            <div class="feature-icon">🔄</div>
-                            <h3>File Replication</h3>
-                            <p>Changes automatically sync across all nodes in the cluster.</p>
-                        </div>
-                        <div class="feature-card">
-                            <div class="feature-icon">🔐</div>
-                            <h3>Deduplication</h3>
-                            <p>Content-addressed storage with SHA256 - same content stored only once.</p>
-                        </div>
-                        <div class="feature-card">
-                            <div class="feature-icon">⚡</div>
-                            <h3>Chunk-Based</h3>
-                            <p>Large files split into 4MB chunks for efficient transfer and sync.</p>
-                        </div>
-                        <div class="feature-card" style="border-color: rgba(34, 197, 94, 0.3);">
-                            <div class="feature-icon">☁️</div>
-                            <h3>S3-Compatible API</h3>
-                            <p>WolfDisk exposes an S3-compatible endpoint. Mount from WolfStack using
-                                <strong>rust-s3</strong> (pure Rust, works on IBM Power/ppc64le). Compatible with
-                                AWS S3 tools, Cyberduck, and rclone.
-                            </p>
-                        </div>
-                        <div class="feature-card">
-                            <div class="feature-icon">🖥️</div>
-                            <h3>WolfStack Integration</h3>
-                            <p>Mount WolfDisk S3 buckets directly from the WolfStack dashboard. Native storage
-                                manager support with sync and auto-mount on boot.</p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Operating Modes Section -->
-                <section class="content-section">
-                    <h2>Operating Modes</h2>
-
-                    <div class="table-wrapper">
-                        <table class="comparison-table">
-                            <thead>
-                                <tr>
-                                    <th>Mode</th>
-                                    <th>Description</th>
-                                    <th>Best For</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>Replicated</strong></td>
-                                    <td>Data copied to N nodes with quorum writes</td>
-                                    <td class="highlight">High availability, disaster recovery</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Shared</strong></td>
-                                    <td>Single leader, others access as clients</td>
-                                    <td class="highlight">Team collaboration, shared home dirs</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-
-                <!-- Node Roles Section -->
-                <section class="content-section">
-                    <h2>Node Roles</h2>
-
-                    <p>WolfDisk supports four node roles to match your deployment needs:</p>
-
-                    <div class="table-wrapper">
-                        <table class="comparison-table">
-                            <thead>
-                                <tr>
-                                    <th>Role</th>
-                                    <th>Storage</th>
-                                    <th>Replication</th>
-                                    <th>Use Case</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>Leader</strong></td>
-                                    <td>✅ Yes</td>
-                                    <td>Broadcasts to followers</td>
-                                    <td class="highlight">Primary write node</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Follower</strong></td>
-                                    <td>✅ Yes</td>
-                                    <td>Receives from leader</td>
-                                    <td class="highlight">Read replicas, failover</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Client</strong></td>
-                                    <td>❌ No</td>
-                                    <td>None (mount-only)</td>
-                                    <td class="highlight">Access shared drive remotely</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Auto</strong></td>
-                                    <td>✅ Yes</td>
-                                    <td>Dynamic election</td>
-                                    <td class="highlight">Default - lowest ID becomes leader</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="info-box" style="margin-top: 1.5rem;">
-                        <strong>💡 Client Mode:</strong> Perfect for workstations that just need to access the shared
-                        filesystem without storing data locally. The client mounts the drive and forwards operations to
-                        the leader.
-                    </div>
-
-                    <!-- Quick Install Section -->
-                    <section class="content-section">
-                        <h2>Quick Install</h2>
-
-                        <p>Install WolfDisk with an interactive installer:</p>
-
-                        <div class="code-block">
-                            <div class="code-header">
-                                <span class="code-lang">bash</span>
-                                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                            </div>
-                            <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/wolfdisk/setup.sh | bash</code></pre>
-                        </div>
-
-                        <p style="margin-top: 1.5rem;">The installer will prompt you for:</p>
-                        <ul>
-                            <li><strong>Node ID</strong> — Unique identifier (defaults to hostname)</li>
-                            <li><strong>Role</strong> — auto, leader, follower, or client</li>
-                            <li><strong>Bind IP address</strong> — IP to listen on (auto-detected)</li>
-                            <li><strong>Discovery</strong> — Auto-discovery, manual peers, or standalone</li>
-                            <li><strong>Mount path</strong> — Where to mount the filesystem</li>
-                        </ul>
-
-                        <div class="info-box"
-                            style="margin-top: 1.5rem; background: rgba(234, 179, 8, 0.1); border-color: rgba(234, 179, 8, 0.3);">
-                            <strong>⚠️ Proxmox Users:</strong> If running in an LXC container, enable FUSE in container
-                            options: <code>Options → Features → FUSE</code>
-                        </div>
-                    </section>
-
-                    <!-- Architecture Section -->
-                    <section class="content-section">
-                        <h2>Architecture</h2>
-
-                        <div class="code-block">
-                            <div class="code-header">
-                                <span class="code-lang">text</span>
-                            </div>
-                            <pre><code>┌─────────────────────────────────────────────────────────────┐
-│                    Linux Applications                        │
-├─────────────────────────────────────────────────────────────┤
-│                   mount /mnt/wolfdisk                        │
-├─────────────────────────────────────────────────────────────┤
-│                     FUSE (fuser)                             │
-├─────────────────────────────────────────────────────────────┤
-│                   WolfDisk Core                              │
-│   ┌───────────┐  ┌───────────┐  ┌─────────────────────────┐ │
-│   │ File Index│  │  Chunks   │  │ Replication Engine      │ │
-│   └───────────┘  └───────────┘  └─────────────────────────┘ │
-├─────────────────────────────────────────────────────────────┤
-│               Network Layer (WolfScale-based)                │
-└─────────────────────────────────────────────────────────────┘</code></pre>
-                        </div>
-
-                        <h3 style="margin-top: 2rem;">Key Components</h3>
-
-                        <div class="table-wrapper">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Component</th>
-                                        <th>Description</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td><strong>FUSE Layer</strong></td>
-                                        <td>Intercepts file operations (read, write, mkdir, etc.)</td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>File Index</strong></td>
-                                        <td>Metadata mapping paths to chunk references</td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Chunk Store</strong></td>
-                                        <td>Content-addressed storage with SHA256 hashing</td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Replication</strong></td>
-                                        <td>Uses WolfScale's Raft-based consensus</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-
-                    <!-- Configuration Section -->
-                    <section class="content-section">
-                        <h2>Configuration</h2>
-
-                        <p>Edit <code>/etc/wolfdisk/config.toml</code>:</p>
-
-                        <div class="code-block">
-                            <div class="code-header">
-                                <span class="code-lang">toml</span>
-                                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                            </div>
-                            <pre><code>[node]
-id = "node1"
-role = "auto"    # auto, leader, follower, or client
-bind = "0.0.0.0:9500"
-data_dir = "/var/lib/wolfdisk"
-
-[cluster]
-# Auto-discovery via UDP multicast:
-discovery = "udp://239.255.0.1:9501"
-# Or specify peers manually:
-# peers = ["192.168.1.10:9500", "192.168.1.11:9500"]
-
-[replication]
-mode = "shared"      # or "replicated"
-factor = 3           # Number of copies (replicated mode)
-chunk_size = 4194304 # 4MB chunks
-
-[mount]
-path = "/mnt/wolfdisk"
-allow_other = true</code></pre>
-                        </div>
-                    </section>
-
-                    <!-- CLI Section -->
-                    <section class="content-section">
-                        <h2>CLI Reference</h2>
-
-                        <div class="table-wrapper">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Command</th>
-                                        <th>Description</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td><code>wolfdisk init</code></td>
-                                        <td>Initialize the data directory</td>
-                                    </tr>
-                                    <tr>
-                                        <td><code>wolfdisk mount -m /mnt/wolfdisk</code></td>
-                                        <td>Mount the filesystem</td>
-                                    </tr>
-                                    <tr>
-                                        <td><code>wolfdisk unmount -m /mnt/wolfdisk</code></td>
-                                        <td>Unmount the filesystem</td>
-                                    </tr>
-                                    <tr>
-                                        <td><code>wolfdisk status</code></td>
-                                        <td>Show node configuration</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <h3 style="margin-top: 2rem;">wolfdiskctl (Control Utility)</h3>
-                        <p style="color: var(--text-muted);">Query the running service for cluster information:</p>
-                        <div class="table-container">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Command</th>
-                                        <th>Description</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td><code>wolfdiskctl status</code></td>
-                                        <td>Show live status from running service</td>
-                                    </tr>
-                                    <tr>
-                                        <td><code>wolfdiskctl list servers</code></td>
-                                        <td>List all discovered servers in the cluster</td>
-                                    </tr>
-                                    <tr>
-                                        <td><code>wolfdiskctl stats</code></td>
-                                        <td>Live cluster statistics (refreshes every second)</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <h3 style="margin-top: 2rem;">Systemd Service</h3>
-
-                        <div class="code-block">
-                            <div class="code-header">
-                                <span class="code-lang">bash</span>
-                            </div>
-                            <pre><code># Start the service
-sudo systemctl start wolfdisk
-
-# Check status
-sudo systemctl status wolfdisk
-
-# View logs
-sudo journalctl -u wolfdisk -f</code></pre>
-                        </div>
-                    </section>
-
-                    <!-- Leader Failover Section -->
-                    <section class="content-section">
-                        <h2>Leader Failover</h2>
-
-                        <p>WolfDisk automatically handles leader failures with fast failover:</p>
-
-                        <ul>
-                            <li><strong>Heartbeat Detection</strong> — Nodes monitor the leader with 2-second timeout
-                            </li>
-                            <li><strong>Automatic Election</strong> — Lowest node ID becomes the new leader</li>
-                            <li><strong>Seamless Transition</strong> — Followers continue serving reads during failover
-                            </li>
-                        </ul>
-
-                        <div class="code-block" style="margin-top: 1.5rem;">
-                            <div class="code-header">
-                                <span class="code-lang">text</span>
-                            </div>
-                            <pre><code>Initial State:
-  node-a (leader) ←→ node-b (follower) ←→ node-c (follower)
-
-node-a goes down:
-  ❌ node-a         node-b detects timeout (2s)
-                    node-b becomes leader (next lowest ID)
-
-node-a returns:
-  node-a syncs from node-b (gets missed changes)
-  node-a becomes leader again (lowest ID)</code></pre>
-                        </div>
-
-                        <h3 style="margin-top: 2rem;">Sync and Catchup</h3>
-
-                        <p>When a node starts or recovers from downtime, it automatically syncs with the leader:</p>
-
-                        <ul>
-                            <li><strong>Version Tracking</strong> — Every write increments the index version</li>
-                            <li><strong>Delta Sync</strong> — Only modified/new/deleted files are transferred</li>
-                            <li><strong>Efficient Catchup</strong> — A node that was down briefly only receives missed
-                                changes</li>
-                        </ul>
-                    </section>
-
-                    <!-- Multiple Drives Section -->
-                    <section class="content-section">
-                        <h2>Multiple Drives</h2>
-
-                        <p>You can mount multiple independent WolfDisk filesystems on the same node by running
-                            separate instances, each with its own configuration file. Each instance needs:</p>
-
-                        <ul>
-                            <li><strong>Unique node ID</strong> — e.g., <code>node1-drive2</code></li>
-                            <li><strong>Separate bind port</strong> — e.g., <code>9501</code> instead of
-                                <code>9500</code>
-                            </li>
-                            <li><strong>Separate data directory</strong> — e.g., <code>/var/lib/wolfdisk2</code></li>
-                            <li><strong>Separate mount point</strong> — e.g., <code>/mnt/wolfdisk2</code></li>
-                        </ul>
-
-                        <h3 style="margin-top: 2rem;">Example: Second Drive Config</h3>
-
-                        <p>Create <code>/etc/wolfdisk/config2.toml</code>:</p>
-
-                        <div class="code-block">
-                            <div class="code-header">
-                                <span class="code-lang">toml</span>
-                                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                            </div>
-                            <pre><code>[node]
-id = "node1-drive2"
-role = "auto"
-bind = "0.0.0.0:9501"
-data_dir = "/var/lib/wolfdisk2"
-
-[cluster]
-discovery = "udp://239.255.0.1:9502"
-# Or: peers = ["192.168.1.10:9501", "192.168.1.11:9501"]
-
-[replication]
-mode = "shared"
-
-[mount]
-path = "/mnt/wolfdisk2"
-allow_other = true</code></pre>
-                        </div>
-
-                        <h3 style="margin-top: 2rem;">Mount the Second Drive</h3>
-
-                        <div class="code-block">
-                            <div class="code-header">
-                                <span class="code-lang">bash</span>
-                                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                            </div>
-                            <pre><code># Mount the second drive with its own config
-wolfdisk mount -m /mnt/wolfdisk2 --config /etc/wolfdisk/config2.toml
-
-# Check status
-wolfdisk status --config /etc/wolfdisk/config2.toml</code></pre>
-                        </div>
-
-                        <div class="info-box" style="margin-top: 1.5rem;">
-                            <strong>💡 Tip:</strong> Each WolfDisk instance is completely independent — separate
-                            cluster,
-                            separate data, separate port. Peers for each drive must use the same port across all nodes
-                            (e.g., all nodes use <code>9501</code> for drive 2).
-                        </div>
-                    </section>
-
-                    <!-- Comparison Section -->
-                    <section class="content-section">
-                        <h2>WolfDisk vs Other Solutions</h2>
-
-                        <div class="table-wrapper">
-                            <table class="comparison-table">
-                                <thead>
-                                    <tr>
-                                        <th>Feature</th>
-                                        <th>NFS</th>
-                                        <th>GlusterFS</th>
-                                        <th>Ceph</th>
-                                        <th>WolfDisk</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>Replication</td>
-                                        <td>❌ None</td>
-                                        <td>✅ Yes</td>
-                                        <td>✅ Yes</td>
-                                        <td class="highlight">✅ Yes</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Setup Complexity</td>
-                                        <td>Easy</td>
-                                        <td>Medium</td>
-                                        <td>Complex</td>
-                                        <td class="highlight">Easy</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Deduplication</td>
-                                        <td>❌ No</td>
-                                        <td>❌ No</td>
-                                        <td>✅ Yes</td>
-                                        <td class="highlight">✅ Yes</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Metadata Server</td>
-                                        <td>Single</td>
-                                        <td>None</td>
-                                        <td>Required</td>
-                                        <td class="highlight">None</td>
-                                    </tr>
-                                    <tr>
-                                        <td>WolfScale Integration</td>
-                                        <td>❌ No</td>
-                                        <td>❌ No</td>
-                                        <td>❌ No</td>
-                                        <td class="highlight">✅ Native</td>
-                                    </tr>
-                                    <tr>
-                                        <td>S3-Compatible API</td>
-                                        <td>❌ No</td>
-                                        <td>❌ No</td>
-                                        <td>✅ Yes (RGW)</td>
-                                        <td class="highlight">✅ Yes (built-in)</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-
-                    <!-- Roadmap Section -->
-                    <section class="content-section">
-                        <h2>Roadmap</h2>
-
-                        <div style="display: flex; flex-direction: column; gap: 1rem;">
-                            <div
-                                style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px;">
-                                <span style="font-size: 1.5rem;">✅</span>
-                                <div>
-                                    <strong>Phase 1: Foundation</strong>
-                                    <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">FUSE filesystem,
-                                        chunk storage, CLI, setup scripts</p>
-                                </div>
-                            </div>
-                            <div
-                                style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px;">
-                                <span style="font-size: 1.5rem;">✅</span>
-                                <div>
-                                    <strong>Phase 2: Clustering</strong>
-                                    <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Leader election,
-                                        node discovery, node roles, cluster state</p>
-                                </div>
-                            </div>
-                            <div
-                                style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px;">
-                                <span style="font-size: 1.5rem;">✅</span>
-                                <div>
-                                    <strong>Phase 3: Failover & Sync</strong>
-                                    <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Leader failover
-                                        (2s),
-                                        delta sync, thin-client mode, live stats CLI</p>
-                                </div>
-                            </div>
-                            <div
-                                style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px;">
-                                <span style="font-size: 1.5rem;">✅</span>
-                                <div>
-                                    <strong>Phase 4: Full Replication</strong>
-                                    <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Write replication
-                                        (leader → followers), read caching, chunk fetching</p>
-                                </div>
-                            </div>
-                            <div
-                                style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px;">
-                                <span style="font-size: 1.5rem;">✅</span>
-                                <div>
-                                    <strong>Phase 5: S3 Integration</strong>
-                                    <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">S3-compatible
-                                        API endpoint, WolfStack Storage Manager integration via <strong>rust-s3</strong>
-                                        (pure Rust),
-                                        sync to/from S3 buckets, rclone.conf import</p>
-                                </div>
-                            </div>
-                            <div
-                                style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 8px;">
-                                <span style="font-size: 1.5rem;">🔄</span>
-                                <div>
-                                    <strong>Phase 6: Production</strong>
-                                    <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Benchmarks,
-                                        stress testing, multi-node validation</p>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <div class="page-nav">
-                        <a href="load-balancer.html" class="prev">← Load Balancer</a>
-                        <a href="configuration.html" class="next">Configuration →</a>
-                    </div>
-            </div>
-
-            <footer class="wiki-footer"
-                style="margin-top: 3rem; padding: 2rem 0; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; opacity: 0.7; font-size: 0.875rem;">
-                <p>© 2026 <a href="https://wolf.uk.com" target="_blank"
-                        style="color: inherit; text-decoration: underline;">Wolf Software Systems Ltd</a> • FSL-1.1
-                </p>
-                <p style="font-size: 0.75rem; margin-top: 0.5rem;">
-                    USE AT YOUR OWN RISK. This software is provided "as is" without warranty of any kind.
-                </p>
-            </footer>
-        </main>
+            <a href="wolfproxy.html">🛡️ Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span></div>
+            <a href="wolfserve.html">🌎 Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Company</div>
+            <a href="https://wolf.uk.com" target="_blank">🐺 Wolf Software</a>
+            <a href="about.html">ℹ️ About</a>
+            <a href="roadmap.html">🗺️ Roadmap</a>
+            <a href="contact.html">📧 Contact</a>
+            <a href="glossary.html">📖 Glossary</a>
+            <a href="licensing.html">📄 Licensing</a>
+            <a href="support.html" style="color:#ff424d;font-weight:700;">&#10084;&#65039; Support Us</a>
+        </div>
+    </nav>
+    <div class="theme-toggle-wrapper">
+        <span class="theme-toggle-label">Theme</span>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme"><span
+                class="theme-toggle-slider"></span></button>
     </div>
-    <script src="script.js"></script>
-</body>
+    <div class="sidebar-links">
+        <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
+        <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+        <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+        <a href="https://www.reddit.com/r/WolfStack/" target="_blank">Reddit</a>
+        <a href="https://wolf.uk.com" target="_blank">wolf.uk.com</a>
+    </div>
+</aside>    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <main class="wiki-main">
+        <div class="mobile-header">
+            <a href="index.html" class="nav-logo"><img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf" class="logo-img"></a>
+            <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+        </div>
+        <div class="page-header"><h1>💾 WolfDisk</h1><p>Distributed filesystem for sharing and replicating files across your network</p></div>
+        <div class="wiki-content">
 
+            <div class="content-section">
+                <h2>Overview</h2>
+                <p>WolfDisk is a distributed filesystem that shares and replicates files across your network. Mount a shared directory on any number of Linux machines and have your data automatically synchronised.</p>
+                <h3>Features</h3>
+                <ul>
+                    <li><strong>FUSE-based</strong> &mdash; Works as a regular Linux directory</li>
+                    <li><strong>Content-addressed deduplication</strong> with SHA256 hashing</li>
+                    <li><strong>S3-compatible API</strong> &mdash; Mount from WolfStack via rust-s3</li>
+                    <li><strong>Multiple drives</strong> per node</li>
+                    <li><strong>Leader/Follower/Client modes</strong> for flexible deployments</li>
+                </ul>
+                <h3>Installation</h3>
+                <div class="code-block">
+                    <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                    <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/master/wolfdisk/install.sh | sudo bash</code></pre>
+                </div>
+                <h3>Quick Start</h3>
+                <ol>
+                    <li>Install WolfDisk on each machine</li>
+                    <li>Configure the leader node and create a drive</li>
+                    <li>Join follower nodes to the drive</li>
+                    <li>Mount the drive on client machines</li>
+                </ol>
+            </div>
+
+<div class="page-nav"><a href="wolfstack-ai.html" class="prev">&larr; AI Agent</a><a href="wolfnet.html" class="next">WolfNet &rarr;</a></div>
+        </div>
+        <footer class="wiki-footer" style="margin-top:3rem;padding:2rem 0;border-top:1px solid rgba(255,255,255,0.1);text-align:center;opacity:0.7;font-size:0.875rem;">
+            <p>&copy; 2026 <a href="https://wolf.uk.com" target="_blank" style="color:inherit;text-decoration:underline;">Wolf Software Systems Ltd</a> &bull; FSL-1.1</p>
+        </footer>
+    </main>
+</div>
+<script src="script.js"></script>
+</body>
 </html>

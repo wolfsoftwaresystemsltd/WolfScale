@@ -1,955 +1,148 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        gtag('js', new Date());
-        gtag('config', 'G-KK9NEE1S54');
-    </script>
-
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-KK9NEE1S54');</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description"
-        content="Glossary of technical terms used in WolfScale, WolfNet, WolfDisk, WolfProxy, and WolfServe — explained in plain language.">
-    <meta name="keywords"
-        content="glossary, technical terms, networking explained, WolfScale, WolfNet, WolfDisk, VPN explained">
-    <meta name="author" content="Wolf Software Systems Ltd">
-    <link rel="canonical" href="https://wolfscale.org/glossary.html">
-
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://wolfscale.org/glossary.html">
-    <meta property="og:title" content="Glossary — Technical Terms Explained | WolfScale">
-    <meta property="og:description" content="Plain-language explanations of networking and server terms.">
-    <meta property="og:image" content="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg">
-
-    <title>Glossary — Technical Terms Explained | WolfScale</title>
+    <meta name="description" content="Common terms and concepts used in WolfStack documentation">
+    <title>📖 Glossary — WolfStack Docs</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=9">
-    <style>
-        .glossary-grid {
-            display: grid;
-            gap: 0;
-        }
-
-        .glossary-letter {
-            font-size: 2rem;
-            font-weight: 800;
-            color: var(--primary);
-            padding: 1.5rem 0 0.5rem 0;
-            border-bottom: 2px solid var(--primary);
-            margin-top: 1.5rem;
-        }
-
-        .glossary-letter:first-child {
-            margin-top: 0;
-        }
-
-        .glossary-entry {
-            padding: 1.25rem 0;
-            border-bottom: 1px solid rgba(128, 128, 128, 0.15);
-        }
-
-        .glossary-entry:last-child {
-            border-bottom: none;
-        }
-
-        .glossary-term {
-            font-size: 1.15rem;
-            font-weight: 700;
-            color: var(--heading);
-            margin-bottom: 0.4rem;
-        }
-
-        .glossary-aka {
-            font-size: 0.85rem;
-            opacity: 0.6;
-            font-style: italic;
-            margin-bottom: 0.4rem;
-        }
-
-        .glossary-definition {
-            font-size: 0.95rem;
-            line-height: 1.7;
-            color: var(--text);
-        }
-
-        .glossary-analogy {
-            margin-top: 0.5rem;
-            padding: 0.6rem 1rem;
-            background: rgba(99, 102, 241, 0.08);
-            border-left: 3px solid var(--primary);
-            border-radius: 0 6px 6px 0;
-            font-size: 0.9rem;
-        }
-
-        .glossary-toc {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .glossary-toc a {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 2.2rem;
-            height: 2.2rem;
-            border-radius: 8px;
-            background: rgba(99, 102, 241, 0.1);
-            color: var(--primary);
-            font-weight: 700;
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-
-        .glossary-toc a:hover {
-            background: var(--primary);
-            color: white;
-            transform: translateY(-2px);
-        }
-
-        .glossary-search {
-            width: 100%;
-            padding: 0.9rem 1.2rem;
-            border-radius: 10px;
-            border: 1px solid rgba(128, 128, 128, 0.3);
-            background: var(--card-bg);
-            color: var(--text);
-            font-size: 1rem;
-            font-family: 'Inter', sans-serif;
-            margin-bottom: 1.5rem;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        .glossary-search:focus {
-            border-color: var(--primary);
-        }
-
-        .glossary-search::placeholder {
-            opacity: 0.5;
-        }
-
-        .glossary-hidden {
-            display: none !important;
-        }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=10">
 </head>
-
 <body>
-    <div class="wiki-layout">
-        <aside class="sidebar" id="sidebar">
-            <a href="index.html" class="sidebar-logo"><img
-                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
-                    alt="Wolf"></a>
-            <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span></div>
-                    <a href="wolfstack.html">Overview &amp; Quick Start</a>
-                    <a href="wolfstack-containers.html">Container Management</a>
-                    <a href="wolfstack-storage.html">Storage Manager</a>
-                    <a href="wolfstack-files.html">File Manager</a>
-                    <a href="wolfstack-networking.html">Networking</a>
-                    <a href="wolfstack-clustering.html">Multi-Server Clustering</a>
-                    <a href="wolfstack-mysql.html">MariaDB/MySQL Editor</a>
-                    <a href="wolfstack-security.html">Security</a>
-                    <a href="wolfstack-certificates.html">Certificates</a>
-                    <a href="wolfstack-cron.html">Cron Jobs</a>
-                    <a href="wolfstack-terminal.html">Terminal</a>
-                    <a href="wolfstack-issues.html">Issues Scanner</a>
-                    <a href="wolfstack-alerting.html">Alerting &amp; Notifications</a>
-                    <a href="proxmox.html">Proxmox Integration</a>
-                    <a href="app-store.html">App Store</a>
-                    <a href="wolfstack-ai.html">AI Agent</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication & Load
-                            Balancer</span></div>
-                    <a href="quickstart.html">Quick Start</a>
-                    <a href="features.html">Features</a>
-                    <a href="architecture.html">Architecture</a>
-                    <a href="how-it-works.html">How It Works</a>
-                    <a href="binlog.html">Binlog Mode</a>
-                    <a href="load-balancer.html">Load Balancer</a>
-                    <a href="configuration.html">Configuration</a>
-                    <a href="performance.html">Performance</a>
-                    <a href="cli.html">CLI Reference</a>
-                    <a href="troubleshooting.html">Troubleshooting</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication & Sharing</span>
-                    </div>
-                    <a href="wolfdisk.html">Overview & Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
-                    <a href="wolfnet.html">Overview & Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
-                            Firewall</span></div>
-                    <a href="wolfproxy.html">Overview & Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
-                    </div>
-                    <a href="wolfserve.html">Overview & Quick Start</a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">Company</div>
-                    <a href="https://wolf.uk.com" target="_blank">Wolf Software</a>
-                    <a href="about.html">About</a>
-                    <a href="roadmap.html">Roadmap</a>
-                    <a href="contact.html">Contact</a>
-                    <a href="glossary.html" class="active">Glossary</a>
-                </div>
-            </nav>
-            <div class="theme-toggle-wrapper">
-                <span class="theme-toggle-label">Theme</span>
-                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
-                    <span class="theme-toggle-slider"></span>
-                </button>
+<div class="wiki-layout">
+<aside class="sidebar" id="sidebar">
+    <a href="index.html" class="sidebar-logo"><img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
+            alt="Wolf"></a>
+    <nav class="sidebar-nav">
+        <div class="nav-section">
+            <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span></div>
+            <a href="wolfstack.html">📊 Overview &amp; Quick Start</a>
+            <a href="wolfstack-containers.html">📦 Container Management</a>
+            <a href="wolfstack-storage.html">💾 Storage Manager</a>
+            <a href="wolfstack-files.html">📁 File Manager</a>
+            <a href="wolfstack-networking.html">🌐 Networking</a>
+            <a href="wolfstack-clustering.html">🔗 Multi-Server Clustering</a>
+            <a href="wolfstack-mysql.html">🗄️ MariaDB/MySQL Editor</a>
+            <a href="wolfstack-security.html">🔒 Security</a>
+            <a href="wolfstack-certificates.html">📜 Certificates</a>
+            <a href="wolfstack-cron.html">⏰ Cron Jobs</a>
+            <a href="wolfstack-terminal.html">💻 Terminal</a>
+            <a href="wolfstack-issues.html">🔍 Issues Scanner</a>
+            <a href="wolfstack-alerting.html">🔔 Alerting &amp; Notifications</a>
+            <a href="wolfrun.html">🐺 WolfRun Orchestration</a>
+            <a href="proxmox.html">🟠 Proxmox Integration</a>
+            <a href="app-store.html">🛍️ App Store</a>
+            <a href="wolfstack-ai.html">🤖 AI Agent</a>
+            <a href="wolfstack-settings.html">⚙️ Settings</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication &amp; Load
+                    Balancer</span></div>
+            <a href="quickstart.html">⚡ Quick Start</a>
+            <a href="features.html">✨ Features</a>
+            <a href="architecture.html">🏗️ Architecture</a>
+            <a href="how-it-works.html">⚙️ How It Works</a>
+            <a href="binlog.html">📋 Binlog Mode</a>
+            <a href="load-balancer.html">⚖️ Load Balancer</a>
+            <a href="configuration.html">🔧 Configuration</a>
+            <a href="performance.html">📈 Performance</a>
+            <a href="cli.html">🖥️ CLI Reference</a>
+            <a href="troubleshooting.html">🔧 Troubleshooting</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication &amp; Sharing</span></div>
+            <a href="wolfdisk.html">💿 Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
+            <a href="wolfnet.html">🌐 Overview &amp; Quick Start</a>
+            <a href="wolfnet-global.html">🌍 Global Network Access</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with Firewall</span>
             </div>
-            <div class="sidebar-links">
-                <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
-                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
-                <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
-            </div>
-        </aside>
-        <div class="sidebar-overlay" id="sidebar-overlay"></div>
-
-        <main class="wiki-main">
-            <div class="mobile-header">
-                <a href="index.html" class="nav-logo"><img
-                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
-                        class="logo-img"></a>
-                <button class="hamburger" id="hamburger" aria-label="Toggle menu">
-                    <span></span><span></span><span></span>
-                </button>
-            </div>
-
-            <div class="wiki-content">
-                <div class="content-header">                    <h1>📖 Glossary</h1>
-                    <p class="lead">Technical terms explained in plain English — no jargon, no assumptions.</p>
-                </div>
-
-                <section class="content-section">
-                    <p>This glossary explains the technical terms used throughout the WolfScale documentation.
-                        Every definition is written so that <strong>anyone</strong> can understand it — even if
-                        you've never worked with servers before.</p>
-
-                    <input type="text" class="glossary-search" id="glossary-search"
-                        placeholder="🔍  Search for a term... (e.g. 'DNS', 'firewall', 'encryption')">
-
-                    <div class="glossary-toc" id="glossary-toc"></div>
-
-                    <div class="glossary-grid" id="glossary-grid">
-
-                        <!-- ═══ B ═══ -->
-                        <div class="glossary-letter" id="letter-B">B</div>
-
-                        <div class="glossary-entry" data-term="bandwidth">
-                            <div class="glossary-term">Bandwidth</div>
-                            <div class="glossary-definition">
-                                The amount of data that can be sent over a network connection in a given time,
-                                usually measured in megabits per second (Mbps) or gigabits per second (Gbps).
-                                <div class="glossary-analogy">💡 Think of it like the width of a pipe — a wider
-                                    pipe lets more water flow through at once.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="binlog binary log">
-                            <div class="glossary-term">Binlog (Binary Log)</div>
-                            <div class="glossary-definition">
-                                A record of every change made to a database. WolfScale can read this log to
-                                copy changes to other servers in real time, keeping all your databases in sync.
-                                <div class="glossary-analogy">💡 Like a diary that records every edit — other
-                                    servers read the diary and replay the same edits.</div>
-                            </div>
-                        </div>
-
-                        <!-- ═══ C ═══ -->
-                        <div class="glossary-letter" id="letter-C">C</div>
-
-                        <div class="glossary-entry" data-term="chacha20-poly1305 encryption cipher">
-                            <div class="glossary-term">ChaCha20-Poly1305</div>
-                            <div class="glossary-definition">
-                                A modern encryption method used by WolfNet to scramble data so only the intended
-                                recipient can read it. It's extremely fast and considered very secure — used by
-                                Google, Cloudflare, and many other major companies.
-                                <div class="glossary-analogy">💡 It's like a high-security lock on your post.
-                                    Only the person with the matching key can open it.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="cli command line interface terminal">
-                            <div class="glossary-term">CLI (Command Line Interface)</div>
-                            <div class="glossary-definition">
-                                A text-based way of controlling software by typing commands instead of clicking
-                                buttons. For example, <code>wolfnetctl peers</code> is a CLI command that shows
-                                your connected peers. Also called the "terminal" or "command prompt."
-                                <div class="glossary-analogy">💡 Instead of clicking icons, you type
-                                    instructions — like texting your computer instead of tapping buttons.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="cluster">
-                            <div class="glossary-term">Cluster</div>
-                            <div class="glossary-definition">
-                                A group of servers that work together as a team. In WolfScale, a cluster is a
-                                group of database servers that share data. If one goes down, the others keep
-                                running.
-                                <div class="glossary-analogy">💡 Like having multiple copies of a shop — if one
-                                    closes, customers can go to another.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="config configuration toml">
-                            <div class="glossary-term">Config / Configuration File</div>
-                            <div class="glossary-definition">
-                                A settings file (usually <code>config.toml</code>) that tells software how to
-                                behave. For example, WolfNet's config file tells it which network address to use
-                                and which peers to connect to. You edit it with a text editor.
-                                <div class="glossary-analogy">💡 Like a recipe card — it tells the software
-                                    exactly what ingredients and steps to use.</div>
-                            </div>
-                        </div>
-
-                        <!-- ═══ D ═══ -->
-                        <div class="glossary-letter" id="letter-D">D</div>
-
-                        <div class="glossary-entry" data-term="daemon background service process">
-                            <div class="glossary-term">Daemon</div>
-                            <div class="glossary-aka">Also: service, background process</div>
-                            <div class="glossary-definition">
-                                A program that runs continuously in the background, without needing you to
-                                watch it. WolfNet runs as a daemon — once started, it keeps your network
-                                connected 24/7 without any manual intervention.
-                                <div class="glossary-analogy">💡 Like a security guard that patrols
-                                    automatically — you don't need to tell them what to do every minute.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="dns domain name system hostname resolution">
-                            <div class="glossary-term">DNS (Domain Name System)</div>
-                            <div class="glossary-definition">
-                                The system that translates human-readable names (like <code>google.com</code>)
-                                into computer-readable IP addresses (like <code>142.250.80.46</code>).
-                                When you type a website name, DNS looks up the actual address for you.
-                                <div class="glossary-analogy">💡 Like a phone book — you look up "John Smith" and
-                                    it gives you his phone number.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="dyndns dynamic dns ddns no-ip duckdns">
-                            <div class="glossary-term">DynDNS (Dynamic DNS)</div>
-                            <div class="glossary-aka">Also: Dynamic DNS, DDNS, No-IP, DuckDNS</div>
-                            <div class="glossary-definition">
-                                A service that gives your home internet connection a permanent name (like
-                                <code>myhome.dyndns.org</code>), even though your actual IP address changes
-                                regularly. Your router automatically updates the DynDNS service whenever your
-                                IP changes, so other machines can always find you.
-                                WolfNet supports DynDNS hostnames in the <code>endpoint</code> setting and
-                                re-checks them every 60 seconds.
-                                <div class="glossary-analogy">💡 Like having a permanent postal redirect — even
-                                    if you move house, your mail still reaches you because the post office knows
-                                    your new address.</div>
-                            </div>
-                        </div>
-
-                        <!-- ═══ E ═══ -->
-                        <div class="glossary-letter" id="letter-E">E</div>
-
-                        <div class="glossary-entry" data-term="encryption encrypted scramble secure">
-                            <div class="glossary-term">Encryption</div>
-                            <div class="glossary-definition">
-                                The process of scrambling data so that only someone with the correct key can
-                                read it. WolfNet encrypts all traffic — even if someone intercepts your data,
-                                they can't understand it without your private key.
-                                <div class="glossary-analogy">💡 Like writing a letter in a secret code that
-                                    only you and the recipient know.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="endpoint ip port address">
-                            <div class="glossary-term">Endpoint</div>
-                            <div class="glossary-definition">
-                                The network address where a machine can be reached — usually an IP address or
-                                hostname followed by a port number. For example, <code>82.45.100.20:9600</code>
-                                or <code>myhome.dyndns.org:9600</code>. In WolfNet, each peer has an endpoint
-                                that tells other machines where to send data.
-                                <div class="glossary-analogy">💡 Like a building's street address plus the flat
-                                    number — telling the postman exactly where to deliver.</div>
-                            </div>
-                        </div>
-
-                        <!-- ═══ F ═══ -->
-                        <div class="glossary-letter" id="letter-F">F</div>
-
-                        <div class="glossary-entry" data-term="failover high availability redundancy">
-                            <div class="glossary-term">Failover</div>
-                            <div class="glossary-definition">
-                                When a server stops working and another one automatically takes over its job.
-                                In WolfScale, if the leader database goes down, a follower is promoted to leader
-                                so your application keeps running.
-                                <div class="glossary-analogy">💡 Like an understudy in a play — if the lead actor
-                                    can't perform, the understudy steps in immediately.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="firewall security block">
-                            <div class="glossary-term">Firewall</div>
-                            <div class="glossary-definition">
-                                Software or hardware that controls what network traffic is allowed in and out.
-                                Think of it as a bouncer at a club — it checks each connection and only lets
-                                through the ones that match your rules. WolfNet uses iptables (a Linux firewall)
-                                to protect your network.
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="follower worker replica secondary">
-                            <div class="glossary-term">Follower</div>
-                            <div class="glossary-aka">Also: worker, replica, secondary</div>
-                            <div class="glossary-definition">
-                                In WolfScale, a follower is a database server that receives copies of data from
-                                the leader. It answers read queries but doesn't accept writes directly. Having
-                                multiple followers means more machines can serve your users.
-                                <div class="glossary-analogy">💡 Like branch offices that have copies of all the
-                                    company files — they can answer questions but send changes back to HQ.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="fuse filesystem userspace mount">
-                            <div class="glossary-term">FUSE (Filesystem in Userspace)</div>
-                            <div class="glossary-definition">
-                                A way to create a "virtual" folder on your computer that looks like a normal
-                                folder but is actually being managed by a program. WolfDisk uses FUSE to create
-                                a shared folder — when you save a file there, WolfDisk automatically copies it
-                                to all your other servers.
-                                <div class="glossary-analogy">💡 Like a magic filing cabinet — put a document
-                                    in, and copies instantly appear in all your other offices.</div>
-                            </div>
-                        </div>
-
-                        <!-- ═══ G ═══ -->
-                        <div class="glossary-letter" id="letter-G">G</div>
-
-                        <div class="glossary-entry" data-term="gateway nat route internet">
-                            <div class="glossary-term">Gateway</div>
-                            <div class="glossary-definition">
-                                A server that acts as a bridge between your private WolfNet network and the
-                                wider internet. In WolfNet, a gateway node routes internet traffic for other
-                                nodes — similar to how your home router connects all your devices to the internet.
-                                <div class="glossary-analogy">💡 Like the front door of your house — all
-                                    deliveries come through this one point.</div>
-                            </div>
-                        </div>
-
-                        <!-- ═══ H ═══ -->
-                        <div class="glossary-letter" id="letter-H">H</div>
-
-                        <div class="glossary-entry" data-term="handshake connection setup hello">
-                            <div class="glossary-term">Handshake</div>
-                            <div class="glossary-definition">
-                                The initial process when two machines introduce themselves and verify each
-                                other's identity before starting to exchange data. WolfNet peers perform
-                                handshakes every 30 seconds to maintain connections and detect changes.
-                                <div class="glossary-analogy">💡 Like meeting someone and shaking hands —
-                                    you confirm who they are before starting a conversation.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="hostname domain name machine name">
-                            <div class="glossary-term">Hostname</div>
-                            <div class="glossary-definition">
-                                A human-readable name for a machine, like <code>office-server</code> or
-                                <code>myhome.dyndns.org</code>. Instead of remembering a number like
-                                <code>82.45.100.20</code>, you can use a name. WolfNet supports hostnames
-                                in the endpoint field, resolving them to IP addresses automatically.
-                            </div>
-                        </div>
-
-                        <!-- ═══ I ═══ -->
-                        <div class="glossary-letter" id="letter-I">I</div>
-
-                        <div class="glossary-entry" data-term="ip address internet protocol ipv4">
-                            <div class="glossary-term">IP Address</div>
-                            <div class="glossary-aka">Also: Internet Protocol Address</div>
-                            <div class="glossary-definition">
-                                A unique number that identifies a machine on a network — like a phone number
-                                for computers. For example, <code>192.168.1.100</code> (a local address) or
-                                <code>82.45.100.20</code> (a public internet address). WolfNet gives each
-                                machine a virtual IP (like <code>10.0.10.1</code>) on the private network.
-                                <div class="glossary-analogy">💡 Like a house number on a street — every
-                                    house has a unique number so the postman knows where to deliver.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="iptables firewall rules linux">
-                            <div class="glossary-term">iptables</div>
-                            <div class="glossary-definition">
-                                The standard Linux firewall tool. It uses rules to decide which network
-                                connections to allow, block, or redirect. WolfNet uses iptables to secure
-                                your virtual network and, in gateway mode, to forward internet traffic.
-                            </div>
-                        </div>
-
-                        <!-- ═══ K ═══ -->
-                        <div class="glossary-letter" id="letter-K">K</div>
-
-                        <div class="glossary-entry" data-term="keepalive heartbeat alive check">
-                            <div class="glossary-term">Keepalive</div>
-                            <div class="glossary-definition">
-                                A small message sent regularly between connected machines to say "I'm still
-                                here." If keepalives stop arriving, the other machine knows the connection
-                                has been lost. WolfNet sends keepalives every 25 seconds.
-                                <div class="glossary-analogy">💡 Like checking in with a friend — "Are you
-                                    still there?" — so you know the call hasn't dropped.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="key pair public key private key cryptography">
-                            <div class="glossary-term">Key Pair (Public Key / Private Key)</div>
-                            <div class="glossary-definition">
-                                Two mathematically linked keys used for secure communication:
-                                <ul>
-                                    <li><strong>Public key</strong> — shared with everyone. Other machines
-                                        use it to encrypt messages that only you can read.</li>
-                                    <li><strong>Private key</strong> — kept secret on your machine. It's the
-                                        only thing that can decrypt messages encrypted with your public key.</li>
-                                </ul>
-                                WolfNet generates a key pair for each machine during setup.
-                                <div class="glossary-analogy">💡 Like a special letterbox — anyone can drop a
-                                    letter in (public key), but only you have the key to open it (private key).</div>
-                            </div>
-                        </div>
-
-                        <!-- ═══ L ═══ -->
-                        <div class="glossary-letter" id="letter-L">L</div>
-
-                        <div class="glossary-entry" data-term="lan local area network local network wifi ethernet">
-                            <div class="glossary-term">LAN (Local Area Network)</div>
-                            <div class="glossary-definition">
-                                The network inside your building — all the devices connected to the same
-                                router or switch. Your home Wi-Fi or office network is a LAN. Devices on
-                                the same LAN can usually see each other directly. WolfNet's auto-discovery
-                                finds peers on the same LAN automatically.
-                                <div class="glossary-analogy">💡 Like everyone in the same room — you can
-                                    talk to each other directly without a phone.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="latency delay ping lag">
-                            <div class="glossary-term">Latency</div>
-                            <div class="glossary-aka">Also: delay, lag, ping time</div>
-                            <div class="glossary-definition">
-                                How long it takes data to travel from one machine to another, measured in
-                                milliseconds (ms). Lower latency = faster response. A local network might
-                                have 1ms latency; a connection across the world might have 200ms.
-                                <div class="glossary-analogy">💡 Like the delay between speaking and the
-                                    other person hearing you on a phone call.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="leader primary master main server">
-                            <div class="glossary-term">Leader</div>
-                            <div class="glossary-aka">Also: primary, master, main server</div>
-                            <div class="glossary-definition">
-                                In WolfScale, the leader is the main database server that accepts changes
-                                (writes). It sends copies of all changes to followers. If the leader goes
-                                down, a follower can be promoted to become the new leader.
-                                <div class="glossary-analogy">💡 Like the head office — all new orders go
-                                    through HQ, which then distributes them to branch offices.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="load balancer distribute traffic proxy">
-                            <div class="glossary-term">Load Balancer</div>
-                            <div class="glossary-definition">
-                                A system that distributes incoming requests across multiple servers so no
-                                single server gets overloaded. WolfScale includes a built-in load balancer
-                                that sends database queries to the best available server.
-                                <div class="glossary-analogy">💡 Like a receptionist directing customers to
-                                    different checkout tills so the queues stay short.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="lxc container proxmox virtualisation">
-                            <div class="glossary-term">LXC Container</div>
-                            <div class="glossary-definition">
-                                A lightweight virtual machine that shares the host computer's operating system.
-                                Commonly used with Proxmox. LXC containers are more efficient than full virtual
-                                machines but need extra configuration for features like WolfNet's TUN device.
-                                <div class="glossary-analogy">💡 Like having separate workspaces in a shared
-                                    office — you each have your own area, but share the building's facilities.</div>
-                            </div>
-                        </div>
-
-                        <!-- ═══ M ═══ -->
-                        <div class="glossary-letter" id="letter-M">M</div>
-
-                        <div class="glossary-entry" data-term="mesh mesh network topology full mesh">
-                            <div class="glossary-term">Mesh Network</div>
-                            <div class="glossary-definition">
-                                A network where every machine is connected to every other machine directly,
-                                rather than going through a central point. WolfNet creates a mesh — if any
-                                single connection fails, data can take an alternative route.
-                                <div class="glossary-analogy">💡 Like a group of friends who all have each
-                                    other's phone numbers — anyone can call anyone directly.</div>
-                            </div>
-                        </div>
-
-                        <!-- ═══ N ═══ -->
-                        <div class="glossary-letter" id="letter-N">N</div>
-
-                        <div class="glossary-entry" data-term="nat network address translation masquerade">
-                            <div class="glossary-term">NAT (Network Address Translation)</div>
-                            <div class="glossary-definition">
-                                A technique used by routers to let multiple devices share a single public IP
-                                address. Your home router uses NAT — all your devices (phone, laptop, TV)
-                                share one internet address. WolfNet's gateway mode uses NAT masquerading to
-                                route internet traffic through a gateway node.
-                                <div class="glossary-analogy">💡 Like an office with one reception desk — all
-                                    outgoing calls show the office number, even though different people are calling.
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- ═══ P ═══ -->
-                        <div class="glossary-letter" id="letter-P">P</div>
-
-                        <div class="glossary-entry" data-term="peer node member">
-                            <div class="glossary-term">Peer</div>
-                            <div class="glossary-aka">Also: node, member</div>
-                            <div class="glossary-definition">
-                                Any machine that is part of your WolfNet network. Each peer has its own
-                                identity (key pair) and IP address. Peers can be servers, desktops, laptops,
-                                or virtual machines.
-                                <div class="glossary-analogy">💡 Like members of a private club — everyone is
-                                    equal and can communicate freely with each other.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="pex peer exchange auto discovery share">
-                            <div class="glossary-term">PEX (Peer Exchange)</div>
-                            <div class="glossary-definition">
-                                A WolfNet feature where connected peers automatically share information about
-                                other peers they know. This means you only need to manually connect to <em>one</em>
-                                peer — PEX will tell you about all the others within 30 seconds.
-                                <div class="glossary-analogy">💡 Like being introduced at a party — you meet
-                                    one person, and they introduce you to everyone else they know.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="port number tcp udp 9600">
-                            <div class="glossary-term">Port</div>
-                            <div class="glossary-definition">
-                                A number (0–65535) that identifies a specific service on a machine. An IP
-                                address gets you to the right computer; a port gets you to the right
-                                application on that computer. WolfNet uses port <strong>9600</strong> by default.
-                                <div class="glossary-analogy">💡 If an IP address is a building's address,
-                                    the port is the flat number — directing you to the exact door.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="port forwarding port mapping router">
-                            <div class="glossary-term">Port Forwarding</div>
-                            <div class="glossary-definition">
-                                A router setting that sends incoming internet traffic on a specific port to
-                                a specific machine on your local network. Some VPN tools require this;
-                                <strong>WolfNet does not</strong>. WolfNet uses UDP hole punching and relay
-                                nodes instead, so you don't need to touch your router settings.
-                                <div class="glossary-analogy">💡 Like telling the receptionist: "Any calls on
-                                    extension 9600 should go to John's desk."</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="proxmox virtualisation hypervisor vm">
-                            <div class="glossary-term">Proxmox</div>
-                            <div class="glossary-definition">
-                                A popular open-source platform for running virtual machines and containers.
-                                Many people run WolfNet inside Proxmox LXC containers. Requires enabling the
-                                TUN device in the container settings (see the WolfNet page for instructions).
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="public ip external ip wan internet address">
-                            <div class="glossary-term">Public IP (External IP)</div>
-                            <div class="glossary-definition">
-                                The IP address that identifies your network on the internet. Every home router
-                                has a public IP assigned by your ISP. This is different from your local/private
-                                IPs (like <code>192.168.1.x</code>) which are only visible inside your network.
-                                <div class="glossary-analogy">💡 Your public IP is like your house's street
-                                    address — visible to the outside world. Your local IPs are like room numbers
-                                    inside the house.</div>
-                            </div>
-                        </div>
-
-                        <!-- ═══ R ═══ -->
-                        <div class="glossary-letter" id="letter-R">R</div>
-
-                        <div class="glossary-entry" data-term="relay forward route indirect">
-                            <div class="glossary-term">Relay</div>
-                            <div class="glossary-definition">
-                                A machine that forwards data between two peers that can't reach each other
-                                directly. If your home machine can't connect to a friend's home machine
-                                (because both are behind routers), a relay server in the middle passes
-                                messages between them.
-                                <div class="glossary-analogy">💡 Like passing a note through a friend —
-                                    if you can't reach someone directly, someone in the middle passes your
-                                    message along.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="replication copy sync duplicate replicate">
-                            <div class="glossary-term">Replication</div>
-                            <div class="glossary-definition">
-                                The process of automatically copying data from one server to another so
-                                they stay in sync. WolfScale replicates database changes; WolfDisk replicates
-                                files. If one server fails, the other already has an up-to-date copy.
-                                <div class="glossary-analogy">💡 Like a photocopier that automatically copies
-                                    every document you print — you always have a backup.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="roaming endpoint roaming dynamic ip change">
-                            <div class="glossary-term">Roaming</div>
-                            <div class="glossary-definition">
-                                In WolfNet, roaming is the ability to automatically reconnect when a machine's
-                                IP address changes (e.g., your ISP assigns a new IP, or you switch from Wi-Fi
-                                to mobile data). WolfNet detects the change within 30 seconds and updates the
-                                connection — no manual intervention needed.
-                            </div>
-                        </div>
-
-                        <!-- ═══ S ═══ -->
-                        <div class="glossary-letter" id="letter-S">S</div>
-
-                        <div class="glossary-entry" data-term="ssh secure shell remote access terminal">
-                            <div class="glossary-term">SSH (Secure Shell)</div>
-                            <div class="glossary-definition">
-                                A protocol for securely connecting to a remote machine's command line.
-                                With WolfNet, you can SSH into any machine on your virtual network using
-                                its WolfNet IP (e.g., <code>ssh user@10.0.10.2</code>).
-                                <div class="glossary-analogy">💡 Like making a secure phone call to your
-                                    server — you can give it instructions from anywhere.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="static ip fixed ip permanent address">
-                            <div class="glossary-term">Static IP</div>
-                            <div class="glossary-definition">
-                                An IP address that stays the same and never changes. Servers in data centres
-                                typically have static IPs. Home broadband usually has a dynamic IP (one that
-                                changes periodically). In WolfNet, you can use a static IP in the
-                                <code>endpoint</code> setting for servers with fixed addresses.
-                                <div class="glossary-analogy">💡 Like a permanent address vs. a temporary one —
-                                    a static IP is your "forever home."</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="systemd service startup boot linux systemctl">
-                            <div class="glossary-term">Systemd / systemctl</div>
-                            <div class="glossary-definition">
-                                The system that manages services (background programs) on most Linux
-                                computers. <code>sudo systemctl start wolfnet</code> starts WolfNet;
-                                <code>sudo systemctl enable wolfnet</code> makes it start automatically
-                                when the computer boots up.
-                                <div class="glossary-analogy">💡 Like a building manager who makes sure the
-                                    heating, lights, and lifts are all running — even after a power cut.</div>
-                            </div>
-                        </div>
-
-                        <!-- ═══ T ═══ -->
-                        <div class="glossary-letter" id="letter-T">T</div>
-
-                        <div class="glossary-entry" data-term="tls ssl https certificate secure connection">
-                            <div class="glossary-term">TLS / SSL</div>
-                            <div class="glossary-aka">Also: HTTPS, secure connection</div>
-                            <div class="glossary-definition">
-                                The encryption technology that makes websites show a 🔒 padlock in your
-                                browser. TLS encrypts data between your browser and a website. WolfProxy
-                                handles TLS certificates so your websites are served securely.
-                                <div class="glossary-analogy">💡 The padlock in your browser's address bar —
-                                    it means the connection between you and the website is private.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="toml configuration file format settings">
-                            <div class="glossary-term">TOML</div>
-                            <div class="glossary-definition">
-                                A simple file format used for configuration files. It's designed to be
-                                easy to read and write by humans. WolfNet, WolfDisk, and WolfScale all
-                                use TOML for their config files (usually named <code>config.toml</code>).
-                                <div class="glossary-analogy">💡 Like a form you fill in — each line has
-                                    a label and a value, like <code>name = "John"</code>.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="tun tunnel device virtual network interface">
-                            <div class="glossary-term">TUN Device</div>
-                            <div class="glossary-definition">
-                                A virtual network interface created by the operating system. WolfNet uses a TUN
-                                device to create a virtual network connection — your computer sees it as a
-                                real network adapter (like Wi-Fi or Ethernet), but it's entirely software-based.
-                                <div class="glossary-analogy">💡 Like a virtual phone line — it works just
-                                    like a real phone line, but it's created by software.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="tunnel vpn encrypted connection">
-                            <div class="glossary-term">Tunnel</div>
-                            <div class="glossary-definition">
-                                An encrypted connection between two machines over the internet. Data sent
-                                through the tunnel is scrambled so nobody in between can read it — not
-                                your ISP, not the Wi-Fi operator, not anyone. WolfNet creates tunnels
-                                between all peers automatically.
-                                <div class="glossary-analogy">💡 Like a sealed, soundproof tube between
-                                    two buildings — anything you send through it is completely private.</div>
-                            </div>
-                        </div>
-
-                        <!-- ═══ U ═══ -->
-                        <div class="glossary-letter" id="letter-U">U</div>
-
-                        <div class="glossary-entry" data-term="udp user datagram protocol connectionless fast">
-                            <div class="glossary-term">UDP (User Datagram Protocol)</div>
-                            <div class="glossary-definition">
-                                A fast, lightweight way of sending data over a network. Unlike TCP (which
-                                checks every packet arrived), UDP sends data without waiting for confirmation
-                                — making it faster but less reliable. WolfNet uses UDP port 9600 because
-                                speed matters for VPN traffic, and encryption handles the reliability.
-                                <div class="glossary-analogy">💡 TCP is like sending a letter by recorded
-                                    delivery (guaranteed, but slower). UDP is like dropping a letter in a
-                                    post box (faster, but no tracking).</div>
-                            </div>
-                        </div>
-
-                        <!-- ═══ V ═══ -->
-                        <div class="glossary-letter" id="letter-V">V</div>
-
-                        <div class="glossary-entry" data-term="vlan virtual lan virtual local area network">
-                            <div class="glossary-term">VLAN (Virtual LAN)</div>
-                            <div class="glossary-definition">
-                                A way to create separate virtual networks on the same physical network
-                                hardware. Some hosting providers offer VLANs to connect your servers
-                                privately — but they only work within that one provider. WolfNet works
-                                across providers and encrypts the traffic, which VLANs usually don't.
-                                <div class="glossary-analogy">💡 Like separate phone extensions in the same
-                                    office — they share the wiring but have their own private lines.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="vpn virtual private network">
-                            <div class="glossary-term">VPN (Virtual Private Network)</div>
-                            <div class="glossary-definition">
-                                A technology that creates a secure, private network over the internet. WolfNet
-                                is a type of VPN — but unlike commercial VPNs (like NordVPN), WolfNet connects
-                                <em>your own</em> machines together rather than routing through someone else's
-                                servers. You control everything.
-                                <div class="glossary-analogy">💡 Like having your own private motorway between
-                                    your buildings — you're not sharing the road with anyone else.</div>
-                            </div>
-                        </div>
-
-                        <div class="glossary-entry" data-term="vps virtual private server cloud server">
-                            <div class="glossary-term">VPS (Virtual Private Server)</div>
-                            <div class="glossary-definition">
-                                A virtual server that you rent from a hosting provider like Hetzner,
-                                DigitalOcean, or OVH. It's like having your own computer in a data centre.
-                                VPS servers typically have static public IPs, making them ideal as WolfNet
-                                peers or relay nodes.
-                                <div class="glossary-analogy">💡 Like renting a desk in a shared office —
-                                    it's your own workspace, but the building is managed for you.</div>
-                            </div>
-                        </div>
-
-                        <!-- ═══ W ═══ -->
-                        <div class="glossary-letter" id="letter-W">W</div>
-
-                        <div class="glossary-entry" data-term="wal write ahead log transaction journal">
-                            <div class="glossary-term">WAL (Write-Ahead Log)</div>
-                            <div class="glossary-definition">
-                                A technique where changes are written to a log file before being applied to
-                                the database. WolfScale uses WAL-based replication to ensure that no data is
-                                lost — even if a server crashes mid-write, the change is safely recorded.
-                                <div class="glossary-analogy">💡 Like writing down "I'm going to move the
-                                    sofa" before actually moving it — if something goes wrong, you know
-                                    exactly what you were trying to do.</div>
-                            </div>
-                        </div>
-
-                    </div>
-                </section>
-
-                <div class="page-nav">
-                    <a href="wolfnet.html" class="prev">← WolfNet</a>
-                    <span></span>
-                </div>
-            </div>
-
-            <footer class="wiki-footer"
-                style="margin-top: 3rem; padding: 2rem 0; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; opacity: 0.7; font-size: 0.875rem;">
-                <p>© 2026 <a href="https://wolf.uk.com" target="_blank"
-                        style="color: inherit; text-decoration: underline;">Wolf Software Systems Ltd</a> • FSL-1.1
-                </p>
-                <p style="font-size: 0.75rem; margin-top: 0.5rem;">
-                    USE AT YOUR OWN RISK. This software is provided "as is" without warranty of any kind.
-                </p>
-            </footer>
-        </main>
+            <a href="wolfproxy.html">🛡️ Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span></div>
+            <a href="wolfserve.html">🌎 Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Company</div>
+            <a href="https://wolf.uk.com" target="_blank">🐺 Wolf Software</a>
+            <a href="about.html">ℹ️ About</a>
+            <a href="roadmap.html">🗺️ Roadmap</a>
+            <a href="contact.html">📧 Contact</a>
+            <a href="glossary.html" class="active">📖 Glossary</a>
+            <a href="licensing.html">📄 Licensing</a>
+            <a href="support.html" style="color:#ff424d;font-weight:700;">&#10084;&#65039; Support Us</a>
+        </div>
+    </nav>
+    <div class="theme-toggle-wrapper">
+        <span class="theme-toggle-label">Theme</span>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme"><span
+                class="theme-toggle-slider"></span></button>
     </div>
+    <div class="sidebar-links">
+        <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
+        <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+        <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+        <a href="https://www.reddit.com/r/WolfStack/" target="_blank">Reddit</a>
+        <a href="https://wolf.uk.com" target="_blank">wolf.uk.com</a>
+    </div>
+</aside>    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <main class="wiki-main">
+        <div class="mobile-header">
+            <a href="index.html" class="nav-logo"><img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf" class="logo-img"></a>
+            <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+        </div>
+        <div class="page-header"><h1>📖 Glossary</h1><p>Common terms and concepts used in WolfStack documentation</p></div>
+        <div class="wiki-content">
 
-    <script src="script.js"></script>
-    <script>
-        // Build letter index
-        const toc = document.getElementById('glossary-toc');
-        const letters = document.querySelectorAll('.glossary-letter');
-        letters.forEach(el => {
-            const a = document.createElement('a');
-            a.href = '#' + el.id;
-            a.textContent = el.textContent;
-            toc.appendChild(a);
-        });
+            <div class="content-section">
+                <h2>Terms &amp; Definitions</h2>
+                <h3>A&ndash;C</h3>
+                <ul>
+                    <li><strong>Cluster</strong> &mdash; A group of servers managed together in WolfStack</li>
+                    <li><strong>Container</strong> &mdash; An isolated environment (Docker or LXC) running on a node</li>
+                </ul>
+                <h3>D&ndash;L</h3>
+                <ul>
+                    <li><strong>Docker</strong> &mdash; Application container runtime</li>
+                    <li><strong>LXC</strong> &mdash; Linux Containers &mdash; system-level containerisation</li>
+                    <li><strong>lxcbr0</strong> &mdash; The default LXC bridge network interface</li>
+                </ul>
+                <h3>N&ndash;P</h3>
+                <ul>
+                    <li><strong>Node</strong> &mdash; A single server managed by WolfStack</li>
+                    <li><strong>PAM</strong> &mdash; Pluggable Authentication Modules &mdash; Linux authentication system</li>
+                    <li><strong>Proxmox VE</strong> &mdash; A virtualisation management platform that WolfStack can integrate with</li>
+                </ul>
+                <h3>V&ndash;W</h3>
+                <ul>
+                    <li><strong>VIP</strong> &mdash; Virtual IP &mdash; A floating IP address for load balancing</li>
+                    <li><strong>WolfDisk</strong> &mdash; Distributed filesystem for file sharing and replication</li>
+                    <li><strong>WolfNet</strong> &mdash; Encrypted mesh networking between nodes</li>
+                    <li><strong>WolfProxy</strong> &mdash; NGINX-compatible reverse proxy with firewall</li>
+                    <li><strong>WolfScale</strong> &mdash; Database replication and load balancing</li>
+                    <li><strong>WolfServe</strong> &mdash; Apache2-compatible web server</li>
+                    <li><strong>WolfStack</strong> &mdash; The central server management platform</li>
+                    <li><strong>wolfnet0</strong> &mdash; The WolfNet TUN interface on each node</li>
+                </ul>
+            </div>
 
-        // Search functionality
-        const search = document.getElementById('glossary-search');
-        const entries = document.querySelectorAll('.glossary-entry');
-
-        search.addEventListener('input', () => {
-            const q = search.value.toLowerCase().trim();
-
-            entries.forEach(entry => {
-                const term = entry.getAttribute('data-term') || '';
-                const text = entry.textContent.toLowerCase();
-                const match = !q || term.includes(q) || text.includes(q);
-                entry.classList.toggle('glossary-hidden', !match);
-            });
-
-            // Show/hide letter headers based on whether any entries below them are visible
-            letters.forEach(letter => {
-                let next = letter.nextElementSibling;
-                let hasVisible = false;
-                while (next && !next.classList.contains('glossary-letter')) {
-                    if (!next.classList.contains('glossary-hidden')) {
-                        hasVisible = true;
-                    }
-                    next = next.nextElementSibling;
-                }
-                letter.classList.toggle('glossary-hidden', !hasVisible);
-            });
-        });
-    </script>
+<div class="page-nav"><a href="contact.html" class="prev">&larr; Contact</a><a href="licensing.html" class="next">Licensing &rarr;</a></div>
+        </div>
+        <footer class="wiki-footer" style="margin-top:3rem;padding:2rem 0;border-top:1px solid rgba(255,255,255,0.1);text-align:center;opacity:0.7;font-size:0.875rem;">
+            <p>&copy; 2026 <a href="https://wolf.uk.com" target="_blank" style="color:inherit;text-decoration:underline;">Wolf Software Systems Ltd</a> &bull; FSL-1.1</p>
+        </footer>
+    </main>
+</div>
+<script src="script.js"></script>
 </body>
-
 </html>
