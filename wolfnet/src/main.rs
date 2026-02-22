@@ -163,7 +163,7 @@ fn resolve_endpoint(ep: &str) -> Option<SocketAddr> {
     match ep.to_socket_addrs() {
         Ok(mut addrs) => {
             let result = addrs.next();
-            if let Some(addr) = result {
+            if let Some(_addr) = result {
 
             } else {
                 warn!("DNS resolution for '{}' returned no addresses", ep);
@@ -319,7 +319,7 @@ fn cmd_join(config_path: &PathBuf, token: &str) {
     match existing_idx {
         Some(idx) => {
             // Update endpoint but preserve name if already set
-            let existing_name = config.peers[idx].name.clone();
+            let _existing_name = config.peers[idx].name.clone();
             config.peers[idx].endpoint = Some(peer_endpoint.to_string());
             config.peers[idx].allowed_ip = peer_ip.to_string();
             if config.peers[idx].name.is_none() {
@@ -652,7 +652,7 @@ fn run_daemon(config_path: &PathBuf) {
                             match peer.encrypt(&packet) {
                                 Ok((counter, ciphertext)) => {
                                     let pkt = transport::build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
-                                    if let Err(e) = socket.send_to(&pkt, endpoint) {
+                                    if let Err(_e) = socket.send_to(&pkt, endpoint) {
 
                                     }
                                     return true;
@@ -694,7 +694,7 @@ fn run_daemon(config_path: &PathBuf) {
                             match relay_peer.encrypt(&packet) {
                                 Ok((counter, ciphertext)) => {
                                     let pkt = transport::build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
-                                    if let Err(e) = socket.send_to(&pkt, endpoint) {
+                                    if let Err(_e) = socket.send_to(&pkt, endpoint) {
 
                                     } else {
 
@@ -716,7 +716,7 @@ fn run_daemon(config_path: &PathBuf) {
                             match gw_peer.encrypt(&packet) {
                                 Ok((counter, ciphertext)) => {
                                     let pkt = transport::build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
-                                    if let Err(e) = socket.send_to(&pkt, endpoint) {
+                                    if let Err(_e) = socket.send_to(&pkt, endpoint) {
 
                                     }
                                 }
@@ -859,7 +859,7 @@ fn run_daemon(config_path: &PathBuf) {
 
                                                             true
                                                         }
-                                                        Err(e) => {
+                                                        Err(_e) => {
 
                                                             false
                                                         }

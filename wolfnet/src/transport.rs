@@ -102,7 +102,7 @@ pub fn send_handshakes(
                 // Try last-known endpoint (may be a LAN address from discovery)
                 if let Some(endpoint) = peer.endpoint {
 
-                    if let Err(e) = socket.send_to(&handshake, endpoint) {
+                    if let Err(_e) = socket.send_to(&handshake, endpoint) {
 
                     }
                 }
@@ -115,7 +115,7 @@ pub fn send_handshakes(
                     if let Ok(configured_addr) = configured_ep.parse::<SocketAddr>() {
                         if peer.endpoint != Some(configured_addr) {
 
-                            if let Err(e) = socket.send_to(&handshake, configured_addr) {
+                            if let Err(_e) = socket.send_to(&handshake, configured_addr) {
 
                             }
                         }
@@ -231,7 +231,7 @@ pub fn send_peer_exchange(
                     match peer.encrypt(&pex_packet) {
                         Ok((counter, ciphertext)) => {
                             let pkt = build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
-                            if let Err(e) = socket.send_to(&pkt, endpoint) {
+                            if let Err(_e) = socket.send_to(&pkt, endpoint) {
 
                             } else {
 

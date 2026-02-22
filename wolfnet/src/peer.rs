@@ -278,7 +278,7 @@ impl PeerManager {
         };
         let map: HashMap<String, String> = match serde_json::from_str(&content) {
             Ok(m) => m,
-            Err(e) => {
+            Err(_e) => {
 
                 return;
             }

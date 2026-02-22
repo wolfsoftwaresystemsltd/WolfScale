@@ -772,7 +772,7 @@ dependencies = [
 
 [[package]]
 name = "wolfnet"
-version = "0.5.1"
+version = "0.5.3"
 dependencies = [
  "base64",
  "chacha20poly1305",
