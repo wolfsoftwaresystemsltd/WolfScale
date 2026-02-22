@@ -5,7 +5,7 @@
 
 use std::net::{UdpSocket, SocketAddr, Ipv4Addr};
 use std::sync::Arc;
-use tracing::{debug, warn};
+use tracing::warn;
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 
 use crate::crypto::KeyPair;
@@ -101,9 +101,9 @@ pub fn send_handshakes(
             if !peer.is_connected() {
                 // Try last-known endpoint (may be a LAN address from discovery)
                 if let Some(endpoint) = peer.endpoint {
-                    debug!("Sending handshake to {} at {}", ip, endpoint);
+
                     if let Err(e) = socket.send_to(&handshake, endpoint) {
-                        debug!("Handshake to {} at {} failed: {}", ip, endpoint, e);
+
                     }
                 }
 
@@ -114,9 +114,9 @@ pub fn send_handshakes(
                 if let Some(ref configured_ep) = peer.configured_endpoint {
                     if let Ok(configured_addr) = configured_ep.parse::<SocketAddr>() {
                         if peer.endpoint != Some(configured_addr) {
-                            debug!("Sending handshake to {} at configured endpoint {}", ip, configured_addr);
+
                             if let Err(e) = socket.send_to(&handshake, configured_addr) {
-                                debug!("Handshake to {} at {} failed: {}", ip, configured_addr, e);
+
                             }
                         }
                     }
@@ -220,7 +220,7 @@ pub fn send_peer_exchange(
 ) {
     let pex_packet = build_peer_exchange(my_ip, peer_manager);
     if pex_packet.len() <= 1 {
-        debug!("PEX: no peers to share");
+
         return;
     } // No peers to share
 
@@ -232,12 +232,12 @@ pub fn send_peer_exchange(
                         Ok((counter, ciphertext)) => {
                             let pkt = build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
                             if let Err(e) = socket.send_to(&pkt, endpoint) {
-                                debug!("PEX send error to {}: {}", ip, e);
+
                             } else {
-                                debug!("PEX sent to {} at {} ({} bytes)", ip, endpoint, pex_packet.len());
+
                             }
                         }
-                        Err(e) => debug!("PEX encrypt error for {}: {}", ip, e),
+                        Err(_e) => {}
                     }
                 }
             }
@@ -263,7 +263,7 @@ pub fn run_discovery_broadcaster(
     let node_id = hostname.clone();
     let broadcast_addr: SocketAddr = format!("255.255.255.255:{}", DISCOVERY_PORT).parse().unwrap();
 
-    debug!("Discovery broadcaster started");
+
     while running.load(std::sync::atomic::Ordering::Relaxed) {
         let msg = format_discovery(&node_id, &public_key, wolfnet_ip, listen_port, &hostname, is_gateway);
         let _ = socket.send_to(msg.as_bytes(), broadcast_addr);
@@ -284,7 +284,7 @@ pub fn run_discovery_listener(
     };
     socket.set_read_timeout(Some(std::time::Duration::from_secs(1))).ok();
 
-    debug!("Discovery listener started on port {}", DISCOVERY_PORT);
+
     let mut buf = [0u8; 512];
 
     while running.load(std::sync::atomic::Ordering::Relaxed) {
@@ -307,7 +307,7 @@ pub fn run_discovery_listener(
                 }
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {}
-            Err(e) => debug!("Discovery recv error: {}", e),
+            Err(_e) => {}
         }
     }
 }

@@ -7,7 +7,7 @@ use x25519_dalek::{PublicKey, StaticSecret};
 use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce, aead::{Aead, KeyInit}};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use sha2::{Sha256, Digest};
-use tracing::{info, debug};
+
 
 /// X25519 keypair for this node
 pub struct KeyPair {
@@ -50,17 +50,17 @@ impl KeyPair {
             use std::os::unix::fs::PermissionsExt;
             std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
         }
-        info!("Private key saved to {:?}", path);
+
         Ok(())
     }
 
     /// Load or generate a keypair
     pub fn load_or_generate(path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
         if path.exists() {
-            info!("Loading keypair from {:?}", path);
+
             Self::load(path)
         } else {
-            info!("Generating new keypair, saving to {:?}", path);
+
             let kp = Self::generate();
             kp.save(path)?;
             Ok(kp)
@@ -102,7 +102,7 @@ impl SessionCipher {
         let cipher = ChaCha20Poly1305::new(key);
         let is_low_side = my_public.as_bytes() < peer_public.as_bytes();
 
-        debug!("Session cipher created (low_side={})", is_low_side);
+
         Self {
             cipher,
             send_counter: 0,

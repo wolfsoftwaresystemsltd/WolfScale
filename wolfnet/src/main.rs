@@ -13,7 +13,7 @@ use std::time::{Duration, Instant};
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
-use tracing::{info, warn, error, debug};
+use tracing::{info, warn, error};
 
 
 use wolfnet::config::{Config, NodeStatus};
@@ -164,7 +164,7 @@ fn resolve_endpoint(ep: &str) -> Option<SocketAddr> {
         Ok(mut addrs) => {
             let result = addrs.next();
             if let Some(addr) = result {
-                debug!("Resolved endpoint '{}' -> {}", ep, addr);
+
             } else {
                 warn!("DNS resolution for '{}' returned no addresses", ep);
             }
@@ -286,7 +286,7 @@ fn cmd_join(config_path: &PathBuf, token: &str) {
 
     if has_existing_address {
         // Preserve existing address — this node is already part of a network
-        info!("Preserving existing WolfNet address: {}", config.network.address);
+
     } else {
         // Auto-assign next available IP in the subnet
         let peer_addr: Ipv4Addr = peer_ip.parse().unwrap_or_else(|_| {
@@ -325,8 +325,7 @@ fn cmd_join(config_path: &PathBuf, token: &str) {
             if config.peers[idx].name.is_none() {
                 config.peers[idx].name = Some("invited-peer".to_string());
             }
-            info!("Updated existing peer: {} ({})", 
-                existing_name.unwrap_or_else(|| "unnamed".into()), peer_ip);
+
         }
         None => {
             config.peers.push(PeerConfig {
@@ -478,7 +477,7 @@ fn run_daemon(config_path: &PathBuf) {
         if let Err(e) = std::fs::write("/proc/sys/net/ipv4/ip_forward", "1") {
             warn!("Failed to enable IP forwarding: {}", e);
         } else {
-            debug!("IP forwarding enabled for relay");
+
         }
     }
 
@@ -561,7 +560,7 @@ fn run_daemon(config_path: &PathBuf) {
                 } else if n < 0 {
                     let err = std::io::Error::last_os_error();
                     if err.kind() != std::io::ErrorKind::WouldBlock {
-                        debug!("TUN read error: {}", err);
+
                     }
                     std::thread::sleep(Duration::from_micros(100));
                 } else {
@@ -634,7 +633,7 @@ fn run_daemon(config_path: &PathBuf) {
                                                 if let Ok((counter, ciphertext)) = relay_peer.encrypt(&packet) {
                                                     let pkt = transport::build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
                                                     let _ = socket.send_to(&pkt, endpoint);
-                                                    debug!("Broadcast relayed via {} for relay-only peers", relay_ip);
+
                                                 }
                                             }
                                         }
@@ -654,11 +653,11 @@ fn run_daemon(config_path: &PathBuf) {
                                 Ok((counter, ciphertext)) => {
                                     let pkt = transport::build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
                                     if let Err(e) = socket.send_to(&pkt, endpoint) {
-                                        debug!("UDP send error to {}: {}", endpoint, e);
+
                                     }
                                     return true;
                                 }
-                                Err(e) => { debug!("Encrypt error for {}: {}", dest_ip, e); }
+                                Err(_e) => { }
                             }
                         }
                     }
@@ -676,10 +675,10 @@ fn run_daemon(config_path: &PathBuf) {
                                     Ok((counter, ciphertext)) => {
                                         let pkt = transport::build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
                                         let _ = socket.send_to(&pkt, endpoint);
-                                        debug!("Routed packet for container {} via host {}", dest_ip, host_ip);
+
                                         true
                                     }
-                                    Err(e) => { debug!("Encrypt error for {} via {}: {}", dest_ip, host_ip, e); false }
+                                    Err(_e) => { false }
                                 }
                             } else { false }
                         } else { false }
@@ -696,15 +695,15 @@ fn run_daemon(config_path: &PathBuf) {
                                 Ok((counter, ciphertext)) => {
                                     let pkt = transport::build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
                                     if let Err(e) = socket.send_to(&pkt, endpoint) {
-                                        debug!("Relay send to {} via {} failed: {}", dest_ip, relay_ip, e);
+
                                     } else {
-                                        debug!("Relayed packet to {} via {} ({})", dest_ip, relay_ip, endpoint);
+
                                     }
                                 }
-                                Err(e) => debug!("Relay encrypt error for {} via {}: {}", dest_ip, relay_ip, e),
+                                Err(_e) => {}
                             }
                         } else {
-                            debug!("Relay peer {} has no endpoint", relay_ip);
+
                         }
                     });
                     continue;
@@ -718,10 +717,10 @@ fn run_daemon(config_path: &PathBuf) {
                                 Ok((counter, ciphertext)) => {
                                     let pkt = transport::build_data_packet(&keypair.my_peer_id(), counter, &ciphertext);
                                     if let Err(e) = socket.send_to(&pkt, endpoint) {
-                                        debug!("UDP send error to gateway {}: {}", endpoint, e);
+
                                     }
                                 }
-                                Err(e) => debug!("Encrypt error for gateway {}: {}", gw_ip, e),
+                                Err(_e) => {}
                             }
                         }
                     });
@@ -743,7 +742,7 @@ fn run_daemon(config_path: &PathBuf) {
                         }
                     });
                 }
-                debug!("Broadcast packet for unknown dest {} to all peers", dest_ip);
+
             }
         }
 
@@ -792,14 +791,14 @@ fn run_daemon(config_path: &PathBuf) {
                                     // Update endpoint if it changed (roaming)
                                     let known_endpoint = peer_manager.with_peer_by_ip(&peer_ip, |peer| peer.endpoint);
                                     if known_endpoint != Some(Some(src)) {
-                                        debug!("Peer {} roamed to new endpoint: {}", peer_ip, src);
+    
                                         peer_manager.update_endpoint(&peer_ip, src);
                                     }
 
                                     // Check if this is a PEX message
                                     if plaintext.len() > 1 && plaintext[0] == transport::PKT_PEER_EXCHANGE {
                                         if let Some(entries) = transport::parse_peer_exchange(&plaintext) {
-                                            debug!("Received PEX from {} with {} peers", peer_ip, entries.len());
+
                                             peer_manager.add_from_pex(&entries, peer_ip, wolfnet_ip, &keypair);
 
                                             // Enable IP forwarding if we have multiple peers (we're a relay)
@@ -815,7 +814,7 @@ fn run_daemon(config_path: &PathBuf) {
                                     // arrive as raw UDP packets (handled in the PKT_HANDSHAKE case above).
                                     // Processing them here corrupts endpoint info and causes session storms.
                                     if plaintext.len() > 1 && plaintext[0] == transport::PKT_HANDSHAKE {
-                                        debug!("Ignoring relayed handshake inside data packet from {}", peer_ip);
+
                                         continue;
                                     }
 
@@ -857,16 +856,16 @@ fn run_daemon(config_path: &PathBuf) {
                                                         Ok((ctr, ct)) => {
                                                             let pkt = transport::build_data_packet(&keypair.my_peer_id(), ctr, &ct);
                                                             let _ = socket.send_to(&pkt, endpoint);
-                                                            debug!("Relayed packet from {} to {} at {} ({} bytes)", peer_ip, dest_ip, endpoint, plaintext.len());
+
                                                             true
                                                         }
                                                         Err(e) => {
-                                                            debug!("Relay forward {} -> {} encrypt failed: {}", peer_ip, dest_ip, e);
+
                                                             false
                                                         }
                                                     }
                                                 } else {
-                                                    debug!("Relay forward {} -> {} has no endpoint", peer_ip, dest_ip);
+
                                                     false
                                                 }
                                             });
@@ -884,7 +883,7 @@ fn run_daemon(config_path: &PathBuf) {
                                                                 if let Ok((ctr, ct)) = host_peer.encrypt(&plaintext) {
                                                                     let pkt = transport::build_data_packet(&keypair.my_peer_id(), ctr, &ct);
                                                                     let _ = socket.send_to(&pkt, endpoint);
-                                                                    debug!("Subnet-routed {} -> {} via host {}", dest_ip, endpoint, host_ip);
+
                                                                 }
                                                             }
                                                         });
@@ -903,11 +902,11 @@ fn run_daemon(config_path: &PathBuf) {
                                         warn!("Decrypt failed from {} (counter={}): {}", peer_ip, counter, e);
                                     }
                                     None => {
-                                        debug!("Peer {} not found during decrypt", src);
+
                                     }
                                 }
                             } else {
-                                debug!("Data from unknown endpoint: {}", src);
+
                             }
                         }
                     }
@@ -923,7 +922,7 @@ fn run_daemon(config_path: &PathBuf) {
                             peer_ip_opt = peer_manager.find_ip_by_id(&peer_id);
                             
                             if let Some(ip) = peer_ip_opt {
-                                debug!("Peer {} recovered from unknown endpoint via keepalive: {}", ip, src);
+
                                 peer_manager.update_endpoint(&ip, src);
                             }
                         }
@@ -934,11 +933,11 @@ fn run_daemon(config_path: &PathBuf) {
                             });
                         }
                     }
-                    _ => debug!("Unknown packet type {} from {}", data[0], src),
+                    _ => {}
                 }
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {}
-            Err(e) => debug!("UDP recv error: {}", e),
+            Err(_e) => {}
         }
 
         // 3. Periodic handshakes (every 10s)
@@ -973,7 +972,7 @@ fn run_daemon(config_path: &PathBuf) {
                         if let Some(new_addr) = resolve_endpoint(&ep_str) {
                             let current = peer_manager.with_peer_by_ip(&ip, |peer| peer.endpoint).flatten();
                             if current != Some(new_addr) {
-                                debug!("DNS re-resolve: {} endpoint changed to {}", ip, new_addr);
+
                                 peer_manager.update_endpoint(&ip, new_addr);
                             }
                         }

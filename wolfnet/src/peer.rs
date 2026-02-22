@@ -9,7 +9,7 @@ use std::net::{Ipv4Addr, SocketAddr};
 use std::sync::{Arc, RwLock};
 use std::time::Instant;
 use x25519_dalek::{PublicKey, StaticSecret};
-use tracing::{info, debug};
+
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 
 use crate::crypto::{SessionCipher, KeyPair};
@@ -72,7 +72,7 @@ impl Peer {
         let shared = my_secret.diffie_hellman(&self.public_key);
         self.cipher = Some(SessionCipher::new(shared.as_bytes(), my_public, &self.public_key));
         self.last_handshake = Some(Instant::now());
-        debug!("Session established with {} ({})", self.hostname, self.wolfnet_ip);
+
     }
 
     /// Check if this peer has an active session
@@ -124,7 +124,7 @@ impl PeerManager {
     pub fn add_peer(&self, peer: Peer) {
         let ip = peer.wolfnet_ip;
         let peer_id = peer.peer_id;
-        debug!("Added peer: {} ({}) id={}", ip, peer.hostname, hex::encode(peer_id));
+
 
         if let Some(endpoint) = peer.endpoint {
             self.endpoint_to_ip.write().unwrap().insert(endpoint, ip);
@@ -157,7 +157,7 @@ impl PeerManager {
             if let Some(old) = peer.endpoint {
                 if old != new_endpoint {
                     self.endpoint_to_ip.write().unwrap().remove(&old);
-                    debug!("Peer {} endpoint changed: {} -> {}", ip, old, new_endpoint);
+
                 }
             }
             peer.endpoint = Some(new_endpoint);
@@ -177,7 +177,7 @@ impl PeerManager {
                 if let Some(old_ep) = peer.endpoint {
                     if old_ep != endpoint {
                         self.endpoint_to_ip.write().unwrap().remove(&old_ep);
-                        debug!("Peer {} endpoint updated: {} -> {} (discovery)", wolfnet_ip, old_ep, endpoint);
+
                     }
                 }
                 peer.endpoint = Some(endpoint);
@@ -199,7 +199,7 @@ impl PeerManager {
         if let Some(old_ip) = existing_ip {
             if old_ip != wolfnet_ip {
                 // Peer changed their WolfNet IP — migrate to new IP
-                debug!("Peer {} ({}) changed IP: {} -> {}", hostname, hex::encode(KeyPair::peer_id(public_key)), old_ip, wolfnet_ip);
+
                 let mut peer = peers.remove(&old_ip).unwrap();
                 
                 // Update old endpoint mapping
@@ -233,7 +233,7 @@ impl PeerManager {
         self.endpoint_to_ip.write().unwrap().insert(endpoint, wolfnet_ip);
         self.id_to_ip.write().unwrap().insert(peer_id, wolfnet_ip);
         peers.insert(wolfnet_ip, peer);
-        debug!("Discovered new peer: {} ({}) at {}", hostname, wolfnet_ip, endpoint);
+
     }
 
     /// Get all peer IPs
@@ -279,7 +279,7 @@ impl PeerManager {
         let map: HashMap<String, String> = match serde_json::from_str(&content) {
             Ok(m) => m,
             Err(e) => {
-                info!("Failed to parse routes file {}: {}", path.display(), e);
+
                 return;
             }
         };
@@ -294,7 +294,7 @@ impl PeerManager {
             }
         }
         if !routes.is_empty() {
-            debug!("Loaded {} subnet route(s) from {}", routes.len(), path.display());
+
         }
     }
 
@@ -394,7 +394,7 @@ impl PeerManager {
 
             let peer_id = peer.peer_id;
             self.id_to_ip.write().unwrap().insert(peer_id, entry_ip);
-            debug!("PEX: learned about {} ({}) via {}", entry.hostname, entry_ip, sender_ip);
+
             peers.insert(entry_ip, peer);
         }
     }

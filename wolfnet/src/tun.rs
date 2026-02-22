@@ -3,7 +3,7 @@
 //! Creates and manages a virtual network interface using the Linux TUN driver.
 
 use std::os::unix::io::RawFd;
-use tracing::{info, warn};
+use tracing::warn;
 
 const TUNSETIFF: libc::c_ulong = 0x400454ca;
 const IFF_TUN: libc::c_short = 0x0001;
@@ -58,7 +58,7 @@ impl TunDevice {
             .trim_end_matches('\0')
             .to_string();
 
-        info!("Created TUN device: {}", actual_name);
+
         Ok(Self { fd, name: actual_name })
     }
 
@@ -88,7 +88,7 @@ impl TunDevice {
             return Err(format!("Failed to bring up {}", self.name).into());
         }
 
-        info!("Configured {}: {}/{} mtu {}", self.name, address, subnet, mtu);
+
         Ok(())
     }
 
@@ -140,7 +140,7 @@ impl TunDevice {
 
 impl Drop for TunDevice {
     fn drop(&mut self) {
-        info!("Closing TUN device: {}", self.name);
+
         unsafe { libc::close(self.fd); }
     }
 }
