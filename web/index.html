@@ -646,6 +646,7 @@
                     <a href="proxmox.html">🟠 Proxmox Integration</a>
                     <a href="app-store.html">🛍️ App Store</a>
                     <a href="wolfstack-ai.html">🤖 AI Agent</a>
+                    <a href="wolfnet-vpn.html">🔐 Remote Access VPN</a>
                     <a href="wolfstack-settings.html">⚙️ Settings</a>
                 </div>
                 <div class="nav-section">
@@ -671,6 +672,7 @@
                     <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
                     <a href="wolfnet.html">🌐 Overview &amp; Quick Start</a>
                     <a href="wolfnet-global.html">🌍 Global Network Access</a>
+                    <a href="wolfnet-vpn.html">🔐 Remote Access VPN</a>
                 </div>
                 <div class="nav-section">
                     <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
@@ -815,6 +817,32 @@
                             Fully customisable.</p>
                     </div>
                 </div>
+
+                <!-- Clusters & Nodes Explanation -->
+                <section class="animate-fade-in animate-delay-4"
+                    style="max-width: 640px; margin: 0 auto 1.5rem; padding: 1.25rem 1.5rem; background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(99,102,241,0.06)); border: 1px solid rgba(59,130,246,0.2); border-radius: 12px; text-align: left;">
+                    <h3 style="font-size: 1rem; font-weight: 700; margin: 0 0 0.75rem; color: var(--text-primary);">
+                        🔗 Clusters &amp; Nodes</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.7; margin: 0 0 0.75rem;">
+                        WolfStack organises your infrastructure into <strong
+                            style="color: var(--text-primary);">clusters</strong> and <strong
+                            style="color: var(--text-primary);">nodes</strong>:
+                    </p>
+                    <ul
+                        style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.8; padding-left: 1.25rem; margin: 0;">
+                        <li>A <strong style="color: var(--text-primary);">node</strong> is any individual server or
+                            machine running WolfStack.</li>
+                        <li>A <strong style="color: var(--text-primary);">cluster</strong> is a group of nodes that are
+                            managed together as a single unit.</li>
+                        <li>Add all your servers to the <strong style="color: var(--text-primary);">same
+                                cluster</strong> so they can share networking, containers, and configuration.</li>
+                    </ul>
+                    <p
+                        style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.6; margin: 0.75rem 0 0; font-style: italic;">
+                        💡 You can also add multiple clusters (e.g. separate WolfStack and Proxmox clusters) to your
+                        dashboard for a complete overview.
+                    </p>
+                </section>
 
                 <!-- Quick Start -->
                 <section style="padding: 0 0 1.5rem; text-align: center;">
@@ -963,6 +991,16 @@
                                         &#x2705; WolfNet</td>
                                     <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
                                     <td style="padding:12px 16px;text-align:center;">&#x26A0;&#xFE0F; CNI plugins</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                </tr>
+                                <tr style="border-bottom:1px solid var(--border-color);">
+                                    <td style="padding:12px 16px;font-weight:600;">Built-in VPN / Remote Access</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;font-weight:700;">
+                                        &#x2705; WolfNet VPN</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
                                     <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
                                     <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
                                     <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
@@ -1213,6 +1251,7 @@
                                 <li>Invite/Join — connect peers with a single token</li>
                                 <li>Relay forwarding — no port forwarding needed</li>
                                 <li>Gateway mode with NAT for internet access</li>
+                                <li><strong>Built-in VPN</strong> — remote access from anywhere</li>
                             </ul>
                             <a href="wolfnet.html" class="product-cta">Get Started →</a>
                         </div>
