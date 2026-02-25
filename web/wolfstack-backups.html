@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-KK9NEE1S54');</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="WolfStack Backup & Restore — schedule automated backups of Docker containers, LXC, VMs and config to local storage, S3, remote nodes, WolfDisk, or Proxmox Backup Server">
+    <meta name="keywords" content="WolfStack, backup, restore, Docker backup, LXC backup, VM backup, S3, Proxmox Backup Server, PBS, schedule, retention">
+    <meta name="author" content="Wolf Software Systems Ltd">
+    <link rel="canonical" href="https://wolfscale.org/wolfstack-backups.html">
+    <title>💾 Backup & Restore — WolfStack Docs</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=10">
+</head>
+<body>
+<div class="wiki-layout">
+<aside class="sidebar" id="sidebar">
+    <a href="index.html" class="sidebar-logo"><img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg"
+            alt="Wolf"></a>
+    <nav class="sidebar-nav">
+        <div class="nav-section">
+            <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span></div>
+            <a href="wolfstack.html">📊 Overview &amp; Quick Start</a>
+            <a href="wolfstack-containers.html">📦 Container Management</a>
+            <a href="wolfstack-storage.html">💾 Storage Manager</a>
+            <a href="wolfstack-files.html">📁 File Manager</a>
+            <a href="wolfstack-networking.html">🌐 Networking</a>
+            <a href="wolfstack-clustering.html">🔗 Multi-Server Clustering</a>
+            <a href="wolfstack-mysql.html">🗄️ MariaDB/MySQL Editor</a>
+            <a href="wolfstack-security.html">🔒 Security</a>
+            <a href="wolfstack-certificates.html">📜 Certificates</a>
+            <a href="wolfstack-cron.html">⏰ Cron Jobs</a>
+            <a href="wolfstack-terminal.html">💻 Terminal</a>
+            <a href="wolfstack-issues.html">🔍 Issues Scanner</a>
+            <a href="wolfstack-alerting.html">🔔 Alerting &amp; Notifications</a>
+            <a href="wolfstack-statuspage.html">📟 Status Pages</a>
+            <a href="wolfstack-backups.html" class="active">🗃️ Backup &amp; Restore</a>
+            <a href="wolfrun.html">🐺 WolfRun Orchestration</a>
+            <a href="proxmox.html">🟠 Proxmox Integration</a>
+            <a href="app-store.html">🛍️ App Store</a>
+            <a href="wolfstack-ai.html">🤖 AI Agent</a>
+            <a href="wolfnet-vpn.html">🔐 Remote Access VPN</a>
+            <a href="wolfstack-settings.html">⚙️ Settings</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication &amp; Load
+                    Balancer</span></div>
+            <a href="quickstart.html">⚡ Quick Start</a>
+            <a href="features.html">✨ Features</a>
+            <a href="architecture.html">🏗️ Architecture</a>
+            <a href="how-it-works.html">⚙️ How It Works</a>
+            <a href="binlog.html">📋 Binlog Mode</a>
+            <a href="load-balancer.html">⚖️ Load Balancer</a>
+            <a href="configuration.html">🔧 Configuration</a>
+            <a href="performance.html">📈 Performance</a>
+            <a href="cli.html">🖥️ CLI Reference</a>
+            <a href="troubleshooting.html">🔧 Troubleshooting</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication &amp; Sharing</span></div>
+            <a href="wolfdisk.html">💿 Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
+            <a href="wolfnet.html">🌐 Overview &amp; Quick Start</a>
+            <a href="wolfnet-global.html">🌍 Global Network Access</a>
+            <a href="wolfnet-vpn.html">🔐 Remote Access VPN</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with Firewall</span>
+            </div>
+            <a href="wolfproxy.html">🛡️ Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span></div>
+            <a href="wolfserve.html">🌎 Overview &amp; Quick Start</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Company</div>
+            <a href="https://wolf.uk.com" target="_blank">🐺 Wolf Software</a>
+            <a href="about.html">ℹ️ About</a>
+            <a href="roadmap.html">🗺️ Roadmap</a>
+            <a href="contact.html">📧 Contact</a>
+            <a href="glossary.html">📖 Glossary</a>
+            <a href="licensing.html">📄 Licensing</a>
+            <a href="enterprise.html">🏢 Enterprise</a>
+            <a href="support.html" style="color:#ff424d;font-weight:700;">&#10084;&#65039; Support Us</a>
+        </div>
+    </nav>
+    <div class="theme-toggle-wrapper">
+        <span class="theme-toggle-label">Theme</span>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme"><span
+                class="theme-toggle-slider"></span></button>
+    </div>
+    <div class="sidebar-links">
+        <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
+        <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+        <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+        <a href="https://www.reddit.com/r/WolfStack/" target="_blank">Reddit</a>
+        <a href="https://wolf.uk.com" target="_blank">wolf.uk.com</a>
+    </div>
+</aside>    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <main class="wiki-main">
+        <div class="mobile-header">
+            <a href="index.html" class="nav-logo"><img src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf" class="logo-img"></a>
+            <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+        </div>
+        <div class="page-header"><h1>🗃️ Backup &amp; Restore</h1><p>Automated backups of Docker containers, LXC containers, VMs, and configuration with flexible storage destinations</p></div>
+        <div class="wiki-content">
+
+            <!-- Overview -->
+            <div class="content-section">
+                <h2>Overview</h2>
+                <p>WolfStack&rsquo;s Backup &amp; Restore system lets you create on-demand or scheduled backups of everything on your server &mdash; Docker containers, LXC containers, KVM virtual machines, and WolfStack configuration files. Backups can be stored locally, on S3-compatible object storage, on a remote WolfStack node, on a WolfDisk mount, or on a Proxmox Backup Server (PBS).</p>
+                <p>Access backups from the WolfStack dashboard under <strong>Datacenter &rarr; Backup</strong>.</p>
+
+                <h3>What Can Be Backed Up</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr><th>Target Type</th><th>What&rsquo;s Included</th><th>Method</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>Docker Container</strong></td><td>Full container filesystem (committed image + gzip)</td><td><code>docker commit</code> &rarr; <code>docker save</code> &rarr; gzip</td></tr>
+                            <tr><td><strong>LXC Container</strong></td><td>Entire <code>/var/lib/lxc/{name}/</code> directory (rootfs + config)</td><td><code>tar czf</code> (container is stopped briefly for consistency)</td></tr>
+                            <tr><td><strong>KVM/QEMU VM</strong></td><td>Disk images (<code>.qcow2</code>), config JSON, logs, extra volumes</td><td><code>tar czf</code> (VM shut down via ACPI for safe snapshot)</td></tr>
+                            <tr><td><strong>Configuration</strong></td><td>All <code>/etc/wolfstack/</code> and <code>/etc/wolfnet/</code> config files, VM configs</td><td><code>tar czf</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Storage Destinations -->
+            <div class="content-section">
+                <h2>Storage Destinations</h2>
+                <p>When creating a backup or schedule you choose where to store the resulting archive. WolfStack supports five destination types:</p>
+
+                <h3>Local Path</h3>
+                <p>Store backups in a directory on the server&rsquo;s local filesystem. Fast and simple &mdash; good for quick snapshots or when combined with an external mount.</p>
+                <div class="info-box">Example path: <code>/var/backups/wolfstack</code></div>
+
+                <h3>S3-Compatible Object Storage</h3>
+                <p>Upload backups to any S3-compatible bucket &mdash; AWS S3, Cloudflare R2, MinIO, Wasabi, Backblaze B2, etc. Backups are stored under the <code>wolfstack-backups/</code> prefix inside the bucket.</p>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr><th>Field</th><th>Description</th><th>Example</th></tr></thead>
+                        <tbody>
+                            <tr><td>Bucket</td><td>Bucket name</td><td><code>my-backups</code></td></tr>
+                            <tr><td>Region</td><td>AWS region or custom region string</td><td><code>eu-west-1</code></td></tr>
+                            <tr><td>Endpoint</td><td>S3 endpoint URL (leave blank for AWS)</td><td><code>https://s3.eu-west-1.amazonaws.com</code></td></tr>
+                            <tr><td>Access Key</td><td>IAM access key ID</td><td><code>AKIA...</code></td></tr>
+                            <tr><td>Secret Key</td><td>IAM secret access key</td><td><code>wJal...</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>Remote WolfStack Node</h3>
+                <p>Send backups to another WolfStack node&rsquo;s import endpoint. Useful for off-site replication across your cluster. Provide the full URL of the remote node (e.g. <code>https://10.0.10.2:8553</code>).</p>
+
+                <h3>WolfDisk</h3>
+                <p>Store backups on a WolfDisk distributed filesystem mount. Works exactly like local storage but the data is replicated across WolfDisk nodes automatically. Specify the mount point path (e.g. <code>/mnt/wolfdisk/backups</code>).</p>
+
+                <h3>Proxmox Backup Server (PBS)</h3>
+                <p>Send backups to a dedicated Proxmox Backup Server. This is the recommended option if you already run PBS in your infrastructure &mdash; you get deduplication, encryption, and a proven backup pipeline. See the <a href="#pbs">Connecting to Proxmox Backup Server</a> section below for full setup instructions.</p>
+            </div>
+
+            <!-- Creating a Backup -->
+            <div class="content-section">
+                <h2>Creating a Backup</h2>
+                <ol>
+                    <li>Go to <strong>Datacenter &rarr; Backup</strong> in the WolfStack dashboard</li>
+                    <li>The <strong>Targets</strong> panel lists every Docker container, LXC container, VM, and a &ldquo;Config&rdquo; entry. Tick the items you want to back up, or use <strong>Select All</strong>.</li>
+                    <li>Choose a <strong>Storage Destination</strong> from the dropdown (local path, S3, remote node, WolfDisk, or PBS &mdash; if configured).</li>
+                    <li>Click <strong>Backup Selected</strong>. A progress indicator shows each item being backed up in real time.</li>
+                    <li>Completed backups appear in the <strong>Backup History</strong> table with their size, date, status, and storage location.</li>
+                </ol>
+                <div class="info-box"><strong>Tip:</strong> For Docker containers, the backup commits the current container state to a temporary image, then exports and compresses it. The container stays running throughout &mdash; only LXC and VM backups require a brief stop.</div>
+            </div>
+
+            <!-- Restoring a Backup -->
+            <div class="content-section">
+                <h2>Restoring a Backup</h2>
+                <ol>
+                    <li>In the <strong>Backup History</strong> table, find the backup you want to restore.</li>
+                    <li>Click the <strong>Restore</strong> button on that row.</li>
+                    <li>Confirm the restore in the dialog. WolfStack will download the archive from storage (if remote) and restore it to the appropriate location:
+                        <ul>
+                            <li><strong>Docker</strong> &mdash; loads the image back into Docker (<code>docker load</code>). You can then create a new container from it.</li>
+                            <li><strong>LXC</strong> &mdash; extracts the rootfs and config to <code>/var/lib/lxc/</code>, fixes paths and permissions automatically. Start it from the Containers page.</li>
+                            <li><strong>VM</strong> &mdash; extracts disk images and config to <code>/var/lib/wolfstack/vms/</code>. The VM appears in the dashboard and can be started.</li>
+                            <li><strong>Config</strong> &mdash; restores all WolfStack and WolfNet configuration files. Restart WolfStack to apply.</li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+
+            <!-- Backup Schedules -->
+            <div class="content-section">
+                <h2>Backup Schedules</h2>
+                <p>Automate your backups with schedules. Each schedule defines what to back up, how often, where to store it, and how many copies to keep.</p>
+
+                <h3>Creating a Schedule</h3>
+                <ol>
+                    <li>In the Backup page, open the <strong>Schedules</strong> panel.</li>
+                    <li>Click <strong>Add Schedule</strong>.</li>
+                    <li>Configure:
+                        <div class="table-wrapper" style="margin-top:0.5rem;">
+                            <table>
+                                <thead><tr><th>Field</th><th>Description</th></tr></thead>
+                                <tbody>
+                                    <tr><td>Name</td><td>A descriptive name (e.g. &ldquo;Nightly full backup&rdquo;)</td></tr>
+                                    <tr><td>Frequency</td><td><strong>Daily</strong>, <strong>Weekly</strong>, or <strong>Monthly</strong></td></tr>
+                                    <tr><td>Time</td><td>Time of day to run (HH:MM, 24-hour format)</td></tr>
+                                    <tr><td>Retention</td><td>Number of backups to keep (0 = unlimited). Oldest backups are pruned when the limit is reached.</td></tr>
+                                    <tr><td>Backup All</td><td>Back up every target on the server, or select specific items</td></tr>
+                                    <tr><td>Storage</td><td>Choose a storage destination (same options as manual backups)</td></tr>
+                                    <tr><td>Enabled</td><td>Toggle the schedule on or off without deleting it</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </li>
+                    <li>Click <strong>Save</strong>. WolfStack checks for due schedules every 60 seconds.</li>
+                </ol>
+                <div class="info-box"><strong>Retention example:</strong> A daily schedule with retention set to 7 keeps one week of backups. On the 8th run, the oldest backup is automatically deleted.</div>
+            </div>
+
+            <!-- Connecting to Proxmox Backup Server -->
+            <div class="content-section" id="pbs">
+                <h2>Connecting to Proxmox Backup Server (PBS)</h2>
+                <p>Proxmox Backup Server is a dedicated backup solution with deduplication, compression, and encryption. WolfStack integrates directly with PBS &mdash; you can send backups to it and restore snapshots from it, all from the WolfStack dashboard.</p>
+
+                <h3>Prerequisites</h3>
+                <ul>
+                    <li>A running Proxmox Backup Server instance (can be on the same network or reachable over the internet)</li>
+                    <li>The <code>proxmox-backup-client</code> package installed on your WolfStack node:
+                        <div class="code-block" style="margin:0.5rem 0;">
+                            <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                            <pre><code># Debian/Ubuntu — add the Proxmox repository first
+apt install proxmox-backup-client
+
+# RHEL/Rocky/Alma
+# Download from the Proxmox website or build from source</code></pre>
+                        </div>
+                    </li>
+                    <li>A PBS user and API token (or password) with access to a datastore</li>
+                </ul>
+
+                <h3>Step 1 &mdash; Create a PBS API Token</h3>
+                <ol>
+                    <li>Log in to your Proxmox Backup Server web interface (default: <code>https://your-pbs:8007</code>).</li>
+                    <li>Go to <strong>Configuration &rarr; Access Control &rarr; API Tokens</strong>.</li>
+                    <li>Click <strong>Add</strong> and create a token:
+                        <ul>
+                            <li><strong>User:</strong> e.g. <code>backup@pbs</code></li>
+                            <li><strong>Token Name:</strong> e.g. <code>wolfstack</code></li>
+                            <li><strong>Privilege Separation:</strong> Untick this so the token inherits the user&rsquo;s permissions</li>
+                        </ul>
+                    </li>
+                    <li>Copy the <strong>Token Secret</strong> &mdash; it is only shown once.</li>
+                    <li>Ensure the user has <strong>DatastoreBackup</strong> and <strong>DatastoreReader</strong> permissions on the target datastore.</li>
+                </ol>
+
+                <h3>Step 2 &mdash; Get the Server Fingerprint (Optional)</h3>
+                <p>If your PBS uses a self-signed certificate you need its TLS fingerprint so WolfStack can verify the connection.</p>
+                <div class="code-block" style="margin:0.5rem 0;">
+                    <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                    <pre><code># Run on the PBS server itself:
+proxmox-backup-manager cert info 2>/dev/null | grep Fingerprint
+
+# Or from a remote machine:
+openssl s_client -connect your-pbs:8007 &lt; /dev/null 2>/dev/null \
+  | openssl x509 -fingerprint -sha256 -noout</code></pre>
+                </div>
+
+                <h3>Step 3 &mdash; Configure PBS in WolfStack</h3>
+                <ol>
+                    <li>In the WolfStack dashboard, go to <strong>Datacenter &rarr; Backup</strong>.</li>
+                    <li>Open the <strong>Proxmox Backup Server</strong> panel.</li>
+                    <li>Fill in the connection details:
+                        <div class="table-wrapper" style="margin-top:0.5rem;">
+                            <table>
+                                <thead><tr><th>Field</th><th>Description</th><th>Example</th></tr></thead>
+                                <tbody>
+                                    <tr><td>PBS Server</td><td>Hostname or IP of your PBS</td><td><code>10.0.10.50</code> or <code>pbs.example.com</code></td></tr>
+                                    <tr><td>Datastore</td><td>Name of the PBS datastore to use</td><td><code>main</code></td></tr>
+                                    <tr><td>User</td><td>PBS user account</td><td><code>backup@pbs</code></td></tr>
+                                    <tr><td>Token Name</td><td>API token name (leave blank to use password auth)</td><td><code>wolfstack</code></td></tr>
+                                    <tr><td>Token Secret</td><td>The token secret you copied earlier</td><td><code>xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</code></td></tr>
+                                    <tr><td>Password</td><td>Alternative to token auth &mdash; the user&rsquo;s password</td><td></td></tr>
+                                    <tr><td>Fingerprint</td><td>TLS fingerprint (required for self-signed certs, optional otherwise)</td><td><code>AB:CD:EF:...</code></td></tr>
+                                    <tr><td>Namespace</td><td>PBS namespace for organizing backups (optional)</td><td><code>wolfstack</code></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </li>
+                    <li>Click <strong>Save &amp; Test Connection</strong>. WolfStack connects to PBS, verifies credentials, and reports how many existing snapshots it found.</li>
+                </ol>
+                <div class="info-box"><strong>Auth options:</strong> You can authenticate with either an <strong>API token</strong> (recommended) or a <strong>password</strong>. API tokens are preferred because they can be scoped to specific datastores and don&rsquo;t expire with password changes.</div>
+
+                <h3>Step 4 &mdash; Send Backups to PBS</h3>
+                <p>Once PBS is configured, it appears as a storage destination in the backup dropdown:</p>
+                <ol>
+                    <li>Select your backup targets (containers, VMs, config).</li>
+                    <li>Choose <strong>PBS &mdash; your-server/datastore</strong> from the storage dropdown.</li>
+                    <li>Click <strong>Backup Selected</strong>.</li>
+                </ol>
+                <p>WolfStack uses <code>proxmox-backup-client</code> under the hood to upload archives to PBS. The repository string is automatically constructed from your configuration:</p>
+                <div class="code-block" style="margin:0.5rem 0;">
+                    <div class="code-header"><span class="code-lang">text</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                    <pre><code># With API token:
+backup@pbs!wolfstack@10.0.10.50:main
+
+# With password:
+backup@pbs@10.0.10.50:main</code></pre>
+                </div>
+                <p>You can also include PBS as the storage destination in a <strong>scheduled backup</strong> for fully automated off-site backups.</p>
+
+                <h3>Step 5 &mdash; Restore from PBS</h3>
+                <ol>
+                    <li>In the <strong>Proxmox Backup Server</strong> panel, click <strong>Browse Snapshots</strong>.</li>
+                    <li>WolfStack fetches the snapshot list from PBS and displays them with their date, size, and type.</li>
+                    <li>Click <strong>Restore</strong> on the snapshot you want. WolfStack downloads it using <code>proxmox-backup-client restore</code> and extracts it to the appropriate location on the node.</li>
+                    <li>A live progress indicator shows the download and restore status.</li>
+                </ol>
+            </div>
+
+            <!-- Connecting to a Proxmox VE Cluster -->
+            <div class="content-section">
+                <h2>Backing Up Proxmox VE Guests</h2>
+                <p>If you have Proxmox VE nodes added to your WolfStack cluster, their VMs and LXC containers are visible in the dashboard. However, WolfStack&rsquo;s built-in backup system backs up workloads running <em>on the WolfStack node itself</em> (native Docker, LXC, and KVM/QEMU VMs).</p>
+                <p>For Proxmox VE guests, the recommended backup strategy is:</p>
+                <ul>
+                    <li><strong>Use PBS for PVE guests</strong> &mdash; Configure Proxmox Backup Server as a storage target in both Proxmox VE and WolfStack. PVE handles its own guest backups natively with vzdump, while WolfStack backs up its local workloads to the same PBS.</li>
+                    <li><strong>Restore PVE guests via WolfStack</strong> &mdash; WolfStack can browse PBS snapshots and trigger restores of vzdump archives back to a Proxmox VE node using the PVE API.</li>
+                </ul>
+                <div class="info-box"><strong>Adding a Proxmox VE node:</strong> See the <a href="proxmox.html">Proxmox Integration</a> docs. WolfStack auto-discovers all nodes in a PVE cluster when you add one node with an API token.</div>
+            </div>
+
+            <!-- Config File Reference -->
+            <div class="content-section">
+                <h2>Configuration Reference</h2>
+                <p>Backup configuration is stored in <code>/etc/wolfstack/backups.json</code>. This file is managed automatically by the dashboard &mdash; you should not need to edit it manually, but it&rsquo;s useful to know the structure for debugging.</p>
+                <div class="code-block">
+                    <div class="code-header"><span class="code-lang">json</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                    <pre><code>{
+  "schedules": [
+    {
+      "id": "uuid",
+      "name": "Nightly full backup",
+      "frequency": "daily",
+      "time": "02:00",
+      "retention": 7,
+      "backup_all": true,
+      "targets": [],
+      "storage": {
+        "type": "s3",
+        "bucket": "my-backups",
+        "region": "eu-west-1",
+        "endpoint": "",
+        "access_key": "AKIA...",
+        "secret_key": "wJal..."
+      },
+      "enabled": true,
+      "last_run": "2026-02-25T02:00:12+00:00"
+    }
+  ],
+  "entries": [
+    {
+      "id": "uuid",
+      "target": { "type": "docker", "name": "nginx-prod" },
+      "storage": { "type": "local", "path": "/var/backups/wolfstack" },
+      "filename": "docker-nginx-prod-20260225-020012.tar.gz",
+      "size_bytes": 52428800,
+      "created_at": "2026-02-25T02:00:12+00:00",
+      "status": "completed",
+      "error": "",
+      "schedule_id": "uuid"
+    }
+  ]
+}</code></pre>
+                </div>
+
+                <h3>PBS Configuration</h3>
+                <p>PBS connection settings are saved separately at <code>/etc/wolfstack/pbs-config.json</code>:</p>
+                <div class="code-block">
+                    <div class="code-header"><span class="code-lang">json</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                    <pre><code>{
+  "pbs_server": "10.0.10.50",
+  "pbs_datastore": "main",
+  "pbs_user": "backup@pbs",
+  "pbs_token_name": "wolfstack",
+  "pbs_token_secret": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "pbs_password": "",
+  "pbs_fingerprint": "AB:CD:EF:...",
+  "pbs_namespace": ""
+}</code></pre>
+                </div>
+            </div>
+
+            <!-- Troubleshooting -->
+            <div class="content-section">
+                <h2>Troubleshooting</h2>
+
+                <h3>PBS connection fails</h3>
+                <ul>
+                    <li>Verify <code>proxmox-backup-client</code> is installed: <code>proxmox-backup-client version</code></li>
+                    <li>Check that the PBS server is reachable: <code>curl -k https://your-pbs:8007/api2/json/version</code></li>
+                    <li>For self-signed certificates, make sure you have the correct fingerprint</li>
+                    <li>Ensure the API token has <strong>DatastoreBackup</strong> and <strong>DatastoreReader</strong> roles on the datastore</li>
+                </ul>
+
+                <h3>Backup fails with &ldquo;Docker commit failed&rdquo;</h3>
+                <ul>
+                    <li>The container may have been removed between target listing and backup. Refresh and try again.</li>
+                    <li>Check Docker is running: <code>systemctl status docker</code></li>
+                </ul>
+
+                <h3>LXC backup fails or takes very long</h3>
+                <ul>
+                    <li>LXC containers are stopped briefly during backup for filesystem consistency. Very large containers may take time to tar.</li>
+                    <li>Ensure sufficient disk space in <code>/tmp/wolfstack-backups/</code> (the staging directory).</li>
+                </ul>
+
+                <h3>Restored LXC container won&rsquo;t start</h3>
+                <ul>
+                    <li>WolfStack automatically fixes the <code>lxc.rootfs.path</code> and sets <code>lxc.apparmor.profile = unconfined</code> during restore.</li>
+                    <li>Check the container config: <code>cat /var/lib/lxc/{name}/config</code></li>
+                    <li>Verify ownership: <code>ls -la /var/lib/lxc/{name}/</code> &mdash; should be owned by root.</li>
+                </ul>
+
+                <h3>S3 upload fails</h3>
+                <ul>
+                    <li>Verify credentials and bucket name. Ensure the IAM user has <code>s3:PutObject</code> permission on the bucket.</li>
+                    <li>For non-AWS providers (R2, MinIO), make sure the endpoint URL is correct.</li>
+                </ul>
+
+                <h3>Scheduled backup didn&rsquo;t run</h3>
+                <ul>
+                    <li>Check the schedule is enabled (toggle switch on).</li>
+                    <li>WolfStack checks schedules every 60 seconds. If the time window was missed (e.g. server was down), it will run on the next check.</li>
+                    <li>Review logs: <code>journalctl -u wolfstack | grep -i backup</code></li>
+                </ul>
+            </div>
+
+<div class="page-nav"><a href="wolfstack-statuspage.html" class="prev">&larr; Status Pages</a><a href="wolfrun.html" class="next">WolfRun &rarr;</a></div>
+        </div>
+        <footer class="wiki-footer" style="margin-top:3rem;padding:2rem 0;border-top:1px solid rgba(255,255,255,0.1);text-align:center;opacity:0.7;font-size:0.875rem;">
+            <p>&copy; 2026 <a href="https://wolf.uk.com" target="_blank" style="color:inherit;text-decoration:underline;">Wolf Software Systems Ltd</a> &bull; FSL-1.1</p>
+        </footer>
+    </main>
+</div>
+<script src="script.js"></script>
+</body>
+</html>

@@ -642,6 +642,8 @@
                     <a href="wolfstack-terminal.html">💻 Terminal</a>
                     <a href="wolfstack-issues.html">🔍 Issues Scanner</a>
                     <a href="wolfstack-alerting.html">🔔 Alerting &amp; Notifications</a>
+                    <a href="wolfstack-statuspage.html">📟 Status Pages</a>
+            <a href="wolfstack-backups.html">🗃️ Backup &amp; Restore</a>
                     <a href="wolfrun.html">🐺 WolfRun Orchestration</a>
                     <a href="proxmox.html">🟠 Proxmox Integration</a>
                     <a href="app-store.html">🛍️ App Store</a>
@@ -692,6 +694,7 @@
                     <a href="contact.html">📧 Contact</a>
                     <a href="glossary.html">📖 Glossary</a>
                     <a href="licensing.html">📄 Licensing</a>
+                    <a href="enterprise.html">🏢 Enterprise</a>
                     <a href="support.html" style="color: #ff424d; font-weight: 700;">❤️ Support Us</a>
                 </div>
             </nav>
@@ -811,10 +814,10 @@
                             automated actions.</p>
                     </div>
                     <div class="highlight-card">
-                        <div class="highlight-icon">🎨</div>
-                        <h3>Beautiful Themes</h3>
-                        <p>Multiple built-in themes including dark mode, glass effect, amber terminal, and midnight.
-                            Fully customisable.</p>
+                        <div class="highlight-icon">📟</div>
+                        <h3>Status Pages</h3>
+                        <p>Built-in uptime monitoring with beautiful public status pages. HTTP, TCP, Ping, Container
+                            &amp; WolfRun monitors with 90-day history.</p>
                     </div>
                 </div>
 
@@ -875,6 +878,20 @@
                                     </div>
                                     <pre><code>curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfStack/master/setup.sh | sudo bash</code></pre>
                                 </div>
+                                <p
+                                    style="font-size: 0.82rem; color: var(--text-muted); margin: 0.5rem 0 0; line-height: 1.7;">
+                                    💡 If <code
+                                        style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">sudo</code>
+                                    or <code
+                                        style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">curl</code>
+                                    are not installed, install them first:<br>
+                                    <strong style="color: var(--text-secondary);">Debian / Ubuntu:</strong>
+                                    <code
+                                        style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">apt install sudo curl</code><br>
+                                    <strong style="color: var(--text-secondary);">RHEL / Fedora:</strong>
+                                    <code
+                                        style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">dnf install sudo curl</code>
+                                </p>
                             </li>
                             <li><strong>Get the token</strong> from each server — after installation, each server
                                 displays its cluster token. You can also run
@@ -1074,6 +1091,16 @@
                                 </tr>
                                 <tr
                                     style="border-bottom:1px solid var(--border-color);background:rgba(255,255,255,0.02);">
+                                    <td style="padding:12px 16px;font-weight:600;">Public Status Pages</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#22c55e;font-weight:700;">
+                                        &#x2705;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                    <td style="padding:12px 16px;text-align:center;color:#ef4444;">&#x274C;</td>
+                                </tr>
+                                <tr style="border-bottom:1px solid var(--border-color);">
                                     <td style="padding:12px 16px;font-weight:600;">Database Editor</td>
                                     <td style="padding:12px 16px;text-align:center;color:#22c55e;font-weight:700;">
                                         &#x2705;</td>
@@ -1120,7 +1147,9 @@
                                         &amp; Open Source<br><a href="https://www.patreon.com/15362110/join"
                                             target="_blank"
                                             style="color:#22c55e;font-size:0.8rem;font-weight:500;text-decoration:underline;">Supported
-                                            by Your Donations</a></td>
+                                            by Your Donations</a><br><a href="enterprise.html"
+                                            style="color:#ff424d;font-size:0.8rem;font-weight:500;text-decoration:underline;">Enterprise
+                                            Licensing Available</a></td>
                                     <td style="padding:12px 16px;text-align:center;">Free + Paid</td>
                                     <td style="padding:12px 16px;text-align:center;">Free</td>
                                     <td style="padding:12px 16px;text-align:center;">Free + Paid</td>
@@ -1185,7 +1214,7 @@
                                 <li>Clone & migrate containers between servers</li>
                                 <li>S3, NFS & WolfDisk storage manager</li>
                                 <li>Multi-server clustering & fleet management</li>
-                                <li>Built-in App Store, Issues Scanner, AI Agent</li>
+                                <li>Built-in App Store, Status Pages, Issues Scanner, AI Agent</li>
                             </ul>
                             <a href="wolfstack.html" class="product-cta">Get Started →</a>
                         </div>
@@ -1331,7 +1360,11 @@
                 <!-- Support Section -->
                 <section class="support-section">
                     <h2>🐺 Support the Pack</h2>
-                    <p>Wolf tools are free and open-source. Support development and get early access to new features.
+                    <p>WolfStack is <strong>free and open-source</strong>, funded by the community through Patreon
+                        donations.
+                        For businesses needing dedicated support, installation and ticketing — <a href="enterprise.html"
+                            style="color:#ff424d;font-weight:600;text-decoration:underline;">enterprise licensing</a> is
+                        available.
                     </p>
                     <div class="support-buttons">
                         <a href="https://www.patreon.com/15362110/join" target="_blank" class="btn-support btn-patreon">
@@ -1341,6 +1374,10 @@
                                     d="M232.3 25.63c-29.45-22.29-73.6-22.15-104.94 2.52C102.06 48.12 94.34 78.36 99.6 106.5c-36.94 4.56-66.44 25.6-82.18 55.46C.98 193.24-.24 231.72 15.48 256H38.2c-20.74-28.46-19.78-72.22 6.7-99.5 22.02-22.7 55.14-31.26 84.34-20.18-5.78 38.28 15.04 77.32 51.4 92.9 21.94 9.4 47.84 9.76 69.1-2.96 24.18-14.48 39.76-42.02 39.76-70.6V69.6c.76-17.1-7.8-33.72-21.14-44h-36.08v.03zM216 155.66c0 18.7-10.14 36.34-26.14 45.48-13.68 7.82-31.26 8.92-47.96.44-25.44-12.92-38.94-43.46-30.2-70.84 25.18 14.14 56.62 16.52 84.06 4.58 7.48-3.28 14.26-8.02 20.24-13.44v33.78zM216 92.18c-20.5 22.34-55.04 29.76-83.7 16.38-18.06-8.44-31.92-24.58-36.2-44.3-4.92-22.56 2.58-47.2 21.56-62 24.32-18.94 59.78-20.68 84.2-5.44l.14.1c8.54 5.82 14.02 16.46 14 27.1v68.16z" />
                             </svg>
                             Support on Patreon
+                        </a>
+                        <a href="enterprise.html" class="btn-support"
+                            style="background:linear-gradient(135deg,#dc2626,#ef4444);">
+                            🏢 Enterprise Licensing
                         </a>
                         <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank"
                             class="btn-support btn-github">

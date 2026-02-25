@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KK9NEE1S54"></script>
+    <script>window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments) } gtag('js', new Date()); gtag('config', 'G-KK9NEE1S54');</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="WolfStack Enterprise Licensing — full support, installation, ticketing and SLA for businesses">
+    <title>🏢 Enterprise Licensing — WolfStack Docs</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=10">
+    <style>
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .pricing-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .pricing-card:hover {
+            border-color: rgba(220, 38, 38, 0.3);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .pricing-card.featured {
+            border-color: rgba(220, 38, 38, 0.5);
+            box-shadow: 0 4px 24px rgba(220, 38, 38, 0.15);
+        }
+
+        .pricing-card.featured::before {
+            content: '⭐ Most Popular';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+            color: white;
+            padding: 4px 16px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .pricing-tier {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .pricing-name {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .pricing-price {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--accent-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .pricing-price .period {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .pricing-price .currency {
+            font-size: 1.2rem;
+            vertical-align: super;
+        }
+
+        .pricing-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .pricing-features {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 1.5rem;
+            text-align: left;
+        }
+
+        .pricing-features li {
+            padding: 0.4rem 0;
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .pricing-features li:last-child {
+            border-bottom: none;
+        }
+
+        .pricing-cta {
+            display: inline-block;
+            padding: 10px 28px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .pricing-cta-primary {
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+            color: white;
+            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+        }
+
+        .pricing-cta-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
+            color: white;
+        }
+
+        .pricing-cta-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .pricing-cta-secondary:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-2px);
+            color: var(--text-primary);
+        }
+
+        .pricing-cta-green {
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+            color: white;
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+        }
+
+        .pricing-cta-green:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+            color: white;
+        }
+
+        .enterprise-includes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .include-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.25rem;
+            transition: all 0.3s ease;
+        }
+
+        .include-card:hover {
+            border-color: rgba(220, 38, 38, 0.2);
+        }
+
+        .include-card h4 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .include-card p {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .contact-box {
+            background: linear-gradient(135deg, rgba(220, 38, 38, 0.08), rgba(239, 68, 68, 0.04));
+            border: 1px solid rgba(220, 38, 38, 0.2);
+            border-radius: 14px;
+            padding: 2rem;
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .contact-box h3 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+        }
+
+        .contact-box p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.25rem;
+            line-height: 1.7;
+        }
+
+        .contact-email {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 12px 28px;
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1rem;
+            box-shadow: 0 4px 20px rgba(220, 38, 38, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .contact-email:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(220, 38, 38, 0.4);
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .enterprise-includes {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wiki-layout">
+        <aside class="sidebar" id="sidebar">
+            <a href="index.html" class="sidebar-logo"><img
+                    src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"></a>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfStack<span class="nav-desc">Server Management Dashboard</span>
+                    </div>
+                    <a href="wolfstack.html">📊 Overview &amp; Quick Start</a>
+                    <a href="wolfstack-containers.html">📦 Container Management</a>
+                    <a href="wolfstack-storage.html">💾 Storage Manager</a>
+                    <a href="wolfstack-files.html">📁 File Manager</a>
+                    <a href="wolfstack-networking.html">🌐 Networking</a>
+                    <a href="wolfstack-clustering.html">🔗 Multi-Server Clustering</a>
+                    <a href="wolfstack-mysql.html">🗄️ MariaDB/MySQL Editor</a>
+                    <a href="wolfstack-security.html">🔒 Security</a>
+                    <a href="wolfstack-certificates.html">📜 Certificates</a>
+                    <a href="wolfstack-cron.html">⏰ Cron Jobs</a>
+                    <a href="wolfstack-terminal.html">💻 Terminal</a>
+                    <a href="wolfstack-issues.html">🔍 Issues Scanner</a>
+                    <a href="wolfstack-alerting.html">🔔 Alerting &amp; Notifications</a>
+                    <a href="wolfstack-statuspage.html">📟 Status Pages</a>
+            <a href="wolfstack-backups.html">🗃️ Backup &amp; Restore</a>
+                    <a href="wolfrun.html">🐺 WolfRun Orchestration</a>
+                    <a href="proxmox.html">🟠 Proxmox Integration</a>
+                    <a href="app-store.html">🛍️ App Store</a>
+                    <a href="wolfstack-ai.html">🤖 AI Agent</a>
+                    <a href="wolfnet-vpn.html">🔐 Remote Access VPN</a>
+                    <a href="wolfstack-settings.html">⚙️ Settings</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfScale<span class="nav-desc">Database Replication &amp; Load
+                            Balancer</span></div>
+                    <a href="quickstart.html">⚡ Quick Start</a>
+                    <a href="features.html">✨ Features</a>
+                    <a href="architecture.html">🏗️ Architecture</a>
+                    <a href="how-it-works.html">⚙️ How It Works</a>
+                    <a href="binlog.html">📋 Binlog Mode</a>
+                    <a href="load-balancer.html">⚖️ Load Balancer</a>
+                    <a href="configuration.html">🔧 Configuration</a>
+                    <a href="performance.html">📈 Performance</a>
+                    <a href="cli.html">🖥️ CLI Reference</a>
+                    <a href="troubleshooting.html">🔧 Troubleshooting</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfDisk<span class="nav-desc">Disk Replication &amp; Sharing</span>
+                    </div>
+                    <a href="wolfdisk.html">💿 Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfNet<span class="nav-desc">Easy Private Network</span></div>
+                    <a href="wolfnet.html">🌐 Overview &amp; Quick Start</a>
+                    <a href="wolfnet-global.html">🌍 Global Network Access</a>
+                    <a href="wolfnet-vpn.html">🔐 Remote Access VPN</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfProxy<span class="nav-desc">NGINX Compatible Proxy with
+                            Firewall</span>
+                    </div>
+                    <a href="wolfproxy.html">🛡️ Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">WolfServe<span class="nav-desc">Apache2 Compatible Web Server</span>
+                    </div>
+                    <a href="wolfserve.html">🌎 Overview &amp; Quick Start</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Company</div>
+                    <a href="https://wolf.uk.com" target="_blank">🐺 Wolf Software</a>
+                    <a href="about.html">ℹ️ About</a>
+                    <a href="roadmap.html">🗺️ Roadmap</a>
+                    <a href="contact.html">📧 Contact</a>
+                    <a href="glossary.html">📖 Glossary</a>
+                    <a href="licensing.html">📄 Licensing</a>
+                    <a href="enterprise.html" class="active">🏢 Enterprise</a>
+                    <a href="support.html" style="color:#ff424d;font-weight:700;">&#10084;&#65039; Support Us</a>
+                </div>
+            </nav>
+            <div class="theme-toggle-wrapper">
+                <span class="theme-toggle-label">Theme</span>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme"><span
+                        class="theme-toggle-slider"></span></button>
+            </div>
+            <div class="sidebar-links">
+                <a href="https://github.com/wolfsoftwaresystemsltd/WolfScale" target="_blank">GitHub</a>
+                <a href="https://www.patreon.com/15362110/join" target="_blank">Patreon</a>
+                <a href="https://discord.gg/q9qMjHjUQY" target="_blank">Discord</a>
+                <a href="https://www.reddit.com/r/WolfStack/" target="_blank">Reddit</a>
+                <a href="https://wolf.uk.com" target="_blank">wolf.uk.com</a>
+            </div>
+        </aside>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+        <main class="wiki-main">
+            <div class="mobile-header">
+                <a href="index.html" class="nav-logo"><img
+                        src="https://wolf.uk.com/wp-content/uploads/2026/01/Group-9.svg" alt="Wolf"
+                        class="logo-img"></a>
+                <button class="mobile-menu-btn" id="mobile-menu-btn"><span></span><span></span><span></span></button>
+            </div>
+            <div class="page-header">
+                <h1>🏢 Enterprise Licensing</h1>
+                <p>Full support, installation, ticketing and SLA for your business</p>
+            </div>
+            <div class="wiki-content">
+
+                <div class="content-section">
+                    <h2>How WolfStack is Funded</h2>
+                    <p>WolfStack is <strong>free and open-source</strong> software, funded by the community through <a
+                            href="https://www.patreon.com/15362110/join" target="_blank"
+                            style="color:#22c55e;font-weight:600;">Patreon donations</a>. This keeps it accessible to
+                        everyone — from hobbyists running a single server to large organisations managing entire fleets.
+                    </p>
+                    <p>For businesses that need <strong>guaranteed support, professional installation, and a ticketing
+                            system</strong>, we offer Enterprise Licensing. You get everything in the community edition,
+                        plus dedicated support from the team that builds it.</p>
+                </div>
+
+                <!-- Pricing Cards -->
+                <div class="content-section">
+                    <h2>Plans &amp; Pricing</h2>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem;">All enterprise
+                        plans are priced <strong>per CPU socket per year</strong>. It doesn't matter how many cores your
+                        CPU has — each occupied socket counts as one.</p>
+                    <div class="pricing-grid">
+
+                        <!-- Community -->
+                        <div class="pricing-card">
+                            <div class="pricing-tier">Community</div>
+                            <div class="pricing-name">Community Edition</div>
+                            <div class="pricing-price" style="color:#22c55e;">Free</div>
+                            <div class="pricing-subtitle">Supported by Patreon</div>
+                            <ul class="pricing-features">
+                                <li>✅ All features included</li>
+                                <li>✅ Unlimited CPU sockets</li>
+                                <li>✅ Full source code access</li>
+                                <li>💬 Community support (Discord &amp; GitHub)</li>
+                                <li>📖 Documentation &amp; guides</li>
+                                <li>🔄 Regular updates</li>
+                            </ul>
+                            <a href="https://www.patreon.com/15362110/join" target="_blank"
+                                class="pricing-cta pricing-cta-green">Support on Patreon</a>
+                        </div>
+
+                        <!-- Basic -->
+                        <div class="pricing-card">
+                            <div class="pricing-tier">Enterprise</div>
+                            <div class="pricing-name">Basic</div>
+                            <div class="pricing-price"><span class="currency">£</span>95 <span class="period">/ year
+                                    &amp; CPU socket</span></div>
+                            <div class="pricing-subtitle">For growing businesses</div>
+                            <ul class="pricing-features">
+                                <li>✅ Everything in Community</li>
+                                <li>📧 Email support</li>
+                                <li>🔧 Installation assistance</li>
+                                <li>🎫 3 support tickets / year</li>
+                                <li>📞 Response within 1 business day</li>
+                                <li>📋 Quarterly check-ins</li>
+                            </ul>
+                            <a href="mailto:sales@wolf.uk.com?subject=Enterprise%20Basic%20Enquiry"
+                                class="pricing-cta pricing-cta-secondary">Contact Sales</a>
+                        </div>
+
+                        <!-- Standard -->
+                        <div class="pricing-card featured">
+                            <div class="pricing-tier">Enterprise</div>
+                            <div class="pricing-name">Standard</div>
+                            <div class="pricing-price"><span class="currency">£</span>450 <span class="period">/ year
+                                    &amp; CPU socket</span></div>
+                            <div class="pricing-subtitle">Most popular</div>
+                            <ul class="pricing-features">
+                                <li>✅ Everything in Basic</li>
+                                <li>🚀 Priority support</li>
+                                <li>🔧 Full installation &amp; onboarding</li>
+                                <li>🎫 10 support tickets / year</li>
+                                <li>📞 Response within 4 hours</li>
+                                <li>🔄 Monthly check-ins</li>
+                                <li>📦 Migration assistance</li>
+                            </ul>
+                            <a href="mailto:sales@wolf.uk.com?subject=Enterprise%20Standard%20Enquiry"
+                                class="pricing-cta pricing-cta-primary">Contact Sales</a>
+                        </div>
+
+                        <!-- Premium -->
+                        <div class="pricing-card">
+                            <div class="pricing-tier">Enterprise</div>
+                            <div class="pricing-name">Premium</div>
+                            <div class="pricing-price"><span class="currency">£</span>900 <span class="period">/ year
+                                    &amp; CPU socket</span></div>
+                            <div class="pricing-subtitle">All you'll ever need</div>
+                            <ul class="pricing-features">
+                                <li>✅ Everything in Standard</li>
+                                <li>⚡ 24/7 support</li>
+                                <li>📄 SLA guarantee</li>
+                                <li>🎫 Unlimited support tickets</li>
+                                <li>📞 Response within 2 hours</li>
+                                <li>🤝 Dedicated account manager</li>
+                                <li>🎓 Team training sessions</li>
+                                <li>🔧 Custom development requests</li>
+                            </ul>
+                            <a href="mailto:sales@wolf.uk.com?subject=Enterprise%20Premium%20Enquiry"
+                                class="pricing-cta pricing-cta-secondary">Contact Sales</a>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- What's Included -->
+                <div class="content-section">
+                    <h2>What's Included with Enterprise</h2>
+                    <div class="enterprise-includes">
+                        <div class="include-card">
+                            <h4>🔧 Full Installation</h4>
+                            <p>Our team will install and configure WolfStack across your entire infrastructure. We
+                                handle the setup so you can focus on your business.</p>
+                        </div>
+                        <div class="include-card">
+                            <h4>🎫 Ticketing System</h4>
+                            <p>Dedicated ticketing system for reporting issues, requesting features, and tracking
+                                resolution. No more waiting on community forums.</p>
+                        </div>
+                        <div class="include-card">
+                            <h4>📧 Direct Support</h4>
+                            <p>Email and priority support directly from the WolfStack development team. Get answers from
+                                the people who build the software.</p>
+                        </div>
+                        <div class="include-card">
+                            <h4>🔄 Migration Help</h4>
+                            <p>Moving from Proxmox, Portainer, or another platform? We'll help migrate your containers,
+                                configurations, and workflows.</p>
+                        </div>
+                        <div class="include-card">
+                            <h4>📄 SLA Guarantee</h4>
+                            <p>Enterprise Premium customers receive a Service Level Agreement with guaranteed response
+                                times and uptime commitments.</p>
+                        </div>
+                        <div class="include-card">
+                            <h4>🎓 Training</h4>
+                            <p>Get your team up to speed with dedicated training sessions covering WolfStack, WolfNet,
+                                container management, and more.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Box -->
+                <div class="contact-box">
+                    <h3>📧 Ready to Get Started?</h3>
+                    <p>Contact our sales team to discuss your requirements and find the right plan for your
+                        organisation.<br>
+                        We'll get back to you within one business day.</p>
+                    <a href="mailto:sales@wolf.uk.com?subject=Enterprise%20Licensing%20Enquiry" class="contact-email">
+                        ✉️ sales@wolf.uk.com
+                    </a>
+                </div>
+
+                <!-- FAQ -->
+                <div class="content-section">
+                    <h2>Frequently Asked Questions</h2>
+
+                    <h3>How many subscriptions do I need?</h3>
+                    <p>Enterprise subscriptions are priced per <strong>physical CPU socket</strong> occupied on the
+                        motherboard. It doesn't matter if your CPU has 4 cores or 128 cores — each occupied socket
+                        counts as one. Empty slots do not require a subscription. Each server needs its own subscription
+                        based on its socket count.</p>
+
+                    <h3>Do I need an enterprise licence to use WolfStack?</h3>
+                    <p>No. WolfStack is completely free and open-source under the FSL-1.1 licence. The Community Edition
+                        includes all features with no limits. Enterprise licensing is for organisations that want
+                        dedicated support and professional services.</p>
+
+                    <h3>Can I switch plans later?</h3>
+                    <p>Yes — you can upgrade or downgrade your enterprise plan at any time. Contact <a
+                            href="mailto:sales@wolf.uk.com">sales@wolf.uk.com</a> to discuss changes.</p>
+
+                    <h3>What payment methods do you accept?</h3>
+                    <p>We accept bank transfer and invoice-based payments. Contact our sales team for details.</p>
+
+                    <h3>Is support available outside business hours?</h3>
+                    <p>24/7 support is included with the Enterprise Premium plan. Basic and Standard plans
+                        include support during UK business hours (Mon–Fri, 9am–5pm GMT).</p>
+
+                    <h3>Can I still support via Patreon if I have an enterprise licence?</h3>
+                    <p>Absolutely! Patreon support is always welcome and helps fund continued development for the entire
+                        community.</p>
+                </div>
+
+                <div class="page-nav"><a href="licensing.html" class="prev">&larr; Licensing</a><a href="support.html"
+                        class="next">Support Us &rarr;</a></div>
+            </div>
+            <footer class="wiki-footer"
+                style="margin-top:3rem;padding:2rem 0;border-top:1px solid rgba(255,255,255,0.1);text-align:center;opacity:0.7;font-size:0.875rem;">
+                <p>&copy; 2026 <a href="https://wolf.uk.com" target="_blank"
+                        style="color:inherit;text-decoration:underline;">Wolf Software Systems Ltd</a> &bull; FSL-1.1
+                </p>
+            </footer>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
