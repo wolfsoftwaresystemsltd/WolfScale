@@ -234,16 +234,7 @@
                 <h3>Prerequisites</h3>
                 <ul>
                     <li>A running Proxmox Backup Server instance (can be on the same network or reachable over the internet)</li>
-                    <li>The <code>proxmox-backup-client</code> package installed on your WolfStack node:
-                        <div class="code-block" style="margin:0.5rem 0;">
-                            <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-                            <pre><code># Debian/Ubuntu — add the Proxmox repository first
-apt install proxmox-backup-client
-
-# RHEL/Rocky/Alma
-# Download from the Proxmox website or build from source</code></pre>
-                        </div>
-                    </li>
+                    <li>The <code>proxmox-backup-client</code> is already installed automatically by the WolfStack setup script &mdash; no extra installation needed</li>
                     <li>A PBS user and API token (or password) with access to a datastore</li>
                 </ul>
 
@@ -405,7 +396,7 @@ backup@pbs@10.0.10.50:main</code></pre>
 
                 <h3>PBS connection fails</h3>
                 <ul>
-                    <li>Verify <code>proxmox-backup-client</code> is installed: <code>proxmox-backup-client version</code></li>
+                    <li>Verify <code>proxmox-backup-client</code> is working: <code>proxmox-backup-client version</code> (installed automatically by WolfStack setup)</li>
                     <li>Check that the PBS server is reachable: <code>curl -k https://your-pbs:8007/api2/json/version</code></li>
                     <li>For self-signed certificates, make sure you have the correct fingerprint</li>
                     <li>Ensure the API token has <strong>DatastoreBackup</strong> and <strong>DatastoreReader</strong> roles on the datastore</li>
