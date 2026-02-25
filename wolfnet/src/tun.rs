@@ -5,6 +5,14 @@
 use std::os::unix::io::RawFd;
 use tracing::warn;
 
+// TUNSETIFF = _IOW('T', 202, c_int)
+// PowerPC encodes ioctl direction bits differently from x86/ARM:
+//   x86/ARM: _IOC_WRITE = 1  → TUNSETIFF = 0x400454ca
+//   PowerPC: _IOC_WRITE = 4  → TUNSETIFF = 0x800454ca
+// Compute at compile time so every architecture gets the correct value.
+#[cfg(any(target_arch = "powerpc", target_arch = "powerpc64"))]
+const TUNSETIFF: libc::c_ulong = 0x800454ca;
+#[cfg(not(any(target_arch = "powerpc", target_arch = "powerpc64")))]
 const TUNSETIFF: libc::c_ulong = 0x400454ca;
 const IFF_TUN: libc::c_short = 0x0001;
 const IFF_NO_PI: libc::c_short = 0x1000;
