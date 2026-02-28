@@ -1,103 +1,58 @@
-// WolfScale Website Scripts
+// WolfStack website scripts v20
 
-// Apply saved theme immediately to prevent flash
+// Theme: apply saved preference before paint
 (function () {
-    const savedTheme = localStorage.getItem('wolfscale-theme') || 'dark';
-    document.documentElement.setAttribute('data-theme', savedTheme);
-})();
-
-// ---- Site-wide Support Banner (permanent) ----
-(function () {
-    const isSupport = window.location.pathname.endsWith('support.html');
-    if (isSupport) return;
-
-    const banner = document.createElement('div');
-    banner.id = 'support-banner';
-    banner.style.cssText = [
-        'background:#b91c1c',
-        'color:#ffffff',
-        'font-family:Inter,-apple-system,sans-serif',
-        'font-size:0.78rem',
-        'font-weight:500',
-        'line-height:1',
-        'padding:8px 16px',
-        'text-align:center',
-        'position:relative',
-        'z-index:9999',
-        'white-space:nowrap',
-        'overflow:hidden',
-        'text-overflow:ellipsis',
-        'border-bottom:1px solid rgba(255,255,255,0.2)'
-    ].join(';');
-    banner.innerHTML =
-        '🐺 <strong>WolfStack is free &amp; open-source</strong> — help keep it alive &nbsp;' +
-        '<a href="support.html" style="color:#fde68a;font-weight:700;text-decoration:underline;">❤️ Become a Patron</a>';
-
-    document.body.insertBefore(banner, document.body.firstChild);
-
-    var sidebar = document.getElementById('sidebar');
-    if (sidebar) sidebar.style.top = banner.offsetHeight + 'px';
+    var t = localStorage.getItem('wolfscale-theme') || 'light';
+    document.documentElement.setAttribute('data-theme', t);
 })();
 
 
 document.addEventListener('DOMContentLoaded', function () {
-    // Theme toggle functionality
-    const themeToggle = document.getElementById('theme-toggle');
-
-    function setTheme(theme) {
-        document.documentElement.setAttribute('data-theme', theme);
-        localStorage.setItem('wolfscale-theme', theme);
-    }
-
-    if (themeToggle) {
-        themeToggle.addEventListener('click', function () {
-            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            setTheme(newTheme);
+    // Theme toggle
+    var toggle = document.getElementById('theme-toggle');
+    if (toggle) {
+        toggle.addEventListener('click', function () {
+            var cur = document.documentElement.getAttribute('data-theme') || 'light';
+            var next = cur === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('wolfscale-theme', next);
         });
     }
-    // Mobile menu toggle for landing page
-    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-    const navLinks = document.getElementById('nav-links');
 
-    if (mobileMenuBtn && navLinks) {
-        mobileMenuBtn.addEventListener('click', function () {
-            mobileMenuBtn.classList.toggle('active');
+    // Mobile menu (landing page)
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var navLinks = document.getElementById('nav-links');
+    if (menuBtn && navLinks) {
+        menuBtn.addEventListener('click', function () {
+            menuBtn.classList.toggle('active');
             navLinks.classList.toggle('active');
         });
     }
 
-    // Sidebar toggle for wiki pages
-    const sidebar = document.getElementById('sidebar');
-    const sidebarOverlay = document.getElementById('sidebar-overlay');
+    // Sidebar toggle (doc pages)
+    var sidebar = document.getElementById('sidebar');
+    var overlay = document.getElementById('sidebar-overlay');
 
-    if (mobileMenuBtn && sidebar) {
-        mobileMenuBtn.addEventListener('click', function () {
-            mobileMenuBtn.classList.toggle('active');
+    if (menuBtn && sidebar) {
+        menuBtn.addEventListener('click', function () {
+            menuBtn.classList.toggle('active');
             sidebar.classList.toggle('active');
-            if (sidebarOverlay) {
-                sidebarOverlay.classList.toggle('active');
-            }
+            if (overlay) overlay.classList.toggle('active');
         });
     }
 
-    // Close sidebar when clicking overlay
-    if (sidebarOverlay) {
-        sidebarOverlay.addEventListener('click', function () {
+    if (overlay) {
+        overlay.addEventListener('click', function () {
             sidebar.classList.remove('active');
-            sidebarOverlay.classList.remove('active');
-            if (mobileMenuBtn) {
-                mobileMenuBtn.classList.remove('active');
-            }
+            overlay.classList.remove('active');
+            if (menuBtn) menuBtn.classList.remove('active');
         });
     }
-
-    // Copy button functionality is handled by the global copyCode function below
 
     // Smooth scroll for anchor links
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            const target = document.querySelector(this.getAttribute('href'));
+    document.querySelectorAll('a[href^="#"]').forEach(function (a) {
+        a.addEventListener('click', function (e) {
+            var target = document.querySelector(this.getAttribute('href'));
             if (target) {
                 e.preventDefault();
                 target.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -106,19 +61,20 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
-// Global copy function called by inline onclick="copyCode(this)" handlers
+// Copy code button handler (called via onclick)
 function copyCode(btn) {
-    const codeBlock = btn.closest('.code-block');
-    if (!codeBlock) return;
-    const code = codeBlock.querySelector('code');
+    var block = btn.closest('.code-block');
+    if (!block) return;
+    var code = block.querySelector('code');
     if (!code) return;
-    const text = code.textContent;
+
+    var text = code.textContent;
 
     if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(text).then(() => {
+        navigator.clipboard.writeText(text).then(function () {
             btn.textContent = 'Copied!';
-            setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
-        }).catch(() => {
+            setTimeout(function () { btn.textContent = 'Copy'; }, 2000);
+        }).catch(function () {
             fallbackCopy(text, btn);
         });
     } else {
@@ -127,19 +83,18 @@ function copyCode(btn) {
 }
 
 function fallbackCopy(text, btn) {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.style.position = 'fixed';
-    textarea.style.opacity = '0';
-    document.body.appendChild(textarea);
-    textarea.select();
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
     try {
         document.execCommand('copy');
         btn.textContent = 'Copied!';
-        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
     } catch (e) {
         btn.textContent = 'Failed';
-        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
     }
-    document.body.removeChild(textarea);
+    setTimeout(function () { btn.textContent = 'Copy'; }, 2000);
+    document.body.removeChild(ta);
 }

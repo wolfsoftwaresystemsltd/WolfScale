@@ -1,0 +1,7 @@
+# Redirect old .html URLs to .php for SEO continuity
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^(.+)\.html$ /$1.php [R=301,L]
+
+# Default index
+DirectoryIndex index.php index.html
