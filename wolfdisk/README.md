@@ -374,3 +374,7 @@ role = "client"
 [Functional Source License (FSL-1.1-Apache-2.0)](../LICENSE) — Free to use for any purpose except competing with Wolf Software Systems Ltd. Converts to Apache 2.0 after two years.
 
 © 2024-2026 Wolf Software Systems Ltd
+
+---
+
+*We hand code and use AI to assist with the development of this software.*
