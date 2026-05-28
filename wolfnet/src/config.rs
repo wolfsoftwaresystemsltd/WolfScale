@@ -149,6 +149,44 @@ impl Config {
     /// Load configuration from a TOML file
     /// Includes auto-migration: fixes `ip =` → `allowed_ip =` and removes duplicate peers.
     pub fn load(path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
+        // Self-heal: if the primary file is missing or empty but a
+        // sibling `.bak` exists from a previous successful save, restore
+        // it before reading. klasSponsor 2026-05-28 reported that a
+        // port edit on one node wiped config.toml entirely and wolfnet
+        // then exited on every start. With atomic saves writing .bak
+        // before each replace, the recovery path now lives here so a
+        // crash mid-save doesn't brick the daemon — the next start
+        // picks up the last good snapshot automatically and logs that
+        // it did so.
+        let primary_usable = std::fs::metadata(path)
+            .map(|m| m.len() > 0)
+            .unwrap_or(false);
+        if !primary_usable {
+            let bak = path.with_extension(
+                match path.extension().and_then(|e| e.to_str()) {
+                    Some(ext) => format!("{}.bak", ext),
+                    None => "bak".to_string(),
+                }
+            );
+            if let Ok(bak_meta) = std::fs::metadata(&bak) {
+                if bak_meta.len() > 0 {
+                    if let Err(e) = std::fs::copy(&bak, path) {
+                        eprintln!(
+                            "[wolfnet] Config recovery: primary {} is empty/missing but \
+                             copying {} → {} failed: {}",
+                            path.display(), bak.display(), path.display(), e
+                        );
+                    } else {
+                        eprintln!(
+                            "[wolfnet] Config recovery: primary {} was empty/missing — \
+                             restored from {}",
+                            path.display(), bak.display()
+                        );
+                    }
+                }
+            }
+        }
+
         let content = std::fs::read_to_string(path)?;
 
         // --- Migration: replace `ip = "..."` with `allowed_ip = "..."` in [[peers]] ---
@@ -191,13 +229,57 @@ impl Config {
         Ok(config)
     }
 
-    /// Save configuration to a TOML file
+    /// Save configuration to a TOML file.
+    ///
+    /// Atomic write with a `.bak` snapshot of the previous file. The
+    /// non-atomic version (`fs::write` directly) could leave the live
+    /// `config.toml` truncated or empty if the process was killed mid-
+    /// write — klasSponsor 2026-05-28 hit exactly that after editing
+    /// the listen port, and wolfnet then exited on every start because
+    /// no usable config remained. The atomic rename + .bak combination
+    /// means: a crash mid-write leaves the old file intact, and the
+    /// load path can recover from .bak if anything still goes wrong.
     pub fn save(&self, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
         let content = toml::to_string_pretty(self)?;
-        std::fs::write(path, content)?;
+        if content.trim().is_empty()
+            || !content.contains("[network]")
+            || !content.contains("[security]")
+        {
+            return Err(format!(
+                "Refusing to save WolfNet config to {}: serialized payload is \
+                 empty or missing required sections. Existing file left untouched.",
+                path.display()
+            )
+            .into());
+        }
+
+        // Stage in a sibling .tmp.
+        let tmp = path.with_extension(
+            match path.extension().and_then(|e| e.to_str()) {
+                Some(ext) => format!("{}.tmp", ext),
+                None => "tmp".to_string(),
+            }
+        );
+        std::fs::write(&tmp, &content)?;
+
+        // Snapshot the prior good config to .bak before replacing —
+        // best-effort, an absent .bak isn't fatal.
+        if path.exists() {
+            let bak = path.with_extension(
+                match path.extension().and_then(|e| e.to_str()) {
+                    Some(ext) => format!("{}.bak", ext),
+                    None => "bak".to_string(),
+                }
+            );
+            let _ = std::fs::copy(path, &bak);
+        }
+
+        // Atomic rename — either the new file is fully visible or
+        // it isn't, never half.
+        std::fs::rename(&tmp, path)?;
         Ok(())
     }
 
