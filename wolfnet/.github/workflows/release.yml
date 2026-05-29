@@ -31,7 +31,12 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Install cross
-        run: cargo install cross --git https://github.com/cross-rs/cross
+        # `--locked` uses the published Cargo.lock from crates.io so the
+        # install isn't broken by upstream crate churn. Pinned to 0.2.5
+        # — cross-rs git HEAD started pulling `directories v6` / `dirs-sys
+        # v0.5` whose `windows-sys` constraint doesn't resolve on
+        # crates.io and broke the v0.5.26 release build.
+        run: cargo install cross --version 0.2.5 --locked
 
       - name: Build static binaries
         run: cross build --release --target ${{ matrix.target }}

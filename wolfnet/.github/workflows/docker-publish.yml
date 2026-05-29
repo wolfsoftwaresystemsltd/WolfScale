@@ -32,7 +32,8 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Install cross
-        run: cargo install cross --git https://github.com/cross-rs/cross
+        # See release.yml — same pin for the same upstream regression.
+        run: cargo install cross --version 0.2.5 --locked
 
       - name: Build static binaries
         run: cross build --release --target ${{ matrix.target }}
