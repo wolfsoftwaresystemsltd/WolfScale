@@ -283,7 +283,12 @@ impl PeerManager {
         }
     }
 
-    /// Update a peer's endpoint (e.g. after receiving a packet from a new address)
+    /// Update a peer's endpoint unconditionally. Used by the config-driven
+    /// paths (SIGHUP applies a new `endpoint = ...` line, DNS re-resolve
+    /// refreshes a hostname-based configured endpoint). Roaming callers
+    /// (inbound data/keepalive from a new src) must use
+    /// `update_endpoint_if_roaming` instead so a configured endpoint
+    /// stays sticky.
     pub fn update_endpoint(&self, ip: &Ipv4Addr, new_endpoint: SocketAddr) {
         let mut peers = self.peers_by_ip.write().unwrap();
         if let Some(peer) = peers.get_mut(ip) {
@@ -296,6 +301,37 @@ impl PeerManager {
             peer.endpoint = Some(new_endpoint);
             self.endpoint_to_ip.write().unwrap().insert(new_endpoint, *ip);
         }
+    }
+
+    /// Update a peer's endpoint from a roamed source (the src of an
+    /// inbound data or keepalive packet). No-op when the peer has a
+    /// configured static endpoint — the operator's choice is sticky and
+    /// must not be overwritten by ambient roaming.
+    ///
+    /// klasSponsor 2026-05-29 root cause: with a configured LAN endpoint
+    /// like `192.168.1.42:9600`, the peer's keepalive arriving via its
+    /// NAT'd WAN address roamed the in-memory endpoint to the public IP;
+    /// the 60s DNS re-resolve loop later restored the configured value;
+    /// rinse and repeat — the operator-visible flap between LAN and
+    /// public IP that broke inter-node connections on his cluster.
+    /// Returns true if the update was applied.
+    pub fn update_endpoint_if_roaming(&self, ip: &Ipv4Addr, new_endpoint: SocketAddr) -> bool {
+        let mut peers = self.peers_by_ip.write().unwrap();
+        let peer = match peers.get_mut(ip) {
+            Some(p) => p,
+            None => return false,
+        };
+        if peer.configured_endpoint.is_some() {
+            return false;
+        }
+        if let Some(old) = peer.endpoint {
+            if old != new_endpoint {
+                self.endpoint_to_ip.write().unwrap().remove(&old);
+            }
+        }
+        peer.endpoint = Some(new_endpoint);
+        self.endpoint_to_ip.write().unwrap().insert(new_endpoint, *ip);
+        true
     }
 
     /// Forget a peer's static endpoint — used when a SIGHUP config reload
@@ -326,20 +362,28 @@ impl PeerManager {
         // First check: does a peer with this exact IP exist?
         if let Some(peer) = peers.get_mut(&wolfnet_ip) {
             if peer.public_key == *public_key {
-                // Same IP, same key — just update endpoint
-                // Clean up old endpoint mapping first
-                if let Some(old_ep) = peer.endpoint {
-                    if old_ep != endpoint {
-                        self.endpoint_to_ip.write().unwrap().remove(&old_ep);
-
-                    }
-                }
-                peer.endpoint = Some(endpoint);
+                // Hostname / gateway flag / relay reset are always refreshed
+                // from discovery — those describe peer identity and role,
+                // not the dial address, so they shouldn't be sticky.
                 peer.hostname = hostname.to_string();
                 peer.is_gateway = is_gateway;
                 // Direct discovery clears relay — we can reach them directly
                 peer.relay_via = None;
-                self.endpoint_to_ip.write().unwrap().insert(endpoint, wolfnet_ip);
+
+                // Endpoint update only when not pinned by config — same
+                // sticky-configured rule as `update_endpoint_if_roaming`.
+                // Without this gate, a handshake from a peer's WAN address
+                // would overwrite the LAN endpoint the operator pinned
+                // (klasSponsor 2026-05-29 flap).
+                if peer.configured_endpoint.is_none() {
+                    if let Some(old_ep) = peer.endpoint {
+                        if old_ep != endpoint {
+                            self.endpoint_to_ip.write().unwrap().remove(&old_ep);
+                        }
+                    }
+                    peer.endpoint = Some(endpoint);
+                    self.endpoint_to_ip.write().unwrap().insert(endpoint, wolfnet_ip);
+                }
                 return;
             }
         }
@@ -753,6 +797,114 @@ mod peer_state_tests {
         // means we couldn't actually have decrypted anything.
         assert!(!p.is_passing_data(),
             "is_passing_data must require an established cipher, not just a recent timestamp");
+    }
+}
+
+#[cfg(test)]
+mod sticky_endpoint_tests {
+    use super::*;
+    use x25519_dalek::{PublicKey, StaticSecret};
+
+    fn pubkey() -> PublicKey {
+        let s = StaticSecret::random_from_rng(rand::thread_rng());
+        PublicKey::from(&s)
+    }
+
+    fn ip(s: &str) -> Ipv4Addr { s.parse().unwrap() }
+    fn sa(s: &str) -> SocketAddr { s.parse().unwrap() }
+
+    /// klasSponsor 2026-05-29 — the core regression: a peer pinned to a
+    /// LAN endpoint must NOT roam when a packet arrives from its WAN
+    /// address. Before the fix, every keepalive from the public IP
+    /// silently overwrote the operator-pinned LAN address.
+    #[test]
+    fn configured_endpoint_blocks_roaming_update() {
+        let pm = PeerManager::new();
+        let mut peer = Peer::new(pubkey(), ip("10.100.10.30"));
+        peer.configured_endpoint = Some("192.168.1.42:9600".to_string());
+        peer.endpoint = Some(sa("192.168.1.42:9600"));
+        pm.add_peer(peer);
+
+        let applied = pm.update_endpoint_if_roaming(&ip("10.100.10.30"), sa("203.0.113.5:55321"));
+
+        assert!(!applied, "roaming update must be refused for a peer with configured_endpoint");
+        let endpoint = pm.with_peer_by_ip(&ip("10.100.10.30"), |p| p.endpoint).flatten();
+        assert_eq!(endpoint, Some(sa("192.168.1.42:9600")),
+            "endpoint must still be the operator-configured LAN address");
+    }
+
+    /// Roaming-only peers (no static endpoint configured — token-joined
+    /// or PEX-learned) keep their pre-fix behaviour: ambient roaming
+    /// updates the in-memory endpoint to the latest src.
+    #[test]
+    fn roaming_peer_still_updates_endpoint() {
+        let pm = PeerManager::new();
+        let mut peer = Peer::new(pubkey(), ip("10.100.10.40"));
+        // No configured_endpoint — this peer is roaming-only.
+        peer.endpoint = Some(sa("203.0.113.5:55321"));
+        pm.add_peer(peer);
+
+        let applied = pm.update_endpoint_if_roaming(&ip("10.100.10.40"), sa("203.0.113.5:55400"));
+
+        assert!(applied, "roaming-only peer must accept the new src");
+        let endpoint = pm.with_peer_by_ip(&ip("10.100.10.40"), |p| p.endpoint).flatten();
+        assert_eq!(endpoint, Some(sa("203.0.113.5:55400")));
+    }
+
+    /// The unconditional `update_endpoint` path (SIGHUP / DNS re-resolve
+    /// applying a configured value) must still overwrite. Otherwise an
+    /// operator changing the `endpoint = ...` line via SIGHUP wouldn't
+    /// take effect on an already-pinned peer.
+    #[test]
+    fn unconditional_update_endpoint_overrides_configured() {
+        let pm = PeerManager::new();
+        let mut peer = Peer::new(pubkey(), ip("10.100.10.50"));
+        peer.configured_endpoint = Some("192.168.1.42:9600".to_string());
+        peer.endpoint = Some(sa("192.168.1.42:9600"));
+        pm.add_peer(peer);
+
+        pm.update_endpoint(&ip("10.100.10.50"), sa("192.168.1.99:9600"));
+
+        let endpoint = pm.with_peer_by_ip(&ip("10.100.10.50"), |p| p.endpoint).flatten();
+        assert_eq!(endpoint, Some(sa("192.168.1.99:9600")),
+            "config-driven update must always apply");
+    }
+
+    /// Discovery (inbound handshake) must NOT overwrite a configured
+    /// endpoint either — the handshake src is just another roamed
+    /// address from the operator's point of view.
+    #[test]
+    fn discovery_does_not_overwrite_configured_endpoint() {
+        let pm = PeerManager::new();
+        let key = pubkey();
+        let mut peer = Peer::new(key, ip("10.100.10.60"));
+        peer.configured_endpoint = Some("192.168.1.42:9600".to_string());
+        peer.endpoint = Some(sa("192.168.1.42:9600"));
+        pm.add_peer(peer);
+
+        pm.update_from_discovery(&key, sa("203.0.113.5:55321"), ip("10.100.10.60"), "newhost", false);
+
+        let (endpoint, hostname) = pm.with_peer_by_ip(&ip("10.100.10.60"), |p| (p.endpoint, p.hostname.clone())).unwrap();
+        assert_eq!(endpoint, Some(sa("192.168.1.42:9600")),
+            "discovery must not overwrite a configured endpoint");
+        assert_eq!(hostname, "newhost",
+            "hostname must still refresh from discovery — that's identity, not address");
+    }
+
+    /// And the symmetric: discovery DOES update the endpoint for a
+    /// roaming-only peer. That's the normal NAT-traversal path.
+    #[test]
+    fn discovery_updates_endpoint_for_roaming_peer() {
+        let pm = PeerManager::new();
+        let key = pubkey();
+        let mut peer = Peer::new(key, ip("10.100.10.70"));
+        peer.endpoint = Some(sa("203.0.113.5:55321"));
+        pm.add_peer(peer);
+
+        pm.update_from_discovery(&key, sa("203.0.113.5:55400"), ip("10.100.10.70"), "host", false);
+
+        let endpoint = pm.with_peer_by_ip(&ip("10.100.10.70"), |p| p.endpoint).flatten();
+        assert_eq!(endpoint, Some(sa("203.0.113.5:55400")));
     }
 }
 

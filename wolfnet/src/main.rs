@@ -781,7 +781,7 @@ fn run_daemon(config_path: &PathBuf) {
                             match dec {
                                 Ok(pt_len) => {
                                     if needs_ep_update {
-                                        peer_manager.update_endpoint(&peer_ip, src);
+                                        peer_manager.update_endpoint_if_roaming(&peer_ip, src);
                                     }
 
                                     let plaintext = &recv_buf[13..13 + pt_len];
@@ -863,9 +863,12 @@ fn run_daemon(config_path: &PathBuf) {
                         let peer_ip = peer_manager.find_ip_by_endpoint_or_id(&src, &peer_id);
 
                         if let Some(ip) = peer_ip {
-                            // Update endpoint if found by ID (NAT rebind)
+                            // Update endpoint if found by ID (NAT rebind).
+                            // Roaming-gated: a peer with a configured
+                            // static endpoint stays pinned to that even
+                            // when keepalives arrive from a different src.
                             if peer_manager.find_ip_by_endpoint(&src).is_none() {
-                                peer_manager.update_endpoint(&ip, src);
+                                peer_manager.update_endpoint_if_roaming(&ip, src);
                             }
                             peer_manager.with_peer_by_ip(&ip, |peer| {
                                 peer.last_seen = Some(Instant::now());
