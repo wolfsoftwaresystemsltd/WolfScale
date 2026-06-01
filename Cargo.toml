@@ -61,8 +61,9 @@ chrono = { version = "0.4", features = ["serde"] }
 async-trait = "0.1"
 futures = "0.3"
 
-# HTTP client (for CLI)
-reqwest = { version = "0.11", features = ["json"] }
+# HTTP client (for CLI). rustls (not native-tls) so there's no OpenSSL C
+# dependency — keeps the binary fully static and cross-compilable to musl.
+reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
 
 # State storage (embedded)
 rusqlite = { version = "0.31", features = ["bundled"] }
