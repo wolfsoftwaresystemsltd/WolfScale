@@ -1,7 +1,11 @@
 #!/bin/bash
 #
 # WolfScale Quick Install Script
-# Installs WolfScale on Ubuntu/Debian (apt) or Fedora/RHEL (dnf)
+# Installs WolfScale on Ubuntu/Debian (apt) or Fedora/RHEL (dnf).
+#
+# Downloads a prebuilt static binary from the release pipeline (the
+# 'wolfscale-latest' GitHub release). Only falls back to a source build if no
+# prebuilt binary is available for this CPU architecture or the download fails.
 #
 # Usage: curl -sSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/setup.sh | bash
 #
@@ -30,65 +34,89 @@ else
     exit 1
 fi
 
-# Install dependencies
-echo ""
-echo "Installing system dependencies..."
+# Detect CPU architecture for the prebuilt binary
+case "$(uname -m)" in
+    x86_64|amd64) ARCH="x86_64" ;;
+    aarch64|arm64) ARCH="aarch64" ;;
+    *) ARCH="" ;;
+esac
 
+RELEASE_BASE="https://github.com/wolfsoftwaresystemsltd/WolfScale/releases/download/wolfscale-latest"
+
+# Base dependencies: git + curl are enough to fetch the repo (for
+# install_service.sh) and download the prebuilt binary. Build tools are only
+# installed in the source-build fallback below.
+echo ""
+echo "Installing base dependencies..."
 if [ "$PKG_MANAGER" = "apt" ]; then
     sudo apt update
-    sudo apt install -y git curl build-essential pkg-config libssl-dev
-elif [ "$PKG_MANAGER" = "dnf" ]; then
-    sudo dnf install -y git curl gcc gcc-c++ make openssl-devel pkg-config
-elif [ "$PKG_MANAGER" = "yum" ]; then
-    sudo yum install -y git curl gcc gcc-c++ make openssl-devel pkgconfig
-fi
-
-echo "✓ System dependencies installed"
-
-# Install Rust if not present
-if ! command -v rustc &> /dev/null; then
-    echo ""
-    echo "Installing Rust..."
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-    source "$HOME/.cargo/env"
-    echo "✓ Rust installed"
+    sudo apt install -y git curl ca-certificates
 else
-    echo "✓ Rust already installed ($(rustc --version))"
+    sudo "$PKG_MANAGER" install -y git curl ca-certificates
 fi
+echo "✓ Base dependencies installed"
 
-# Ensure cargo is in PATH
-export PATH="$HOME/.cargo/bin:$PATH"
-
-# Clone or update repository
+# Clone or update the repository — needed for install_service.sh + upgrade
+# detection. (A shallow clone is cheap; we no longer build it here.)
 INSTALL_DIR="/opt/wolfscale-src"
 echo ""
-echo "Cloning WolfScale repository..."
-
-if [ -d "$INSTALL_DIR" ]; then
-    echo "  Updating existing installation..."
+echo "Fetching WolfScale..."
+if [ -d "$INSTALL_DIR/.git" ]; then
+    echo "  Updating existing checkout..."
     cd "$INSTALL_DIR"
-    # Use fetch + reset instead of pull to handle force-pushes cleanly
     sudo git fetch origin
     sudo git reset --hard origin/main
-    # Clear logs to prevent huge log files from accumulating
     if [ -f "/var/log/wolfscale/wolfscale.log" ]; then
-        echo "  Clearing logs..."
         sudo truncate -s 0 /var/log/wolfscale/wolfscale.log
     fi
 else
-    sudo git clone https://github.com/wolfsoftwaresystemsltd/WolfScale.git "$INSTALL_DIR"
+    sudo git clone --depth 1 https://github.com/wolfsoftwaresystemsltd/WolfScale.git "$INSTALL_DIR"
     cd "$INSTALL_DIR"
 fi
-
 sudo chown -R "$USER:$USER" "$INSTALL_DIR"
-echo "✓ Repository cloned to $INSTALL_DIR"
+mkdir -p "$INSTALL_DIR/target/release"
+echo "✓ Repository ready at $INSTALL_DIR"
 
-# Build
+# Get the binary: prefer the prebuilt release artifact, build from source only
+# if it's unavailable for this arch. The rest of the script copies from
+# $INSTALL_DIR/target/release, so we drop the downloaded binary there.
 echo ""
-echo "Building WolfScale (this may take a few minutes)..."
-cd "$INSTALL_DIR"
-cargo build --release
-echo "✓ Build complete"
+GOT_BINARY=false
+if [ -n "$ARCH" ]; then
+    echo "Downloading prebuilt WolfScale binary ($ARCH)..."
+    if curl -fsSL "$RELEASE_BASE/wolfscale-$ARCH" -o "$INSTALL_DIR/target/release/wolfscale" \
+        && chmod +x "$INSTALL_DIR/target/release/wolfscale" \
+        && "$INSTALL_DIR/target/release/wolfscale" --version >/dev/null 2>&1; then
+        curl -fsSL "$RELEASE_BASE/wolfctl-$ARCH" -o "$INSTALL_DIR/target/release/wolfctl" 2>/dev/null \
+            && chmod +x "$INSTALL_DIR/target/release/wolfctl" || true
+        GOT_BINARY=true
+        echo "✓ Installed prebuilt binary ($("$INSTALL_DIR/target/release/wolfscale" --version 2>/dev/null))"
+    else
+        echo "⚠ Prebuilt binary not available for $ARCH — falling back to a source build"
+    fi
+else
+    echo "⚠ Unknown CPU architecture ($(uname -m)) — falling back to a source build"
+fi
+
+if [ "$GOT_BINARY" = false ]; then
+    echo ""
+    echo "Building WolfScale from source (this may take a few minutes)..."
+    if [ "$PKG_MANAGER" = "apt" ]; then
+        sudo apt install -y build-essential pkg-config libssl-dev
+    elif [ "$PKG_MANAGER" = "dnf" ]; then
+        sudo dnf install -y gcc gcc-c++ make openssl-devel pkg-config
+    else
+        sudo yum install -y gcc gcc-c++ make openssl-devel pkgconfig
+    fi
+    if ! command -v rustc &> /dev/null; then
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        source "$HOME/.cargo/env"
+    fi
+    export PATH="$HOME/.cargo/bin:$PATH"
+    cd "$INSTALL_DIR"
+    cargo build --release
+    echo "✓ Build complete"
+fi
 
 # Check if this is an upgrade (service already exists)
 IS_UPGRADE=false
@@ -102,24 +130,21 @@ if [ "$IS_UPGRADE" = true ]; then
     # Upgrade mode: just copy binary and restart service
     echo ""
     echo "Upgrading WolfScale..."
-    
-    # Copy new binary
+
     sudo cp "$INSTALL_DIR/target/release/wolfscale" /usr/local/bin/wolfscale
     sudo chmod +x /usr/local/bin/wolfscale
     echo "✓ Binary updated"
-    
-    # Restart service
+
     sudo systemctl daemon-reload
     sudo systemctl restart wolfscale
     echo "✓ Service restarted"
-    
-    # Update wolfctl if present
+
     if [ -f "$INSTALL_DIR/target/release/wolfctl" ]; then
         sudo cp "$INSTALL_DIR/target/release/wolfctl" /usr/local/bin/wolfctl
         sudo chmod +x /usr/local/bin/wolfctl
         echo "✓ wolfctl updated"
     fi
-    
+
     echo ""
     echo ""
     echo "  Upgrade Complete!"
@@ -131,15 +156,14 @@ else
     # New install: run interactive installer
     echo ""
     echo "  $(printf '%0.s─' {1..50})"
-    echo "  Build complete! Starting service installer..."
+    echo "  Binary ready! Starting service installer..."
     echo "  $(printf '%0.s─' {1..50})"
     echo ""
-    
+
     # Run installer with TTY for interactive input
     # (Needed because stdin is consumed when script is piped via curl)
     sudo ./install_service.sh < /dev/tty
-    
-    # Install wolfctl CLI tool to /usr/local/bin
+
     echo ""
     echo "Installing wolfctl CLI tool..."
     if [ -f "$INSTALL_DIR/target/release/wolfctl" ]; then
@@ -147,9 +171,9 @@ else
         sudo chmod +x /usr/local/bin/wolfctl
         echo "✓ wolfctl installed to /usr/local/bin/wolfctl"
     else
-        echo "⚠ wolfctl binary not found (may not have been built)"
+        echo "⚠ wolfctl binary not found"
     fi
-    
+
     echo ""
     echo ""
     echo "  Installation Complete!"
