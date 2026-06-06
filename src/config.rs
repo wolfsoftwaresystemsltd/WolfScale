@@ -22,6 +22,13 @@ pub struct WolfScaleConfig {
     /// Cluster configuration
     pub cluster: ClusterConfig,
 
+    /// Convenience top-level alias for `cluster.bootstrap`. `bootstrap = true`
+    /// at the top of wolfscale.toml OR `[cluster] bootstrap = true` both make
+    /// this node assert initial leadership — the two were easy to confuse and a
+    /// top-level placement used to be silently ignored (JJ 2026-06, §4.2).
+    #[serde(default)]
+    pub bootstrap: bool,
+
     /// API configuration
     #[serde(default)]
     pub api: ApiConfig,

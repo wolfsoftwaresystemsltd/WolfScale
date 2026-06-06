@@ -100,7 +100,14 @@ impl Discovery {
 
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(BROADCAST_INTERVAL);
-            
+            // Surface the FIRST broadcast outcome at a visible level so an
+            // operator can tell whether node-mode auto-discovery is working.
+            // JJ 2026-06 (§4.3): nodes failed to discover each other and the
+            // failure was hidden at trace level — node mode looked broken when
+            // the real cause is a network that doesn't forward UDP broadcast.
+            let mut warned_fail = false;
+            let mut logged_ok = false;
+
             loop {
                 interval.tick().await;
 
@@ -121,8 +128,20 @@ impl Discovery {
                     .unwrap();
 
                 if let Err(e) = socket.send_to(message.as_bytes(), broadcast_addr).await {
-                    // Broadcast might not be supported on all networks
-                    tracing::trace!("Broadcast send failed (network may not support broadcast): {}", e);
+                    if !warned_fail {
+                        warned_fail = true;
+                        tracing::warn!(
+                            "Auto-discovery broadcast failed ({e}). This network likely doesn't \
+                             forward UDP broadcast (common on bridged/VLAN/Proxmox setups), so \
+                             nodes won't find each other automatically — set explicit `peers` in \
+                             [cluster] on each node instead."
+                        );
+                    } else {
+                        tracing::trace!("Broadcast send failed: {}", e);
+                    }
+                } else if !logged_ok {
+                    logged_ok = true;
+                    tracing::info!("Auto-discovery broadcasting on the LAN (UDP port {})", DISCOVERY_PORT);
                 } else {
                     tracing::trace!("Discovery broadcast sent");
                 }

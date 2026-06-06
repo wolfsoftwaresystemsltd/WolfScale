@@ -629,8 +629,11 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
     // Determine role BEFORE starting proxy
     // Priority-based election: lowest node ID is leader
     // Bootstrap flag forces this node to be leader (for initial cluster setup)
-    // Check BOTH CLI arg AND config file
-    let bootstrap = bootstrap || config.cluster.bootstrap;
+    // Honour the flag from any of: CLI (--bootstrap), [cluster] bootstrap, or a
+    // top-level `bootstrap` key. The last two are easy to mix up; accepting both
+    // means a config-set bootstrap is no longer silently ignored under systemd —
+    // which is what forced JJ to add --bootstrap to ExecStart (§4.2).
+    let bootstrap = bootstrap || config.cluster.bootstrap || config.bootstrap;
     
     let is_leader = if bootstrap {
         tracing::info!("Bootstrap mode - starting as leader");
@@ -758,7 +761,12 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
             }
         });
     }
-    
+
+    // §4.1 (JJ 2026-06): when the leader yields to a higher-priority node we now
+    // transition to FOLLOWER *in-process* instead of exiting. This flag carries
+    // that decision from the leader block to the follower block below.
+    let mut yielded_to_follower = false;
+
     if is_leader {
         tracing::info!("Starting LEADER components");
         tracing::debug!("LeaderNode cluster Arc ptr: {:p}", Arc::as_ptr(&cluster));
@@ -788,7 +796,9 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                 heartbeat_interval_ms: config.cluster.heartbeat_interval_ms,
                 replication_timeout_ms: config.cluster.election_timeout_ms,
             },
-            msg_tx,
+            // clone (not move) so the follower block can still use msg_tx after
+            // an in-process leader→follower yield (§4.1).
+            msg_tx.clone(),
             Some(Arc::clone(&executor)),
         ));
 
@@ -800,11 +810,17 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
             result = leader.start() => {
                 match result {
                     Ok(()) => {
-                        // Leader returned normally - yielding leadership to higher-priority node
-                        tracing::info!("Leader yielding to higher-priority node. Process will restart as follower.");
-                        // Exit the process - systemd will restart it and it will come up as follower
-                        // since it's no longer bootstrapping and a leader exists
-                        std::process::exit(0);
+                        // Leader yielded to a higher-priority node. Transition to
+                        // FOLLOWER IN-PROCESS (fall through to the follower block
+                        // below) rather than exiting and relying on a systemd
+                        // restart. The old exit-and-restart, combined with a
+                        // bootstrap flag in ExecStart, produced a 5-second
+                        // yield→exit→restart→re-bootstrap→yield loop and the node
+                        // never held a stable follower connection (JJ 2026-06, §4.1).
+                        // Same end state — this node becomes a follower of the new
+                        // leader — but with no process churn.
+                        tracing::info!("Leader yielded to a higher-priority node — transitioning to FOLLOWER in-process");
+                        yielded_to_follower = true;
                     }
                     Err(e) => {
                         tracing::error!("Leader error: {}", e);
@@ -825,8 +841,19 @@ async fn run_start(config_path: PathBuf, bootstrap: bool) -> Result<()> {
                 tracing::info!("Received shutdown signal");
             }
         }
-    } else {
+    }
+
+    if !is_leader || yielded_to_follower {
         tracing::info!("Starting as FOLLOWER");
+
+        // Recreate a fresh WAL writer — the leader block above consumes the
+        // original when it yields. WalWriter::new opens the same WAL files,
+        // matching how the follower→leader transition recreates its writer.
+        let wal_writer = WalWriter::new(
+            config.data_dir().clone(),
+            config.wal.clone(),
+            config.node.id.clone(),
+        ).await?;
 
         // Create shared state for role transitions
         let follower = Arc::new(FollowerNode::new(

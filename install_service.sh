@@ -42,10 +42,21 @@ if systemctl is-active --quiet wolfscale 2>/dev/null; then
     systemctl stop wolfscale
 fi
 
-# Create user if doesn't exist
+# Create the service user. On minimal/root-only hosts `useradd` can fail or be
+# absent; if the user still doesn't exist afterwards, run the service as root
+# rather than emitting `User=<missing>` and failing at start with 217/USER.
+# (JJ 2026-06: User=wolfscale failed 217/USER on a Proxmox node.)
 if ! id "$USER" &>/dev/null; then
-    useradd --system --no-create-home --shell /bin/false "$USER"
-    echo "Created user: $USER"
+    useradd --system --no-create-home --shell /bin/false "$USER" 2>/dev/null \
+        && echo "Created user: $USER" \
+        || echo "⚠ Could not create user '$USER' (useradd unavailable or failed)"
+fi
+if id "$USER" &>/dev/null; then
+    USER_DIRECTIVES="User=$USER
+Group=$USER"
+else
+    echo "⚠ User '$USER' does not exist — running the WolfScale service as root."
+    USER_DIRECTIVES=""
 fi
 
 # Create install directory
@@ -302,8 +313,7 @@ $WANTS_LINE
 
 [Service]
 Type=simple
-User=$USER
-Group=$USER
+$USER_DIRECTIVES
 WorkingDirectory=$INSTALL_DIR
 ExecStart=$EXEC_START
 Restart=always

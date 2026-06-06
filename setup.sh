@@ -43,16 +43,29 @@ esac
 
 RELEASE_BASE="https://github.com/wolfsoftwaresystemsltd/WolfScale/releases/download/wolfscale-latest"
 
+# Root-only environments (e.g. a minimal Proxmox VE host) frequently ship no
+# `sudo` binary. Use sudo only when we're NOT already root; if we're not root
+# and sudo is missing, fail clearly up front instead of erroring on every line.
+# (JJ 2026-06: the installer assumed sudo and broke on root-only Proxmox.)
+if [ "$(id -u)" -eq 0 ]; then
+    SUDO=""
+elif command -v sudo >/dev/null 2>&1; then
+    SUDO="sudo"
+else
+    echo "ERROR: not running as root and 'sudo' is not installed — re-run this script as root." >&2
+    exit 1
+fi
+
 # Base dependencies: git + curl are enough to fetch the repo (for
 # install_service.sh) and download the prebuilt binary. Build tools are only
 # installed in the source-build fallback below.
 echo ""
 echo "Installing base dependencies..."
 if [ "$PKG_MANAGER" = "apt" ]; then
-    sudo apt update
-    sudo apt install -y git curl ca-certificates
+    $SUDO apt update
+    $SUDO apt install -y git curl ca-certificates
 else
-    sudo "$PKG_MANAGER" install -y git curl ca-certificates
+    $SUDO "$PKG_MANAGER" install -y git curl ca-certificates
 fi
 echo "✓ Base dependencies installed"
 
@@ -64,16 +77,16 @@ echo "Fetching WolfScale..."
 if [ -d "$INSTALL_DIR/.git" ]; then
     echo "  Updating existing checkout..."
     cd "$INSTALL_DIR"
-    sudo git fetch origin
-    sudo git reset --hard origin/main
+    $SUDO git fetch origin
+    $SUDO git reset --hard origin/main
     if [ -f "/var/log/wolfscale/wolfscale.log" ]; then
-        sudo truncate -s 0 /var/log/wolfscale/wolfscale.log
+        $SUDO truncate -s 0 /var/log/wolfscale/wolfscale.log
     fi
 else
-    sudo git clone --depth 1 https://github.com/wolfsoftwaresystemsltd/WolfScale.git "$INSTALL_DIR"
+    $SUDO git clone --depth 1 https://github.com/wolfsoftwaresystemsltd/WolfScale.git "$INSTALL_DIR"
     cd "$INSTALL_DIR"
 fi
-sudo chown -R "$USER:$USER" "$INSTALL_DIR"
+$SUDO chown -R "$USER:$USER" "$INSTALL_DIR"
 mkdir -p "$INSTALL_DIR/target/release"
 echo "✓ Repository ready at $INSTALL_DIR"
 
@@ -102,11 +115,11 @@ if [ "$GOT_BINARY" = false ]; then
     echo ""
     echo "Building WolfScale from source (this may take a few minutes)..."
     if [ "$PKG_MANAGER" = "apt" ]; then
-        sudo apt install -y build-essential pkg-config libssl-dev
+        $SUDO apt install -y build-essential pkg-config libssl-dev
     elif [ "$PKG_MANAGER" = "dnf" ]; then
-        sudo dnf install -y gcc gcc-c++ make openssl-devel pkg-config
+        $SUDO dnf install -y gcc gcc-c++ make openssl-devel pkg-config
     else
-        sudo yum install -y gcc gcc-c++ make openssl-devel pkgconfig
+        $SUDO yum install -y gcc gcc-c++ make openssl-devel pkgconfig
     fi
     if ! command -v rustc &> /dev/null; then
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
@@ -131,17 +144,17 @@ if [ "$IS_UPGRADE" = true ]; then
     echo ""
     echo "Upgrading WolfScale..."
 
-    sudo cp "$INSTALL_DIR/target/release/wolfscale" /usr/local/bin/wolfscale
-    sudo chmod +x /usr/local/bin/wolfscale
+    $SUDO cp "$INSTALL_DIR/target/release/wolfscale" /usr/local/bin/wolfscale
+    $SUDO chmod +x /usr/local/bin/wolfscale
     echo "✓ Binary updated"
 
-    sudo systemctl daemon-reload
-    sudo systemctl restart wolfscale
+    $SUDO systemctl daemon-reload
+    $SUDO systemctl restart wolfscale
     echo "✓ Service restarted"
 
     if [ -f "$INSTALL_DIR/target/release/wolfctl" ]; then
-        sudo cp "$INSTALL_DIR/target/release/wolfctl" /usr/local/bin/wolfctl
-        sudo chmod +x /usr/local/bin/wolfctl
+        $SUDO cp "$INSTALL_DIR/target/release/wolfctl" /usr/local/bin/wolfctl
+        $SUDO chmod +x /usr/local/bin/wolfctl
         echo "✓ wolfctl updated"
     fi
 
@@ -162,13 +175,13 @@ else
 
     # Run installer with TTY for interactive input
     # (Needed because stdin is consumed when script is piped via curl)
-    sudo ./install_service.sh < /dev/tty
+    $SUDO ./install_service.sh < /dev/tty
 
     echo ""
     echo "Installing wolfctl CLI tool..."
     if [ -f "$INSTALL_DIR/target/release/wolfctl" ]; then
-        sudo cp "$INSTALL_DIR/target/release/wolfctl" /usr/local/bin/wolfctl
-        sudo chmod +x /usr/local/bin/wolfctl
+        $SUDO cp "$INSTALL_DIR/target/release/wolfctl" /usr/local/bin/wolfctl
+        $SUDO chmod +x /usr/local/bin/wolfctl
         echo "✓ wolfctl installed to /usr/local/bin/wolfctl"
     else
         echo "⚠ wolfctl binary not found"
