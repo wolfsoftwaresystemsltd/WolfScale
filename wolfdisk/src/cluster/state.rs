@@ -1,14 +1,14 @@
 //! Cluster state management and leader election for WolfDisk
 
-use std::sync::{Arc, RwLock};
-use std::time::{Duration, Instant};
 use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 use std::thread;
+use std::time::{Duration, Instant};
 
 use tracing::{debug, info, warn};
 
 use crate::config::{Config, NodeRole};
-use crate::network::discovery::{Discovery, DiscoveredPeer};
+use crate::network::discovery::{DiscoveredPeer, Discovery};
 
 /// Cluster state for this node
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -66,7 +66,7 @@ impl ClusterManager {
             NodeRole::Client => ClusterState::Client,
             _ => ClusterState::Discovering,
         };
-        
+
         Self {
             config,
             node_id,
@@ -124,13 +124,16 @@ impl ClusterManager {
     pub fn add_peer_as_leader(&self, address: &str) {
         let peer_id = format!("leader@{}", address);
         *self.leader_id.write().unwrap() = Some(peer_id.clone());
-        self.peers.write().unwrap().insert(peer_id.clone(), PeerInfo {
-            node_id: peer_id,
-            address: address.to_string(),
-            is_leader: true,
-            is_client: false,
-            last_seen: std::time::Instant::now(),
-        });
+        self.peers.write().unwrap().insert(
+            peer_id.clone(),
+            PeerInfo {
+                node_id: peer_id,
+                address: address.to_string(),
+                is_leader: true,
+                is_client: false,
+                last_seen: std::time::Instant::now(),
+            },
+        );
     }
 
     /// Get current index version
@@ -143,38 +146,41 @@ impl ClusterManager {
     pub fn increment_index_version(&self, path: std::path::PathBuf) -> u64 {
         self.record_change(path, false)
     }
-    
+
     /// Record a deletion in the changelog so followers can remove the entry
     pub fn record_deletion(&self, path: std::path::PathBuf) -> u64 {
         self.record_change(path, true)
     }
-    
+
     /// Internal: record a change (create/update/delete) in the changelog
     fn record_change(&self, path: std::path::PathBuf, is_deleted: bool) -> u64 {
         let mut v = self.index_version.write().unwrap();
         *v += 1;
         let version = *v;
-        
+
         let mut log = self.changelog.write().unwrap();
         log.push((version, path, is_deleted));
-        
+
         // Cap changelog at 10,000 entries to prevent unbounded growth
         // If a follower is more than 10,000 changes behind, it gets a full sync
         if log.len() > 10_000 {
             let drain_count = log.len() - 10_000;
             log.drain(0..drain_count);
         }
-        
+
         version
     }
-    
+
     /// Get the paths that changed since a given version
     /// Returns None if the changelog doesn't go back far enough (need full sync)
     /// Returns (changed_paths, deleted_paths) — changed_paths are creates/updates,
     /// deleted_paths are files that were removed
-    pub fn changes_since(&self, from_version: u64) -> Option<(Vec<std::path::PathBuf>, Vec<std::path::PathBuf>)> {
+    pub fn changes_since(
+        &self,
+        from_version: u64,
+    ) -> Option<(Vec<std::path::PathBuf>, Vec<std::path::PathBuf>)> {
         let log = self.changelog.read().unwrap();
-        
+
         // Check if changelog goes back far enough
         if let Some((oldest_version, _, _)) = log.first() {
             if from_version < *oldest_version {
@@ -182,16 +188,17 @@ impl ClusterManager {
                 return None;
             }
         }
-        
+
         // Collect unique paths changed since from_version
         // A path's latest operation wins (if deleted then re-created, it's a change not a delete)
-        let mut latest_ops: std::collections::HashMap<std::path::PathBuf, bool> = std::collections::HashMap::new();
+        let mut latest_ops: std::collections::HashMap<std::path::PathBuf, bool> =
+            std::collections::HashMap::new();
         for (v, path, is_deleted) in log.iter() {
             if *v > from_version {
                 latest_ops.insert(path.clone(), *is_deleted);
             }
         }
-        
+
         let mut changed = Vec::new();
         let mut deleted = Vec::new();
         for (path, is_deleted) in latest_ops {
@@ -201,7 +208,7 @@ impl ClusterManager {
                 changed.push(path);
             }
         }
-        
+
         Some((changed, deleted))
     }
 
@@ -239,7 +246,7 @@ impl ClusterManager {
     /// Start the cluster manager
     pub fn start(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         *self.running.write().unwrap() = true;
-        
+
         // Client mode: run discovery to find leader, but never become leader
         let is_client = self.config.node.role == NodeRole::Client;
         if is_client {
@@ -249,13 +256,21 @@ impl ClusterManager {
 
         // Start discovery if enabled (including for clients!)
         if self.config.cluster.discovery.is_some() || !self.config.cluster.peers.is_empty() {
+            // Port comes from this node's own config (`discovery = "udp://ip:PORT"`),
+            // NOT a compiled constant — an upgraded node keeps its existing port
+            // (Golden Rule: never break existing installs).
+            let discovery_port = crate::network::discovery::discovery_port_from_config(
+                &self.config.cluster.discovery,
+            );
             let discovery = Discovery::new(
                 self.node_id.clone(),
                 self.config.node.bind.clone(),
                 self.config.node.role,
-            ).with_peers(self.config.cluster.peers.clone());
+                discovery_port,
+            )
+            .with_peers(self.config.cluster.peers.clone());
             discovery.start()?;
-            
+
             // Start a sync thread to copy discovered peers to our peer map
             // AND sync our leader status to Discovery for broadcasts
             let cluster_peers = Arc::clone(&self.peers);
@@ -264,7 +279,7 @@ impl ClusterManager {
             let running = Arc::clone(&self.running);
             let discovery_clone = discovery.clone();
             let is_client_mode = is_client;
-            
+
             thread::spawn(move || {
                 while *running.read().unwrap() {
                     // Sync our leader status TO discovery (for broadcasts)
@@ -273,10 +288,10 @@ impl ClusterManager {
                         let is_leading = *cluster_state.read().unwrap() == ClusterState::Leading;
                         discovery_clone.set_leader(is_leading);
                     }
-                    
+
                     // Get peers FROM discovery
                     let discovered = discovery_clone.peers();
-                    
+
                     // Update our peer map and track leader
                     let mut peers = cluster_peers.write().unwrap();
                     for dp in discovered {
@@ -284,24 +299,28 @@ impl ClusterManager {
                         if is_client_mode && dp.is_leader {
                             *cluster_leader_id.write().unwrap() = Some(dp.node_id.clone());
                         }
-                        
-                        let is_client_peer = matches!(dp.role, crate::network::discovery::DiscoveryRole::Client);
-                        peers.insert(dp.node_id.clone(), PeerInfo {
-                            node_id: dp.node_id,
-                            address: dp.address,
-                            is_leader: dp.is_leader,
-                            is_client: is_client_peer,
-                            last_seen: dp.last_seen,
-                        });
+
+                        let is_client_peer =
+                            matches!(dp.role, crate::network::discovery::DiscoveryRole::Client);
+                        peers.insert(
+                            dp.node_id.clone(),
+                            PeerInfo {
+                                node_id: dp.node_id,
+                                address: dp.address,
+                                is_leader: dp.is_leader,
+                                is_client: is_client_peer,
+                                last_seen: dp.last_seen,
+                            },
+                        );
                     }
                     drop(peers);
-                    
+
                     thread::sleep(Duration::from_millis(500));
                 }
             });
-            
+
             self.discovery = Some(discovery);
-            
+
             info!("Discovery started for node {}", self.node_id);
         }
 
@@ -314,7 +333,7 @@ impl ClusterManager {
     }
 
     /// Start the election monitor thread
-    /// 
+    ///
     /// Election model:
     /// 1. All nodes start as followers (Discovering state)
     /// 2. Wait for discovery to find other peers
@@ -330,61 +349,70 @@ impl ClusterManager {
         let running = Arc::clone(&self.running);
         let term = Arc::clone(&self.term);
         let last_leader_heartbeat = Arc::clone(&self.last_leader_heartbeat);
-        
+
         // Give discovery enough time to find all peers before electing
         let discovery_delay = Duration::from_secs(5);
         let peer_stale_threshold = Duration::from_secs(4);
         let initial_sync_complete = Arc::clone(&self.initial_sync_complete);
 
         thread::spawn(move || {
-            info!("Election monitor started for node {} - waiting for discovery", node_id);
-            
+            info!(
+                "Election monitor started for node {} - waiting for discovery",
+                node_id
+            );
+
             // All nodes start as followers and wait for discovery
             thread::sleep(discovery_delay);
-            
+
             while *running.read().unwrap() {
                 let current_state = *state.read().unwrap();
-                
+
                 // Clone active peers so we don't hold the lock
                 let active_peers: Vec<_> = {
                     let snapshot = peers.read().unwrap();
-                    snapshot.values()
+                    snapshot
+                        .values()
                         .filter(|p| p.last_seen.elapsed() < peer_stale_threshold)
                         .cloned()
                         .collect()
                 };
-                
+
                 // Get server peer IDs for comparison (exclude clients!)
                 // Clients should never be considered for leader election
-                let peer_ids: Vec<&str> = active_peers.iter()
+                let peer_ids: Vec<&str> = active_peers
+                    .iter()
                     .filter(|p| !p.is_client)
                     .map(|p| p.node_id.as_str())
                     .collect();
-                
+
                 // Am I the lowest ID? (I should be leader if so)
-                let i_am_lowest = peer_ids.is_empty() || 
-                    peer_ids.iter().all(|id| node_id.as_str() < *id);
-                
+                let i_am_lowest =
+                    peer_ids.is_empty() || peer_ids.iter().all(|id| node_id.as_str() < *id);
+
                 // Is there a visible leader already?
-                let current_leader = active_peers.iter()
+                let current_leader = active_peers
+                    .iter()
                     .find(|p| p.is_leader)
                     .map(|p| p.node_id.clone());
-                
+
                 match current_state {
                     ClusterState::Discovering | ClusterState::Following => {
                         if let Some(leader) = &current_leader {
                             // There's a leader - follow them
                             *last_leader_heartbeat.write().unwrap() = std::time::Instant::now();
                             *leader_id.write().unwrap() = Some(leader.clone());
-                            
+
                             if current_state == ClusterState::Discovering {
                                 info!("Found leader: {}", leader);
                                 *state.write().unwrap() = ClusterState::Following;
                             }
-                            
+
                             // But if I have a lower ID, I should become leader
                             if i_am_lowest && node_id.as_str() < leader.as_str() {
-                                info!("I have lower ID than current leader {} - taking over", leader);
+                                info!(
+                                    "I have lower ID than current leader {} - taking over",
+                                    leader
+                                );
                                 *term.write().unwrap() += 1;
                                 *leader_id.write().unwrap() = Some(node_id.clone());
                                 *state.write().unwrap() = ClusterState::Leading;
@@ -394,16 +422,24 @@ impl ClusterManager {
                             // taking leadership. This ensures a restarting node first
                             // gets the latest data from the current leader.
                             if *initial_sync_complete.read().unwrap() || active_peers.is_empty() {
-                                info!("Becoming leader (term {}) - I have the lowest node ID", *term.read().unwrap());
+                                info!(
+                                    "Becoming leader (term {}) - I have the lowest node ID",
+                                    *term.read().unwrap()
+                                );
                                 *term.write().unwrap() += 1;
                                 *leader_id.write().unwrap() = Some(node_id.clone());
                                 *state.write().unwrap() = ClusterState::Leading;
                             } else {
-                                debug!("Deferring leadership: waiting for initial sync to complete");
+                                debug!(
+                                    "Deferring leadership: waiting for initial sync to complete"
+                                );
                             }
                         } else {
                             // Not lowest ID, stay as follower and wait
-                            debug!("Not becoming leader: i_am_lowest={}, config_role={:?}", i_am_lowest, config_role);
+                            debug!(
+                                "Not becoming leader: i_am_lowest={}, config_role={:?}",
+                                i_am_lowest, config_role
+                            );
                             if current_state == ClusterState::Discovering {
                                 *state.write().unwrap() = ClusterState::Following;
                             }
@@ -421,7 +457,7 @@ impl ClusterManager {
                         // No election participation
                     }
                 }
-                
+
                 thread::sleep(Duration::from_secs(1));
             }
         });
@@ -437,9 +473,9 @@ impl ClusterManager {
             is_client: matches!(peer.role, crate::network::discovery::DiscoveryRole::Client),
             last_seen: peer.last_seen,
         };
-        
+
         self.peers.write().unwrap().insert(peer.node_id, info);
-        
+
         // Update discovery with our leader status
         if let Some(ref discovery) = self.discovery {
             discovery.set_leader(self.is_leader());
@@ -454,18 +490,24 @@ impl ClusterManager {
     /// Write cluster status with file index stats for wolfdiskctl
     pub fn write_status_file_with_stats(&self, file_count: usize, total_size: u64) {
         use std::time::{SystemTime, UNIX_EPOCH};
-        
+
         let status_dir = std::path::Path::new(&self.config.node.data_dir);
         if !status_dir.exists() {
             return; // Data dir doesn't exist yet
         }
-        
+
         let status_path = status_dir.join("cluster_status.json");
-        
+
         let state = self.state();
         let peers = self.peers();
-        
-        let role = if self.is_leader() { "leader" } else if state == ClusterState::Client { "client" } else { "follower" };
+
+        let role = if self.is_leader() {
+            "leader"
+        } else if state == ClusterState::Client {
+            "client"
+        } else {
+            "follower"
+        };
         let state_str = match state {
             ClusterState::Discovering => "discovering",
             ClusterState::Following => "following",
@@ -473,19 +515,28 @@ impl ClusterManager {
             ClusterState::Client => "client",
             ClusterState::Standalone => "standalone",
         };
-        
-        let peer_statuses: Vec<serde_json::Value> = peers.iter().map(|p| {
-            let peer_role = if p.is_leader { "leader" } else if p.is_client { "client" } else { "follower" };
-            serde_json::json!({
-                "node_id": p.node_id,
-                "address": p.address,
-                "role": peer_role,
-                "is_leader": p.is_leader,
-                "is_client": p.is_client,
-                "last_seen_secs_ago": p.last_seen.elapsed().as_secs()
+
+        let peer_statuses: Vec<serde_json::Value> = peers
+            .iter()
+            .map(|p| {
+                let peer_role = if p.is_leader {
+                    "leader"
+                } else if p.is_client {
+                    "client"
+                } else {
+                    "follower"
+                };
+                serde_json::json!({
+                    "node_id": p.node_id,
+                    "address": p.address,
+                    "role": peer_role,
+                    "is_leader": p.is_leader,
+                    "is_client": p.is_client,
+                    "last_seen_secs_ago": p.last_seen.elapsed().as_secs()
+                })
             })
-        }).collect();
-        
+            .collect();
+
         let status = serde_json::json!({
             "node_id": self.node_id,
             "role": role,
@@ -501,7 +552,7 @@ impl ClusterManager {
                 .unwrap()
                 .as_secs()
         });
-        
+
         if let Ok(json) = serde_json::to_string_pretty(&status) {
             let _ = std::fs::write(&status_path, json);
         }

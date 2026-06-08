@@ -13,11 +13,31 @@ use tracing::{debug, info, warn};
 
 use crate::config::NodeRole;
 
-/// Discovery port. 8651, NOT 8551 — WolfStack reserves the whole 8550..=8599
-/// band for its status-page listener, so the old 8551 default collided on any
-/// WolfStack node (WolfDisk install report 2026-06-08). Kept adjacent to the
-/// peer-manager port (8650) for operator legibility.
-pub const DISCOVERY_PORT: u16 = 8651;
+/// Discovery-port FALLBACK, used only when the config's `discovery` line has no
+/// parseable port. Kept at the historical 8551 for backward compatibility — the
+/// actual port is config-driven (see `discovery_port_from_config`), so an
+/// existing cluster keeps its own port on upgrade (Golden Rule: never break
+/// existing installs). FRESH installs get the new conflict-free 8651 because the
+/// updated setup.sh writes `discovery = "udp://ip:8651"` (WolfStack reserves the
+/// 8550..=8599 band, so the old 8551 default clashed on WolfStack nodes).
+pub const DISCOVERY_PORT: u16 = 8551;
+
+/// Resolve the discovery port from the config's `discovery = "udp://host:PORT"`
+/// string, falling back to DISCOVERY_PORT when absent/unparseable.
+///
+/// GOLDEN RULE — never break existing installs (2026-06-08): the discovery port
+/// must come from the node's OWN config, not a compiled constant. An existing
+/// auto-discovery cluster carries its port in config (e.g. `:8551`, written by
+/// an older installer), so a binary upgrade keeps that port instead of silently
+/// jumping to the new default and losing discovery mid-fleet. Fresh installs get
+/// the new 8651 because the updated setup.sh writes `udp://ip:8651`.
+pub fn discovery_port_from_config(discovery: &Option<String>) -> u16 {
+    discovery
+        .as_deref()
+        .and_then(|d| d.rsplit_once(':'))
+        .and_then(|(_, p)| p.parse::<u16>().ok())
+        .unwrap_or(DISCOVERY_PORT)
+}
 
 /// Discovery message prefix
 const DISCOVERY_PREFIX: &str = "WOLFDISK";
@@ -57,6 +77,10 @@ pub struct Discovery {
     node_id: String,
     bind_address: String,
     role: DiscoveryRole,
+    /// UDP port for discovery broadcast/listen. Config-driven (see
+    /// `discovery_port_from_config`) so an upgraded node keeps its existing
+    /// port rather than jumping to a new compiled default.
+    discovery_port: u16,
     configured_peers: Vec<String>,
     peers: Arc<RwLock<HashMap<String, DiscoveredPeer>>>,
     is_leader: Arc<RwLock<bool>>,
@@ -64,12 +88,14 @@ pub struct Discovery {
 }
 
 impl Discovery {
-    /// Create a new discovery service
-    pub fn new(node_id: String, bind_address: String, role: NodeRole) -> Self {
+    /// Create a new discovery service. `discovery_port` comes from the node's
+    /// config (via `discovery_port_from_config`), not a constant.
+    pub fn new(node_id: String, bind_address: String, role: NodeRole, discovery_port: u16) -> Self {
         Self {
             node_id,
             bind_address,
             role: role.into(),
+            discovery_port,
             configured_peers: Vec::new(),
             peers: Arc::new(RwLock::new(HashMap::new())),
             is_leader: Arc::new(RwLock::new(false)),
@@ -111,6 +137,7 @@ impl Discovery {
         let node_id = self.node_id.clone();
         let bind_address = self.bind_address.clone();
         let role = self.role;
+        let discovery_port = self.discovery_port;
         let is_leader = Arc::clone(&self.is_leader);
         let running = Arc::clone(&self.running);
         let configured_peers = self.configured_peers.clone();
@@ -120,6 +147,7 @@ impl Discovery {
                 node_id,
                 bind_address,
                 role,
+                discovery_port,
                 is_leader,
                 running,
                 configured_peers,
@@ -130,18 +158,19 @@ impl Discovery {
 
         // Start listener thread
         let node_id = self.node_id.clone();
+        let discovery_port = self.discovery_port;
         let peers = Arc::clone(&self.peers);
         let running = Arc::clone(&self.running);
 
         thread::spawn(move || {
-            if let Err(e) = run_listener(node_id, peers, running) {
+            if let Err(e) = run_listener(node_id, discovery_port, peers, running) {
                 warn!("Discovery listener error: {}", e);
             }
         });
 
         info!(
             "Discovery started on port {} (UDP broadcast)",
-            DISCOVERY_PORT
+            self.discovery_port
         );
         Ok(())
     }
@@ -194,6 +223,7 @@ fn run_broadcaster(
     node_id: String,
     bind_address: String,
     role: DiscoveryRole,
+    discovery_port: u16,
     is_leader: Arc<RwLock<bool>>,
     running: Arc<RwLock<bool>>,
     configured_peers: Vec<String>,
@@ -203,7 +233,7 @@ fn run_broadcaster(
     socket.set_broadcast(true)?;
 
     // Broadcast destinations: 255.255.255.255 for LAN, plus subnet broadcast for WolfNet
-    let mut broadcast_addrs: Vec<SocketAddr> = vec![format!("255.255.255.255:{}", DISCOVERY_PORT)
+    let mut broadcast_addrs: Vec<SocketAddr> = vec![format!("255.255.255.255:{}", discovery_port)
         .parse()
         .unwrap()];
 
@@ -216,7 +246,7 @@ fn run_broadcaster(
             if octets[0] != 0 {
                 let subnet_bcast = format!(
                     "{}.{}.{}.255:{}",
-                    octets[0], octets[1], octets[2], DISCOVERY_PORT
+                    octets[0], octets[1], octets[2], discovery_port
                 );
                 if let Ok(addr) = subnet_bcast.parse::<SocketAddr>() {
                     broadcast_addrs.push(addr);
@@ -228,9 +258,9 @@ fn run_broadcaster(
     // Also send discovery directly to configured peers (unicast) — critical for
     // cross-subnet and WolfNet connectivity where broadcast doesn't work
     for peer in &configured_peers {
-        // Peer address is host:port for the data port — discovery uses DISCOVERY_PORT
+        // Peer address is host:port for the data port — discovery uses the discovery port
         if let Some(host) = peer.rsplit_once(':').map(|(h, _)| h) {
-            let discovery_addr = format!("{}:{}", host, DISCOVERY_PORT);
+            let discovery_addr = format!("{}:{}", host, discovery_port);
             if let Ok(addr) = discovery_addr.parse::<SocketAddr>() {
                 if !broadcast_addrs.contains(&addr) {
                     broadcast_addrs.push(addr);
@@ -268,19 +298,20 @@ fn run_broadcaster(
 /// Run the discovery listener
 fn run_listener(
     node_id: String,
+    discovery_port: u16,
     peers: Arc<RwLock<HashMap<String, DiscoveredPeer>>>,
     running: Arc<RwLock<bool>>,
 ) -> std::io::Result<()> {
     // Bind to discovery port
-    let socket = match UdpSocket::bind(format!("0.0.0.0:{}", DISCOVERY_PORT)) {
+    let socket = match UdpSocket::bind(format!("0.0.0.0:{}", discovery_port)) {
         Ok(s) => {
-            info!("Discovery listener bound to port {}", DISCOVERY_PORT);
+            info!("Discovery listener bound to port {}", discovery_port);
             s
         }
         Err(e) => {
             warn!(
                 "Failed to bind discovery listener on port {}: {}",
-                DISCOVERY_PORT, e
+                discovery_port, e
             );
             return Err(e);
         }
@@ -311,7 +342,7 @@ fn run_listener(
                         // If the advertised address uses 0.0.0.0 (wildcard bind),
                         // replace with the actual source IP from the UDP packet
                         let actual_address = if msg_address.starts_with("0.0.0.0:") {
-                            let port = msg_address.strip_prefix("0.0.0.0:").unwrap_or("8650");
+                            let port = msg_address.strip_prefix("0.0.0.0:").unwrap_or("8550");
                             let fixed = format!("{}:{}", src.ip(), port);
                             info!(
                                 "Peer {} advertised 0.0.0.0, using actual IP: {}",
@@ -355,4 +386,24 @@ fn run_listener(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn discovery_port_is_config_driven_for_backward_compat() {
+        // GOLDEN RULE: an existing cluster whose config carries :8551 (written
+        // by an older installer) MUST keep 8551 after a binary upgrade, not jump
+        // to the new compiled default.
+        assert_eq!(discovery_port_from_config(&Some("udp://10.10.10.3:8551".into())), 8551);
+        // A fresh install (updated setup.sh writes :8651) uses the new port.
+        assert_eq!(discovery_port_from_config(&Some("udp://10.10.10.3:8651".into())), 8651);
+        // An operator's custom port is honoured.
+        assert_eq!(discovery_port_from_config(&Some("udp://10.0.0.1:8561".into())), 8561);
+        // No discovery line, or no port in the URL → the compiled fallback.
+        assert_eq!(discovery_port_from_config(&None), DISCOVERY_PORT);
+        assert_eq!(discovery_port_from_config(&Some("udp://10.0.0.1".into())), DISCOVERY_PORT);
+    }
 }

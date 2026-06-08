@@ -50,11 +50,13 @@ fn default_role() -> NodeRole {
 }
 
 fn default_bind() -> String {
-    // 8650, NOT 8550: WolfStack dynamically reserves a status-page port across
-    // the whole 8550..=8599 range, so any WolfDisk port in that band can clash
-    // (klasSponsor/WolfDisk install report 2026-06-08 — WolfDisk crashed with
-    // "Address in use" on every WolfStack node). 86xx sits clear of it.
-    "0.0.0.0:8650".to_string()
+    // Backward-compat fallback ONLY — kept at the historical 8550 so an existing
+    // config that omits `bind` keeps its behaviour on a binary upgrade (Golden
+    // Rule: never break existing installs). The conflict fix (WolfStack reserves
+    // 8550..=8599 for status pages) lives in the INSTALLER: setup.sh / docker
+    // write `bind = "...:8650"` for FRESH installs. Every installer writes bind
+    // explicitly, so this default is effectively never used in practice.
+    "0.0.0.0:8550".to_string()
 }
 
 fn default_data_dir() -> PathBuf {
