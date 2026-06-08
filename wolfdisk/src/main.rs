@@ -1218,7 +1218,7 @@ fn main() {
                             {
                                 // Fix 0.0.0.0 bind addresses — use the actual source IP
                                 let actual_addr = if addr.starts_with("0.0.0.0:") {
-                                    let port = addr.strip_prefix("0.0.0.0:").unwrap_or("8550");
+                                    let port = addr.strip_prefix("0.0.0.0:").unwrap_or("8650");
                                     // peer_id is "ip:port" from the incoming TCP socket
                                     if let Some(ip) = peer_id.rsplit_once(':').map(|(h, _)| h) {
                                         format!("{}:{}", ip, port)

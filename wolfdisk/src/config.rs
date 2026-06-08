@@ -50,7 +50,11 @@ fn default_role() -> NodeRole {
 }
 
 fn default_bind() -> String {
-    "0.0.0.0:8550".to_string()
+    // 8650, NOT 8550: WolfStack dynamically reserves a status-page port across
+    // the whole 8550..=8599 range, so any WolfDisk port in that band can clash
+    // (klasSponsor/WolfDisk install report 2026-06-08 — WolfDisk crashed with
+    // "Address in use" on every WolfStack node). 86xx sits clear of it.
+    "0.0.0.0:8650".to_string()
 }
 
 fn default_data_dir() -> PathBuf {

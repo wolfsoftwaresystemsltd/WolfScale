@@ -2,19 +2,22 @@
 //!
 //! Uses broadcast (255.255.255.255) for node discovery, same as WolfScale.
 
-use std::net::SocketAddr;
-use std::sync::{Arc, RwLock};
-use std::time::{Duration, Instant};
 use std::collections::HashMap;
-use std::thread;
+use std::net::SocketAddr;
 use std::net::UdpSocket;
+use std::sync::{Arc, RwLock};
+use std::thread;
+use std::time::{Duration, Instant};
 
 use tracing::{debug, info, warn};
 
 use crate::config::NodeRole;
 
-/// Discovery port
-pub const DISCOVERY_PORT: u16 = 8551;
+/// Discovery port. 8651, NOT 8551 — WolfStack reserves the whole 8550..=8599
+/// band for its status-page listener, so the old 8551 default collided on any
+/// WolfStack node (WolfDisk install report 2026-06-08). Kept adjacent to the
+/// peer-manager port (8650) for operator legibility.
+pub const DISCOVERY_PORT: u16 = 8651;
 
 /// Discovery message prefix
 const DISCOVERY_PREFIX: &str = "WOLFDISK";
@@ -25,8 +28,8 @@ const DISCOVERY_VERSION: u8 = 1;
 /// Role in discovery packet
 #[derive(Debug, Clone, Copy)]
 pub enum DiscoveryRole {
-    Server,  // Leader or Follower - participates in replication
-    Client,  // Client-only - mount access only
+    Server, // Leader or Follower - participates in replication
+    Client, // Client-only - mount access only
 }
 
 impl From<NodeRole> for DiscoveryRole {
@@ -92,7 +95,9 @@ impl Discovery {
 
     /// Get current leader (if known)
     pub fn leader(&self) -> Option<DiscoveredPeer> {
-        self.peers.read().unwrap()
+        self.peers
+            .read()
+            .unwrap()
             .values()
             .find(|p| p.is_leader)
             .cloned()
@@ -111,7 +116,14 @@ impl Discovery {
         let configured_peers = self.configured_peers.clone();
 
         thread::spawn(move || {
-            if let Err(e) = run_broadcaster(node_id, bind_address, role, is_leader, running, configured_peers) {
+            if let Err(e) = run_broadcaster(
+                node_id,
+                bind_address,
+                role,
+                is_leader,
+                running,
+                configured_peers,
+            ) {
                 warn!("Discovery broadcaster error: {}", e);
             }
         });
@@ -127,7 +139,10 @@ impl Discovery {
             }
         });
 
-        info!("Discovery started on port {} (UDP broadcast)", DISCOVERY_PORT);
+        info!(
+            "Discovery started on port {} (UDP broadcast)",
+            DISCOVERY_PORT
+        );
         Ok(())
     }
 
@@ -143,19 +158,14 @@ fn format_message(node_id: &str, address: &str, is_server: bool, is_leader: bool
     let leader = if is_leader { "L" } else { "F" };
     format!(
         "{}|{}|{}|{}|{}|{}",
-        DISCOVERY_PREFIX,
-        DISCOVERY_VERSION,
-        node_id,
-        address,
-        role,
-        leader
+        DISCOVERY_PREFIX, DISCOVERY_VERSION, node_id, address, role, leader
     )
 }
 
 /// Parse a discovery broadcast message
 fn parse_message(message: &str) -> Option<(String, String, bool, bool)> {
     let parts: Vec<&str> = message.split('|').collect();
-    
+
     if parts.len() < 6 {
         return None;
     }
@@ -193,18 +203,21 @@ fn run_broadcaster(
     socket.set_broadcast(true)?;
 
     // Broadcast destinations: 255.255.255.255 for LAN, plus subnet broadcast for WolfNet
-    let mut broadcast_addrs: Vec<SocketAddr> = vec![
-        format!("255.255.255.255:{}", DISCOVERY_PORT).parse().unwrap(),
-    ];
+    let mut broadcast_addrs: Vec<SocketAddr> = vec![format!("255.255.255.255:{}", DISCOVERY_PORT)
+        .parse()
+        .unwrap()];
 
     // If bind address is on a specific IP (not 0.0.0.0), also broadcast to its /24 subnet
-    // e.g. bind 10.10.10.3:8550 → broadcast to 10.10.10.255:8551
+    // e.g. bind 10.10.10.3:8650 → broadcast to 10.10.10.255:8651
     if let Ok(bind_sock) = bind_address.parse::<SocketAddr>() {
         let ip = bind_sock.ip();
         if let std::net::IpAddr::V4(v4) = ip {
             let octets = v4.octets();
             if octets[0] != 0 {
-                let subnet_bcast = format!("{}.{}.{}.255:{}", octets[0], octets[1], octets[2], DISCOVERY_PORT);
+                let subnet_bcast = format!(
+                    "{}.{}.{}.255:{}",
+                    octets[0], octets[1], octets[2], DISCOVERY_PORT
+                );
                 if let Ok(addr) = subnet_bcast.parse::<SocketAddr>() {
                     broadcast_addrs.push(addr);
                 }
@@ -227,12 +240,16 @@ fn run_broadcaster(
         }
     }
 
-    info!("Discovery broadcaster started for node {} ({} targets)", node_id, broadcast_addrs.len());
+    info!(
+        "Discovery broadcaster started for node {} ({} targets)",
+        node_id,
+        broadcast_addrs.len()
+    );
 
     while *running.read().unwrap() {
         let is_server = matches!(role, DiscoveryRole::Server);
         let leader = *is_leader.read().unwrap();
-        
+
         let message = format_message(&node_id, &bind_address, is_server, leader);
 
         for addr in &broadcast_addrs {
@@ -261,11 +278,14 @@ fn run_listener(
             s
         }
         Err(e) => {
-            warn!("Failed to bind discovery listener on port {}: {}", DISCOVERY_PORT, e);
+            warn!(
+                "Failed to bind discovery listener on port {}: {}",
+                DISCOVERY_PORT, e
+            );
             return Err(e);
         }
     };
-    
+
     socket.set_read_timeout(Some(Duration::from_secs(1)))?;
 
     let mut buf = [0u8; 512];
@@ -275,27 +295,39 @@ fn run_listener(
         match socket.recv_from(&mut buf) {
             Ok((len, src)) => {
                 if let Ok(message) = std::str::from_utf8(&buf[..len]) {
-                    if let Some((msg_node_id, msg_address, is_server, is_leader)) = parse_message(message) {
+                    if let Some((msg_node_id, msg_address, is_server, is_leader)) =
+                        parse_message(message)
+                    {
                         // Skip our own broadcasts
                         if msg_node_id == node_id {
                             continue;
                         }
 
-                        info!("Discovered peer: {} at {} (from {})", msg_node_id, msg_address, src);
+                        info!(
+                            "Discovered peer: {} at {} (from {})",
+                            msg_node_id, msg_address, src
+                        );
 
                         // If the advertised address uses 0.0.0.0 (wildcard bind),
                         // replace with the actual source IP from the UDP packet
                         let actual_address = if msg_address.starts_with("0.0.0.0:") {
-                            let port = msg_address.strip_prefix("0.0.0.0:").unwrap_or("8550");
+                            let port = msg_address.strip_prefix("0.0.0.0:").unwrap_or("8650");
                             let fixed = format!("{}:{}", src.ip(), port);
-                            info!("Peer {} advertised 0.0.0.0, using actual IP: {}", msg_node_id, fixed);
+                            info!(
+                                "Peer {} advertised 0.0.0.0, using actual IP: {}",
+                                msg_node_id, fixed
+                            );
                             fixed
                         } else {
                             msg_address
                         };
 
-                        let role = if is_server { DiscoveryRole::Server } else { DiscoveryRole::Client };
-                        
+                        let role = if is_server {
+                            DiscoveryRole::Server
+                        } else {
+                            DiscoveryRole::Client
+                        };
+
                         peers.write().unwrap().insert(
                             msg_node_id.clone(),
                             DiscoveredPeer {
@@ -311,9 +343,10 @@ fn run_listener(
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 // Timeout - clean up stale peers
-                peers.write().unwrap().retain(|_, peer| {
-                    peer.last_seen.elapsed() < stale_threshold
-                });
+                peers
+                    .write()
+                    .unwrap()
+                    .retain(|_, peer| peer.last_seen.elapsed() < stale_threshold);
             }
             Err(e) => {
                 debug!("Discovery recv error: {}", e);

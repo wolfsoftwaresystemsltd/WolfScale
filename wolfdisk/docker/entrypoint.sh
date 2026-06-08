@@ -22,7 +22,7 @@ wolfdisk --config "$CONFIG" init --data-dir "$DATA_DIR" >/dev/null 2>&1 || true
 if [ ! -f "$CONFIG" ]; then
     NODE_ID="${WOLFDISK_NODE_ID:-$(hostname)}"
     ROLE="${WOLFDISK_ROLE:-client}"
-    BIND="${WOLFDISK_BIND:-0.0.0.0:8550}"
+    BIND="${WOLFDISK_BIND:-0.0.0.0:8650}"  # 8650, not 8550 — avoids WolfStack's 8550..8599 status-page range
     MODE="${WOLFDISK_MODE:-shared}"
 
     # Parse comma-separated WOLFDISK_PEERS into a TOML array

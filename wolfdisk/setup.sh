@@ -19,20 +19,61 @@ if [ "$EUID" -ne 0 ]; then
         # Script is a real file — re-exec directly
         exec sudo bash "$0" "$@"
     else
-        # Piped execution (curl | bash) — re-download and run as root
+        # Piped execution (curl | bash) — re-download and run as root.
+        # Pass our args through (`-s -- "$@"`) so non-interactive flags like
+        # --node-id / --bind survive the sudo re-exec (WolfDisk install report
+        # B4, 2026-06-08 — they were dropped here before).
         SETUP_URL="https://raw.githubusercontent.com/wolfsoftwaresystemsltd/WolfScale/main/wolfdisk/setup.sh"
-        curl -sSL "$SETUP_URL" | sudo bash
+        curl -sSL "$SETUP_URL" | sudo bash -s -- "$@"
         exit $?
     fi
 fi
 
+# ─── Argument parsing (B4: non-interactive / automated installs) ────────────
+# Supports the WolfStack dashboard (pipes `curl | bash` with no terminal) and
+# scripted remote installs. Example:
+#   curl -sSL .../wolfdisk/setup.sh | bash -s -- \
+#     --node-id pve02 --role auto --bind 10.10.1.22:8650 \
+#     --peers 10.10.1.21:8650 --data-dir /appdata/wolfdisk --mount /mnt/wolfdata
 BRANCH="main"
+NODE_ID=""; NODE_ROLE=""; BIND_ARG=""; PEERS_INPUT=""
+DATA_DIR=""; MOUNT_PATH=""; DISCOVERY_MODE=""; FORCE_NONINTERACTIVE=false
 while [ $# -gt 0 ]; do
     case "$1" in
         --beta) BRANCH="beta" ;;
+        --node-id) NODE_ID="$2"; shift ;;           --node-id=*) NODE_ID="${1#*=}" ;;
+        --role) NODE_ROLE="$2"; shift ;;            --role=*) NODE_ROLE="${1#*=}" ;;
+        --bind) BIND_ARG="$2"; shift ;;             --bind=*) BIND_ARG="${1#*=}" ;;
+        --peers) PEERS_INPUT="$2"; shift ;;         --peers=*) PEERS_INPUT="${1#*=}" ;;
+        --data-dir) DATA_DIR="$2"; shift ;;         --data-dir=*) DATA_DIR="${1#*=}" ;;
+        --mount) MOUNT_PATH="$2"; shift ;;          --mount=*) MOUNT_PATH="${1#*=}" ;;
+        --discovery) DISCOVERY_MODE="$2"; shift ;;  --discovery=*) DISCOVERY_MODE="${1#*=}" ;;
+        -y|--yes|--non-interactive) FORCE_NONINTERACTIVE=true ;;
+        *) ;;
     esac
     shift
 done
+
+# Non-interactive when told to be, when any config flag was supplied, or when no
+# controlling terminal is attached (a piped `curl | bash` — the dashboard path).
+# Otherwise prompt as before.
+if [ "$FORCE_NONINTERACTIVE" = "true" ] \
+   || [ -n "$NODE_ID$NODE_ROLE$BIND_ARG$PEERS_INPUT$DATA_DIR$MOUNT_PATH$DISCOVERY_MODE" ]; then
+    INTERACTIVE=false
+elif (exec < /dev/tty) 2>/dev/null; then
+    # Test that /dev/tty can actually be OPENED, not just that the device node
+    # is mode-readable: a systemd-spawned `curl | bash` (the dashboard) has no
+    # controlling terminal, so the open fails (ENXIO) and we go non-interactive
+    # instead of dying on `read < /dev/tty`. A user who pipes it in their own
+    # shell still gets the prompts.
+    INTERACTIVE=true
+else
+    INTERACTIVE=false
+fi
+
+# data_dir is needed before the config block (data directories are created up
+# front); mount defaults later so we can tell a --mount flag from the default.
+DATA_DIR=${DATA_DIR:-/var/lib/wolfdisk}
 
 # Allow git to operate on repos owned by other users
 export GIT_CONFIG_COUNT=1
@@ -201,109 +242,122 @@ if [ "$WOLFDISK_PREBUILT" = "false" ]; then
     echo "  ✓ wolfdiskctl installed to /usr/local/bin/wolfdiskctl"
 fi
 
-# Create data directory
+# Create data directory (honours --data-dir; defaults to /var/lib/wolfdisk)
 echo ""
 echo "  Creating data directories..."
-mkdir -p /var/lib/wolfdisk/{chunks,index,wal}
+mkdir -p "$DATA_DIR"/{chunks,index,wal}
 mkdir -p /etc/wolfdisk
 mkdir -p /mnt/wolfdisk
 echo "  ✓ Directories created"
 
-# Create config if not exists - with interactive prompts
-# Use /dev/tty to read from terminal even when script is piped
+# Create config if not exists. In interactive mode we prompt (reading /dev/tty);
+# otherwise (flags supplied, -y, or no terminal) we use flags + sensible
+# defaults so an unattended install just works (B4).
 if [ ! -f "/etc/wolfdisk/config.toml" ]; then
     echo ""
     echo "  ─────────────────────────────────────"
     echo "  WolfDisk Configuration"
     echo "  ─────────────────────────────────────"
     echo ""
-    
-    # Get hostname as default
+
     DEFAULT_HOSTNAME=$(hostname)
-    
-    # Prompt for Node ID
-    echo -n "  Node ID [$DEFAULT_HOSTNAME]: "
-    read NODE_ID < /dev/tty
-    NODE_ID=${NODE_ID:-$DEFAULT_HOSTNAME}
-    
-    # Prompt for Role
-    echo ""
-    echo "  Node Roles:"
-    echo "    1) auto     - Automatic election (lowest ID becomes leader)"
-    echo "    2) leader   - Force this node to be leader"
-    echo "    3) follower - Force this node to be follower"
-    echo "    4) client   - Mount-only (no local storage, access remote data)"
-    echo ""
-    echo -n "  Select role [1-4, default: 1]: "
-    read ROLE_CHOICE < /dev/tty
-    
-    case $ROLE_CHOICE in
-        2) NODE_ROLE="leader" ;;
-        3) NODE_ROLE="follower" ;;
-        4) NODE_ROLE="client" ;;
-        *) NODE_ROLE="auto" ;;
-    esac
-    
-    # Get default IP address
     DEFAULT_IP=$(hostname -I | awk '{print $1}')
     DEFAULT_IP=${DEFAULT_IP:-"0.0.0.0"}
-    
-    # Prompt for bind address
-    echo ""
-    echo -n "  Bind IP address [$DEFAULT_IP]: "
-    read BIND_IP < /dev/tty
-    BIND_IP=${BIND_IP:-$DEFAULT_IP}
-    
-    # Prompt for Discovery
-    echo ""
-    echo "  Cluster Discovery:"
-    echo "    1) Auto-discovery (UDP multicast - recommended for LAN)"
-    echo "    2) Manual peers (specify IP addresses)"
-    echo "    3) Standalone (single node, no clustering)"
-    echo ""
-    echo -n "  Select discovery method [1-3, default: 1]: "
-    read DISCOVERY_CHOICE < /dev/tty
-    
+
+    # ── Node ID ──
+    if [ "$INTERACTIVE" = "true" ]; then
+        echo -n "  Node ID [${NODE_ID:-$DEFAULT_HOSTNAME}]: "
+        read _in < /dev/tty; [ -n "$_in" ] && NODE_ID="$_in"
+    fi
+    NODE_ID=${NODE_ID:-$DEFAULT_HOSTNAME}
+
+    # ── Role ──
+    if [ "$INTERACTIVE" = "true" ] && [ -z "$NODE_ROLE" ]; then
+        echo ""
+        echo "  Node Roles:"
+        echo "    1) auto     - Automatic election (lowest ID becomes leader)"
+        echo "    2) leader   - Force this node to be leader"
+        echo "    3) follower - Force this node to be follower"
+        echo "    4) client   - Mount-only (no local storage, access remote data)"
+        echo ""
+        echo -n "  Select role [1-4, default: 1]: "
+        read _in < /dev/tty
+        case "$_in" in
+            2) NODE_ROLE="leader" ;;
+            3) NODE_ROLE="follower" ;;
+            4) NODE_ROLE="client" ;;
+            *) NODE_ROLE="auto" ;;
+        esac
+    fi
+    NODE_ROLE=${NODE_ROLE:-auto}
+
+    # ── Bind address (accepts IP or IP:PORT; default port 8650, NOT 8550 —
+    #    8550..8599 is WolfStack's status-page range) ──
+    if [ "$INTERACTIVE" = "true" ] && [ -z "$BIND_ARG" ]; then
+        echo ""
+        echo -n "  Bind IP address [$DEFAULT_IP]: "
+        read _in < /dev/tty; [ -n "$_in" ] && BIND_ARG="$_in"
+    fi
+    BIND_PORT=8650
+    case "$BIND_ARG" in
+        *:*) BIND_IP="${BIND_ARG%:*}"; BIND_PORT="${BIND_ARG##*:}" ;;
+        "")  BIND_IP="$DEFAULT_IP" ;;
+        *)   BIND_IP="$BIND_ARG" ;;
+    esac
+
+    # ── Discovery / peers ──
+    if [ "$INTERACTIVE" = "true" ] && [ -z "$DISCOVERY_MODE" ] && [ -z "$PEERS_INPUT" ]; then
+        echo ""
+        echo "  Cluster Discovery:"
+        echo "    1) Auto-discovery (UDP broadcast - recommended for LAN)"
+        echo "    2) Manual peers (specify IP addresses)"
+        echo "    3) Standalone (single node, no clustering)"
+        echo ""
+        echo -n "  Select discovery method [1-3, default: 1]: "
+        read _in < /dev/tty
+        case "$_in" in
+            2) DISCOVERY_MODE="peers"
+               echo -n "  Enter peer addresses (comma-separated, e.g. 192.168.1.10:8650,192.168.1.11:8650): "
+               read PEERS_INPUT < /dev/tty ;;
+            3) DISCOVERY_MODE="standalone" ;;
+            *) DISCOVERY_MODE="auto" ;;
+        esac
+    fi
+    # A --peers value always implies manual-peer mode.
+    [ -n "$PEERS_INPUT" ] && DISCOVERY_MODE="peers"
+    DISCOVERY_MODE=${DISCOVERY_MODE:-auto}
+
     DISCOVERY_CONFIG=""
     PEERS_CONFIG="peers = []"
-    
-    case $DISCOVERY_CHOICE in
-        2)
-            echo ""
-            echo -n "  Enter peer addresses (comma-separated, e.g. 192.168.1.10:8550,192.168.1.11:8550): "
-            read PEERS_INPUT < /dev/tty
+    case "$DISCOVERY_MODE" in
+        peers)
             if [ -n "$PEERS_INPUT" ]; then
-                # Convert comma-separated to TOML array format
-                PEERS_FORMATTED=$(echo "$PEERS_INPUT" | sed 's/,/", "/g')
+                PEERS_FORMATTED=$(echo "$PEERS_INPUT" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//; s/ *, */", "/g')
                 PEERS_CONFIG="peers = [\"$PEERS_FORMATTED\"]"
             fi
             ;;
-        3)
-            # Standalone - no discovery, no peers
-            ;;
-        *)
-            DISCOVERY_CONFIG="discovery = \"udp://$BIND_IP:8551\""
-            ;;
+        standalone) ;;  # no discovery, no peers
+        *) DISCOVERY_CONFIG="discovery = \"udp://$BIND_IP:8651\"" ;;
     esac
-    
-    # Prompt for mount path
-    echo ""
-    echo -n "  Mount path [/mnt/wolfdisk]: "
-    read MOUNT_PATH < /dev/tty
+
+    # ── Mount path ──
+    if [ "$INTERACTIVE" = "true" ] && [ -z "$MOUNT_PATH" ]; then
+        echo ""
+        echo -n "  Mount path [/mnt/wolfdisk]: "
+        read _in < /dev/tty; [ -n "$_in" ] && MOUNT_PATH="$_in"
+    fi
     MOUNT_PATH=${MOUNT_PATH:-/mnt/wolfdisk}
-    
-    # Create the mount directory
     mkdir -p "$MOUNT_PATH"
-    
-    # Write config
+
+    # ── Write config ──
     echo ""
     echo "  Creating configuration..."
     cat <<EOF > /etc/wolfdisk/config.toml
 [node]
 id = "$NODE_ID"
 role = "$NODE_ROLE"
-bind = "$BIND_IP:8550"
-data_dir = "/var/lib/wolfdisk"
+bind = "$BIND_IP:$BIND_PORT"
+data_dir = "$DATA_DIR"
 
 [cluster]
 $PEERS_CONFIG
@@ -323,15 +377,14 @@ EOF
     echo "  Configuration Summary:"
     echo "    Node ID:    $NODE_ID"
     echo "    Role:       $NODE_ROLE"
-    echo "    Bind:       $BIND_IP:8550"
+    echo "    Bind:       $BIND_IP:$BIND_PORT"
+    echo "    Data dir:   $DATA_DIR"
     echo "    Mount:      $MOUNT_PATH"
-    if [ -n "$DISCOVERY_CONFIG" ]; then
-        echo "    Discovery:  UDP multicast (auto)"
-    elif [ "$DISCOVERY_CHOICE" = "2" ]; then
-        echo "    Peers:      $PEERS_INPUT"
-    else
-        echo "    Mode:       Standalone"
-    fi
+    case "$DISCOVERY_MODE" in
+        auto)       echo "    Discovery:  UDP broadcast (auto) on :8651" ;;
+        peers)      echo "    Peers:      $PEERS_INPUT" ;;
+        standalone) echo "    Mode:       Standalone" ;;
+    esac
 else
     echo ""
     echo "  ✓ Config already exists at /etc/wolfdisk/config.toml"

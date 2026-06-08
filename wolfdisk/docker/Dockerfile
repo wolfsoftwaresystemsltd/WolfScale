@@ -12,7 +12,7 @@
 #     -v wolfdisk-data:/var/lib/wolfdisk \
 #     -v /mnt/wolfdisk:/mnt/wolfdisk:rshared \
 #     -e WOLFDISK_ROLE=client \
-#     -e WOLFDISK_PEERS=<leader_ip:8550> \
+#     -e WOLFDISK_PEERS=<leader_ip:8650> \
 #     ghcr.io/wolfsoftwaresystemsltd/wolfdisk:latest
 
 FROM debian:bookworm-slim
@@ -33,7 +33,8 @@ COPY docker/entrypoint.sh /entrypoint.sh
 
 RUN chmod +x /usr/local/bin/wolfdisk /usr/local/bin/wolfdiskctl /entrypoint.sh
 
-EXPOSE 8550/tcp
+EXPOSE 8650/tcp
+EXPOSE 8651/udp
 EXPOSE 9878/tcp
 
 VOLUME ["/etc/wolfdisk", "/var/lib/wolfdisk"]
