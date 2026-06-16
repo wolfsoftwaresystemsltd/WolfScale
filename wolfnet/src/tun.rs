@@ -225,3 +225,21 @@ pub fn get_src_ip(packet: &[u8]) -> Option<std::net::Ipv4Addr> {
     }
     Some(std::net::Ipv4Addr::new(packet[12], packet[13], packet[14], packet[15]))
 }
+
+/// Extract the destination IPv6 address from a raw IP packet. Returns None
+/// for non-IPv6 packets or a truncated header. IPv6 has a fixed 40-byte
+/// header (RFC 8200 §3); the destination address is the final 16 bytes,
+/// offsets 24–39. Used only for v6 subnet routing — the overlay control
+/// plane (peer IPs, handshake) stays IPv4.
+pub fn get_dest_ip6(packet: &[u8]) -> Option<std::net::Ipv6Addr> {
+    if packet.len() < 40 {
+        return None;
+    }
+    // IPv6: version in the upper nibble of byte 0.
+    if (packet[0] >> 4) != 6 {
+        return None;
+    }
+    let mut octets = [0u8; 16];
+    octets.copy_from_slice(&packet[24..40]);
+    Some(std::net::Ipv6Addr::from(octets))
+}

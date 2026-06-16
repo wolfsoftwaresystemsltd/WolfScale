@@ -4,7 +4,7 @@
 //! Supports peer exchange (PEX) for automatic mesh topology propagation.
 
 use std::collections::HashMap;
-use std::net::{Ipv4Addr, SocketAddr};
+use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 #[allow(unused_imports)]
 use std::sync::{Arc, RwLock};
 use std::time::Instant;
@@ -164,6 +164,14 @@ pub struct PeerManager {
     /// would either get dropped (no peer match) or sent to the first
     /// auto-gateway peer (often the wrong one).
     subnet_routes_cidrs: Arc<RwLock<Vec<(Ipv4Addr, u8, Ipv4Addr)>>>,
+    /// IPv6 CIDR subnet routes: (network, prefix, gateway WolfNet IP). The
+    /// gateway is still an IPv4 WolfNet IP — the overlay endpoints are IPv4;
+    /// only the *destination* subnet is v6. Populated from the same
+    /// /var/run/wolfnet/subnet-routes.json (entries whose CIDR is IPv6),
+    /// which WolfStack only writes when the operator opted into IPv6 subnet
+    /// routing. Sorted longest-prefix first. Empty (and thus inert) on every
+    /// node that hasn't enabled the feature. See find_subnet_match_v6.
+    subnet_routes_cidrs_v6: Arc<RwLock<Vec<(Ipv6Addr, u8, Ipv4Addr)>>>,
     /// IPs purged via SIGHUP — blocked from PEX re-addition until daemon restart
     purged_ips: Arc<RwLock<std::collections::HashSet<Ipv4Addr>>>,
 }
@@ -215,6 +223,7 @@ impl PeerManager {
             endpoint_to_ip: Arc::new(RwLock::new(HashMap::new())),
             subnet_routes: Arc::new(RwLock::new(HashMap::new())),
             subnet_routes_cidrs: Arc::new(RwLock::new(Vec::new())),
+            subnet_routes_cidrs_v6: Arc::new(RwLock::new(Vec::new())),
             purged_ips: Arc::new(RwLock::new(std::collections::HashSet::new())),
         }
     }
@@ -519,12 +528,14 @@ impl PeerManager {
         let content = match std::fs::read_to_string(path) {
             Ok(c) => c,
             Err(_) => {
-                // File missing — clear the table so deleted CIDRs go
-                // away. (load_routes returns without clearing here, but
+                // File missing — clear BOTH family tables so deleted CIDRs
+                // go away. (load_routes returns without clearing here, but
                 // for subnet routes "no file" really does mean "no
                 // routes configured", and stale entries would cause
-                // wrong routing decisions.)
+                // wrong routing decisions.) The v6 table must clear too, or
+                // a removed v6 route would linger in the daemon.
                 self.subnet_routes_cidrs.write().unwrap().clear();
+                self.subnet_routes_cidrs_v6.write().unwrap().clear();
                 return;
             }
         };
@@ -534,29 +545,40 @@ impl PeerManager {
         };
 
         let mut parsed: Vec<(Ipv4Addr, u8, Ipv4Addr)> = Vec::new();
+        let mut parsed_v6: Vec<(Ipv6Addr, u8, Ipv4Addr)> = Vec::new();
         for (cidr, gw_str) in &map {
             let (net_str, prefix_str) = match cidr.split_once('/') {
                 Some(p) => p,
                 None => continue,
             };
-            let net: Ipv4Addr = match net_str.parse() {
-                Ok(n) => n,
-                Err(_) => continue,
-            };
-            let prefix: u8 = match prefix_str.parse() {
-                Ok(p) if p <= 32 => p,
-                _ => continue,
-            };
+            // The gateway is ALWAYS an IPv4 WolfNet IP, for both families —
+            // the overlay endpoints are IPv4; only the destination subnet
+            // may be v6.
             let gateway: Ipv4Addr = match gw_str.parse() {
                 Ok(g) => g,
                 Err(_) => continue,
             };
-            parsed.push((net, prefix, gateway));
+            if let Ok(net) = net_str.parse::<Ipv4Addr>() {
+                let prefix: u8 = match prefix_str.parse() {
+                    Ok(p) if p <= 32 => p,
+                    _ => continue,
+                };
+                parsed.push((net, prefix, gateway));
+            } else if let Ok(net6) = net_str.parse::<Ipv6Addr>() {
+                let prefix: u8 = match prefix_str.parse() {
+                    Ok(p) if p <= 128 => p,
+                    _ => continue,
+                };
+                parsed_v6.push((net6, prefix, gateway));
+            }
+            // else: CIDR network is neither v4 nor v6 — skip.
         }
-        // Sort longest prefix first so find_subnet_match returns on the
-        // first hit (longest-prefix-match semantics, like the kernel).
+        // Sort longest prefix first so the find_subnet_match* helpers return
+        // on the first hit (longest-prefix-match semantics, like the kernel).
         parsed.sort_by(|a, b| b.1.cmp(&a.1));
+        parsed_v6.sort_by(|a, b| b.1.cmp(&a.1));
         *self.subnet_routes_cidrs.write().unwrap() = parsed;
+        *self.subnet_routes_cidrs_v6.write().unwrap() = parsed_v6;
     }
 
     /// Longest-prefix-match against the loaded CIDR subnet routes.
@@ -578,6 +600,32 @@ impl PeerManager {
             };
             let net_u32 = u32::from_be_bytes(net.octets());
             if (dest_u32 & mask) == (net_u32 & mask) {
+                return Some(*gw);
+            }
+        }
+        None
+    }
+
+    /// Longest-prefix-match against the loaded IPv6 CIDR subnet routes.
+    /// Returns the gateway WolfNet IP (IPv4 — the overlay endpoint) for the
+    /// most specific configured v6 CIDR that contains `dest_ip`, or None.
+    /// Mirrors `find_subnet_match` with u128 math. The v6 table is empty
+    /// unless the operator opted into IPv6 subnet routing, so this returns
+    /// None — and the caller drops the packet, exactly as v6 packets were
+    /// handled before the feature existed — on every node not using it.
+    pub fn find_subnet_match_v6(&self, dest_ip: &Ipv6Addr) -> Option<Ipv4Addr> {
+        let dest_u128 = u128::from_be_bytes(dest_ip.octets());
+        let table = self.subnet_routes_cidrs_v6.read().unwrap();
+        for (net, prefix, gw) in table.iter() {
+            let mask: u128 = if *prefix == 0 {
+                0
+            } else if *prefix >= 128 {
+                u128::MAX
+            } else {
+                u128::MAX << (128 - *prefix as u32)
+            };
+            let net_u128 = u128::from_be_bytes(net.octets());
+            if (dest_u128 & mask) == (net_u128 & mask) {
                 return Some(*gw);
             }
         }
@@ -1184,5 +1232,71 @@ mod pex_endpoint_filter_tests {
         // Asking for entries as if we WERE 10.100.10.40 should exclude self.
         let entries = pm.get_pex_entries("10.100.10.40".parse().unwrap());
         assert_eq!(entries.len(), 0);
+    }
+}
+
+#[cfg(test)]
+mod subnet_route_v6_tests {
+    use super::*;
+    use std::io::Write;
+
+    fn temp_json(name: &str, body: &str) -> std::path::PathBuf {
+        let mut path = std::env::temp_dir();
+        path.push(format!("wolfnet-test-{}-{}.json", name, std::process::id()));
+        let mut f = std::fs::File::create(&path).unwrap();
+        f.write_all(body.as_bytes()).unwrap();
+        path
+    }
+
+    #[test]
+    fn load_subnet_routes_splits_families_and_matches() {
+        let pm = PeerManager::new();
+        // Mixed v4 + v6 map. The gateway is always an IPv4 WolfNet IP.
+        let path = temp_json("mixed", r#"{
+            "10.10.0.0/16": "10.100.10.30",
+            "fc00:abcd::/32": "10.100.10.40",
+            "fc00:abcd:1::/48": "10.100.10.41"
+        }"#);
+        pm.load_subnet_routes(&path);
+        let _ = std::fs::remove_file(&path);
+
+        // v4 path unchanged.
+        assert_eq!(
+            pm.find_subnet_match(&"10.10.5.9".parse().unwrap()),
+            Some("10.100.10.30".parse().unwrap())
+        );
+        // v6 longest-prefix-match: the /48 wins over the /32.
+        assert_eq!(
+            pm.find_subnet_match_v6(&"fc00:abcd:1::99".parse().unwrap()),
+            Some("10.100.10.41".parse().unwrap())
+        );
+        // A v6 address only inside the /32.
+        assert_eq!(
+            pm.find_subnet_match_v6(&"fc00:abcd:2::1".parse().unwrap()),
+            Some("10.100.10.40".parse().unwrap())
+        );
+        // A v6 address outside every configured range → no match (dropped).
+        assert_eq!(pm.find_subnet_match_v6(&"2001:db8::1".parse().unwrap()), None);
+    }
+
+    #[test]
+    fn missing_file_clears_v6_table() {
+        let pm = PeerManager::new();
+        let path = temp_json("present", r#"{ "fc00::/16": "10.100.10.40" }"#);
+        pm.load_subnet_routes(&path);
+        assert!(pm.find_subnet_match_v6(&"fc00::5".parse().unwrap()).is_some());
+        // Now point at a missing file — the table must clear, not linger.
+        let _ = std::fs::remove_file(&path);
+        pm.load_subnet_routes(&path);
+        assert_eq!(pm.find_subnet_match_v6(&"fc00::5".parse().unwrap()), None);
+    }
+
+    #[test]
+    fn v6_disabled_default_table_is_empty() {
+        // A fresh manager (the state on every node that never enabled the
+        // feature, since WolfStack only writes v6 CIDRs when opted in) has
+        // an empty v6 table and matches nothing.
+        let pm = PeerManager::new();
+        assert_eq!(pm.find_subnet_match_v6(&"fc00::1".parse().unwrap()), None);
     }
 }

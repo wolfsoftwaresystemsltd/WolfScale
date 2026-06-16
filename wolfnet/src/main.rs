@@ -722,6 +722,17 @@ fn run_daemon(config_path: &PathBuf) {
                             encrypt_and_send(&mut send_buf, pkt, peer, &my_peer_id, &socket);
                         });
                     }
+                } else if let Some(dest6) = tun::get_dest_ip6(pkt) {
+                    // IPv6 subnet routing — the only routing path that applies
+                    // to a v6 destination on the IPv4 overlay. Resolve the v6
+                    // CIDR to its v4 gateway peer and encapsulate. An empty v6
+                    // table (feature off) yields no match → the packet is
+                    // dropped, exactly as v6 packets were before this support.
+                    if let Some(gw_ip) = peer_manager.find_subnet_match_v6(&dest6) {
+                        peer_manager.with_peer_by_ip(&gw_ip, |peer| {
+                            encrypt_and_send(&mut send_buf, pkt, peer, &my_peer_id, &socket);
+                        });
+                    }
                 }
             }
         }
@@ -848,8 +859,25 @@ fn run_daemon(config_path: &PathBuf) {
                                                 // back to wolfnet0 since dest is in our subnet)
                                             }
                                         }
+                                    } else if let Some(dest6) = tun::get_dest_ip6(plaintext) {
+                                        // IPv6 subnet routing on the decap/forward
+                                        // path. If this node is the configured
+                                        // gateway for the v6 CIDR, write to the TUN
+                                        // (kernel + ip6tables forward it out the LAN
+                                        // side); otherwise re-encapsulate to whichever
+                                        // peer IS the gateway. Empty v6 table (feature
+                                        // off) → no match → drop, exactly as before.
+                                        if let Some(gw_ip) = peer_manager.find_subnet_match_v6(&dest6) {
+                                            if gw_ip == wolfnet_ip {
+                                                unsafe { libc::write(tun_fd, plaintext.as_ptr() as *const _, pt_len) };
+                                            } else {
+                                                peer_manager.with_peer_by_ip(&gw_ip, |gw_peer| {
+                                                    encrypt_and_send(&mut send_buf, plaintext, gw_peer, &my_peer_id, &socket);
+                                                });
+                                            }
+                                        }
                                     }
-                                    // else: non-IPv4 packet with no dest IP — drop silently
+                                    // else: non-IP / unparseable packet — drop silently
                                 }
                                 Err(e) => {
                                     debug!("Decrypt failed from {} (counter={}): {}", peer_ip, counter, e);
