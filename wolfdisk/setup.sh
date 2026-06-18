@@ -136,8 +136,17 @@ elif command -v dnf &> /dev/null; then
 elif command -v yum &> /dev/null; then
     PKG_MANAGER="yum"
     echo "  ✓ Detected RHEL/CentOS (yum)"
+elif command -v pacman &> /dev/null; then
+    PKG_MANAGER="pacman"
+    echo "  ✓ Detected Arch (pacman)"
+elif command -v zypper &> /dev/null; then
+    PKG_MANAGER="zypper"
+    echo "  ✓ Detected openSUSE/SLES (zypper)"
+elif command -v apk &> /dev/null; then
+    PKG_MANAGER="apk"
+    echo "  ✓ Detected Alpine (apk)"
 else
-    echo "  ✗ Could not detect package manager (apt/dnf/yum)"
+    echo "  ✗ Could not detect package manager (apt/dnf/yum/pacman/zypper/apk)"
     echo "    Please install dependencies manually and run install_service.sh"
     exit 1
 fi
@@ -153,6 +162,12 @@ elif [ "$PKG_MANAGER" = "dnf" ]; then
     dnf install -y curl fuse3
 elif [ "$PKG_MANAGER" = "yum" ]; then
     yum install -y curl fuse3
+elif [ "$PKG_MANAGER" = "pacman" ]; then
+    pacman -Sy --noconfirm curl fuse3
+elif [ "$PKG_MANAGER" = "zypper" ]; then
+    zypper install -y curl fuse3
+elif [ "$PKG_MANAGER" = "apk" ]; then
+    apk add curl fuse3
 fi
 
 echo "  ✓ System dependencies installed"
@@ -188,6 +203,12 @@ if [ "$WOLFDISK_PREBUILT" = "false" ]; then
         dnf install -y git gcc gcc-c++ make openssl-devel pkg-config fuse3-devel
     elif [ "$PKG_MANAGER" = "yum" ]; then
         yum install -y git gcc gcc-c++ make openssl-devel pkgconfig fuse3-devel
+    elif [ "$PKG_MANAGER" = "pacman" ]; then
+        pacman -S --noconfirm git base-devel openssl pkgconf fuse3
+    elif [ "$PKG_MANAGER" = "zypper" ]; then
+        zypper install -y git gcc gcc-c++ make libopenssl-devel pkg-config fuse3-devel
+    elif [ "$PKG_MANAGER" = "apk" ]; then
+        apk add git build-base openssl-dev pkgconf fuse3-dev
     fi
 
     # Determine the real user (even when running under sudo)
