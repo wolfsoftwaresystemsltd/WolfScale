@@ -271,6 +271,12 @@ fn cmd_invite(config_path: &PathBuf) {
         }
     };
 
+    // Inviter's hostname — carried in the token so the joiner names the peer
+    // after us instead of the generic "invited-peer" (which collides across
+    // every join and makes a single ghost impossible to single out — see
+    // cmd_join). Falls back to a key-derived name there if absent (old tokens).
+    let my_hostname = hostname::get().map(|h| h.to_string_lossy().to_string()).unwrap_or_default();
+
     // Build invite token as JSON → base64
     let invite = serde_json::json!({
         "pk": kp.public_key_base64(),
@@ -278,6 +284,7 @@ fn cmd_invite(config_path: &PathBuf) {
         "ip": config.network.address,
         "sn": config.network.subnet,
         "pt": config.network.listen_port,
+        "hn": my_hostname,
     });
     let token = base64::Engine::encode(
         &base64::engine::general_purpose::STANDARD,
@@ -295,6 +302,19 @@ fn cmd_invite(config_path: &PathBuf) {
     println!("  sudo wolfnet --config /etc/wolfnet/config.toml join {}", token);
     println!();
     println!("After they join, they'll get a reverse token for you to run.");
+}
+
+/// Choose a peer's friendly name on join. Prefer the inviter's hostname (carried
+/// in the invite token); otherwise derive a name from the public key that is
+/// still UNIQUE per peer. Never returns the bare "invited-peer" that every join
+/// used to share — that collision is what turned a stray peer into a ghost no
+/// operator could single out (klasSponsor 2026-06-22).
+fn derive_peer_name(hostname: Option<&str>, pubkey: &str) -> String {
+    if let Some(hn) = hostname.map(|s| s.trim()).filter(|s| !s.is_empty()) {
+        return hn.to_string();
+    }
+    let suffix: String = pubkey.chars().filter(|c| c.is_ascii_alphanumeric()).take(8).collect();
+    format!("invited-{}", suffix)
 }
 
 fn cmd_join(config_path: &PathBuf, token: &str) {
@@ -321,6 +341,11 @@ fn cmd_join(config_path: &PathBuf, token: &str) {
         error!("Token missing IP"); std::process::exit(1);
     });
     let subnet = invite["sn"].as_u64().unwrap_or(24) as u8;
+
+    // Name the peer after the inviter's hostname (carried in the token), else a
+    // key-derived UNIQUE name — never the bare "invited-peer" (see
+    // derive_peer_name).
+    let peer_name = derive_peer_name(invite["hn"].as_str(), peer_pubkey);
 
     // Load or create config
     let mut config = if config_path.exists() {
@@ -374,7 +399,7 @@ fn cmd_join(config_path: &PathBuf, token: &str) {
             config.peers[idx].endpoint = Some(peer_endpoint.to_string());
             config.peers[idx].allowed_ip = peer_ip.to_string();
             if config.peers[idx].name.is_none() {
-                config.peers[idx].name = Some("invited-peer".to_string());
+                config.peers[idx].name = Some(peer_name.clone());
             }
 
         }
@@ -383,7 +408,7 @@ fn cmd_join(config_path: &PathBuf, token: &str) {
                 public_key: peer_pubkey.to_string(),
                 endpoint: Some(peer_endpoint.to_string()),
                 allowed_ip: peer_ip.to_string(),
-                name: Some("invited-peer".to_string()),
+                name: Some(peer_name.clone()),
             });
         }
     }
@@ -406,12 +431,14 @@ fn cmd_join(config_path: &PathBuf, token: &str) {
         Some(ip) => format!("{}:{}", ip, config.network.listen_port),
         None => format!("{}:{}", config.network.address, config.network.listen_port),
     };
+    let my_hostname = hostname::get().map(|h| h.to_string_lossy().to_string()).unwrap_or_default();
     let reverse = serde_json::json!({
         "pk": kp.public_key_base64(),
         "ep": my_endpoint,
         "ip": config.network.address,
         "sn": subnet,
         "pt": config.network.listen_port,
+        "hn": my_hostname,
     });
     let reverse_token = base64::Engine::encode(
         &base64::engine::general_purpose::STANDARD,
@@ -1039,15 +1066,34 @@ fn run_daemon(config_path: &PathBuf) {
                     let configured_ips: std::collections::HashSet<Ipv4Addr> = new_config.peers.iter()
                         .filter_map(|pc| pc.allowed_ip.parse().ok())
                         .collect();
+                    // Endpoints of CONFIGURED peers. A runtime-only peer that
+                    // dials one of these is a duplicate-endpoint GHOST — e.g.
+                    // klasSponsor 2026-06-22: a host node and a container behind
+                    // the same NAT both claimed the router's ip:9600, so a stray
+                    // peer kept "connected" off the shared endpoint and the
+                    // is_direct guard below shielded it from purge forever (it
+                    // was invisible in the UI because it lived in no config).
+                    // Such a duplicate is always wrong: two peers can't share a
+                    // real endpoint. Purge it regardless of connection state.
+                    let configured_endpoints: std::collections::HashSet<SocketAddr> = new_config.peers.iter()
+                        .filter_map(|pc| pc.endpoint.as_deref())
+                        .filter_map(resolve_endpoint)
+                        .collect();
                     let all_runtime_ips = peer_manager.all_ips();
                     let mut removed = 0;
                     for ip in &all_runtime_ips {
                         if !configured_ips.contains(ip) {
-                            // Check if this peer is directly connected (LAN discovery)
-                            let is_direct = peer_manager.with_peer_by_ip(ip, |p| {
-                                p.relay_via.is_none() && p.is_connected()
-                            }).unwrap_or(false);
-                            if !is_direct {
+                            // is_direct: directly connected (LAN discovery) — normally
+                            // spared. dup_endpoint: shares a configured peer's endpoint
+                            // — a ghost that must go even when "connected".
+                            let (is_direct, dup_endpoint) = peer_manager.with_peer_by_ip(ip, |p| {
+                                let dup = p.endpoint.map(|e| configured_endpoints.contains(&e)).unwrap_or(false);
+                                (p.relay_via.is_none() && p.is_connected(), dup)
+                            }).unwrap_or((false, false));
+                            if !is_direct || dup_endpoint {
+                                if dup_endpoint {
+                                    warn!("Purging duplicate-endpoint ghost peer {} (stole a configured peer's endpoint)", ip);
+                                }
                                 peer_manager.purge_peer(ip);
                                 removed += 1;
                             }
@@ -1115,3 +1161,26 @@ extern "C" fn handle_reload(_sig: libc::c_int) {
 }
 
 static RELOAD_FLAG: AtomicBool = AtomicBool::new(false);
+
+#[cfg(test)]
+mod join_name_tests {
+    use super::derive_peer_name;
+
+    #[test]
+    fn prefers_inviter_hostname() {
+        assert_eq!(derive_peer_name(Some("vps-1"), "AbCdEf1234"), "vps-1");
+        assert_eq!(derive_peer_name(Some("  trimmed  "), "k"), "trimmed");
+    }
+
+    #[test]
+    fn falls_back_to_unique_key_name_never_generic() {
+        let a = derive_peer_name(None, "AAAA1111BBBB2222");
+        let b = derive_peer_name(Some(""), "CCCC3333DDDD4444");
+        assert_eq!(a, "invited-AAAA1111");
+        // Distinct keys → distinct names (the whole point — no collisions).
+        assert_ne!(a, b);
+        // And never the bare colliding name that created the ghost.
+        assert_ne!(a, "invited-peer");
+        assert_ne!(b, "invited-peer");
+    }
+}
