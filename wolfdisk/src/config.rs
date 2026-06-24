@@ -162,6 +162,17 @@ pub struct S3Config {
 
     /// Optional secret key for authentication
     pub secret_key: Option<String>,
+
+    /// Optional bucket → folder mappings, relative to the WolfDisk root.
+    /// A bucket listed here serves the given folder instead of a same-named
+    /// top-level directory, e.g. in `[s3.buckets]`:
+    ///   photos  = "/data/photos"
+    ///   backups = "/srv/backups"
+    /// Buckets NOT listed keep the default behaviour (a top-level directory of
+    /// the same name becomes the bucket). Leading/trailing slashes are ignored;
+    /// the path is always interpreted from the WolfDisk root.
+    #[serde(default)]
+    pub buckets: std::collections::HashMap<String, String>,
 }
 
 impl Default for S3Config {
@@ -171,6 +182,7 @@ impl Default for S3Config {
             bind: default_s3_bind(),
             access_key: None,
             secret_key: None,
+            buckets: std::collections::HashMap::new(),
         }
     }
 }

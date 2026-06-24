@@ -1,6 +1,6 @@
 [package]
 name = "wolfdisk"
-version = "2.7.7"
+version = "2.9.1"
 edition = "2021"
 authors = ["Wolf Software Systems Ltd"]
 description = "Distributed file system with replicated and shared storage modes"
@@ -23,6 +23,11 @@ toml = "0.8"
 # Hashing for content-addressed storage
 sha2 = "0.10"
 hex = "0.4"
+
+# S3 SigV4 authentication + ETag computation
+hmac = "0.12"
+md-5 = "0.10"
+percent-encoding = "2"
 
 # Logging
 tracing = "0.1"

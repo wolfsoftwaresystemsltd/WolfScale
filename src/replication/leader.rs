@@ -741,6 +741,7 @@ mod tests {
             cluster,
             ReplicationConfig::default(),
             tx,
+            None,
         );
     }
 }

@@ -35,7 +35,9 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Install cross
-        run: cargo install cross --git https://github.com/cross-rs/cross
+        # Install the published release with its pinned lockfile (git HEAD fails
+        # to compile on the runner's toolchain).
+        run: cargo install cross --locked
         working-directory: .
 
       - name: Build static binaries

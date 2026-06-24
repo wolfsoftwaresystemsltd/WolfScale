@@ -37,7 +37,10 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Install cross
-        run: cargo install cross --git https://github.com/cross-rs/cross
+        # Install the published release with its pinned lockfile. Building cross
+        # from git HEAD broke (its `directories 6`/`dirs-sys 0.5.0` dep needs a
+        # newer toolchain than the runner provides).
+        run: cargo install cross --locked
         working-directory: .
 
       - name: Build static binaries
