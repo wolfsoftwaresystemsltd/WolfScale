@@ -113,14 +113,37 @@ impl PeerManager {
 
     /// Start listening for peer connections
     pub fn start(&self) -> std::io::Result<()> {
-        *self.running.write().unwrap() = true;
-
         let bind_addr: SocketAddr = self
             .bind_address
             .parse()
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
-        let listener = TcpListener::bind(bind_addr)?;
+        // Bind BEFORE flipping `running` true — if the address is taken we must
+        // not leave the manager flagged as running. std's TcpListener already
+        // sets SO_REUSEADDR, so AddrInUse here means another process is actively
+        // listening on this exact port (a second wolfdisk instance, a stale
+        // wolfdisk that didn't stop, or a clash with WolfStack's status-page
+        // range 8550-8599). Name the address and the likely cause so the
+        // operator can find it with `ss -ltnp` instead of a bare errno 98.
+        let listener = TcpListener::bind(bind_addr).map_err(|e| {
+            if e.kind() == std::io::ErrorKind::AddrInUse {
+                std::io::Error::new(
+                    std::io::ErrorKind::AddrInUse,
+                    format!(
+                        "peer port {bind_addr} is already in use — another wolfdisk \
+                         is likely already listening there (you do NOT need a second \
+                         wolfdisk for S3: set `[s3] enabled = true` on the existing \
+                         one). If you really want a second instance, give it a \
+                         different `bind`/`data_dir`. Find the holder with: \
+                         ss -ltnp 'sport = :{port}'",
+                        port = bind_addr.port()
+                    ),
+                )
+            } else {
+                e
+            }
+        })?;
         listener.set_nonblocking(true)?;
+        *self.running.write().unwrap() = true;
 
         let handler = Arc::clone(&self.message_handler);
         let running = Arc::clone(&self.running);
