@@ -711,7 +711,7 @@ mod tests {
         let dir = tempdir().unwrap();
         let (tx, _rx) = mpsc::channel(100);
 
-        let wal_writer = WalWriter::new(
+        let wal_writer = crate::wal::WalWriter::new(
             dir.path().to_path_buf(),
             test_wal_config(),
             "follower".to_string(),
