@@ -285,13 +285,14 @@ mod tests {
             term: 1,
             leader_id: "node-1".to_string(),
             commit_lsn: 100,
+            members: vec![],
         };
 
         let bytes = msg.serialize().unwrap();
         let restored = Message::deserialize(&bytes).unwrap();
 
         match restored {
-            Message::Heartbeat { term, leader_id, commit_lsn } => {
+            Message::Heartbeat { term, leader_id, commit_lsn, .. } => {
                 assert_eq!(term, 1);
                 assert_eq!(leader_id, "node-1");
                 assert_eq!(commit_lsn, 100);
