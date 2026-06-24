@@ -6,5 +6,6 @@
 
 pub mod server;
 pub mod auth;
+pub mod meta;
 
 pub use server::S3Server;
