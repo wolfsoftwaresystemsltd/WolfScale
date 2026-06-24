@@ -412,28 +412,31 @@ else
     echo "    (Upgrade mode - skipping configuration prompts)"
 fi
 
-# Service setup
-if [ ! -f "/etc/systemd/system/wolfdisk.service" ]; then
-    echo ""
-    echo "  ─────────────────────────────────────"
-    echo "  Creating systemd service..."
-    echo "  ─────────────────────────────────────"
+# Service setup — ALWAYS (re)write the unit, every run. Previously this was
+# gated on the file not existing, so an update could leave a node with a
+# missing or stale wolfdisk.service (and "systemctl enable/start wolfdisk" then
+# fails with "Unit wolfdisk.service not found"). Re-running setup.sh now always
+# repairs it.
+echo ""
+echo "  ─────────────────────────────────────"
+echo "  Installing systemd service..."
+echo "  ─────────────────────────────────────"
 
-    # Get mount point from config or use default
-    SVC_MOUNT="/mnt/wolfdisk"
-    SVC_CONFIG="/etc/wolfdisk/config.toml"
-    if [ -f "$SVC_CONFIG" ]; then
-        SVC_MOUNT_CFG=$(grep -E "^path\s*=" "$SVC_CONFIG" | cut -d'"' -f2 | head -1)
-        [ -n "$SVC_MOUNT_CFG" ] && SVC_MOUNT="$SVC_MOUNT_CFG"
-    fi
+# Get mount point from config or use default
+SVC_MOUNT="/mnt/wolfdisk"
+SVC_CONFIG="/etc/wolfdisk/config.toml"
+if [ -f "$SVC_CONFIG" ]; then
+    SVC_MOUNT_CFG=$(grep -E "^path\s*=" "$SVC_CONFIG" | cut -d'"' -f2 | head -1)
+    [ -n "$SVC_MOUNT_CFG" ] && SVC_MOUNT="$SVC_MOUNT_CFG"
+fi
 
-    # Enable user_allow_other in /etc/fuse.conf
-    if ! grep -q "^user_allow_other" /etc/fuse.conf 2>/dev/null; then
-        echo "user_allow_other" >> /etc/fuse.conf
-        echo "  ✓ Enabled user_allow_other in /etc/fuse.conf"
-    fi
+# Enable user_allow_other in /etc/fuse.conf
+if ! grep -q "^user_allow_other" /etc/fuse.conf 2>/dev/null; then
+    echo "user_allow_other" >> /etc/fuse.conf
+    echo "  ✓ Enabled user_allow_other in /etc/fuse.conf"
+fi
 
-    cat << SVCEOF > /etc/systemd/system/wolfdisk.service
+cat << SVCEOF > /etc/systemd/system/wolfdisk.service
 [Unit]
 Description=WolfDisk Distributed File System
 After=network.target
@@ -455,13 +458,8 @@ PrivateTmp=false
 WantedBy=multi-user.target
 SVCEOF
 
-    systemctl daemon-reload
-    echo "  ✓ Created wolfdisk.service"
-else
-    echo ""
-    echo "  ✓ Service already installed - reloading systemd"
-    systemctl daemon-reload
-fi
+systemctl daemon-reload
+echo "  ✓ Installed wolfdisk.service"
 
 # Start/restart service
 echo ""
