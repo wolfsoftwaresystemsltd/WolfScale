@@ -49,6 +49,21 @@ pub struct S3State {
     pub meta: Arc<RwLock<S3MetaStore>>,
     /// Path the sidecar is persisted to.
     pub meta_path: PathBuf,
+    /// bucket name → folder path (relative to the WolfDisk root). A bucket
+    /// here serves that folder instead of a same-named top-level directory.
+    pub bucket_mappings: Arc<HashMap<String, String>>,
+}
+
+/// Resolve a bucket name to its root path inside WolfDisk. A bucket configured
+/// in `[s3.buckets]` maps to that folder (slashes normalised, interpreted from
+/// the WolfDisk root); any other bucket is a top-level directory of the same
+/// name — the original behaviour.
+fn bucket_root(state: &S3State, bucket: &str) -> PathBuf {
+    if let Some(folder) = state.bucket_mappings.get(bucket) {
+        let rel = folder.trim_matches('/');
+        return PathBuf::from(rel);
+    }
+    PathBuf::from(bucket)
 }
 
 /// S3 server that runs alongside WolfDisk FUSE
@@ -69,6 +84,7 @@ impl S3Server {
         next_inode: Arc<RwLock<u64>>,
         credentials: Option<S3Credentials>,
         meta_path: PathBuf,
+        bucket_mappings: HashMap<String, String>,
     ) -> Self {
         let meta = S3MetaStore::load(&meta_path);
         let state = S3State {
@@ -81,6 +97,7 @@ impl S3Server {
             multipart: Arc::new(RwLock::new(HashMap::new())),
             meta: Arc::new(RwLock::new(meta)),
             meta_path,
+            bucket_mappings: Arc::new(bucket_mappings),
         };
 
         Self { bind_addr, state }
@@ -287,6 +304,13 @@ async fn list_buckets(state: S3State) -> Response {
             }
         }
     }
+    drop(index);
+
+    // Explicitly-configured bucket → folder mappings are buckets too, even when
+    // their target folder isn't a top-level directory of the same name.
+    for name in state.bucket_mappings.keys() {
+        buckets.insert(name.clone());
+    }
 
     let mut xml = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
     xml.push_str("<ListAllMyBucketsResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">\n");
@@ -336,7 +360,7 @@ async fn list_objects(state: S3State, bucket: &str, query: &HashMap<String, Stri
     let continuation_token = query.get("continuation-token").cloned();
 
     let index = state.file_index.read().unwrap();
-    let bucket_prefix = PathBuf::from(bucket);
+    let bucket_prefix = bucket_root(&state, bucket);
 
     let mut objects: Vec<(String, u64, SystemTime, Vec<ChunkRef>)> = Vec::new();
     let mut common_prefixes: HashSet<String> = HashSet::new();
@@ -453,7 +477,7 @@ async fn list_objects(state: S3State, bucket: &str, query: &HashMap<String, Stri
 /// HEAD /bucket → HeadBucket
 async fn head_bucket(state: S3State, bucket: &str) -> Response {
     let index = state.file_index.read().unwrap();
-    let bucket_path = PathBuf::from(bucket);
+    let bucket_path = bucket_root(&state, bucket);
     let exists = index.get(&bucket_path).map(|e| e.is_dir).unwrap_or(false)
         || index.iter().any(|(p, _)| p.starts_with(&bucket_path));
     if exists {
@@ -469,7 +493,7 @@ async fn head_bucket(state: S3State, bucket: &str) -> Response {
 
 /// PUT /bucket → CreateBucket
 async fn create_bucket(state: S3State, bucket: &str) -> Response {
-    let bucket_path = PathBuf::from(bucket);
+    let bucket_path = bucket_root(&state, bucket);
     {
         let mut index = state.file_index.write().unwrap();
         let mut inode_tbl = state.inode_table.write().unwrap();
@@ -493,7 +517,7 @@ async fn create_bucket(state: S3State, bucket: &str) -> Response {
 /// DELETE /bucket → DeleteBucket. A bucket with no *objects* is deletable;
 /// synthetic intermediate directories are swept away with it (S3 has no dirs).
 async fn delete_bucket(state: S3State, bucket: &str) -> Response {
-    let bucket_path = PathBuf::from(bucket);
+    let bucket_path = bucket_root(&state, bucket);
     {
         let mut index = state.file_index.write().unwrap();
         let mut inode_tbl = state.inode_table.write().unwrap();
@@ -544,7 +568,7 @@ async fn delete_bucket(state: S3State, bucket: &str) -> Response {
 
 /// GET /bucket/key → GetObject (supports Range)
 async fn get_object(state: S3State, bucket: &str, key: &str, headers: &HeaderMap) -> Response {
-    let object_path = PathBuf::from(bucket).join(key);
+    let object_path = bucket_root(&state, bucket).join(key);
 
     let entry = {
         let index = state.file_index.read().unwrap();
@@ -625,7 +649,7 @@ async fn get_object(state: S3State, bucket: &str, key: &str, headers: &HeaderMap
 
 /// HEAD /bucket/key → HeadObject
 async fn head_object(state: S3State, bucket: &str, key: &str) -> Response {
-    let object_path = PathBuf::from(bucket).join(key);
+    let object_path = bucket_root(&state, bucket).join(key);
     let index = state.file_index.read().unwrap();
     let entry = match index.get(&object_path) {
         Some(e) if !e.is_dir => e.clone(),
@@ -664,7 +688,7 @@ async fn put_object(
     data: Vec<u8>,
     headers: &HeaderMap,
 ) -> Response {
-    let object_path = PathBuf::from(bucket).join(key);
+    let object_path = bucket_root(&state, bucket).join(key);
     ensure_bucket_and_parents(&state, bucket, &object_path);
 
     let mut chunks: Vec<ChunkRef> = Vec::new();
@@ -703,7 +727,7 @@ async fn put_object(
 
 /// DELETE /bucket/key → DeleteObject (idempotent)
 async fn delete_object(state: S3State, bucket: &str, key: &str) -> Response {
-    let object_path = PathBuf::from(bucket).join(key);
+    let object_path = bucket_root(&state, bucket).join(key);
     match remove_object(&state, &object_path) {
         Ok(()) => {
             set_object_meta_remove(&state, bucket, key);
@@ -831,7 +855,7 @@ async fn delete_objects(state: S3State, bucket: &str, body: &[u8]) -> Response {
     let mut xml = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
     xml.push_str("<DeleteResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">\n");
     for key in keys {
-        let object_path = PathBuf::from(bucket).join(&key);
+        let object_path = bucket_root(&state, bucket).join(&key);
         match remove_object(&state, &object_path) {
             Ok(()) => {
                 set_object_meta_remove(&state, bucket, &key);
@@ -1046,7 +1070,7 @@ async fn complete_multipart(
         requested.len()
     );
 
-    let object_path = PathBuf::from(bucket).join(key);
+    let object_path = bucket_root(&state, bucket).join(key);
     ensure_bucket_and_parents(&state, bucket, &object_path);
     store_object(&state, &object_path, final_chunks, total);
     set_object_meta(
@@ -1132,7 +1156,7 @@ fn new_dir_entry() -> FileEntry {
 /// Auto-create the bucket directory and any intermediate directories for an
 /// object path (mirrors the FUSE-visible namespace).
 fn ensure_bucket_and_parents(state: &S3State, bucket: &str, object_path: &std::path::Path) {
-    let bucket_path = PathBuf::from(bucket);
+    let bucket_path = bucket_root(state, bucket);
     let mut index = state.file_index.write().unwrap();
     let mut inode_tbl = state.inode_table.write().unwrap();
 

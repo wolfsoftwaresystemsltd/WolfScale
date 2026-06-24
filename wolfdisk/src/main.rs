@@ -2292,6 +2292,7 @@ fn main() {
                 let s3_bind = config.s3.bind.clone();
                 let s3_credentials = config.s3.credentials();
                 let s3_meta_path = wolfdisk::s3::meta::meta_path(&config.index_dir());
+                let s3_buckets = config.s3.buckets.clone();
 
                 std::thread::spawn(move || {
                     let rt = tokio::runtime::Builder::new_multi_thread()
@@ -2309,6 +2310,7 @@ fn main() {
                             s3_next_inode,
                             s3_credentials,
                             s3_meta_path,
+                            s3_buckets,
                         );
 
                         if let Err(e) = server.run().await {
