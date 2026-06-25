@@ -24,6 +24,59 @@ pub struct Config {
     /// S3-compatible API configuration
     #[serde(default)]
     pub s3: S3Config,
+
+    /// Optional SSD cache tier (faster disk in front of the bulk data_dir).
+    #[serde(default)]
+    pub cache: CacheConfig,
+}
+
+/// SSD cache tier. When `dir` is set, hot chunks (and, by default, the index/WAL
+/// metadata) live on this faster disk in front of the bulk `data_dir`. See
+/// `storage::chunks::CacheMode` for the write-through vs write-back trade-off.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CacheConfig {
+    /// Cache directory on the fast disk. Empty = no cache (default, unchanged behaviour).
+    #[serde(default)]
+    pub dir: String,
+
+    /// "off" | "writethrough" (safe; HDD authoritative) | "writeback" (uploads land on
+    /// the SSD first, async-flushed to the HDD). Defaults to write-through when a dir is
+    /// set but no mode is given.
+    #[serde(default = "default_cache_mode")]
+    pub mode: String,
+
+    /// Soft ceiling (bytes) on cached chunk data before cold *clean* chunks are evicted
+    /// from the SSD. 0 = unbounded. Default 0 (operator sizes it for their disk).
+    #[serde(default)]
+    pub max_bytes: u64,
+
+    /// Also place the index/ and wal/ metadata on the cache disk (fast lookups).
+    /// Defaults to OFF: turning it on relocates the metadata, so the migration that
+    /// copies an existing namespace across must run (see migrate_metadata_to_cache).
+    /// A blanket default of `true` would silently orphan an existing install's index
+    /// the moment a cache dir was added (Golden Rule — never break existing installs).
+    #[serde(default)]
+    pub metadata_on_cache: bool,
+}
+
+impl Default for CacheConfig {
+    fn default() -> Self {
+        Self {
+            dir: String::new(),
+            mode: default_cache_mode(),
+            max_bytes: 0,
+            metadata_on_cache: false,
+        }
+    }
+}
+
+fn default_cache_mode() -> String { "writethrough".to_string() }
+
+impl CacheConfig {
+    /// True when a cache disk is configured and active (a non-empty dir + a mode != off).
+    pub fn is_active(&self) -> bool {
+        !self.dir.trim().is_empty() && self.mode.to_lowercase() != "off"
+    }
 }
 
 /// Node configuration
@@ -229,6 +282,7 @@ impl Default for Config {
                 allow_other: default_allow_other(),
             },
             s3: S3Config::default(),
+            cache: CacheConfig::default(),
         }
     }
 }
@@ -248,18 +302,97 @@ impl Config {
         Ok(())
     }
 
-    /// Get the chunks directory path
+    /// Get the chunks directory path (always on the bulk data_dir / HDD — the
+    /// authoritative store; the SSD tier is a *cache* in front of it, see cache_chunks_dir).
     pub fn chunks_dir(&self) -> PathBuf {
         self.node.data_dir.join("chunks")
     }
 
-    /// Get the index directory path
+    /// Get the index directory path. Lives on the cache disk when one is configured and
+    /// `metadata_on_cache` is set, so metadata lookups hit the fast disk.
     pub fn index_dir(&self) -> PathBuf {
-        self.node.data_dir.join("index")
+        self.metadata_base().join("index")
     }
 
-    /// Get the WAL directory path
+    /// Get the WAL directory path (cache disk when metadata_on_cache, else data_dir).
     pub fn wal_dir(&self) -> PathBuf {
-        self.node.data_dir.join("wal")
+        self.metadata_base().join("wal")
     }
+
+    /// Base dir for metadata (index/wal): the cache disk if active + metadata_on_cache,
+    /// otherwise the bulk data_dir.
+    fn metadata_base(&self) -> PathBuf {
+        if self.cache.is_active() && self.cache.metadata_on_cache {
+            PathBuf::from(self.cache.dir.trim())
+        } else {
+            self.node.data_dir.clone()
+        }
+    }
+
+    /// The SSD chunk-cache directory, if a cache tier is active. `<cache.dir>/chunks`.
+    pub fn cache_chunks_dir(&self) -> Option<PathBuf> {
+        if self.cache.is_active() {
+            Some(PathBuf::from(self.cache.dir.trim()).join("chunks"))
+        } else {
+            None
+        }
+    }
+
+    /// Parse the configured cache mode into the chunk store's `CacheMode`.
+    pub fn cache_mode(&self) -> crate::storage::chunks::CacheMode {
+        use crate::storage::chunks::CacheMode;
+        if !self.cache.is_active() {
+            return CacheMode::Off;
+        }
+        match self.cache.mode.to_lowercase().as_str() {
+            "writeback" | "write-back" | "write_back" => CacheMode::WriteBack,
+            "off" => CacheMode::Off,
+            _ => CacheMode::WriteThrough,
+        }
+    }
+
+    /// One-time, idempotent migration: when metadata is configured onto the cache
+    /// disk but the cache index/wal are empty while the data_dir copies hold data,
+    /// copy them across. Without this, enabling the cache would point the daemon at
+    /// an empty index and orphan an existing namespace (chunks present, file→chunk
+    /// mapping lost). Best-effort; failures are logged by the caller via the return.
+    pub fn migrate_metadata_to_cache(&self) {
+        if !(self.cache.is_active() && self.cache.metadata_on_cache) {
+            return;
+        }
+        let cache_base = PathBuf::from(self.cache.dir.trim());
+        for sub in ["index", "wal"] {
+            let src = self.node.data_dir.join(sub);
+            let dst = cache_base.join(sub);
+            if dir_has_files(&src) && !dir_has_files(&dst) {
+                let _ = std::fs::create_dir_all(&dst);
+                if let Err(e) = copy_dir_files(&src, &dst) {
+                    tracing::warn!("metadata migration {} -> {} failed: {}", src.display(), dst.display(), e);
+                } else {
+                    tracing::info!("Migrated WolfDisk {} metadata onto the cache disk", sub);
+                }
+            }
+        }
+    }
+}
+
+/// True if `p` is a directory containing at least one entry.
+fn dir_has_files(p: &Path) -> bool {
+    std::fs::read_dir(p).map(|mut it| it.any(|e| e.is_ok())).unwrap_or(false)
+}
+
+/// Recursively copy the contents of `src` into `dst` (files + subdirs).
+fn copy_dir_files(src: &Path, dst: &Path) -> std::io::Result<()> {
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let from = entry.path();
+        let to = dst.join(entry.file_name());
+        if from.is_dir() {
+            std::fs::create_dir_all(&to)?;
+            copy_dir_files(&from, &to)?;
+        } else {
+            std::fs::copy(&from, &to)?;
+        }
+    }
+    Ok(())
 }

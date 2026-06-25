@@ -110,6 +110,11 @@ fn main() {
             // Wrap cluster in Arc for sharing with filesystem
             let cluster = std::sync::Arc::new(cluster);
 
+            // If metadata was just moved onto a cache disk, copy an existing
+            // index/wal across BEFORE we read from the (otherwise empty) new path,
+            // so enabling the cache never orphans an existing namespace.
+            config.migrate_metadata_to_cache();
+
             // Create shared state for filesystem that can be accessed by message handler
             std::fs::create_dir_all(config.chunks_dir()).ok();
             std::fs::create_dir_all(config.index_dir()).ok();
@@ -119,11 +124,47 @@ fn main() {
             ));
             let file_index_for_handler = file_index.clone();
 
-            // Create chunk store for replication (shared with WolfDiskFS)
+            // Create chunk store for replication (shared with WolfDiskFS). When an SSD
+            // cache tier is configured it sits in front of the bulk data_dir.
             let chunk_store = std::sync::Arc::new(
-                wolfdisk::storage::ChunkStore::new(config.chunks_dir(), 4 * 1024 * 1024)
-                    .expect("Failed to create chunk store"),
+                wolfdisk::storage::ChunkStore::with_cache(
+                    config.chunks_dir(),
+                    4 * 1024 * 1024,
+                    config.cache_chunks_dir(),
+                    config.cache_mode(),
+                    config.cache.max_bytes,
+                ).expect("Failed to create chunk store"),
             );
+            // Crash recovery: re-queue any chunk that was written to the SSD cache but
+            // not yet flushed to the bulk store before an unclean shutdown.
+            let recovered = chunk_store.recover_dirty();
+            if recovered > 0 {
+                tracing::warn!("Chunk cache: recovered {} un-flushed chunk(s) from the SSD tier", recovered);
+            }
+            if chunk_store.has_cache() {
+                tracing::info!(
+                    "Chunk cache active: {:?} mode, SSD tier at {:?}",
+                    chunk_store.cache_mode(), config.cache_chunks_dir()
+                );
+            }
+            // Write-back: background flusher copies dirty SSD chunks down to the bulk
+            // store. Exits when the store Arc has no other owners (process shutdown).
+            if chunk_store.cache_mode() == wolfdisk::storage::chunks::CacheMode::WriteBack {
+                let flusher = chunk_store.clone();
+                std::thread::spawn(move || {
+                    loop {
+                        std::thread::sleep(std::time::Duration::from_secs(2));
+                        // Flush BEFORE the exit check so the final iteration (once the
+                        // other owners have dropped on shutdown) still drains dirty
+                        // chunks to the bulk store. recover_dirty re-flushes anything
+                        // an unclean kill leaves behind, so no acked chunk is lost.
+                        flusher.flush_dirty();
+                        if std::sync::Arc::strong_count(&flusher) <= 1 {
+                            break;
+                        }
+                    }
+                });
+            }
             let chunk_store_for_handler = chunk_store.clone();
 
             // Build inode table from index (shared with WolfDiskFS)
