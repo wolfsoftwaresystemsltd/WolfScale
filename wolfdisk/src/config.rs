@@ -216,6 +216,15 @@ pub struct S3Config {
     /// Optional secret key for authentication
     pub secret_key: Option<String>,
 
+    /// AWS region this gateway reports for the bucket (the value returned in
+    /// the GetBucketLocation `LocationConstraint`). SigV4 signatures are
+    /// verified against whatever region the client signed with, so this does
+    /// not affect authentication — but some S3 clients/services validate the
+    /// bucket's region and refuse to proceed unless it matches their own
+    /// configured region. Defaults to `us-east-1` (the historical behaviour).
+    #[serde(default = "default_s3_region")]
+    pub region: String,
+
     /// Optional bucket → folder mappings, relative to the WolfDisk root.
     /// A bucket listed here serves the given folder instead of a same-named
     /// top-level directory, e.g. in `[s3.buckets]`:
@@ -235,6 +244,7 @@ impl Default for S3Config {
             bind: default_s3_bind(),
             access_key: None,
             secret_key: None,
+            region: default_s3_region(),
             buckets: std::collections::HashMap::new(),
         }
     }
@@ -255,6 +265,10 @@ impl S3Config {
 
 fn default_s3_bind() -> String {
     "0.0.0.0:9878".to_string()
+}
+
+fn default_s3_region() -> String {
+    "us-east-1".to_string()
 }
 
 impl Default for Config {
@@ -395,4 +409,30 @@ fn copy_dir_files(src: &Path, dst: &Path) -> std::io::Result<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn s3_config_default_region_is_us_east_1() {
+        assert_eq!(S3Config::default().region, "us-east-1");
+    }
+
+    #[test]
+    fn s3_config_without_region_defaults_for_existing_installs() {
+        // Golden Rule: an existing [s3] config written before the region field
+        // existed must still deserialize, falling back to us-east-1.
+        let s3: S3Config = toml::from_str("enabled = true\nbind = \"0.0.0.0:9878\"\n")
+            .expect("legacy s3 config without region should parse");
+        assert_eq!(s3.region, "us-east-1");
+    }
+
+    #[test]
+    fn s3_config_honours_explicit_region() {
+        let s3: S3Config = toml::from_str("enabled = true\nregion = \"eu-west-1\"\n")
+            .expect("s3 config with region should parse");
+        assert_eq!(s3.region, "eu-west-1");
+    }
 }

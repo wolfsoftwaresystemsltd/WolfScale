@@ -83,17 +83,25 @@ impl S3Server {
         inode_table: Arc<RwLock<InodeTable>>,
         next_inode: Arc<RwLock<u64>>,
         credentials: Option<S3Credentials>,
+        region: String,
         meta_path: PathBuf,
         bucket_mappings: HashMap<String, String>,
     ) -> Self {
         let meta = S3MetaStore::load(&meta_path);
+        // An empty region in the config falls back to the historical default so
+        // GetBucketLocation never returns a blank LocationConstraint.
+        let region = if region.trim().is_empty() {
+            "us-east-1".to_string()
+        } else {
+            region
+        };
         let state = S3State {
             file_index,
             chunk_store,
             inode_table,
             next_inode,
             credentials,
-            region: "us-east-1".to_string(),
+            region,
             multipart: Arc::new(RwLock::new(HashMap::new())),
             meta: Arc::new(RwLock::new(meta)),
             meta_path,
@@ -336,10 +344,19 @@ async fn list_buckets(state: S3State) -> Response {
 
 /// GET /bucket?location → GetBucketLocation
 async fn get_bucket_location(state: S3State) -> Response {
+    // AWS reports us-east-1 buckets with an EMPTY LocationConstraint (the
+    // historical default region's special case); every other region returns
+    // its own name. Strict AWS SDKs validate the bucket region against this,
+    // so mirror the spec exactly rather than emitting the literal "us-east-1".
+    let body = if state.region == "us-east-1" {
+        String::new()
+    } else {
+        xml_escape(&state.region)
+    };
     let xml = format!(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
          <LocationConstraint xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">{}</LocationConstraint>",
-        state.region
+        body
     );
     (
         StatusCode::OK,
