@@ -382,7 +382,7 @@ fn main() {
                         Message::FileSync(sync) => {
                             // Check if this is a deletion signal (size == u64::MAX)
                             if sync.size == u64::MAX {
-                                info!("Received FileDelete from {}: {}", peer_id, sync.path);
+                                debug!("Received FileDelete from {}: {}", peer_id, sync.path);
 
                                 let path = std::path::PathBuf::from(&sync.path);
 
@@ -391,7 +391,7 @@ fn main() {
                                 let mut index = file_index_for_handler.write().unwrap();
 
                                 let chunks_to_delete = if let Some(entry) = index.remove(&path) {
-                                    info!("Deleted file from follower: {}", sync.path);
+                                    debug!("Deleted file from follower: {}", sync.path);
                                     inode_tbl.remove_path(&path);
                                     entry.chunks
                                 } else {
@@ -408,7 +408,7 @@ fn main() {
                                 return None;
                             }
 
-                            info!("Received FileSync from {}: {} ({} bytes, {} chunk_refs, {} chunk_data)", 
+                            debug!("Received FileSync from {}: {} ({} bytes, {} chunk_refs, {} chunk_data)", 
                                     peer_id, sync.path, sync.size, sync.chunks.len(), sync.chunk_data.len());
 
                             // Store chunks locally (skip for client nodes - they read from leader)
@@ -471,7 +471,7 @@ fn main() {
                                     entry.modified = std::time::UNIX_EPOCH
                                         + std::time::Duration::from_millis(sync.modified_ms);
                                 }
-                                info!(
+                                debug!(
                                     "Stored {} additional chunks for {} (batch continuation)",
                                     sync.chunk_data.len(),
                                     sync.path
@@ -525,18 +525,18 @@ fn main() {
                                 let ino = *next_ino;
                                 *next_ino += 1;
                                 inode_tbl.insert(ino, path.clone());
-                                info!("Added inode {} for replicated path: {}", ino, sync.path);
+                                debug!("Added inode {} for replicated path: {}", ino, sync.path);
                             }
 
                             drop(index);
                             drop(inode_tbl);
 
-                            info!("FileSync complete for {}", sync.path);
+                            debug!("FileSync complete for {}", sync.path);
                             None
                         }
                         Message::WriteRequest(write_req) => {
                             // Handle write request from follower (we're the leader)
-                            info!(
+                            debug!(
                                 "Received WriteRequest from {}: {} (offset: {}, size: {})",
                                 peer_id,
                                 write_req.path,
@@ -592,7 +592,7 @@ fn main() {
                                             .unwrap()
                                             .push((path_clone, entry_clone));
 
-                                        info!(
+                                        debug!(
                                             "Leader wrote {} bytes to {} ({} new chunks streamed)",
                                             written,
                                             write_req.path,
@@ -637,7 +637,7 @@ fn main() {
                         }
                         Message::CreateFile(create_req) => {
                             // Handle create file request from follower (we're the leader)
-                            info!(
+                            debug!(
                                 "Received CreateFile from {}: {} (mode: {:o})",
                                 peer_id, create_req.path, create_req.mode
                             );
@@ -678,7 +678,7 @@ fn main() {
                                 *next_ino += 1;
                                 inode_tbl.insert(ino, path.clone());
 
-                                info!(
+                                debug!(
                                     "Leader created file: {} with inode {}",
                                     create_req.path, ino
                                 );
@@ -799,7 +799,7 @@ fn main() {
                                 *next_ino += 1;
                                 inode_tbl.insert(ino, path.clone());
 
-                                info!(
+                                debug!(
                                     "Leader created directory: {} with inode {}",
                                     dir_req.path, ino
                                 );
