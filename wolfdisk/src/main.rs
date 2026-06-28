@@ -226,7 +226,7 @@ fn main() {
                             None // No response needed
                         }
                         Message::IndexUpdate(update) => {
-                            info!(
+                            debug!(
                                 "Received IndexUpdate from {}: {:?}",
                                 peer_id, update.operation
                             );
@@ -240,7 +240,7 @@ fn main() {
 
                             match update.operation {
                                 IndexOperation::Delete { path } => {
-                                    info!("Replicating delete: {}", path);
+                                    debug!("Replicating delete: {}", path);
                                     let del_path = std::path::PathBuf::from(&path);
 
                                     // Update index
@@ -248,7 +248,7 @@ fn main() {
                                         if !is_client_role {
                                             chunks_to_delete = entry.chunks;
                                         }
-                                        info!("Deleted file from follower: {}", path);
+                                        debug!("Deleted file from follower: {}", path);
                                     }
 
                                     // Update inode table (atomic with index update)
@@ -261,7 +261,7 @@ fn main() {
                                     permissions,
                                     chunks,
                                 } => {
-                                    info!("Replicating upsert: {} ({} bytes)", path, size);
+                                    debug!("Replicating upsert: {} ({} bytes)", path, size);
                                     let chunk_refs: Vec<ChunkRef> = chunks
                                         .iter()
                                         .map(|c| ChunkRef {
@@ -310,7 +310,7 @@ fn main() {
                                     }
                                 }
                                 IndexOperation::Mkdir { path, permissions } => {
-                                    info!("Replicating mkdir: {}", path);
+                                    debug!("Replicating mkdir: {}", path);
                                     let now = std::time::SystemTime::now();
                                     let dir_path = std::path::PathBuf::from(&path);
 
@@ -340,7 +340,7 @@ fn main() {
                                     }
                                 }
                                 IndexOperation::Rename { from_path, to_path } => {
-                                    info!("Replicating rename: {} -> {}", from_path, to_path);
+                                    debug!("Replicating rename: {} -> {}", from_path, to_path);
                                     let from = std::path::PathBuf::from(&from_path);
                                     let to = std::path::PathBuf::from(&to_path);
 
@@ -1883,6 +1883,10 @@ fn main() {
                                                     }
                                                 }
                                                 info!("Direct TCP sync complete: {} entries added from {}", added, peer_addr);
+                                                // Publish the synced version so reporting is correct
+                                                // and the re-sync thread seeds from it (avoids a
+                                                // redundant full sync). (adversarial review W4)
+                                                sync_cluster.set_index_version(response.current_version);
                                                 // Store the peer address as leader so future ops can find it
                                                 sync_cluster.add_peer_as_leader(peer_addr);
                                                 leader_found = true;
@@ -2059,6 +2063,12 @@ fn main() {
                                             info!("Initial sync: removed {} deleted entries from leader changelog", removed);
                                         }
                                     }
+
+                                    // Publish the synced version only AFTER entries AND
+                                    // deletions are applied — otherwise the re-sync thread
+                                    // (which seeds from index_version) could skip these
+                                    // deletions in its first delta. (adversarial review C2)
+                                    sync_cluster.set_index_version(response.current_version);
                                 }
                                 Ok(other) => {
                                     warn!("Unexpected response to SyncRequest: {:?}", other);
@@ -2098,11 +2108,13 @@ fn main() {
                     // Wait for initial sync to complete first
                     std::thread::sleep(std::time::Duration::from_secs(15));
 
-                    // Track last synced version — if leader version matches, no transfer needed
-                    let mut last_synced_version: u64 = 0;
+                    // Track last synced version — if leader version matches, no transfer
+                    // needed. Seed from the cluster's current version (set by the initial
+                    // sync) so a restart doesn't force a redundant full sync.
+                    let mut last_synced_version: u64 = resync_cluster.index_version();
 
                     loop {
-                        std::thread::sleep(std::time::Duration::from_secs(30));
+                        std::thread::sleep(std::time::Duration::from_secs(10));
 
                         // Skip if we're the leader
                         if resync_cluster.is_leader() {
@@ -2149,6 +2161,7 @@ fn main() {
                                         response.current_version
                                     );
                                     last_synced_version = response.current_version;
+                                    resync_cluster.set_index_version(last_synced_version);
                                     continue;
                                 }
 
@@ -2239,8 +2252,13 @@ fn main() {
                                     }
                                 }
 
-                                // Update our version to the leader's version
+                                // Update our version to the leader's version, and publish it
+                                // to the cluster so the health UI reflects real progress.
+                                // Previously this stayed in this thread's local variable, so a
+                                // follower that had applied all the data still reported v0 and
+                                // showed as "N behind" forever (wabil 2026-06-28).
                                 last_synced_version = response.current_version;
+                                resync_cluster.set_index_version(last_synced_version);
 
                                 if added > 0 || updated > 0 || removed > 0 {
                                     info!("Periodic re-sync: added {}, updated {}, removed {} (now at version {})", added, updated, removed, last_synced_version);
