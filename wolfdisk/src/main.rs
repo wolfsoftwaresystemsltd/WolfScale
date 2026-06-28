@@ -2311,14 +2311,28 @@ fn main() {
             let status_cluster = cluster.clone();
             let status_file_index = file_index.clone();
             std::thread::spawn(move || {
+                // file_count is O(1) (len); total_size is an O(n) sum over the
+                // ENTIRE index. Walking 250k+ entries under the read lock every
+                // second blocked EVERY writer for the walk's duration (and the
+                // writers starved this thread back) — on a bulk small-files copy
+                // that stalled replication/applies and made the node report
+                // "stale" while alive (wabil 2026-06-28). Two changes: (1)
+                // try_read so this thread NEVER blocks the apply path — if a
+                // writer holds the lock we reuse the last values and still write
+                // a FRESH status (the node keeps reporting); (2) recompute the
+                // expensive size only every ~15s, not every second.
+                let mut cached_count: usize = 0;
+                let mut cached_size: u64 = 0;
+                let mut tick: u64 = 0;
                 while std::sync::Arc::strong_count(&status_cluster) > 1 {
-                    let (file_count, total_size) = {
-                        let index = status_file_index.read().unwrap();
-                        let count = index.len();
-                        let size: u64 = index.iter().map(|(_, e)| e.size).sum();
-                        (count, size)
-                    };
-                    status_cluster.write_status_file_with_stats(file_count, total_size);
+                    if let Ok(index) = status_file_index.try_read() {
+                        cached_count = index.len();
+                        if tick.is_multiple_of(15) {
+                            cached_size = index.iter().map(|(_, e)| e.size).sum();
+                        }
+                    }
+                    status_cluster.write_status_file_with_stats(cached_count, cached_size);
+                    tick = tick.wrapping_add(1);
                     std::thread::sleep(std::time::Duration::from_secs(1));
                 }
             });
@@ -2334,11 +2348,29 @@ fn main() {
                 if std::sync::Arc::strong_count(&persist_file_index) <= 1 {
                     break;
                 }
-                let index = persist_file_index.read().unwrap();
-                if let Err(e) = index.save(&persist_index_dir) {
-                    tracing::warn!("Failed to persist index: {}", e);
-                } else {
-                    tracing::debug!("Periodic index save: {} entries", index.len());
+                // Serialize under the read lock (CPU only), then write to disk
+                // AFTER releasing it. The old code held the read lock across the
+                // whole disk write of a 250k-entry index every 5s, blocking every
+                // writer (the replication apply path) for the entire save — a
+                // periodic freeze that, on a bulk small-files copy, starved
+                // followers into "stale" and tanked throughput (wabil 2026-06-28).
+                let serialized = {
+                    let index = persist_file_index.read().unwrap();
+                    let n = index.len();
+                    (index.serialize(), n)
+                };
+                match serialized {
+                    (Ok(bytes), n) => {
+                        if let Err(e) = wolfdisk::storage::FileIndex::write_serialized(
+                            &persist_index_dir,
+                            &bytes,
+                        ) {
+                            tracing::warn!("Failed to persist index: {}", e);
+                        } else {
+                            tracing::debug!("Periodic index save: {} entries", n);
+                        }
+                    }
+                    (Err(e), _) => tracing::warn!("Failed to serialize index: {}", e),
                 }
             });
 
