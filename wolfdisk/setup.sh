@@ -71,9 +71,10 @@ else
     INTERACTIVE=false
 fi
 
-# data_dir is needed before the config block (data directories are created up
-# front); mount defaults later so we can tell a --mount flag from the default.
-DATA_DIR=${DATA_DIR:-/var/lib/wolfdisk}
+# data_dir: if --data-dir was supplied we honour it; otherwise the interactive
+# config block below prompts for it (defaulting to /var/lib/wolfdisk) and creates
+# it once chosen. Leave it unset here so the prompt's `-z "$DATA_DIR"` guard can
+# fire. mount defaults later so we can tell a --mount flag from the default.
 
 # Allow git to operate on repos owned by other users
 export GIT_CONFIG_COUNT=1
@@ -263,10 +264,10 @@ if [ "$WOLFDISK_PREBUILT" = "false" ]; then
     echo "  ✓ wolfdiskctl installed to /usr/local/bin/wolfdiskctl"
 fi
 
-# Create data directory (honours --data-dir; defaults to /var/lib/wolfdisk)
+# Create base directories. The data_dir itself is created in the config block
+# below, once its location is known (honours --data-dir or the interactive prompt).
 echo ""
-echo "  Creating data directories..."
-mkdir -p "$DATA_DIR"/{chunks,index,wal}
+echo "  Creating base directories..."
 mkdir -p /etc/wolfdisk
 mkdir -p /mnt/wolfdisk
 echo "  ✓ Directories created"
@@ -360,6 +361,18 @@ if [ ! -f "/etc/wolfdisk/config.toml" ]; then
         standalone) ;;  # no discovery, no peers
         *) DISCOVERY_CONFIG="discovery = \"udp://$BIND_IP:8651\"" ;;
     esac
+
+    # ── Data directory (chunks + index + WAL live here) ──
+    if [ "$INTERACTIVE" = "true" ] && [ -z "$DATA_DIR" ]; then
+        echo ""
+        echo "  Data directory — chunks, the index and the WAL are stored here."
+        echo "  Put it on your bulk/fast data disk. To move it later you must stop"
+        echo "  wolfdisk and move the contents, not just re-point this."
+        echo -n "  Data directory [/var/lib/wolfdisk]: "
+        read _in < /dev/tty; [ -n "$_in" ] && DATA_DIR="$_in"
+    fi
+    DATA_DIR=${DATA_DIR:-/var/lib/wolfdisk}
+    mkdir -p "$DATA_DIR"/{chunks,index,wal}
 
     # ── Mount path ──
     if [ "$INTERACTIVE" = "true" ] && [ -z "$MOUNT_PATH" ]; then
