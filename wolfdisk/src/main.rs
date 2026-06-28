@@ -260,6 +260,9 @@ fn main() {
                                     modified_ms,
                                     permissions,
                                     chunks,
+                                    uid,
+                                    gid,
+                                    symlink_target,
                                 } => {
                                     debug!("Replicating upsert: {} ({} bytes)", path, size);
                                     let chunk_refs: Vec<ChunkRef> = chunks
@@ -273,7 +276,8 @@ fn main() {
                                     let now = std::time::SystemTime::now();
                                     let file_path = std::path::PathBuf::from(&path);
 
-                                    // Update index
+                                    // Update index. is_dir/symlink derived from the
+                                    // op: a symlink_target marks a symlink.
                                     let old_entry = index.insert(
                                         file_path.clone(),
                                         FileEntry {
@@ -283,11 +287,11 @@ fn main() {
                                             permissions,
                                             is_dir: false,
                                             chunks: chunk_refs,
-                                            uid: 0,
-                                            gid: 0,
+                                            uid,
+                                            gid,
                                             created: now,
                                             accessed: now,
-                                            symlink_target: None,
+                                            symlink_target,
                                         },
                                     );
 
@@ -458,7 +462,7 @@ fn main() {
                                             + std::time::Duration::from_millis(sync.modified_ms),
                                         accessed: std::time::SystemTime::now(),
                                         chunks: chunk_refs,
-                                        symlink_target: None,
+                                        symlink_target: sync.symlink_target.clone(),
                                     },
                                 );
                             } else if !sync.chunk_data.is_empty() {
@@ -492,6 +496,7 @@ fn main() {
                                     entry.permissions = sync.permissions;
                                     entry.uid = sync.uid;
                                     entry.gid = sync.gid;
+                                    entry.symlink_target = sync.symlink_target.clone();
                                     entry.modified = std::time::UNIX_EPOCH
                                         + std::time::Duration::from_millis(sync.modified_ms);
                                 } else {
@@ -513,7 +518,7 @@ fn main() {
                                                 ),
                                             accessed: std::time::SystemTime::now(),
                                             chunks: chunk_refs,
-                                            symlink_target: None,
+                                            symlink_target: sync.symlink_target.clone(),
                                         },
                                     );
                                 }
@@ -1011,8 +1016,8 @@ fn main() {
                                 size: symlink_req.target.len() as u64,
                                 is_dir: false,
                                 permissions: 0o777,
-                                uid: 0,
-                                gid: 0,
+                                uid: symlink_req.uid,
+                                gid: symlink_req.gid,
                                 modified: std::time::SystemTime::now(),
                                 created: std::time::SystemTime::now(),
                                 accessed: std::time::SystemTime::now(),
@@ -1034,10 +1039,13 @@ fn main() {
                                 symlink_req.link_path, symlink_req.target
                             );
 
-                            // Queue broadcast
+                            // Record in the changelog so the delta re-sync carries
+                            // the symlink too (not just the live broadcast), then
+                            // queue the broadcast.
                             drop(index);
                             drop(inode_tbl);
                             drop(next_ino);
+                            cluster_for_handler.increment_index_version(link_path.clone());
                             broadcast_queue_for_handler
                                 .lock()
                                 .unwrap()
@@ -1093,9 +1101,11 @@ fn main() {
 
                                 info!("Leader applied setattr to {}", setattr_req.path);
 
-                                // Queue broadcast to followers
+                                // Record in the changelog (so delta re-sync carries
+                                // this chmod/chown) then queue the broadcast.
                                 let entry_clone = entry.clone();
                                 drop(index);
+                                cluster_for_handler.increment_index_version(path.clone());
                                 broadcast_queue_for_handler
                                     .lock()
                                     .unwrap()
@@ -1334,6 +1344,9 @@ fn main() {
                                                     modified_ms,
                                                     permissions: entry.permissions,
                                                     chunks,
+                                                    uid: entry.uid,
+                                                    gid: entry.gid,
+                                                    symlink_target: entry.symlink_target.clone(),
                                                 });
                                             }
                                         }
@@ -1386,6 +1399,9 @@ fn main() {
                                                 modified_ms,
                                                 permissions: entry.permissions,
                                                 chunks,
+                                                uid: entry.uid,
+                                                gid: entry.gid,
+                                                symlink_target: entry.symlink_target.clone(),
                                             });
                                         }
 
@@ -1433,6 +1449,9 @@ fn main() {
                                         modified_ms,
                                         permissions: entry.permissions,
                                         chunks,
+                                        uid: entry.uid,
+                                        gid: entry.gid,
+                                        symlink_target: entry.symlink_target.clone(),
                                     });
                                 }
 
@@ -1618,6 +1637,7 @@ fn main() {
                             modified_ms,
                             chunks: chunk_refs,
                             chunk_data: Vec::new(), // Metadata only — chunks already streamed
+                            symlink_target: entry.symlink_target.clone(),
                         });
 
                         // Metadata updates go to everyone (Clients need size/mtime updates)
@@ -1651,6 +1671,7 @@ fn main() {
                                 modified_ms: 0,
                                 chunks: Vec::new(),
                                 chunk_data: Vec::new(),
+                                symlink_target: None,
                             });
 
                             info!("Broadcasting FileDelete for {}", path.display());
@@ -1690,6 +1711,7 @@ fn main() {
                                 modified_ms,
                                 chunks: chunk_refs,
                                 chunk_data: Vec::new(),
+                                symlink_target: entry.symlink_target.clone(),
                             });
                             peer_manager_for_broadcast.broadcast(&msg);
                         } else {
@@ -1723,6 +1745,7 @@ fn main() {
                                         Vec::new()
                                     },
                                     chunk_data: chunks_with_data, // Has Data
+                                    symlink_target: entry.symlink_target.clone(),
                                 });
 
                                 let msg_meta = Message::FileSync(FileSyncMsg {
@@ -1739,6 +1762,7 @@ fn main() {
                                         Vec::new()
                                     },
                                     chunk_data: Vec::new(), // No Data
+                                    symlink_target: entry.symlink_target.clone(),
                                 });
 
                                 if batch_idx == 0 {
@@ -1864,12 +1888,12 @@ fn main() {
                                                             size: entry_msg.size,
                                                             is_dir: entry_msg.is_dir,
                                                             permissions: entry_msg.permissions,
-                                                            uid: 0, gid: 0,
+                                                            uid: entry_msg.uid, gid: entry_msg.gid,
                                                             modified: std::time::UNIX_EPOCH + std::time::Duration::from_millis(entry_msg.modified_ms),
                                                             created: std::time::SystemTime::now(),
                                                             accessed: std::time::SystemTime::now(),
                                                             chunks: chunk_refs,
-                                                            symlink_target: None,
+                                                            symlink_target: entry_msg.symlink_target.clone(),
                                                         };
                                                         if !index.contains(&path) {
                                                             if inode_tbl.get_inode(&path).is_none() {
@@ -1996,9 +2020,19 @@ fn main() {
                                             let should_update = match index.get(&path) {
                                                 None => true,
                                                 Some(existing) => {
+                                                    // Also detect metadata-only changes (chmod,
+                                                    // chown, symlink target) — not just size/chunks
+                                                    // — or chmod/chown never replicated on re-sync
+                                                    // (wabil 2026-06-28).
                                                     existing.size != entry_msg.size
                                                         || existing.chunks.len()
                                                             != entry_msg.chunks.len()
+                                                        || existing.permissions
+                                                            != entry_msg.permissions
+                                                        || existing.uid != entry_msg.uid
+                                                        || existing.gid != entry_msg.gid
+                                                        || existing.symlink_target
+                                                            != entry_msg.symlink_target
                                                 }
                                             };
 
@@ -2009,8 +2043,8 @@ fn main() {
                                                     size: entry_msg.size,
                                                     is_dir: entry_msg.is_dir,
                                                     permissions: entry_msg.permissions,
-                                                    uid: 0,
-                                                    gid: 0,
+                                                    uid: entry_msg.uid,
+                                                    gid: entry_msg.gid,
                                                     modified: std::time::UNIX_EPOCH
                                                         + std::time::Duration::from_millis(
                                                             entry_msg.modified_ms,
@@ -2018,7 +2052,7 @@ fn main() {
                                                     created: std::time::SystemTime::now(),
                                                     accessed: std::time::SystemTime::now(),
                                                     chunks: chunk_refs,
-                                                    symlink_target: None,
+                                                    symlink_target: entry_msg.symlink_target.clone(),
                                                 };
 
                                                 index.insert(path.clone(), entry);
@@ -2194,8 +2228,8 @@ fn main() {
                                             size: entry_msg.size,
                                             is_dir: entry_msg.is_dir,
                                             permissions: entry_msg.permissions,
-                                            uid: 0,
-                                            gid: 0,
+                                            uid: entry_msg.uid,
+                                            gid: entry_msg.gid,
                                             modified: std::time::UNIX_EPOCH
                                                 + std::time::Duration::from_millis(
                                                     entry_msg.modified_ms,
@@ -2203,7 +2237,7 @@ fn main() {
                                             created: std::time::SystemTime::now(),
                                             accessed: std::time::SystemTime::now(),
                                             chunks: chunk_refs,
-                                            symlink_target: None,
+                                            symlink_target: entry_msg.symlink_target.clone(),
                                         };
 
                                         // Only update if missing or if leader has newer/different data
@@ -2218,7 +2252,13 @@ fn main() {
                                             Some(existing)
                                                 if existing.size != entry_msg.size
                                                     || existing.chunks.len()
-                                                        != entry_msg.chunks.len() =>
+                                                        != entry_msg.chunks.len()
+                                                    || existing.permissions
+                                                        != entry_msg.permissions
+                                                    || existing.uid != entry_msg.uid
+                                                    || existing.gid != entry_msg.gid
+                                                    || existing.symlink_target
+                                                        != entry_msg.symlink_target =>
                                             {
                                                 index.insert(path.clone(), new_entry);
                                                 // Ensure inode exists
