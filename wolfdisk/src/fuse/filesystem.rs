@@ -453,9 +453,33 @@ impl WolfDiskFS {
             };
             let msg = Message::IndexUpdate(IndexUpdateMsg { version, operation });
 
-            // Queue for async broadcast
-            if let Some(ref tx) = self.replication_tx {
-                let _ = tx.send(ReplicationMsg::Broadcast(msg));
+            // Queue for async broadcast (non-blocking — see queue_metadata_replication)
+            self.queue_metadata_replication(msg);
+        }
+    }
+
+    /// Queue a metadata replication message WITHOUT ever blocking the caller.
+    ///
+    /// The replication channel is a bounded `sync_channel`; a blocking `send`
+    /// here lets a single slow follower throttle the leader's FUSE write path
+    /// down to the follower's drain rate. wabil (2026-06-28) hit exactly that:
+    /// copying tens of thousands of small files collapsed write throughput to
+    /// near zero once the queue filled. We instead `try_send` and, if the queue
+    /// is full, DROP the live push — the follower is behind and the periodic
+    /// delta re-sync (driven off the leader's changelog, the source of truth)
+    /// will deliver the change. Mirrors `stream_chunk_to_followers`.
+    fn queue_metadata_replication(&self, msg: Message) {
+        if let Some(ref tx) = self.replication_tx {
+            match tx.try_send(ReplicationMsg::Broadcast(msg)) {
+                Ok(()) => {}
+                Err(std::sync::mpsc::TrySendError::Full(_)) => {
+                    tracing::debug!(
+                        "Replication queue full — dropping live metadata push (follower will catch up via delta re-sync)"
+                    );
+                }
+                Err(std::sync::mpsc::TrySendError::Disconnected(_)) => {
+                    tracing::warn!("Replication sender disconnected — metadata push not queued");
+                }
             }
         }
     }
@@ -679,7 +703,29 @@ impl WolfDiskFS {
             return;
         }
 
-        if let Some(ref tx) = self.replication_tx {
+        // Record this write-completion in the changelog BEFORE queuing the push.
+        // The FileSync is the only carrier of the final size/chunks for a
+        // leader-local FUSE write, and the push is now best-effort (droppable
+        // under load — see queue_metadata_replication). Without a changelog
+        // entry, a dropped FileSync would leave the follower stuck at the file's
+        // create-time state (size 0 / no chunks) until the changelog overflowed
+        // — a silent divergence. With the entry, the periodic delta re-sync
+        // re-delivers the path's CURRENT state and converges. (adversarial review C1)
+        //
+        // EXCEPT the `unlink` delete-signal (size == u64::MAX): that path already
+        // recorded the deletion via broadcast_index_update(Delete). Bumping the
+        // version here would append a NON-deleted changelog entry for the same
+        // path at a higher version, and changes_since (latest-op-wins) would then
+        // classify the path as "changed" not "deleted" — the leader can't find it
+        // in the index, drops it, and the follower keeps a ghost entry forever.
+        // (adversarial re-review)
+        if let Some(ref cluster) = self.cluster {
+            if entry.size != u64::MAX {
+                cluster.increment_index_version(path.to_path_buf());
+            }
+        }
+
+        if self.replication_tx.is_some() {
             let modified_ms = entry
                 .modified
                 .duration_since(std::time::UNIX_EPOCH)
@@ -714,7 +760,7 @@ impl WolfDiskFS {
                 entry.size,
                 entry.chunks.len()
             );
-            let _ = tx.send(ReplicationMsg::Broadcast(msg));
+            self.queue_metadata_replication(msg);
         }
     }
 
