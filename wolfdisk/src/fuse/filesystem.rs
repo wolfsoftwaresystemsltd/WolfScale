@@ -594,64 +594,119 @@ impl WolfDiskFS {
                 return;
             }
 
-            // Get the path for this inode
-            let path = {
+            // Resolve the path AND snapshot the entry's pre-store chunk-count and
+            // size in ONE atomic read, holding inode_table+file_index read locks
+            // together (read+read, no conflict, in the documented inode→index
+            // order). Doing the two lookups in SEPARATE locks let a `rename`
+            // (which holds inode.write()+index.write() and moves the entry
+            // old→new atomically — the tmpfile→rename pattern used by editors,
+            // git, cp -f) slip between them and lose the buffered data. The
+            // snapshot lets us detect a truncate/delete that races the lock-free
+            // store below. (adversarial review — rename race)
+            let (path, len0, size0) = {
                 let inode_table = self.inode_table.read().unwrap();
+                let fi = self.file_index.read().unwrap();
                 match inode_table.get_path(ino) {
-                    Some(p) => p.clone(),
                     None => return,
+                    Some(p) => match fi.get(p) {
+                        None => return,
+                        Some(e) => (p.clone(), e.chunks.len(), e.size),
+                    },
                 }
             };
 
-            // Collect chunks for streaming replication
+            // Store the buffered data as chunks WITHOUT holding the index lock.
+            // The store does file create+rename (and an fsync when the SSD cache
+            // tier is enabled); doing it under the global file_index write lock
+            // serialised EVERY other FUSE op and the status reader behind disk
+            // I/O, collapsing throughput and freezing reads on a bulk small-files
+            // write (wabil 2026-06-28). The chunk store is content-addressed and
+            // independent of the index, so this is safe to do lock-free; we take
+            // the index lock only briefly afterwards to attach the refs, guarding
+            // against a truncate/delete that raced the store.
+            let chunk_size = self.config.replication.chunk_size;
+            let mut new_refs: Vec<crate::storage::ChunkRef> = Vec::new();
             let mut flushed_chunks: Vec<([u8; 32], Vec<u8>, u64, u32)> = Vec::new();
+            let mut offset = buffer.base_offset;
+            let mut pos = 0;
+            while pos < buffer.data.len() {
+                let end = (pos + chunk_size).min(buffer.data.len());
+                let chunk_data = &buffer.data[pos..end];
 
-            // Store the buffered data as chunks
-            let mut file_index = self.file_index.write().unwrap();
-            if let Some(entry) = file_index.get_mut(&path) {
-                let mut offset = buffer.base_offset;
-                let chunk_size = self.config.replication.chunk_size;
-                let mut pos = 0;
-
-                while pos < buffer.data.len() {
-                    let end = (pos + chunk_size).min(buffer.data.len());
-                    let chunk_data = &buffer.data[pos..end];
-
-                    match self.chunk_store.store(chunk_data) {
-                        Ok(hash) => {
-                            let chunk_len = chunk_data.len() as u32;
-                            entry.chunks.push(crate::storage::ChunkRef {
-                                hash,
-                                offset,
-                                size: chunk_len,
-                            });
-                            // Queue for streaming replication
-                            flushed_chunks.push((hash, chunk_data.to_vec(), offset, chunk_len));
-                        }
-                        Err(e) => {
-                            warn!("Failed to flush write buffer chunk: {}", e);
-                            return;
-                        }
+                match self.chunk_store.store(chunk_data) {
+                    Ok(hash) => {
+                        let chunk_len = chunk_data.len() as u32;
+                        new_refs.push(crate::storage::ChunkRef {
+                            hash,
+                            offset,
+                            size: chunk_len,
+                        });
+                        flushed_chunks.push((hash, chunk_data.to_vec(), offset, chunk_len));
                     }
-
-                    offset += chunk_data.len() as u64;
-                    pos = end;
+                    Err(e) => {
+                        warn!("Failed to flush write buffer chunk: {}", e);
+                        return;
+                    }
                 }
 
-                let new_end = buffer.base_offset + buffer.data.len() as u64;
-                if new_end > entry.size {
-                    entry.size = new_end;
+                offset += chunk_data.len() as u64;
+                pos = end;
+            }
+
+            // Attach under the index lock only (brief, no disk I/O).
+            let new_end = buffer.base_offset + buffer.data.len() as u64;
+            let mut refs_attached = false;
+            {
+                let mut file_index = self.file_index.write().unwrap();
+                match file_index.get_mut(&path) {
+                    None => {
+                        // File deleted/renamed while we stored — chunks are
+                        // content-addressed orphans (GC-able); nothing leaks.
+                        debug!(
+                            "flush_write_buffer: {} vanished during flush; {} chunk(s) left unreferenced",
+                            path.display(),
+                            flushed_chunks.len()
+                        );
+                    }
+                    Some(entry) if entry.chunks.len() < len0 || entry.size < size0 => {
+                        // The file was TRUNCATED (chunk count or size shrank)
+                        // while we stored. Do NOT resurrect it — drop our refs.
+                        // (Residual, accepted: a FIRST write to a 0-chunk/0-size
+                        // file racing a truncate-to-0 has len0==0 && size0==0 so
+                        // this can't fire — that's concurrent write+truncate on a
+                        // brand-new file, POSIX-undefined; a generation counter
+                        // would close it but needs a 4-lock order we avoid here.)
+                        debug!(
+                            "flush_write_buffer: {} truncated during flush; dropping {} stale ref(s)",
+                            path.display(),
+                            new_refs.len()
+                        );
+                    }
+                    Some(entry) => {
+                        entry.chunks.extend(new_refs);
+                        // chunk_store.read() assumes chunks are offset-sorted (it
+                        // breaks early once past the requested range); a concurrent
+                        // inline-flush may have appended a higher-offset ref before
+                        // ours, so re-sort to preserve that invariant.
+                        entry.chunks.sort_by_key(|c| c.offset);
+                        if new_end > entry.size {
+                            entry.size = new_end;
+                        }
+                        entry.modified = SystemTime::now();
+                        refs_attached = true;
+                    }
                 }
-                entry.modified = SystemTime::now();
-            }
-            drop(file_index);
-
-            // Stream final chunks to followers (the tail end of the file)
-            for (hash, chunk_data, offset, size) in &flushed_chunks {
-                self.stream_chunk_to_followers(&path, hash, chunk_data, *offset, *size);
             }
 
-            *self.index_dirty.write().unwrap() = true;
+            // Only replicate + mark dirty when we actually referenced the chunks.
+            // In the deleted/truncated branches the chunks are local orphans;
+            // streaming them would make followers store orphans too.
+            if refs_attached {
+                for (hash, chunk_data, offset, size) in &flushed_chunks {
+                    self.stream_chunk_to_followers(&path, hash, chunk_data, *offset, *size);
+                }
+                *self.index_dirty.write().unwrap() = true;
+            }
         }
     }
 
@@ -2144,6 +2199,22 @@ impl Filesystem for WolfDiskFS {
 
             (parent_path.join(name), newparent_path.join(newname))
         };
+
+        // Commit any in-flight write buffer for the SOURCE inode BEFORE moving
+        // the entry. flush_write_buffer resolves by path, so if a buffer is
+        // still pending when rename moves old→new, the flush would resolve the
+        // old (now-absent) path and silently lose the buffered data / orphan its
+        // chunks. Flushing here closes that window for the common case (the
+        // buffer not yet picked up). Safe + a no-op if there's nothing buffered;
+        // it takes and releases its own locks before we take the rename locks.
+        // (adversarial review — rename race, Window C)
+        let src_ino = {
+            let it = self.inode_table.read().unwrap();
+            it.get_inode(&from_path)
+        };
+        if let Some(src_ino) = src_ino {
+            self.flush_write_buffer(src_ino);
+        }
 
         // If not leader, forward to leader
         if !self.is_leader() {
