@@ -553,10 +553,14 @@ impl WolfDiskFS {
         &self,
         link_path: &str,
         target: &str,
+        uid: u32,
+        gid: u32,
     ) -> std::result::Result<(), i32> {
         let msg = Message::CreateSymlink(CreateSymlinkMsg {
             link_path: link_path.to_string(),
             target: target.to_string(),
+            uid,
+            gid,
         });
 
         match self.request_leader(&msg)? {
@@ -807,6 +811,7 @@ impl WolfDiskFS {
                 modified_ms,
                 chunks: chunk_refs,
                 chunk_data: Vec::new(),
+                symlink_target: entry.symlink_target.clone(),
             });
 
             debug!(
@@ -980,8 +985,14 @@ impl WolfDiskFS {
             mtime: entry.modified,
             ctime: entry.modified,
             crtime: entry.created,
+            // A symlink is identified by symlink_target being set — without
+            // this a replicated symlink (its target now carried over the wire)
+            // would still report as a regular file and the kernel would never
+            // call readlink (wabil 2026-06-28).
             kind: if entry.is_dir {
                 FileType::Directory
+            } else if entry.symlink_target.is_some() {
+                FileType::Symlink
             } else {
                 FileType::RegularFile
             },
@@ -1289,8 +1300,12 @@ impl Filesystem for WolfDiskFS {
 
         *self.index_dirty.write().unwrap() = true;
 
-        // Broadcast truncation to followers (non-blocking via replication queue)
-        if size.is_some() {
+        // Broadcast to followers (non-blocking via replication queue) whenever
+        // ANY replicated attribute changed — not just size. The old `size.is_some()`
+        // guard meant a pure chmod / chown (no size change) never replicated at
+        // all (wabil 2026-06-28). broadcast_file_sync_final also records the
+        // change in the changelog so the delta re-sync carries it too.
+        if size.is_some() || mode.is_some() || uid.is_some() || gid.is_some() || mtime.is_some() {
             let file_index = self.file_index.read().unwrap();
             if let Some(entry) = file_index.get(&path) {
                 let entry_clone = entry.clone();
@@ -1955,6 +1970,9 @@ impl Filesystem for WolfDiskFS {
                 .as_millis() as u64,
             permissions: mode,
             chunks: vec![],
+            uid: entry.uid,
+            gid: entry.gid,
+            symlink_target: None,
         });
 
         reply.created(&TTL, &attr, 0, fh, 0);
@@ -2401,7 +2419,12 @@ impl Filesystem for WolfDiskFS {
                 "Forwarding symlink to leader: {:?} -> {}",
                 link_path, target_str
             );
-            match self.forward_symlink_to_leader(&link_path.to_string_lossy(), &target_str) {
+            match self.forward_symlink_to_leader(
+                &link_path.to_string_lossy(),
+                &target_str,
+                req.uid(),
+                req.gid(),
+            ) {
                 Ok(()) => {
                     // Create local entry
                     let now = SystemTime::now();
@@ -2478,6 +2501,13 @@ impl Filesystem for WolfDiskFS {
             .insert(link_path.clone(), entry.clone());
 
         info!("Created symlink: {:?} -> {}", link_path, target_str);
+
+        // Replicate to followers (the FileSync now carries symlink_target) and
+        // record the change in the changelog so the delta re-sync picks it up.
+        // Without this a leader-created symlink only reached followers on a full
+        // re-sync, and on the way it had no target — i.e. a root-owned empty
+        // file (review CRITICAL — the leader symlink handler never broadcast).
+        self.broadcast_file_sync_final(&link_path, &entry);
 
         let attr = FileAttr {
             ino: inode,

@@ -148,6 +148,16 @@ pub enum IndexOperation {
         modified_ms: u64,
         permissions: u32,
         chunks: Vec<ChunkRefMsg>,
+        /// Owner uid/gid — without these, chown never replicated and every
+        /// replicated entry defaulted to root (wabil 2026-06-28).
+        #[serde(default)]
+        uid: u32,
+        #[serde(default)]
+        gid: u32,
+        /// Symlink target if this entry is a symlink. Without it, a symlink
+        /// replicated through the index sync became a regular empty file.
+        #[serde(default)]
+        symlink_target: Option<String>,
     },
     /// File or directory deleted
     Delete { path: String },
@@ -198,6 +208,17 @@ pub struct IndexEntryMsg {
     pub modified_ms: u64,
     pub permissions: u32,
     pub chunks: Vec<ChunkRefMsg>,
+    /// Owner uid/gid — the full + delta re-sync carries the authoritative file
+    /// state; without these, chown never propagated and re-synced entries
+    /// reverted to root (wabil 2026-06-28).
+    #[serde(default)]
+    pub uid: u32,
+    #[serde(default)]
+    pub gid: u32,
+    /// Symlink target if this entry is a symlink; else None. Without it a
+    /// symlink re-synced as a regular empty file.
+    #[serde(default)]
+    pub symlink_target: Option<String>,
 }
 
 /// Client read request
@@ -323,6 +344,11 @@ pub struct FileSyncMsg {
     pub chunks: Vec<ChunkRefMsg>,
     /// Actual chunk data (hash -> data)
     pub chunk_data: Vec<ChunkWithData>,
+    /// Symlink target if this entry is a symlink; else None. Without it a
+    /// symlink replicated via FileSync became a regular empty file
+    /// (wabil 2026-06-28).
+    #[serde(default)]
+    pub symlink_target: Option<String>,
 }
 
 /// Chunk with its actual data
@@ -357,10 +383,24 @@ pub struct CreateSymlinkMsg {
     pub link_path: String,
     /// Target path the symlink points to
     pub target: String,
+    /// Owner uid/gid of the symlink — without these a follower-created symlink
+    /// was stored root-owned on the leader and every replica (wabil 2026-06-28).
+    #[serde(default)]
+    pub uid: u32,
+    #[serde(default)]
+    pub gid: u32,
 }
 
 /// Serialize and compress a message for transmission
 /// Uses LZ4 compression — extremely fast with good ratios for file data
+///
+/// WIRE-COMPAT NOTE: this is **bincode** — fields are read POSITIONALLY, not by
+/// name. The `#[serde(default)]` attributes on message fields therefore do
+/// NOTHING for this transport (they only matter for self-describing formats like
+/// JSON). Adding a field to a message struct is a breaking wire change: mixed
+/// versions during a rolling upgrade WILL mis-decode, and for a `Vec<…>` payload
+/// (e.g. SyncResponse.entries) a new→old decode corrupts every entry after the
+/// first. Upgrade order: all nodes together, or followers before the leader.
 pub fn encode_message(msg: &Message) -> Result<Vec<u8>, bincode::Error> {
     let serialized = bincode::serialize(msg)?;
     Ok(lz4_flex::compress_prepend_size(&serialized))
