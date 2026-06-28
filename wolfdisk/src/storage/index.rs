@@ -107,13 +107,34 @@ impl FileIndex {
     /// Save index to disk
     pub fn save(&self, index_dir: &Path) -> Result<()> {
         fs::create_dir_all(index_dir)?;
-        
+
         let index_path = index_dir.join(INDEX_FILENAME);
         let file = File::create(&index_path)?;
         let writer = BufWriter::new(file);
         serde_json::to_writer_pretty(writer, self)?;
-        
+
         debug!("Saved file index with {} entries", self.entries.len());
+        Ok(())
+    }
+
+    /// Serialize the index to bytes WITHOUT touching the filesystem, so a caller
+    /// can hold the read lock only for serialization (CPU) and do the slow disk
+    /// write AFTER releasing it (see the periodic persistence thread). Saving
+    /// the whole index under the read lock stalled every writer for the entire
+    /// disk write every 5s — on a 250k-entry index that froze replication on a
+    /// bulk copy (wabil 2026-06-28).
+    pub fn serialize(&self) -> serde_json::Result<Vec<u8>> {
+        serde_json::to_vec_pretty(self)
+    }
+
+    /// Write pre-serialized index bytes to disk atomically (temp + rename), so a
+    /// crash mid-write can't truncate the live index. Pair with `serialize()`.
+    pub fn write_serialized(index_dir: &Path, bytes: &[u8]) -> Result<()> {
+        fs::create_dir_all(index_dir)?;
+        let index_path = index_dir.join(INDEX_FILENAME);
+        let tmp_path = index_dir.join(format!("{}.tmp", INDEX_FILENAME));
+        fs::write(&tmp_path, bytes)?;
+        fs::rename(&tmp_path, &index_path)?;
         Ok(())
     }
 
