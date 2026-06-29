@@ -141,7 +141,16 @@ impl ReplicationManager {
         }
     }
 
-    /// Apply sync response from leader
+    /// Apply sync response from leader.
+    ///
+    /// ⚠️ DATA-SAFETY: this `ReplicationManager` path is currently DEAD (the
+    /// struct is never constructed; the live replication runs in the resync loop
+    /// in `main.rs`). If it is ever re-enabled, its deletion handling MUST adopt
+    /// the same guards as the live path — `full_sync_may_delete()` (never delete
+    /// to match an empty or version-regressed leader) and the monotonic-version
+    /// rule (never lower our version to match a regressed leader). As written it
+    /// applies `deleted_paths` with no version check and would re-introduce the
+    /// 2026-06-29 data-loss hole.
     fn apply_sync_response(&self, response: SyncResponseMsg) -> Result<(), String> {
         info!(
             "Applying sync response: {} entries, version {}",
@@ -588,7 +597,12 @@ impl ReplicationManager {
         }
     }
 
-    /// Handle incoming sync response from leader
+    /// Handle incoming sync response from leader.
+    ///
+    /// ⚠️ DATA-SAFETY: DEAD path (see `apply_sync_response`). It applies
+    /// `deleted_paths` with no version guard. Before re-enabling, route deletions
+    /// through `full_sync_may_delete()` + the monotonic-version rule, or it will
+    /// re-open the regressed-leader data-loss hole.
     pub fn handle_sync_response(&self, response: SyncResponseMsg) {
         info!(
             "Received sync response: {} entries, {} deletions, version {}",
