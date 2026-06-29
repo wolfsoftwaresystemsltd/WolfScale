@@ -197,6 +197,21 @@ pub struct SyncResponseMsg {
     pub entries: Vec<IndexEntryMsg>,
     /// Paths deleted since the requested version (for delta sync)
     pub deleted_paths: Vec<String>,
+    /// True when `entries` is the leader's COMPLETE index (a full sync), not a
+    /// delta. The follower then reconciles authoritatively — it removes any
+    /// local path absent from `entries`, instead of merely merging. Without
+    /// this, a follower that fell out of changelog range (e.g. a bulk delete of
+    /// 250k files, or a leader that restarted to v0) re-received the leader's
+    /// small index every cycle but never dropped its stale extras, so it never
+    /// converged (wabil 2026-06-29). Appended LAST (bincode is positional — see
+    /// encode_message's WIRE-COMPAT note). Rolling-upgrade order for THIS field:
+    /// **leader first, then followers**. A new follower cannot decode an old
+    /// leader's (shorter) response and would loop on sync errors; an old follower
+    /// harmlessly ignores this trailing field on a new leader's response (it just
+    /// never runs the authoritative reconcile). Upgrading all nodes together is
+    /// also safe.
+    #[serde(default)] // no-op for the bincode transport (positional); kept for JSON/debug only
+    pub is_full: bool,
 }
 
 /// Index entry in sync response
@@ -400,7 +415,11 @@ pub struct CreateSymlinkMsg {
 /// JSON). Adding a field to a message struct is a breaking wire change: mixed
 /// versions during a rolling upgrade WILL mis-decode, and for a `Vec<…>` payload
 /// (e.g. SyncResponse.entries) a new→old decode corrupts every entry after the
-/// first. Upgrade order: all nodes together, or followers before the leader.
+/// first. Upgrade order is DIRECTION-DEPENDENT: upgrade the side that DECODES the
+/// changed message last. For a field added to a response (leader→follower, e.g.
+/// SyncResponseMsg.is_full) upgrade the LEADER first; for a field added to a
+/// request (follower→leader) upgrade FOLLOWERS first. Upgrading all nodes
+/// together is always safe.
 pub fn encode_message(msg: &Message) -> Result<Vec<u8>, bincode::Error> {
     let serialized = bincode::serialize(msg)?;
     Ok(lz4_flex::compress_prepend_size(&serialized))

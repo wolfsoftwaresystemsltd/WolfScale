@@ -69,6 +69,20 @@ enum Commands {
     },
 }
 
+/// Paths the follower must delete on a full (authoritative) sync: every local
+/// path the leader's complete index no longer contains. This is the
+/// data-deleting decision of the self-heal, so it's a pure function with a
+/// direct regression test (see tests at the bottom of this file).
+fn full_sync_stale_paths<'a>(
+    leader_paths: &std::collections::HashSet<std::path::PathBuf>,
+    local_paths: impl Iterator<Item = &'a std::path::PathBuf>,
+) -> Vec<std::path::PathBuf> {
+    local_paths
+        .filter(|p| !leader_paths.contains(*p))
+        .cloned()
+        .collect()
+}
+
 fn main() {
     let cli = Cli::parse();
 
@@ -123,6 +137,12 @@ fn main() {
                 FileIndex::load_or_create(&config.index_dir()).expect("Failed to load file index"),
             ));
             let file_index_for_handler = file_index.clone();
+
+            // Restore the replication version + changelog from disk so a restart
+            // doesn't reset us to v0 — which made every node falsely agree "v0, in
+            // sync" while their file sets diverged, and forced a heavy full
+            // reconcile on every restart (wabil 2026-06-29).
+            cluster.load_replication_state(&config.index_dir());
 
             // Create chunk store for replication (shared with WolfDiskFS). When an SSD
             // cache tier is configured it sits in front of the bulk data_dir.
@@ -1307,6 +1327,7 @@ fn main() {
                                     current_version,
                                     entries: Vec::new(),
                                     deleted_paths: Vec::new(),
+                                    is_full: false,
                                 }))
                             } else if sync_req.from_version > 0 {
                                 // Try delta sync — only send files that changed since their version
@@ -1364,6 +1385,7 @@ fn main() {
                                             current_version,
                                             entries,
                                             deleted_paths: deleted_strs,
+                                            is_full: false,
                                         }))
                                     }
                                     None => {
@@ -1411,6 +1433,8 @@ fn main() {
                                             current_version,
                                             entries,
                                             deleted_paths: Vec::new(),
+                                            // Full index → follower reconciles authoritatively.
+                                            is_full: true,
                                         }))
                                     }
                                 }
@@ -1465,6 +1489,8 @@ fn main() {
                                     current_version,
                                     entries,
                                     deleted_paths: Vec::new(),
+                                    // Full index (initial / from_version 0) → authoritative.
+                                    is_full: true,
                                 }))
                             }
                         }
@@ -2292,6 +2318,41 @@ fn main() {
                                     }
                                 }
 
+                                // Authoritative full sync: the leader sent its COMPLETE index, so
+                                // any local entry it did NOT send is stale and must go. This is what
+                                // makes a follower actually CONVERGE after it falls out of changelog
+                                // range or misses a bulk delete — the old code only ever added/updated
+                                // and applied changelog deletions, so a follower holding 250k stale
+                                // files re-received the leader's small index every cycle and kept the
+                                // extras forever (wabil 2026-06-29). Snapshot local paths under a
+                                // brief read lock, diff against the leader's set off-lock, then delete
+                                // in small batches so FUSE ops aren't starved on a huge index.
+                                // Guard: never authoritatively wipe to match an EMPTY leader index.
+                                // A leader whose index failed to load reads as 0 entries; honouring
+                                // that would nuke every follower. A genuine "delete everything" still
+                                // propagates as normal changelog deletions, not a full-sync wipe.
+                                if response.is_full && !response.entries.is_empty() {
+                                    let keep: std::collections::HashSet<std::path::PathBuf> = response
+                                        .entries
+                                        .iter()
+                                        .map(|e| std::path::PathBuf::from(&e.path))
+                                        .collect();
+                                    let stale: Vec<std::path::PathBuf> = {
+                                        let index = resync_file_index.read().unwrap();
+                                        full_sync_stale_paths(&keep, index.paths())
+                                    };
+                                    for del_batch in stale.chunks(50) {
+                                        let mut index = resync_file_index.write().unwrap();
+                                        let mut inode_tbl = resync_inode_table.write().unwrap();
+                                        for del_path in del_batch {
+                                            if index.remove(del_path).is_some() {
+                                                inode_tbl.remove_path(del_path);
+                                                removed += 1;
+                                            }
+                                        }
+                                    }
+                                }
+
                                 // Update our version to the leader's version, and publish it
                                 // to the cluster so the health UI reflects real progress.
                                 // Previously this stayed in this thread's local variable, so a
@@ -2383,10 +2444,16 @@ fn main() {
             // the index directly without setting the FUSE dirty flag.
             let persist_file_index = file_index.clone();
             let persist_index_dir = config.index_dir().to_path_buf();
+            let persist_cluster = cluster.clone();
             std::thread::spawn(move || loop {
                 std::thread::sleep(std::time::Duration::from_secs(5));
                 if std::sync::Arc::strong_count(&persist_file_index) <= 1 {
                     break;
+                }
+                // Persist the replication version + changelog so a restart resumes
+                // at the right version instead of resetting to v0 (wabil 2026-06-29).
+                if let Err(e) = persist_cluster.save_replication_state(&persist_index_dir) {
+                    tracing::warn!("Failed to persist replication state: {}", e);
                 }
                 // Serialize under the read lock (CPU only), then write to disk
                 // AFTER releasing it. The old code held the read lock across the
@@ -2687,5 +2754,32 @@ fn main() {
             info!("  {}/wal/     - write-ahead log", data_dir.display());
             info!("Initialization complete!");
         }
+    }
+}
+
+#[cfg(test)]
+mod full_sync_tests {
+    use super::full_sync_stale_paths;
+    use std::collections::HashSet;
+    use std::path::PathBuf;
+
+    fn p(s: &str) -> PathBuf { PathBuf::from(s) }
+
+    #[test]
+    fn deletes_only_paths_absent_from_leader() {
+        // Leader's authoritative set (post bulk-delete): two files.
+        let leader: HashSet<PathBuf> = [p("/keep/a"), p("/keep/b")].into_iter().collect();
+        // Follower still holds the leader's two PLUS three stale extras.
+        let local = vec![p("/keep/a"), p("/keep/b"), p("/old/1"), p("/old/2"), p("/old/3")];
+        let mut stale = full_sync_stale_paths(&leader, local.iter());
+        stale.sort();
+        assert_eq!(stale, vec![p("/old/1"), p("/old/2"), p("/old/3")]);
+    }
+
+    #[test]
+    fn keeps_everything_when_follower_matches_leader() {
+        let leader: HashSet<PathBuf> = [p("/a"), p("/b")].into_iter().collect();
+        let local = vec![p("/a"), p("/b")];
+        assert!(full_sync_stale_paths(&leader, local.iter()).is_empty());
     }
 }

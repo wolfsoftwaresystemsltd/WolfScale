@@ -35,6 +35,18 @@ pub struct PeerInfo {
     pub last_seen: Instant,
 }
 
+/// On-disk filename for the persisted replication version + changelog,
+/// stored alongside the file index.
+const REPL_STATE_FILENAME: &str = "replication_state.json";
+
+/// Serializable snapshot of the replication state that must survive a restart:
+/// the monotonic index version and the recent changelog used for delta sync.
+#[derive(serde::Serialize, serde::Deserialize)]
+struct PersistedReplicationState {
+    version: u64,
+    changelog: Vec<(u64, std::path::PathBuf, bool)>,
+}
+
 /// Cluster manager - handles leader election and state
 pub struct ClusterManager {
     config: Config,
@@ -184,13 +196,30 @@ impl ClusterManager {
         &self,
         from_version: u64,
     ) -> Option<(Vec<std::path::PathBuf>, Vec<std::path::PathBuf>)> {
+        let current = self.index_version();
+
+        // Already at (or somehow beyond) our version → genuinely nothing to send.
+        if from_version >= current {
+            return Some((Vec::new(), Vec::new()));
+        }
+
         let log = self.changelog.read().unwrap();
 
-        // Check if changelog goes back far enough
-        if let Some((oldest_version, _, _)) = log.front() {
-            if from_version < *oldest_version {
-                // Changelog truncated, need full sync
-                return None;
+        // We're behind (from_version < current), so the changelog MUST contain
+        // every change after from_version to answer with a delta. If it's empty,
+        // or its oldest entry is newer than from_version+1, there's a gap we
+        // can't fill → force a full sync. The empty case is the critical one:
+        // after a restart the in-memory changelog is empty while `current` was
+        // restored from disk, and the old code returned Some((empty, empty))
+        // here — telling the follower "nothing changed" when in fact it must
+        // re-reconcile against the leader's full index (wabil 2026-06-29).
+        match log.front() {
+            None => return None,
+            Some((oldest_version, _, _)) => {
+                if from_version.saturating_add(1) < *oldest_version {
+                    // Changelog truncated, need full sync
+                    return None;
+                }
             }
         }
 
@@ -220,6 +249,60 @@ impl ClusterManager {
     /// Set the index version (used during sync)
     pub fn set_index_version(&self, version: u64) {
         *self.index_version.write().unwrap() = version;
+    }
+
+    /// Persist the replication index version + changelog next to the file index,
+    /// written atomically (temp + rename). Without this the version is in-memory
+    /// only, so a restart reset the leader to v0 — every node then falsely agreed
+    /// "v0, in sync" while their file sets differed by a quarter-million entries,
+    /// and deletions never propagated (wabil 2026-06-29).
+    pub fn save_replication_state(&self, index_dir: &std::path::Path) -> std::io::Result<()> {
+        // Snapshot version + changelog CONSISTENTLY: hold the version lock across
+        // the changelog read, mirroring record_change's lock order (version then
+        // changelog). Otherwise a concurrent record_change could bump the version
+        // and append its entry between the two reads, persisting a version one
+        // behind its own changelog.
+        let (version, changelog) = {
+            let v = self.index_version.read().unwrap();
+            let log: Vec<(u64, std::path::PathBuf, bool)> =
+                self.changelog.read().unwrap().iter().cloned().collect();
+            (*v, log)
+        };
+        let state = PersistedReplicationState { version, changelog };
+        let bytes = serde_json::to_vec(&state).map_err(std::io::Error::other)?;
+        std::fs::create_dir_all(index_dir)?;
+        let path = index_dir.join(REPL_STATE_FILENAME);
+        let tmp = index_dir.join(format!("{}.tmp", REPL_STATE_FILENAME));
+        std::fs::write(&tmp, &bytes)?;
+        std::fs::rename(&tmp, &path)?;
+        Ok(())
+    }
+
+    /// Restore the replication version + changelog on startup. A missing or
+    /// corrupt file simply leaves us at v0 (the prior behaviour) — which now
+    /// self-heals via the authoritative full sync regardless.
+    pub fn load_replication_state(&self, index_dir: &std::path::Path) {
+        let path = index_dir.join(REPL_STATE_FILENAME);
+        let bytes = match std::fs::read(&path) {
+            Ok(b) => b,
+            Err(_) => return,
+        };
+        let state: PersistedReplicationState = match serde_json::from_slice(&bytes) {
+            Ok(s) => s,
+            Err(e) => {
+                warn!("Ignoring corrupt replication state ({}); starting at v0", e);
+                return;
+            }
+        };
+        *self.index_version.write().unwrap() = state.version;
+        let mut log = self.changelog.write().unwrap();
+        log.clear();
+        log.extend(state.changelog);
+        info!(
+            "Restored replication state: version {}, {} changelog entries",
+            state.version,
+            log.len()
+        );
     }
 
     /// Mark initial sync as complete (allows election monitor to promote to leader)
@@ -569,5 +652,69 @@ impl ClusterManager {
         if let Some(ref discovery) = self.discovery {
             discovery.stop();
         }
+    }
+}
+
+#[cfg(test)]
+mod replication_state_tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    fn mgr() -> ClusterManager {
+        ClusterManager::new(Config::default())
+    }
+
+    #[test]
+    fn changes_since_at_version_is_empty_not_none() {
+        let m = mgr();
+        // Genuinely caught up (from == current == 0) → "no changes", NOT a full sync.
+        assert_eq!(m.changes_since(0), Some((Vec::new(), Vec::new())));
+        m.increment_index_version(PathBuf::from("/a"));
+        assert_eq!(m.changes_since(1), Some((Vec::new(), Vec::new())));
+    }
+
+    #[test]
+    fn changes_since_reports_changes_and_deletions() {
+        let m = mgr();
+        m.increment_index_version(PathBuf::from("/a")); // v1 change
+        m.record_deletion(PathBuf::from("/b")); // v2 delete
+        let (changed, deleted) = m.changes_since(0).expect("covered by changelog");
+        assert_eq!(changed, vec![PathBuf::from("/a")]);
+        assert_eq!(deleted, vec![PathBuf::from("/b")]);
+    }
+
+    #[test]
+    fn behind_with_empty_changelog_forces_full_sync() {
+        // The restart trap: version was restored from disk (so current > 0) but
+        // the in-memory changelog is empty. The old code returned Some((empty,
+        // empty)) here — telling the follower "nothing changed" when it must in
+        // fact reconcile against the full index. It MUST be None (full sync).
+        let m = mgr();
+        m.set_index_version(262_700);
+        assert_eq!(m.changes_since(0), None);
+        assert_eq!(m.changes_since(100), None);
+    }
+
+    #[test]
+    fn replication_state_survives_save_load() {
+        let dir = std::env::temp_dir().join(format!("wolfdisk_rs_test_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let m1 = mgr();
+        m1.increment_index_version(PathBuf::from("/x")); // v1
+        m1.increment_index_version(PathBuf::from("/y")); // v2
+        m1.record_deletion(PathBuf::from("/x")); // v3
+        m1.save_replication_state(&dir).unwrap();
+
+        let m2 = mgr();
+        assert_eq!(m2.index_version(), 0);
+        m2.load_replication_state(&dir);
+        assert_eq!(m2.index_version(), 3);
+        // Changelog restored → delta sync still works across the restart.
+        let (changed, deleted) = m2.changes_since(1).expect("changelog restored");
+        assert!(changed.contains(&PathBuf::from("/y")));
+        assert!(deleted.contains(&PathBuf::from("/x")));
+
+        std::fs::remove_dir_all(&dir).ok();
     }
 }
