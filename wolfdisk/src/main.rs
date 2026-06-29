@@ -83,6 +83,32 @@ fn full_sync_stale_paths<'a>(
         .collect()
 }
 
+/// May a full-sync response authoritatively DELETE this follower's local
+/// entries (those the leader didn't send)? This is the one place a follower can
+/// lose data, so it is deliberately conservative — two independent conditions
+/// must BOTH hold:
+///
+///   1. `leader_entry_count > 0` — never wipe to match a leader whose index
+///      failed to load (it reads as zero entries; honouring it nukes the data).
+///   2. `leader_version >= our_version` — never delete our (more-advanced) data
+///      to match a leader that has REGRESSED below what we already knew. A
+///      leader at a lower or zero version has most likely just restarted before
+///      its persisted version reloaded (or lost persistence entirely); its
+///      smaller index may be stale/half-loaded. Honouring it let a transient
+///      post-restart blip drive a cluster-wide delete — observed in wabil's
+///      logs as a leader briefly at v0/226 entries (2026-06-29).
+///
+/// When this returns false we still apply the leader's ADDITIONS (we never
+/// reject data) and simply keep our local extras; the next cycle, once the
+/// leader's version is credible again, the reconcile proceeds normally. So the
+/// cost of a false negative is at most a slightly delayed convergence — never
+/// lost data. Paired with the monotonic version rule in the resync loop (we
+/// never lower our own version to match a regressed leader), a follower cannot
+/// be tricked into deleting data it correctly held.
+fn full_sync_may_delete(leader_version: u64, our_version: u64, leader_entry_count: usize) -> bool {
+    leader_entry_count > 0 && leader_version >= our_version
+}
+
 fn main() {
     let cli = Cli::parse();
 
@@ -2161,7 +2187,7 @@ fn main() {
                 let resync_is_client = config.node.role == wolfdisk::config::NodeRole::Client;
 
                 std::thread::spawn(move || {
-                    use tracing::{debug, info};
+                    use tracing::{debug, info, warn};
                     use wolfdisk::network::protocol::*;
                     use wolfdisk::storage::{ChunkRef, FileEntry};
 
@@ -2172,6 +2198,11 @@ fn main() {
                     // needed. Seed from the cluster's current version (set by the initial
                     // sync) so a restart doesn't force a redundant full sync.
                     let mut last_synced_version: u64 = resync_cluster.index_version();
+                    // Whether we're currently deferring an authoritative reconcile because the
+                    // leader regressed below us. Used to WARN only on the transition INTO that
+                    // state (a leader restart can take minutes to reload — we must not WARN-spam
+                    // every 10s; "log state changes, not heartbeats").
+                    let mut deferral_active = false;
 
                     loop {
                         std::thread::sleep(std::time::Duration::from_secs(10));
@@ -2220,8 +2251,14 @@ fn main() {
                                         "Periodic re-sync: already at version {}, no changes",
                                         response.current_version
                                     );
-                                    last_synced_version = response.current_version;
-                                    resync_cluster.set_index_version(last_synced_version);
+                                    // MONOTONIC (see the post-reconcile note): never lower our version
+                                    // to match a leader reporting a version below ours. Otherwise a
+                                    // regressed leader's "you're caught up" reply would drag us down and
+                                    // the next full sync would delete our data.
+                                    if response.current_version >= last_synced_version {
+                                        last_synced_version = response.current_version;
+                                        resync_cluster.set_index_version(last_synced_version);
+                                    }
                                     continue;
                                 }
 
@@ -2327,11 +2364,17 @@ fn main() {
                                 // extras forever (wabil 2026-06-29). Snapshot local paths under a
                                 // brief read lock, diff against the leader's set off-lock, then delete
                                 // in small batches so FUSE ops aren't starved on a huge index.
-                                // Guard: never authoritatively wipe to match an EMPTY leader index.
-                                // A leader whose index failed to load reads as 0 entries; honouring
-                                // that would nuke every follower. A genuine "delete everything" still
-                                // propagates as normal changelog deletions, not a full-sync wipe.
-                                if response.is_full && !response.entries.is_empty() {
+                                // Authoritative deletion is the one place a follower can LOSE data,
+                                // so full_sync_may_delete() gates it on TWO things: a non-empty leader
+                                // index (never wipe to match a failed-to-load leader), AND the leader
+                                // not having regressed below our version (never delete our more-advanced
+                                // data to match a leader that just restarted before its persisted
+                                // version reloaded — the v0/226-entry blip in wabil's logs, 2026-06-29).
+                                // Additions are already applied above either way; deferring only delays
+                                // convergence a cycle, it never loses data.
+                                if response.is_full
+                                    && full_sync_may_delete(response.current_version, last_synced_version, response.entries.len())
+                                {
                                     let keep: std::collections::HashSet<std::path::PathBuf> = response
                                         .entries
                                         .iter()
@@ -2351,6 +2394,32 @@ fn main() {
                                             }
                                         }
                                     }
+                                    deferral_active = false; // reconciled normally — clear any prior deferral
+                                } else if response.is_full
+                                    && !response.entries.is_empty()
+                                    && response.current_version < last_synced_version
+                                {
+                                    // Leader regressed below us — keep our data, don't reconcile-delete.
+                                    // WARN only on the transition into deferral; a leader restart can sit
+                                    // here for minutes while it reloads, so subsequent ticks log at debug.
+                                    let local_len = resync_file_index.read().unwrap().len();
+                                    if !deferral_active {
+                                        warn!(
+                                            "Deferring authoritative reconcile: leader version {} is below ours {} \
+                                             (leader sent {} entries, we hold {}). Leader may be recovering — \
+                                             keeping local entries to avoid data loss.",
+                                            response.current_version, last_synced_version,
+                                            response.entries.len(), local_len
+                                        );
+                                        deferral_active = true;
+                                    } else {
+                                        debug!(
+                                            "Still deferring reconcile: leader version {} below ours {} ({} entries)",
+                                            response.current_version, last_synced_version, response.entries.len()
+                                        );
+                                    }
+                                } else {
+                                    deferral_active = false; // any normal full/delta apply clears deferral
                                 }
 
                                 // Update our version to the leader's version, and publish it
@@ -2358,8 +2427,14 @@ fn main() {
                                 // Previously this stayed in this thread's local variable, so a
                                 // follower that had applied all the data still reported v0 and
                                 // showed as "N behind" forever (wabil 2026-06-28).
-                                last_synced_version = response.current_version;
-                                resync_cluster.set_index_version(last_synced_version);
+                                // MONOTONIC: never LOWER our version to match a leader that has
+                                // regressed below us. Adopting a regressed leader's version would let
+                                // the next cycle's full sync pass full_sync_may_delete() and delete our
+                                // more-advanced data — the second half of the regressed-leader trap.
+                                if response.current_version >= last_synced_version {
+                                    last_synced_version = response.current_version;
+                                    resync_cluster.set_index_version(last_synced_version);
+                                }
 
                                 if added > 0 || updated > 0 || removed > 0 {
                                     info!("Periodic re-sync: added {}, updated {}, removed {} (now at version {})", added, updated, removed, last_synced_version);
@@ -2759,11 +2834,32 @@ fn main() {
 
 #[cfg(test)]
 mod full_sync_tests {
-    use super::full_sync_stale_paths;
+    use super::{full_sync_may_delete, full_sync_stale_paths};
     use std::collections::HashSet;
     use std::path::PathBuf;
 
     fn p(s: &str) -> PathBuf { PathBuf::from(s) }
+
+    #[test]
+    fn may_delete_only_when_leader_is_credible() {
+        // Normal: leader at/ahead of us with real entries → reconcile (delete) ok.
+        assert!(full_sync_may_delete(1000, 1000, 226));   // equal version
+        assert!(full_sync_may_delete(2000, 1000, 50));    // leader ahead
+        assert!(full_sync_may_delete(1, 0, 5));           // fresh-ish, leader ahead
+        // v0/v0 base case: a fresh/fully-reset cluster MUST still reconcile (the
+        // original self-heal). Pinned so a future `>=`→`>` "tightening" can't
+        // silently break it.
+        assert!(full_sync_may_delete(0, 0, 226));
+
+        // Failed-to-load leader (0 entries) → never wipe to match it.
+        assert!(!full_sync_may_delete(5000, 1000, 0));
+
+        // The wabil data-loss case: leader regressed to v0 with a small index
+        // while we were caught up at a high version → MUST NOT delete our data.
+        assert!(!full_sync_may_delete(0, 1_050_909, 226));
+        // Any leader regression below us is refused, regardless of entry count.
+        assert!(!full_sync_may_delete(900, 1000, 100_000));
+    }
 
     #[test]
     fn deletes_only_paths_absent_from_leader() {
