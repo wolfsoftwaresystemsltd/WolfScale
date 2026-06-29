@@ -55,7 +55,7 @@ pub struct ClusterManager {
     /// Changelog: (version, path, is_deleted) triples tracking which files changed at each version
     /// Used for delta sync - leader only sends entries that changed since follower's version
     /// The is_deleted flag tracks deletions so followers can remove entries they no longer need
-    changelog: Arc<RwLock<Vec<(u64, std::path::PathBuf, bool)>>>,
+    changelog: Arc<RwLock<std::collections::VecDeque<(u64, std::path::PathBuf, bool)>>>,
 }
 
 impl ClusterManager {
@@ -79,7 +79,7 @@ impl ClusterManager {
             last_leader_heartbeat: Arc::new(RwLock::new(Instant::now())),
             index_version: Arc::new(RwLock::new(0)),
             initial_sync_complete: Arc::new(RwLock::new(false)),
-            changelog: Arc::new(RwLock::new(Vec::new())),
+            changelog: Arc::new(RwLock::new(std::collections::VecDeque::new())),
         }
     }
 
@@ -159,13 +159,18 @@ impl ClusterManager {
         let version = *v;
 
         let mut log = self.changelog.write().unwrap();
-        log.push((version, path, is_deleted));
+        log.push_back((version, path, is_deleted));
 
-        // Cap changelog at 10,000 entries to prevent unbounded growth
-        // If a follower is more than 10,000 changes behind, it gets a full sync
-        if log.len() > 10_000 {
-            let drain_count = log.len() - 10_000;
-            log.drain(0..drain_count);
+        // Cap the changelog at 10,000 entries (a follower more than 10k changes
+        // behind gets a full sync instead). MUST be a VecDeque: pop_front is
+        // O(1), whereas the old Vec `drain(0..n)` was O(n) PER call once at
+        // capacity — and since v2.11.4 EVERY write AND EVERY setattr records a
+        // change, a bulk op (cp -a / rsync / chmod -R over hundreds of thousands
+        // of files) turned that into billions of element shifts while holding
+        // the changelog write lock, freezing the leader and hanging the
+        // followers' synchronous forwards (wabil 2026-06-29).
+        while log.len() > 10_000 {
+            log.pop_front();
         }
 
         version
@@ -182,7 +187,7 @@ impl ClusterManager {
         let log = self.changelog.read().unwrap();
 
         // Check if changelog goes back far enough
-        if let Some((oldest_version, _, _)) = log.first() {
+        if let Some((oldest_version, _, _)) = log.front() {
             if from_version < *oldest_version {
                 // Changelog truncated, need full sync
                 return None;
