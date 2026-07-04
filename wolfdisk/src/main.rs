@@ -2203,6 +2203,12 @@ fn main() {
                     // state (a leader restart can take minutes to reload — we must not WARN-spam
                     // every 10s; "log state changes, not heartbeats").
                     let mut deferral_active = false;
+                    // Last leader-connect error, so a PERSISTENT failure is a
+                    // visible WARN (once, on change) instead of debug-only —
+                    // a node that can't reach its leader was completely silent
+                    // at default log level while stuck forever (wabil
+                    // 2026-07-04). Recovery logs INFO and re-arms.
+                    let mut last_connect_err: Option<String> = None;
 
                     loop {
                         std::thread::sleep(std::time::Duration::from_secs(10));
@@ -2230,9 +2236,21 @@ fn main() {
                         let conn = match resync_peer_manager
                             .get_or_connect_leader(&leader_id, &leader_addr)
                         {
-                            Ok(c) => c,
+                            Ok(c) => {
+                                if last_connect_err.take().is_some() {
+                                    info!("Re-sync: connection to leader {} recovered", leader_id);
+                                }
+                                c
+                            }
                             Err(e) => {
-                                debug!("Re-sync: failed to connect to leader: {}", e);
+                                let msg = e.to_string();
+                                if last_connect_err.as_deref() != Some(msg.as_str()) {
+                                    warn!(
+                                        "Re-sync: cannot reach leader {} at {}: {} — will keep retrying every 10s (check connectivity and that all nodes run the same wolfdisk version)",
+                                        leader_id, leader_addr, msg
+                                    );
+                                    last_connect_err = Some(msg);
+                                }
                                 continue;
                             }
                         };

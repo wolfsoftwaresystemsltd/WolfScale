@@ -627,6 +627,10 @@ impl ClusterManager {
 
         let status = serde_json::json!({
             "node_id": self.node_id,
+            // Software version — the health UI renders it and flags
+            // mixed-version clusters, which cannot sync (positional bincode
+            // wire; wabil 2026-07-04).
+            "version": env!("CARGO_PKG_VERSION"),
             "role": role,
             "state": state_str,
             "bind_address": self.config.node.bind,
