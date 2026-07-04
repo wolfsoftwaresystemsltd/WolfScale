@@ -11,6 +11,74 @@ use tracing::{debug, info, warn};
 
 use crate::network::protocol::{decode_message, encode_message, Message};
 
+/// Wire handshake, exchanged FIRST on every TCP connection (both directions)
+/// since v2.11.8. The transport is positional bincode with no per-message
+/// versioning, so mixed-version clusters didn't fail — they silently decoded
+/// garbage or looped on errors forever (wabil 2026-07-04: a freshly
+/// reinstalled node sat at index v0 for good because v2.11.6 appended a field
+/// to SyncResponseMsg that its older leader never sent). The handshake turns
+/// that into a one-line, named error on the NEW side:
+///
+///   magic "WDHS" (4 bytes) + wire_version u16 LE + ver_len u16 LE + version string
+///
+/// Deliberately NOT bincode (no chicken-and-egg) and deliberately magic-first:
+/// an old peer's first 4 bytes are a frame-length prefix, which can never
+/// equal the magic, so a missing handshake is detected deterministically.
+/// An old node RECEIVING our magic reads it as a ~1.4GB length prefix and
+/// rejects it via its existing 100MB frame cap — closing the socket, which
+/// the new side reports as "peer speaks no handshake".
+/// Bump WIRE_VERSION whenever protocol.rs changes any message layout.
+const WIRE_MAGIC: [u8; 4] = *b"WDHS";
+const WIRE_VERSION: u16 = 2;
+
+fn write_handshake(stream: &mut TcpStream) -> std::io::Result<()> {
+    let ver = env!("CARGO_PKG_VERSION").as_bytes();
+    let mut buf = Vec::with_capacity(8 + ver.len());
+    buf.extend_from_slice(&WIRE_MAGIC);
+    buf.extend_from_slice(&WIRE_VERSION.to_le_bytes());
+    buf.extend_from_slice(&(ver.len() as u16).to_le_bytes());
+    buf.extend_from_slice(ver);
+    stream.write_all(&buf)?;
+    stream.flush()
+}
+
+/// Read and validate the peer's handshake. Returns the peer's software
+/// version string. Every failure names the likely cause — this is the
+/// diagnosis surface for mixed-version clusters.
+fn read_handshake(stream: &mut TcpStream) -> std::io::Result<String> {
+    let mut magic = [0u8; 4];
+    stream.read_exact(&mut magic).map_err(|e| std::io::Error::new(
+        e.kind(),
+        format!("peer closed before handshake — likely pre-2.11.8 wolfdisk (upgrade all nodes together): {}", e),
+    ))?;
+    if magic != WIRE_MAGIC {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "peer sent no wire handshake — it runs pre-2.11.8 wolfdisk. Mixed versions cannot sync; upgrade all nodes together.",
+        ));
+    }
+    let mut hdr = [0u8; 4];
+    stream.read_exact(&mut hdr)?;
+    let wire = u16::from_le_bytes([hdr[0], hdr[1]]);
+    let ver_len = u16::from_le_bytes([hdr[2], hdr[3]]) as usize;
+    if ver_len > 64 {
+        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "handshake version string too long"));
+    }
+    let mut ver = vec![0u8; ver_len];
+    stream.read_exact(&mut ver)?;
+    let peer_version = String::from_utf8_lossy(&ver).to_string();
+    if wire != WIRE_VERSION {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!(
+                "wire version mismatch: peer runs wolfdisk {} (wire v{}), this node is {} (wire v{}) — upgrade all nodes together",
+                peer_version, wire, env!("CARGO_PKG_VERSION"), WIRE_VERSION
+            ),
+        ));
+    }
+    Ok(peer_version)
+}
+
 /// Connection to a peer node
 pub struct PeerConnection {
     pub node_id: String,
@@ -30,7 +98,7 @@ impl PeerConnection {
         let sock_addr: SocketAddr = address.to_socket_addrs()?.next().ok_or_else(|| {
             std::io::Error::new(std::io::ErrorKind::InvalidInput, "cannot resolve address")
         })?;
-        let stream = TcpStream::connect_timeout(&sock_addr, Duration::from_secs(5))?;
+        let mut stream = TcpStream::connect_timeout(&sock_addr, Duration::from_secs(5))?;
         // 10s read/write timeouts — short enough to keep Dolphin responsive,
         // long enough for WAN round-trips over WolfNet.
         stream.set_read_timeout(Some(Duration::from_secs(10)))?;
@@ -38,6 +106,13 @@ impl PeerConnection {
         // Disable Nagle's algorithm - each FUSE op is a synchronous round-trip,
         // so we want messages sent immediately, not buffered
         stream.set_nodelay(true)?;
+
+        // Wire handshake before any frame (see WIRE_MAGIC docs). A peer that
+        // doesn't answer it is a different wolfdisk generation — fail HERE
+        // with a named error instead of looping on undecodable frames.
+        write_handshake(&mut stream)?;
+        let peer_version = read_handshake(&mut stream)?;
+        debug!("handshake ok with {} (wolfdisk {})", address, peer_version);
 
         Ok(Self {
             node_id,
@@ -324,6 +399,21 @@ fn handle_peer_connection(
     // Disable Nagle's algorithm for prompt responses
     stream.set_nodelay(true)?;
 
+    // Wire handshake first (see WIRE_MAGIC docs): read theirs, answer with
+    // ours. An old peer's first bytes are a frame-length prefix, never the
+    // magic — surfaced as a named upgrade-together error instead of a
+    // bincode decode failure deep in the message loop.
+    match read_handshake(&mut stream) {
+        Ok(peer_version) => {
+            write_handshake(&mut stream)?;
+            debug!("handshake ok from {} (wolfdisk {})", addr, peer_version);
+        }
+        Err(e) => {
+            warn!("rejected peer {}: {}", addr, e);
+            return Err(e.into());
+        }
+    }
+
     loop {
         // Read length prefix
         let mut len_buf = [0u8; 4];
@@ -350,5 +440,70 @@ fn handle_peer_connection(
             stream.write_all(&resp_data)?;
             stream.flush()?;
         }
+    }
+}
+
+#[cfg(test)]
+mod handshake_tests {
+    use super::*;
+    use std::net::TcpListener;
+
+    /// Both sides new: handshake round-trips and reports the software version.
+    #[test]
+    fn handshake_roundtrip() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = std::thread::spawn(move || {
+            let (mut s, _) = listener.accept().unwrap();
+            let peer_ver = read_handshake(&mut s).unwrap();
+            write_handshake(&mut s).unwrap();
+            peer_ver
+        });
+        let mut c = TcpStream::connect(addr).unwrap();
+        write_handshake(&mut c).unwrap();
+        let server_ver = read_handshake(&mut c).unwrap();
+        let client_seen = server.join().unwrap();
+        assert_eq!(server_ver, env!("CARGO_PKG_VERSION"));
+        assert_eq!(client_seen, env!("CARGO_PKG_VERSION"));
+    }
+
+    /// An old (pre-2.11.8) peer opens with a frame-length prefix, never the
+    /// magic — must be rejected with the named upgrade-together error.
+    #[test]
+    fn old_peer_without_handshake_is_named() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = std::thread::spawn(move || {
+            let (mut s, _) = listener.accept().unwrap();
+            read_handshake(&mut s).map(|_| ())
+        });
+        let mut c = TcpStream::connect(addr).unwrap();
+        // Simulate an old node: 4-byte LE length prefix of a small frame.
+        c.write_all(&42u32.to_le_bytes()).unwrap();
+        c.flush().unwrap();
+        let err = server.join().unwrap().unwrap_err();
+        assert!(err.to_string().contains("pre-2.11.8"), "got: {}", err);
+    }
+
+    /// Same magic but a different wire version: named mismatch error.
+    #[test]
+    fn wire_version_mismatch_is_named() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = std::thread::spawn(move || {
+            let (mut s, _) = listener.accept().unwrap();
+            read_handshake(&mut s).map(|_| ())
+        });
+        let mut c = TcpStream::connect(addr).unwrap();
+        let mut buf = Vec::new();
+        buf.extend_from_slice(&WIRE_MAGIC);
+        buf.extend_from_slice(&1u16.to_le_bytes()); // old wire version
+        buf.extend_from_slice(&3u16.to_le_bytes());
+        buf.extend_from_slice(b"9.9");
+        c.write_all(&buf).unwrap();
+        c.flush().unwrap();
+        let err = server.join().unwrap().unwrap_err();
+        assert!(err.to_string().contains("wire version mismatch"), "got: {}", err);
+        assert!(err.to_string().contains("9.9"), "peer version must be named: {}", err);
     }
 }
