@@ -301,11 +301,35 @@ impl Default for Config {
     }
 }
 
+/// Accept a bare IP as a bind value by appending the given default port.
+/// Operators pinning wolfdisk to a private address (WolfNet, LAN) naturally
+/// write `bind = "10.100.10.40"` — before this, that crashed startup with an
+/// uncontextualised "invalid socket address syntax" (klas's VPS, 2026-07-08).
+/// Anything that isn't a bare IP is returned unchanged so real syntax errors
+/// still surface (with context) at the actual bind site.
+fn normalize_bind(bind: &str, default_port: u16) -> String {
+    let trimmed = bind.trim();
+    if let Ok(ip) = trimmed.parse::<std::net::IpAddr>() {
+        let fixed = match ip {
+            std::net::IpAddr::V4(v4) => format!("{}:{}", v4, default_port),
+            std::net::IpAddr::V6(v6) => format!("[{}]:{}", v6, default_port),
+        };
+        tracing::info!("bind '{}' has no port — using {}", trimmed, fixed);
+        return fixed;
+    }
+    trimmed.to_string()
+}
+
 impl Config {
     /// Load configuration from a TOML file
     pub fn load(path: &Path) -> Result<Self> {
         let content = std::fs::read_to_string(path)?;
-        let config: Config = toml::from_str(&content)?;
+        let mut config: Config = toml::from_str(&content)?;
+        // A bare-IP bind means "this address, default port" — never a crash.
+        // 8550 matches default_bind() (Golden Rule: same port an omitted bind
+        // gets); the S3 sidecar keeps its own default port likewise.
+        config.node.bind = normalize_bind(&config.node.bind, 8550);
+        config.s3.bind = normalize_bind(&config.s3.bind, 9878);
         Ok(config)
     }
 
@@ -418,6 +442,24 @@ mod tests {
     #[test]
     fn s3_config_default_region_is_us_east_1() {
         assert_eq!(S3Config::default().region, "us-east-1");
+    }
+
+    #[test]
+    fn bare_ip_bind_gets_default_port() {
+        // klas's VPS config: `bind = "10.100.10.40"` must not crash startup.
+        assert_eq!(normalize_bind("10.100.10.40", 8550), "10.100.10.40:8550");
+        assert_eq!(normalize_bind(" 10.100.10.40 ", 8550), "10.100.10.40:8550");
+        assert_eq!(normalize_bind("::1", 8550), "[::1]:8550");
+    }
+
+    #[test]
+    fn explicit_and_invalid_binds_pass_through() {
+        // An explicit port is untouched.
+        assert_eq!(normalize_bind("10.100.10.40:8650", 8550), "10.100.10.40:8650");
+        assert_eq!(normalize_bind("0.0.0.0:8550", 8550), "0.0.0.0:8550");
+        // Genuine garbage is left for the bind site to reject with context.
+        assert_eq!(normalize_bind("not-an-ip", 8550), "not-an-ip");
+        assert_eq!(normalize_bind("10.100.10.40:", 8550), "10.100.10.40:");
     }
 
     #[test]

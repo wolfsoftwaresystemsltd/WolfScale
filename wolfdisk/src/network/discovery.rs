@@ -156,14 +156,18 @@ impl Discovery {
             }
         });
 
-        // Start listener thread
+        // Start listener thread. It binds to the SAME address the node's
+        // `bind` pins (wildcard stays wildcard) — a node deliberately bound
+        // to a private/WolfNet IP must not open a world-reachable UDP port
+        // on the side (klas's VPS, 2026-07-08).
         let node_id = self.node_id.clone();
         let discovery_port = self.discovery_port;
+        let listen_ip = listen_ip_from_bind(&self.bind_address);
         let peers = Arc::clone(&self.peers);
         let running = Arc::clone(&self.running);
 
         thread::spawn(move || {
-            if let Err(e) = run_listener(node_id, discovery_port, peers, running) {
+            if let Err(e) = run_listener(node_id, listen_ip, discovery_port, peers, running) {
                 warn!("Discovery listener error: {}", e);
             }
         });
@@ -228,8 +232,11 @@ fn run_broadcaster(
     running: Arc<RwLock<bool>>,
     configured_peers: Vec<String>,
 ) -> std::io::Result<()> {
-    // Create UDP socket for broadcasting
-    let socket = UdpSocket::bind("0.0.0.0:0")?;
+    // Create UDP socket for broadcasting. Pinned to the node's bind IP when
+    // one is configured — an announce socket must not be another wildcard
+    // port on a host the operator deliberately took off the public internet
+    // (its ephemeral port receives datagrams too).
+    let socket = UdpSocket::bind(SocketAddr::new(listen_ip_from_bind(&bind_address), 0))?;
     socket.set_broadcast(true)?;
 
     // Broadcast destinations: 255.255.255.255 for LAN, plus subnet broadcast for WolfNet
@@ -295,23 +302,46 @@ fn run_broadcaster(
     Ok(())
 }
 
+/// The IP the discovery listener should bind: the node's pinned bind IP
+/// when one is configured, else wildcard. A pinned (non-wildcard) IP means
+/// this socket no longer receives 255.255.255.255 / subnet broadcasts
+/// (Linux only delivers those to wildcard-bound sockets) — unicast
+/// discovery to configured peers still works, which is the only mode that
+/// functions across WolfNet/WAN anyway. That trade is exactly what an
+/// operator pinning wolfdisk off the public internet is asking for.
+fn listen_ip_from_bind(bind_address: &str) -> std::net::IpAddr {
+    bind_address
+        .parse::<SocketAddr>()
+        .map(|s| s.ip())
+        .unwrap_or_else(|_| std::net::IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED))
+}
+
 /// Run the discovery listener
 fn run_listener(
     node_id: String,
+    listen_ip: std::net::IpAddr,
     discovery_port: u16,
     peers: Arc<RwLock<HashMap<String, DiscoveredPeer>>>,
     running: Arc<RwLock<bool>>,
 ) -> std::io::Result<()> {
-    // Bind to discovery port
-    let socket = match UdpSocket::bind(format!("0.0.0.0:{}", discovery_port)) {
+    // Bind to the discovery port on the node's configured address
+    let socket = match UdpSocket::bind(SocketAddr::new(listen_ip, discovery_port)) {
         Ok(s) => {
-            info!("Discovery listener bound to port {}", discovery_port);
+            if listen_ip.is_unspecified() {
+                info!("Discovery listener bound to port {}", discovery_port);
+            } else {
+                info!(
+                    "Discovery listener bound to {}:{} (pinned to the node's bind address; \
+                     broadcast discovery off, unicast discovery on)",
+                    listen_ip, discovery_port
+                );
+            }
             s
         }
         Err(e) => {
             warn!(
-                "Failed to bind discovery listener on port {}: {}",
-                discovery_port, e
+                "Failed to bind discovery listener on {}:{}: {}",
+                listen_ip, discovery_port, e
             );
             return Err(e);
         }

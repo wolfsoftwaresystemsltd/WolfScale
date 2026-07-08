@@ -837,8 +837,13 @@ impl WolfDiskFS {
         };
 
         if should_save {
-            if let Ok(index) = self.file_index.read() {
-                let _ = index.save(&self.config.index_dir());
+            // Serialize under the read lock (CPU only), write to disk AFTER
+            // releasing it — holding the lock across the disk write (fsync +
+            // rename, plus possibly waiting for the periodic persist thread
+            // at the disk-write gate) stalls every FUSE writer meanwhile.
+            let serialized = self.file_index.read().ok().map(|index| index.serialize());
+            if let Some(Ok(bytes)) = serialized {
+                let _ = FileIndex::write_serialized(&self.config.index_dir(), &bytes);
             }
             *self.last_index_save.write().unwrap() = Instant::now();
             *self.index_dirty.write().unwrap() = false;
@@ -853,8 +858,10 @@ impl WolfDiskFS {
             return;
         }
 
-        if let Ok(index) = self.file_index.read() {
-            let _ = index.save(&self.config.index_dir());
+        // Same serialize-then-release pattern as maybe_save_index.
+        let serialized = self.file_index.read().ok().map(|index| index.serialize());
+        if let Some(Ok(bytes)) = serialized {
+            let _ = FileIndex::write_serialized(&self.config.index_dir(), &bytes);
         }
         *self.last_index_save.write().unwrap() = Instant::now();
         *self.index_dirty.write().unwrap() = false;
