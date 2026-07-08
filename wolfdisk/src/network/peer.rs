@@ -188,10 +188,18 @@ impl PeerManager {
 
     /// Start listening for peer connections
     pub fn start(&self) -> std::io::Result<()> {
-        let bind_addr: SocketAddr = self
-            .bind_address
-            .parse()
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
+        let bind_addr: SocketAddr = self.bind_address.parse().map_err(|e| {
+            // Name the offending value and the expected shape — the bare
+            // AddrParseError ("invalid socket address syntax") sent an
+            // operator hunting through the whole config (klas 2026-07-08).
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!(
+                    "invalid `bind` address '{}' ({}) — expected ip:port, e.g. 10.100.10.40:8650",
+                    self.bind_address, e
+                ),
+            )
+        })?;
         // Bind BEFORE flipping `running` true — if the address is taken we must
         // not leave the manager flagged as running. std's TcpListener already
         // sets SO_REUSEADDR, so AddrInUse here means another process is actively

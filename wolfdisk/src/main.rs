@@ -159,16 +159,27 @@ fn main() {
             std::fs::create_dir_all(config.chunks_dir()).ok();
             std::fs::create_dir_all(config.index_dir()).ok();
 
-            let file_index = std::sync::Arc::new(std::sync::RwLock::new(
-                FileIndex::load_or_create(&config.index_dir()).expect("Failed to load file index"),
-            ));
+            // Cluster mode recovers from a corrupt index (quarantine + full
+            // resync) instead of crash-looping on it; remaining Err here is a
+            // real I/O fault (permissions, dying disk) that must stay fatal.
+            let (loaded_index, index_recovered) =
+                FileIndex::load_or_recover(&config.index_dir()).expect("Failed to load file index");
+            let file_index = std::sync::Arc::new(std::sync::RwLock::new(loaded_index));
             let file_index_for_handler = file_index.clone();
 
-            // Restore the replication version + changelog from disk so a restart
-            // doesn't reset us to v0 — which made every node falsely agree "v0, in
-            // sync" while their file sets diverged, and forced a heavy full
-            // reconcile on every restart (wabil 2026-06-29).
-            cluster.load_replication_state(&config.index_dir());
+            if index_recovered {
+                // The index was corrupt and rebuilt empty: our persisted
+                // replication version is a lie now (vN with no data). Discard
+                // it and DON'T load it, so we rejoin at v0 and the leader's
+                // authoritative full sync repopulates this node.
+                wolfdisk::ClusterManager::discard_replication_state(&config.index_dir());
+            } else {
+                // Restore the replication version + changelog from disk so a restart
+                // doesn't reset us to v0 — which made every node falsely agree "v0, in
+                // sync" while their file sets diverged, and forced a heavy full
+                // reconcile on every restart (wabil 2026-06-29).
+                cluster.load_replication_state(&config.index_dir());
+            }
 
             // Create chunk store for replication (shared with WolfDiskFS). When an SSD
             // cache tier is configured it sits in front of the bulk data_dir.
@@ -1861,6 +1872,7 @@ fn main() {
                 let _sync_chunk_store = chunk_store.clone();
                 let sync_node_id = config.node.id.clone();
                 let sync_bind_address = config.node.bind.clone();
+                let sync_index_recovered = index_recovered;
 
                 std::thread::spawn(move || {
                     use tracing::{info, warn};
@@ -1892,6 +1904,20 @@ fn main() {
                     let sync_peers = sync_cluster.config().cluster.peers.clone();
                     loop {
                         if wait_count >= max_wait_iterations {
+                            // A node whose index was just recovered (corrupt →
+                            // quarantined → empty) must NEVER give up and
+                            // self-elect: it would lead an EMPTY namespace over
+                            // peers that still hold the data. Keep waiting —
+                            // the periodic TCP probes below re-fire each cycle.
+                            if sync_index_recovered {
+                                tracing::error!(
+                                    "Index was recovered empty and no leader is reachable — \
+                                     refusing sole-node election (an empty node must not lead); \
+                                     continuing to wait for a peer that has the data"
+                                );
+                                wait_count = 0;
+                                continue;
+                            }
                             break;
                         }
                         std::thread::sleep(std::time::Duration::from_millis(500));
@@ -2884,7 +2910,7 @@ mod full_sync_tests {
         // Leader's authoritative set (post bulk-delete): two files.
         let leader: HashSet<PathBuf> = [p("/keep/a"), p("/keep/b")].into_iter().collect();
         // Follower still holds the leader's two PLUS three stale extras.
-        let local = vec![p("/keep/a"), p("/keep/b"), p("/old/1"), p("/old/2"), p("/old/3")];
+        let local = [p("/keep/a"), p("/keep/b"), p("/old/1"), p("/old/2"), p("/old/3")];
         let mut stale = full_sync_stale_paths(&leader, local.iter());
         stale.sort();
         assert_eq!(stale, vec![p("/old/1"), p("/old/2"), p("/old/3")]);
@@ -2893,7 +2919,7 @@ mod full_sync_tests {
     #[test]
     fn keeps_everything_when_follower_matches_leader() {
         let leader: HashSet<PathBuf> = [p("/a"), p("/b")].into_iter().collect();
-        let local = vec![p("/a"), p("/b")];
+        let local = [p("/a"), p("/b")];
         assert!(full_sync_stale_paths(&leader, local.iter()).is_empty());
     }
 }

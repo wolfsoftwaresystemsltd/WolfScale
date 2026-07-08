@@ -273,9 +273,51 @@ impl ClusterManager {
         std::fs::create_dir_all(index_dir)?;
         let path = index_dir.join(REPL_STATE_FILENAME);
         let tmp = index_dir.join(format!("{}.tmp", REPL_STATE_FILENAME));
-        std::fs::write(&tmp, &bytes)?;
+        {
+            use std::io::Write;
+            let mut f = std::fs::File::create(&tmp)?;
+            f.write_all(&bytes)?;
+            // Same durability bar as the file index: fsync before rename
+            // so power loss can't materialise the rename with empty
+            // content (a corrupt file here silently resets us to v0).
+            f.sync_all()?;
+        }
         std::fs::rename(&tmp, &path)?;
+        // ...and fsync the directory so the rename itself is durable.
+        if let Ok(dir) = std::fs::File::open(index_dir) {
+            let _ = dir.sync_all();
+        }
         Ok(())
+    }
+
+    /// Quarantine the persisted replication state (rename to
+    /// `*.corrupt-<unixtime>`). Called when the file index was corrupt and
+    /// had to be rebuilt empty: restoring the old version would make this
+    /// node claim vN while holding no entries, so peers would consider it
+    /// in sync and never resend anything. At v0 the leader's authoritative
+    /// full sync repopulates it (deletes stay double-gated on the leader
+    /// side by full_sync_may_delete, so an empty rejoiner can't nuke peers).
+    pub fn discard_replication_state(index_dir: &std::path::Path) {
+        let path = index_dir.join(REPL_STATE_FILENAME);
+        if !path.exists() {
+            return;
+        }
+        let ts = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let quarantine = index_dir.join(format!("{}.corrupt-{}", REPL_STATE_FILENAME, ts));
+        match std::fs::rename(&path, &quarantine) {
+            Ok(()) => warn!(
+                "Discarded replication state {:?} → {:?} (file index was corrupt; forcing full resync from v0)",
+                path, quarantine
+            ),
+            Err(e) => warn!(
+                "Failed to discard replication state {:?}: {} — refusing to load it; \
+                 the periodic persist will overwrite it at v0 shortly",
+                path, e
+            ),
+        }
     }
 
     /// Restore the replication version + changelog on startup. A missing or
