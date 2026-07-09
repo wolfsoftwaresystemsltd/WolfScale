@@ -105,6 +105,48 @@ fn full_sync_stale_paths<'a>(
 /// lost data. Paired with the monotonic version rule in the resync loop (we
 /// never lower our own version to match a regressed leader), a follower cannot
 /// be tricked into deleting data it correctly held.
+/// A `stat()` result on a mountpoint indicates a stale/dead FUSE mount iff it
+/// failed with ENOTCONN. Extracted so the exact trigger (and its negatives — a
+/// healthy dir, a missing path, a permission error) is unit-testable without a
+/// real FUSE mount. Only ENOTCONN means "mount entry present, no server".
+fn metadata_is_stale_fuse(result: &std::io::Result<std::fs::Metadata>) -> bool {
+    matches!(result, Err(e) if e.raw_os_error() == Some(libc::ENOTCONN))
+}
+
+/// Clear a stale FUSE mount left behind by a wolfdisk that exited uncleanly.
+///
+/// `AutoUnmount` only detaches the FUSE mount on a CLEAN process exit. A crash
+/// — SIGKILL, OOM, panic, or the corrupt-index crash-loop 2.11.9 fixed — leaves
+/// the kernel mount entry with no userspace process serving it. Any `stat()` on
+/// the mountpoint then returns ENOTCONN ("transport endpoint is not
+/// connected"), which breaks Docker bind mounts, `ls`, AND our own attempt to
+/// re-mount over it (klas, Unraid `/mnt/wolfdisk`, 2026-07-09). Detect that
+/// exact condition and lazy-unmount the corpse so the fresh mount succeeds.
+///
+/// Targeted on purpose: we ONLY act on ENOTCONN. A healthy existing mount
+/// (metadata succeeds) is left alone so we never rip out a live filesystem —
+/// `fuser::mount2` will then correctly refuse to double-mount it.
+fn clean_stale_fuse_mount(mountpoint: &std::path::Path) {
+    let meta = std::fs::metadata(mountpoint);
+    if !metadata_is_stale_fuse(&meta) {
+        return;
+    }
+    tracing::warn!(
+        "{:?} is a stale FUSE mount (ENOTCONN — a previous wolfdisk exited uncleanly); \
+         unmounting the dead mount before re-mounting",
+        mountpoint
+    );
+    // fusermount -uz = lazy unmount, which detaches even a 'busy' or dead
+    // mount. Fall back to `umount -l` for minimal environments (some Unraid
+    // images) that lack fusermount on PATH. Both are best-effort; if neither
+    // clears it the mount below surfaces the real error to the operator.
+    let fm = std::process::Command::new("fusermount").arg("-uz").arg(mountpoint).status();
+    let cleared = matches!(fm, Ok(s) if s.success());
+    if !cleared {
+        let _ = std::process::Command::new("umount").arg("-l").arg(mountpoint).status();
+    }
+}
+
 fn full_sync_may_delete(leader_version: u64, our_version: u64, leader_entry_count: usize) -> bool {
     leader_entry_count > 0 && leader_version >= our_version
 }
@@ -2641,6 +2683,14 @@ fn main() {
                 info!("S3-compatible API enabled on {}", config.s3.bind);
             }
 
+            // Clear a stale FUSE mount from a previous unclean exit before
+            // mounting, so a crashed-then-restarted wolfdisk re-mounts cleanly
+            // instead of failing on the ENOTCONN corpse (klas Unraid 2026-07-09).
+            clean_stale_fuse_mount(&mountpoint);
+            // Ensure the mountpoint dir exists (a lazy-unmount can leave the
+            // path, but a fresh host / relocated mount may not have it yet).
+            let _ = std::fs::create_dir_all(&mountpoint);
+
             // Mount the filesystem (this blocks)
             if let Err(e) = fuser::mount2(fs, &mountpoint, &options) {
                 error!("Mount failed: {}", e);
@@ -2873,6 +2923,36 @@ fn main() {
             info!("  {}/wal/     - write-ahead log", data_dir.display());
             info!("Initialization complete!");
         }
+    }
+}
+
+#[cfg(test)]
+mod stale_mount_tests {
+    use super::metadata_is_stale_fuse;
+
+    #[test]
+    fn only_enotconn_is_treated_as_stale() {
+        // The exact bug: a stale FUSE mount stats with ENOTCONN.
+        let enotconn: std::io::Result<std::fs::Metadata> =
+            Err(std::io::Error::from_raw_os_error(libc::ENOTCONN));
+        assert!(metadata_is_stale_fuse(&enotconn));
+
+        // A missing path (fresh host / relocated mount) is NOT stale — we
+        // create it, we don't unmount it.
+        let enoent: std::io::Result<std::fs::Metadata> =
+            Err(std::io::Error::from_raw_os_error(libc::ENOENT));
+        assert!(!metadata_is_stale_fuse(&enoent));
+
+        // A permission error must never trigger a destructive unmount.
+        let eacces: std::io::Result<std::fs::Metadata> =
+            Err(std::io::Error::from_raw_os_error(libc::EACCES));
+        assert!(!metadata_is_stale_fuse(&eacces));
+
+        // A healthy directory (metadata succeeds) is left alone — this is the
+        // guard that stops us ripping out a live mount.
+        let healthy = std::fs::metadata(".");
+        assert!(healthy.is_ok());
+        assert!(!metadata_is_stale_fuse(&healthy));
     }
 }
 
