@@ -151,6 +151,288 @@ fn full_sync_may_delete(leader_version: u64, our_version: u64, leader_entry_coun
     leader_entry_count > 0 && leader_version >= our_version
 }
 
+/// How many consecutive 10s re-sync cycles the SAME leader must keep reporting
+/// an index version below ours before we treat the regression as permanent and
+/// start actively reconciling (full-sync requests, then merge-up). The
+/// regressed-leader guards above deliberately freeze convergence to protect
+/// data — but a leader whose persisted version is genuinely lower than ours
+/// (leadership moved to a node that missed writes, or whose replication state
+/// was quarantined/lost) stays below us FOREVER, and the freeze became a
+/// permanent deadlock: the leader answers every delta request with "nothing
+/// changed" (changes_since() is empty for a from_version at/above its own),
+/// we refuse to lower our version, and both sides persist their numbers across
+/// restarts (wabil 2026-07-24: one node "behind", never converging, restarts
+/// in any order changed nothing). 30 cycles = 5 minutes — well past a leader
+/// restart's index reload, which the deferral path observes "can take minutes".
+const DIVERGENCE_CYCLES_BEFORE_MERGE: u32 = 30;
+
+/// Bounds on one cycle's merge-up work so a huge divergence reconciles
+/// incrementally instead of stalling the re-sync loop for hours. Once either
+/// limit is crossed no NEW file is started (a single oversized file still
+/// completes, so per-cycle progress is guaranteed); the remainder goes next
+/// cycle, 10s later.
+const MERGE_PUSH_MAX_FILES_PER_CYCLE: usize = 200;
+const MERGE_PUSH_MAX_BYTES_PER_CYCLE: u64 = 256 * 1024 * 1024;
+
+/// Suffix of the leader-side temporary path a merge-push streams into before
+/// the atomic rename to the real path. The real path therefore only ever
+/// appears on the leader fully-formed: a connection lost mid-push leaves (and
+/// a retry reuses) only the tmp entry — never a truncated real file that the
+/// next pull sync would replicate over the follower's good local copy.
+const MERGE_TMP_SUFFIX: &str = ".wolfdisk-merge-tmp";
+
+/// Merge-up push order for the entries a diverged follower holds that the
+/// leader lacks: directories first, parents before children (so the leader
+/// materialises `/a` before `/a/b`), then files/symlinks, deterministically by
+/// path. Pure so the ordering has a direct test.
+fn merge_push_order(
+    mut entries: Vec<(std::path::PathBuf, wolfdisk::storage::FileEntry)>,
+) -> Vec<(std::path::PathBuf, wolfdisk::storage::FileEntry)> {
+    entries.sort_by(|(pa, ea), (pb, eb)| {
+        eb.is_dir
+            .cmp(&ea.is_dir) // dirs (true) first
+            .then_with(|| pa.components().count().cmp(&pb.components().count()))
+            .then_with(|| pa.cmp(pb))
+    });
+    entries
+}
+
+/// A regular file may only be merge-pushed if EVERY chunk it references is
+/// readable locally — pushing a partial file would install a corrupt copy on
+/// the leader that then replicates everywhere. Directories and symlinks carry
+/// no chunks and are always pushable. Pure so the refusal has a direct test.
+fn merge_entry_pushable(
+    entry: &wolfdisk::storage::FileEntry,
+    chunk_exists: &dyn Fn(&[u8; 32]) -> bool,
+) -> bool {
+    entry.is_dir
+        || entry.symlink_target.is_some()
+        || entry.chunks.iter().all(|c| chunk_exists(&c.hash))
+}
+
+/// Push one entry this follower holds but a stably-regressed leader lacks
+/// ("merge up"). Uses only the ops the FUSE forward path already uses
+/// (CreateDir / CreateSymlink / CreateFile / WriteRequest / SetAttr /
+/// RenameFile), so leader-side semantics — version increments, changelog
+/// records, broadcasts to the other followers — are identical to a normal
+/// client write. Regular files stream into a `MERGE_TMP_SUFFIX` path and are
+/// renamed into place only when complete (see the suffix's doc comment).
+///
+/// Conflict bias, matching v2.11.7's "never delete follower data": if the
+/// leader (re)acquired the real path while we streamed, the leader's copy wins
+/// the real path and OUR diverged bytes are installed as a visible
+/// `.wolfdisk-merge-conflict-<unixtime>` sibling for the operator — both
+/// copies survive.
+///
+/// Returns Ok(true) if the leader now holds the entry (pushed, or it already
+/// had one), Ok(false) if skipped this cycle (conflict / locally unreadable —
+/// logged), Err on a transport failure (caller drops the connection and
+/// retries next cycle; the tmp entry is reused on retry, and rewriting
+/// identical bytes is idempotent — identical chunk hashes deduplicate).
+fn merge_push_entry(
+    conn: &std::sync::Arc<wolfdisk::network::peer::PeerConnection>,
+    path: &std::path::Path,
+    entry: &wolfdisk::storage::FileEntry,
+    chunk_store: &wolfdisk::storage::ChunkStore,
+) -> Result<bool, String> {
+    use wolfdisk::network::protocol::*;
+    let path_str = path.to_string_lossy().to_string();
+    let net = |e: Box<dyn std::error::Error + Send + Sync>| e.to_string();
+
+    if entry.is_dir {
+        // CreateDir's only rejection is "already exists" — either way the
+        // leader has the directory afterwards.
+        return match conn
+            .request(&Message::CreateDir(CreateDirMsg {
+                path: path_str,
+                mode: entry.permissions,
+                uid: entry.uid,
+                gid: entry.gid,
+            }))
+            .map_err(net)?
+        {
+            Message::FileOpResponse(_) => Ok(true),
+            _ => Ok(false),
+        };
+    }
+
+    if let Some(target) = &entry.symlink_target {
+        // Likewise: "Path already exists" also means the leader has it.
+        return match conn
+            .request(&Message::CreateSymlink(CreateSymlinkMsg {
+                link_path: path_str,
+                target: target.clone(),
+                uid: entry.uid,
+                gid: entry.gid,
+            }))
+            .map_err(net)?
+        {
+            Message::FileOpResponse(_) => Ok(true),
+            _ => Ok(false),
+        };
+    }
+
+    // Regular file. If the leader has the path after all (a racing live write
+    // since the stale snapshot), the leader's copy is authoritative — skip;
+    // the normal pull sync reconciles our local copy.
+    match conn
+        .request(&Message::GetAttr(GetAttrMsg {
+            path: path_str.clone(),
+        }))
+        .map_err(net)?
+    {
+        Message::GetAttrResponse(r) if r.exists => {
+            tracing::info!(
+                "Merge-up: leader already has {} — skipping (leader copy wins)",
+                path_str
+            );
+            return Ok(false);
+        }
+        Message::GetAttrResponse(_) => {}
+        _ => return Ok(false),
+    }
+
+    if !merge_entry_pushable(entry, &|h| chunk_store.exists(h)) {
+        tracing::error!(
+            "Merge-up: cannot push {} — one or more of its {} chunks is unreadable \
+             locally, and a partial push would install a corrupt copy cluster-wide. \
+             This file stays divergent until restored from backup or deleted.",
+            path_str,
+            entry.chunks.len()
+        );
+        return Ok(false);
+    }
+
+    let tmp_str = format!("{}{}", path_str, MERGE_TMP_SUFFIX);
+    match conn
+        .request(&Message::CreateFile(CreateFileMsg {
+            path: tmp_str.clone(),
+            mode: entry.permissions,
+            uid: entry.uid,
+            gid: entry.gid,
+        }))
+        .map_err(net)?
+    {
+        // Success, or "File already exists" = leftover tmp from an interrupted
+        // push of this same (locally static) file — write into it either way.
+        Message::FileOpResponse(_) => {}
+        _ => return Ok(false),
+    }
+
+    for c in &entry.chunks {
+        let data = match chunk_store.get(&c.hash) {
+            Ok(d) => d,
+            Err(e) => {
+                tracing::error!(
+                    "Merge-up: chunk {} of {} became unreadable mid-push ({}); \
+                     abandoning this file for now (tmp entry is reused on retry)",
+                    hex::encode(c.hash),
+                    path_str,
+                    e
+                );
+                return Ok(false);
+            }
+        };
+        if data.len() != c.size as usize {
+            tracing::error!(
+                "Merge-up: chunk {} of {} is {} bytes but the index says {} — \
+                 refusing to push inconsistent data",
+                hex::encode(c.hash),
+                path_str,
+                data.len(),
+                c.size
+            );
+            return Ok(false);
+        }
+        match conn
+            .request(&Message::WriteRequest(WriteRequestMsg {
+                path: tmp_str.clone(),
+                offset: c.offset,
+                data,
+            }))
+            .map_err(net)?
+        {
+            Message::ClientResponse(r) if r.success => {}
+            Message::ClientResponse(r) => {
+                tracing::warn!(
+                    "Merge-up: leader rejected write into {}: {:?}",
+                    tmp_str,
+                    r.error
+                );
+                return Ok(false);
+            }
+            _ => return Ok(false),
+        }
+    }
+
+    let modified_ms = entry
+        .modified
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64;
+    match conn
+        .request(&Message::SetAttr(SetAttrMsg {
+            path: tmp_str.clone(),
+            permissions: Some(entry.permissions),
+            uid: Some(entry.uid),
+            gid: Some(entry.gid),
+            size: Some(entry.size),
+            modified_ms: Some(modified_ms),
+        }))
+        .map_err(net)?
+    {
+        Message::FileOpResponse(r) if r.success => {}
+        _ => return Ok(false),
+    }
+
+    // Install atomically. Last-second conflict check: if the real path appeared
+    // on the leader while we streamed, keep BOTH copies (see doc comment).
+    let raced = match conn
+        .request(&Message::GetAttr(GetAttrMsg {
+            path: path_str.clone(),
+        }))
+        .map_err(net)?
+    {
+        Message::GetAttrResponse(r) => r.exists,
+        _ => return Ok(false),
+    };
+    let dest = if raced {
+        let ts = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let conflict = format!("{}.wolfdisk-merge-conflict-{}", path_str, ts);
+        tracing::warn!(
+            "Merge-up: {} was concurrently created on the leader; installing our \
+             diverged copy as {} — reconcile the two by hand",
+            path_str,
+            conflict
+        );
+        conflict
+    } else {
+        path_str.clone()
+    };
+    match conn
+        .request(&Message::RenameFile(RenameFileMsg {
+            from_path: tmp_str.clone(),
+            to_path: dest.clone(),
+        }))
+        .map_err(net)?
+    {
+        Message::FileOpResponse(r) if r.success => Ok(true),
+        Message::FileOpResponse(r) => {
+            tracing::warn!(
+                "Merge-up: rename {} -> {} rejected: {:?} — tmp entry kept for retry",
+                tmp_str,
+                dest,
+                r.error
+            );
+            Ok(false)
+        }
+        _ => Ok(false),
+    }
+}
+
 fn main() {
     let cli = Cli::parse();
 
@@ -1037,9 +1319,18 @@ fn main() {
                                     }
                                 }
 
-                                // Delete chunks of target
+                                // Delete the overwritten target's chunks — but NEVER a
+                                // hash the SOURCE entry also references. Chunks are
+                                // content-addressed and shared across identical content;
+                                // renaming a file over an identical copy used to delete
+                                // the very chunks the surviving entry points at, leaving
+                                // it unreadable.
+                                let src_hashes: std::collections::HashSet<[u8; 32]> =
+                                    entry.chunks.iter().map(|c| c.hash).collect();
                                 for chunk in &target_entry.chunks {
-                                    let _ = chunk_store_for_handler.delete(&chunk.hash);
+                                    if !src_hashes.contains(&chunk.hash) {
+                                        let _ = chunk_store_for_handler.delete(&chunk.hash);
+                                    }
                                 }
 
                                 // Remove target from index/inode
@@ -1078,6 +1369,16 @@ fn main() {
                             };
                             drop(index);
                             drop(inode_tbl);
+
+                            // Record BOTH sides in the changelog, like every sibling
+                            // handler (DeleteFile records the deletion, CreateFile the
+                            // upsert). Without this a rename was carried ONLY by the
+                            // live broadcast — a follower that missed it never learned
+                            // of the rename via delta re-sync: the old path lingered as
+                            // a divergent stale entry and the new path stayed missing
+                            // until a full sync happened to run.
+                            cluster_for_handler.record_deletion(from_path.clone());
+                            cluster_for_handler.increment_index_version(to_path.clone());
 
                             let mut queue = broadcast_queue_for_handler.lock().unwrap();
                             queue.push((from_path, delete_marker));
@@ -2250,6 +2551,7 @@ fn main() {
                 let resync_file_index = file_index.clone();
                 let resync_inode_table = inode_table.clone();
                 let resync_next_inode = next_inode.clone();
+                let resync_chunk_store = chunk_store.clone();
                 let resync_node_id = config.node.id.clone();
                 let resync_bind_address = config.node.bind.clone();
                 let resync_is_client = config.node.role == wolfdisk::config::NodeRole::Client;
@@ -2277,6 +2579,17 @@ fn main() {
                     // at default log level while stuck forever (wabil
                     // 2026-07-04). Recovery logs INFO and re-arms.
                     let mut last_connect_err: Option<String> = None;
+                    // Divergence tracking (wabil 2026-07-24 stuck-follower):
+                    // consecutive cycles the SAME leader kept reporting a version
+                    // below ours. Once it exceeds DIVERGENCE_CYCLES_BEFORE_MERGE
+                    // the regression is real (not a restart mid-reload) and we
+                    // reconcile actively: request FULL syncs (a below-us leader's
+                    // delta is always empty — the deadlock), converge downward
+                    // when the leader already holds everything we hold, and
+                    // merge-push our extras up when it doesn't.
+                    let mut divergent_cycles: u32 = 0;
+                    let mut divergent_leader: Option<String> = None;
+                    let mut force_full_resync = false;
 
                     loop {
                         std::thread::sleep(std::time::Duration::from_secs(10));
@@ -2324,15 +2637,22 @@ fn main() {
                         };
 
                         let msg = Message::SyncRequest(SyncRequestMsg {
-                            from_version: last_synced_version,
+                            // While actively reconciling a divergence, ask for the
+                            // FULL index (from_version 0): a below-us leader's delta
+                            // is empty by construction, and the reconcile below needs
+                            // the leader's complete picture.
+                            from_version: if force_full_resync { 0 } else { last_synced_version },
                             node_id: Some(resync_node_id.clone()),
                             bind_address: Some(resync_bind_address.clone()),
                             is_client: resync_is_client,
                         });
                         match conn.request(&msg) {
                             Ok(Message::SyncResponse(response)) => {
-                                // If versions match and no entries, we're up to date
-                                if response.entries.is_empty() {
+                                // Empty DELTA: versions match, or the leader is below
+                                // us and has nothing newer. (An empty FULL response
+                                // falls through to the reconcile below instead — an
+                                // empty-index regressed leader must still be detected.)
+                                if response.entries.is_empty() && !response.is_full {
                                     debug!(
                                         "Periodic re-sync: already at version {}, no changes",
                                         response.current_version
@@ -2344,6 +2664,38 @@ fn main() {
                                     if response.current_version >= last_synced_version {
                                         last_synced_version = response.current_version;
                                         resync_cluster.set_index_version(last_synced_version);
+                                        divergent_cycles = 0;
+                                        divergent_leader = None;
+                                        force_full_resync = false;
+                                    } else {
+                                        // The empty-delta DEADLOCK: the leader is below
+                                        // us, so changes_since(our_version) is forever
+                                        // empty, we (correctly) refuse to drop our
+                                        // version, and both sides persist their numbers
+                                        // — without intervention this exact exchange
+                                        // repeats every 10s until the end of time
+                                        // (wabil 2026-07-24). After a stability window,
+                                        // switch to full-sync requests so the next
+                                        // response carries the leader's complete index
+                                        // and the reconcile below can converge or merge.
+                                        if divergent_leader.as_deref() == Some(leader_id.as_str()) {
+                                            divergent_cycles += 1;
+                                        } else {
+                                            divergent_leader = Some(leader_id.clone());
+                                            divergent_cycles = 1;
+                                        }
+                                        if divergent_cycles >= DIVERGENCE_CYCLES_BEFORE_MERGE
+                                            && !force_full_resync
+                                        {
+                                            warn!(
+                                                "Leader {} has stayed at version {} (below ours, {}) for {} cycles — \
+                                                 its regression is real, not a restart. Switching to full-sync \
+                                                 reconciliation to converge without data loss.",
+                                                leader_id, response.current_version,
+                                                last_synced_version, divergent_cycles
+                                            );
+                                            force_full_resync = true;
+                                        }
                                     }
                                     continue;
                                 }
@@ -2481,31 +2833,150 @@ fn main() {
                                         }
                                     }
                                     deferral_active = false; // reconciled normally — clear any prior deferral
+                                    divergent_cycles = 0;
+                                    divergent_leader = None;
+                                    force_full_resync = false;
                                 } else if response.is_full
-                                    && !response.entries.is_empty()
                                     && response.current_version < last_synced_version
                                 {
-                                    // Leader regressed below us — keep our data, don't reconcile-delete.
-                                    // WARN only on the transition into deferral; a leader restart can sit
-                                    // here for minutes while it reloads, so subsequent ticks log at debug.
-                                    let local_len = resync_file_index.read().unwrap().len();
-                                    if !deferral_active {
-                                        warn!(
-                                            "Deferring authoritative reconcile: leader version {} is below ours {} \
-                                             (leader sent {} entries, we hold {}). Leader may be recovering — \
-                                             keeping local entries to avoid data loss.",
-                                            response.current_version, last_synced_version,
-                                            response.entries.len(), local_len
-                                        );
-                                        deferral_active = true;
+                                    // Leader regressed below us — NEVER reconcile-delete
+                                    // our data to match it (v2.11.7). But "wait until the
+                                    // leader's version climbs past ours" is not a plan:
+                                    // with persisted versions and a low write rate that
+                                    // can take forever, and this deferral WAS the
+                                    // permanent stuck-follower (wabil 2026-07-24). Two
+                                    // loss-free ways to actually converge:
+                                    //
+                                    //  1. If the leader's FULL index already contains
+                                    //     every path we hold, the monotonic rule has
+                                    //     nothing left to protect — adopting the lower
+                                    //     version can delete nothing. Converge downward.
+                                    //  2. Otherwise we hold entries the leader lacks:
+                                    //     once the regression has been stable for
+                                    //     DIVERGENCE_CYCLES_BEFORE_MERGE cycles, push
+                                    //     them UP to the leader (merge) — then case 1
+                                    //     completes on a later cycle.
+                                    if divergent_leader.as_deref() == Some(leader_id.as_str()) {
+                                        divergent_cycles += 1;
                                     } else {
-                                        debug!(
-                                            "Still deferring reconcile: leader version {} below ours {} ({} entries)",
-                                            response.current_version, last_synced_version, response.entries.len()
+                                        divergent_leader = Some(leader_id.clone());
+                                        divergent_cycles = 1;
+                                    }
+                                    let keep: std::collections::HashSet<std::path::PathBuf> = response
+                                        .entries
+                                        .iter()
+                                        .map(|e| std::path::PathBuf::from(&e.path))
+                                        .collect();
+                                    let stale_entries: Vec<(std::path::PathBuf, FileEntry)> = {
+                                        let index = resync_file_index.read().unwrap();
+                                        index
+                                            .iter()
+                                            .filter(|(p, _)| !keep.contains(*p))
+                                            .map(|(p, e)| (p.clone(), e.clone()))
+                                            .collect()
+                                    };
+                                    if stale_entries.is_empty() {
+                                        warn!(
+                                            "Adopting leader {}'s lower index version {} (ours was {}): its full \
+                                             index contains all {} entries we hold, so nothing can be lost — \
+                                             version divergence resolved.",
+                                            leader_id, response.current_version,
+                                            last_synced_version, resync_file_index.read().unwrap().len()
                                         );
+                                        last_synced_version = response.current_version;
+                                        resync_cluster.set_index_version(last_synced_version);
+                                        deferral_active = false;
+                                        divergent_cycles = 0;
+                                        divergent_leader = None;
+                                        force_full_resync = false;
+                                    } else if divergent_cycles >= DIVERGENCE_CYCLES_BEFORE_MERGE {
+                                        force_full_resync = true;
+                                        warn!(
+                                            "Merge-up: leader {} has been {} cycles at version {} (below ours, {}) \
+                                             and lacks {} entries we hold — pushing them to it (bounded per cycle) \
+                                             instead of waiting forever.",
+                                            leader_id, divergent_cycles, response.current_version,
+                                            last_synced_version, stale_entries.len()
+                                        );
+                                        let total = stale_entries.len();
+                                        let ordered = merge_push_order(stale_entries);
+                                        let mut pushed = 0usize;
+                                        let mut skipped = 0usize;
+                                        let mut pushed_bytes: u64 = 0;
+                                        for (p, e) in ordered {
+                                            if pushed + skipped >= MERGE_PUSH_MAX_FILES_PER_CYCLE
+                                                || pushed_bytes >= MERGE_PUSH_MAX_BYTES_PER_CYCLE
+                                            {
+                                                info!(
+                                                    "Merge-up: cycle budget reached ({} entries, {} bytes); \
+                                                     the rest of the {} divergent entries continue next cycle",
+                                                    pushed + skipped, pushed_bytes, total
+                                                );
+                                                break;
+                                            }
+                                            // Never re-push another push's scaffolding.
+                                            if p.to_string_lossy().ends_with(MERGE_TMP_SUFFIX) {
+                                                skipped += 1;
+                                                continue;
+                                            }
+                                            match merge_push_entry(&conn, &p, &e, &resync_chunk_store) {
+                                                Ok(true) => {
+                                                    pushed += 1;
+                                                    pushed_bytes += e.size;
+                                                }
+                                                Ok(false) => skipped += 1,
+                                                Err(err) => {
+                                                    warn!(
+                                                        "Merge-up: connection to leader lost mid-push ({}); \
+                                                         {} pushed so far, retrying next cycle",
+                                                        err, pushed
+                                                    );
+                                                    resync_peer_manager.disconnect_leader(&leader_id);
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        if pushed > 0 || skipped > 0 {
+                                            info!(
+                                                "Merge-up: pushed {}, skipped {} (of {} divergent entries) — \
+                                                 versions converge once the leader holds them all",
+                                                pushed, skipped, total
+                                            );
+                                        }
+                                    } else {
+                                        // Inside the stability window: the leader may
+                                        // still be a restart reloading its persisted
+                                        // state. Keep deferring; WARN only on the
+                                        // transition into deferral.
+                                        force_full_resync = true; // keep the full picture coming
+                                        let local_len = resync_file_index.read().unwrap().len();
+                                        if !deferral_active {
+                                            warn!(
+                                                "Deferring authoritative reconcile: leader version {} is below ours {} \
+                                                 (leader sent {} entries, we hold {}). Leader may be recovering — \
+                                                 keeping local entries to avoid data loss; active reconcile begins \
+                                                 after {} more quiet cycles.",
+                                                response.current_version, last_synced_version,
+                                                response.entries.len(), local_len,
+                                                DIVERGENCE_CYCLES_BEFORE_MERGE.saturating_sub(divergent_cycles)
+                                            );
+                                            deferral_active = true;
+                                        } else {
+                                            debug!(
+                                                "Still deferring reconcile: leader version {} below ours {} ({} entries, cycle {}/{})",
+                                                response.current_version, last_synced_version,
+                                                response.entries.len(), divergent_cycles,
+                                                DIVERGENCE_CYCLES_BEFORE_MERGE
+                                            );
+                                        }
                                     }
                                 } else {
                                     deferral_active = false; // any normal full/delta apply clears deferral
+                                    if response.current_version >= last_synced_version {
+                                        divergent_cycles = 0;
+                                        divergent_leader = None;
+                                        force_full_resync = false;
+                                    }
                                 }
 
                                 // Update our version to the leader's version, and publish it
@@ -3001,5 +3472,75 @@ mod full_sync_tests {
         let leader: HashSet<PathBuf> = [p("/a"), p("/b")].into_iter().collect();
         let local = [p("/a"), p("/b")];
         assert!(full_sync_stale_paths(&leader, local.iter()).is_empty());
+    }
+}
+
+#[cfg(test)]
+mod merge_tests {
+    use super::{merge_entry_pushable, merge_push_order};
+    use std::path::PathBuf;
+    use std::time::SystemTime;
+    use wolfdisk::storage::{ChunkRef, FileEntry};
+
+    fn entry(is_dir: bool, chunks: Vec<ChunkRef>, symlink: Option<&str>) -> FileEntry {
+        FileEntry {
+            size: chunks.iter().map(|c| c.size as u64).sum(),
+            is_dir,
+            permissions: 0o644,
+            uid: 0,
+            gid: 0,
+            created: SystemTime::now(),
+            modified: SystemTime::now(),
+            accessed: SystemTime::now(),
+            chunks,
+            symlink_target: symlink.map(String::from),
+        }
+    }
+
+    fn chunk(id: u8) -> ChunkRef {
+        ChunkRef { hash: [id; 32], offset: 0, size: 4 }
+    }
+
+    #[test]
+    fn push_order_is_dirs_first_parents_before_children() {
+        let input = vec![
+            (PathBuf::from("/a/b/file2"), entry(false, vec![], None)),
+            (PathBuf::from("/a/b/c"), entry(true, vec![], None)),
+            (PathBuf::from("/a"), entry(true, vec![], None)),
+            (PathBuf::from("/file1"), entry(false, vec![], None)),
+            (PathBuf::from("/a/b"), entry(true, vec![], None)),
+        ];
+        let ordered: Vec<PathBuf> = merge_push_order(input).into_iter().map(|(p, _)| p).collect();
+        assert_eq!(
+            ordered,
+            vec![
+                PathBuf::from("/a"),       // dirs first, shallowest first
+                PathBuf::from("/a/b"),
+                PathBuf::from("/a/b/c"),
+                PathBuf::from("/file1"),   // then files, shallowest first
+                PathBuf::from("/a/b/file2"),
+            ]
+        );
+    }
+
+    #[test]
+    fn pushable_requires_every_chunk_readable() {
+        let have_all = |_h: &[u8; 32]| true;
+        let have_none = |_h: &[u8; 32]| false;
+        let have_only_1 = |h: &[u8; 32]| h == &[1u8; 32];
+
+        // Dirs and symlinks carry no chunks — always pushable.
+        assert!(merge_entry_pushable(&entry(true, vec![], None), &have_none));
+        assert!(merge_entry_pushable(&entry(false, vec![], Some("/t")), &have_none));
+
+        // A file is pushable only when EVERY chunk is locally readable —
+        // a partial push would install a corrupt copy cluster-wide.
+        let file = entry(false, vec![chunk(1), chunk(2)], None);
+        assert!(merge_entry_pushable(&file, &have_all));
+        assert!(!merge_entry_pushable(&file, &have_only_1));
+        assert!(!merge_entry_pushable(&file, &have_none));
+
+        // Chunkless (empty) files are trivially pushable.
+        assert!(merge_entry_pushable(&entry(false, vec![], None), &have_none));
     }
 }
