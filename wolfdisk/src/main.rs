@@ -166,6 +166,18 @@ fn full_sync_may_delete(leader_version: u64, our_version: u64, leader_entry_coun
 /// restart's index reload, which the deferral path observes "can take minutes".
 const DIVERGENCE_CYCLES_BEFORE_MERGE: u32 = 30;
 
+/// Chunk-GC cadence. Chunks are content-addressed and deduplicated, so file
+/// operations only drop REFERENCES; this sweep (storage::gc) is the sole
+/// deleter of chunk files. 15 minutes keeps space reclaim timely without
+/// index-scan churn.
+const CHUNK_GC_INTERVAL_SECS: u64 = 900;
+/// Minimum age before an unreferenced chunk file may be swept. Covers the gap
+/// between a chunk being written/streamed and its index entry (or multipart
+/// completion) landing — locally and on replicating peers. One hour is far
+/// beyond any write→index latency in the system; the cost of being generous
+/// is only delayed space reclaim.
+const CHUNK_GC_GRACE_SECS: u64 = 3600;
+
 /// Bounds on one cycle's merge-up work so a huge divergence reconciles
 /// incrementally instead of stalling the re-sync loop for hours. Once either
 /// limit is crossed no NEW file is started (a single oversized file still
@@ -616,19 +628,19 @@ fn main() {
                             let mut inode_tbl = inode_table_for_handler.write().unwrap();
                             let mut index = file_index_for_handler.write().unwrap();
 
-                            // Track chunks to delete after dropping locks
-                            let mut chunks_to_delete = Vec::new();
-
+                            // Chunk files are NOT deleted here. Chunks are
+                            // content-addressed and deduplicated across files,
+                            // so deleting them at operation time destroyed every
+                            // identical twin's data. Dropping the index reference
+                            // is enough — the periodic GC sweep (storage::gc)
+                            // reclaims unreferenced chunk files safely.
                             match update.operation {
                                 IndexOperation::Delete { path } => {
                                     debug!("Replicating delete: {}", path);
                                     let del_path = std::path::PathBuf::from(&path);
 
                                     // Update index
-                                    if let Some(entry) = index.remove(&del_path) {
-                                        if !is_client_role {
-                                            chunks_to_delete = entry.chunks;
-                                        }
+                                    if index.remove(&del_path).is_some() {
                                         debug!("Deleted file from follower: {}", path);
                                     }
 
@@ -659,7 +671,10 @@ fn main() {
 
                                     // Update index. is_dir/symlink derived from the
                                     // op: a symlink_target marks a symlink.
-                                    let old_entry = index.insert(
+                                    // The replaced entry's chunks (if any) are
+                                    // left for the GC sweep — see the note at
+                                    // the top of this handler.
+                                    let _old_entry = index.insert(
                                         file_path.clone(),
                                         FileEntry {
                                             size,
@@ -675,16 +690,6 @@ fn main() {
                                             symlink_target,
                                         },
                                     );
-
-                                    // If we overwrote an existing file, clean up its chunks
-                                    if let Some(entry) = old_entry {
-                                        if !entry.is_dir && !is_client_role {
-                                            // We can't delete immediately if we are holding locks?
-                                            // Actually we can, chunk_store doesn't use these locks.
-                                            // But for safety/consistency we'll collect them to delete later.
-                                            chunks_to_delete.extend(entry.chunks);
-                                        }
-                                    }
 
                                     // Update inode table if needed (atomic with index update)
                                     if inode_tbl.get_inode(&file_path).is_none() {
@@ -729,11 +734,9 @@ fn main() {
                                     let from = std::path::PathBuf::from(&from_path);
                                     let to = std::path::PathBuf::from(&to_path);
 
-                                    // Handle overwrite at destination
-                                    if let Some(target_entry) = index.remove(&to) {
-                                        if !target_entry.is_dir && !is_client_role {
-                                            chunks_to_delete.extend(target_entry.chunks);
-                                        }
+                                    // Handle overwrite at destination (chunks
+                                    // left for the GC sweep).
+                                    if index.remove(&to).is_some() {
                                         // Also remove from inode table
                                         // Note: inode_table.remove_path deletes by path, effectively removing the target inode mapping.
                                         inode_tbl.remove_path(&to);
@@ -753,15 +756,6 @@ fn main() {
                                 }
                             }
 
-                            // Drop locks before doing IO (deleting chunks)
-                            drop(index);
-                            drop(inode_tbl);
-
-                            // Delete chunks if any
-                            for chunk in chunks_to_delete {
-                                let _ = chunk_store_for_handler.delete(&chunk.hash);
-                            }
-
                             None // No response needed for replication
                         }
                         Message::FileSync(sync) => {
@@ -775,20 +769,12 @@ fn main() {
                                 let mut inode_tbl = inode_table_for_handler.write().unwrap();
                                 let mut index = file_index_for_handler.write().unwrap();
 
-                                let chunks_to_delete = if let Some(entry) = index.remove(&path) {
+                                // Drop the index reference only; the deduped
+                                // chunk files are reclaimed by the GC sweep
+                                // (storage::gc) once nothing references them.
+                                if index.remove(&path).is_some() {
                                     debug!("Deleted file from follower: {}", sync.path);
                                     inode_tbl.remove_path(&path);
-                                    entry.chunks
-                                } else {
-                                    Vec::new()
-                                };
-
-                                drop(index);
-                                drop(inode_tbl);
-
-                                // Delete chunks
-                                for chunk in chunks_to_delete {
-                                    let _ = chunk_store_for_handler.delete(&chunk.hash);
                                 }
                                 return None;
                             }
@@ -1094,11 +1080,10 @@ fn main() {
                             let mut inode_tbl = inode_table_for_handler.write().unwrap();
                             let mut index = file_index_for_handler.write().unwrap();
 
-                            if let Some(entry) = index.remove(&path) {
-                                // Delete chunks (can do this after dropping locks, or here?)
-                                // For now collect them to delete later or just delete (fast enough usually)
-                                // Or better: drop locks then delete. But we need index lock to remove entry.
-                                let chunks_to_delete = entry.chunks;
+                            if index.remove(&path).is_some() {
+                                // The entry's chunk files stay on disk — they
+                                // may be deduplicated into other files, so only
+                                // the GC sweep (storage::gc) may remove them.
 
                                 // Remove from inode table
                                 inode_tbl.remove_path(&path);
@@ -1119,14 +1104,9 @@ fn main() {
                                     symlink_target: None,
                                 };
 
-                                // Drop locks before IO
+                                // Drop locks before the broadcast queueing below
                                 drop(index);
                                 drop(inode_tbl);
-
-                                // Delete chunks
-                                for chunk in chunks_to_delete {
-                                    let _ = chunk_store_for_handler.delete(&chunk.hash);
-                                }
 
                                 cluster_for_handler.record_deletion(path.clone());
                                 broadcast_queue_for_handler
@@ -1319,19 +1299,12 @@ fn main() {
                                     }
                                 }
 
-                                // Delete the overwritten target's chunks — but NEVER a
-                                // hash the SOURCE entry also references. Chunks are
-                                // content-addressed and shared across identical content;
-                                // renaming a file over an identical copy used to delete
-                                // the very chunks the surviving entry points at, leaving
-                                // it unreadable.
-                                let src_hashes: std::collections::HashSet<[u8; 32]> =
-                                    entry.chunks.iter().map(|c| c.hash).collect();
-                                for chunk in &target_entry.chunks {
-                                    if !src_hashes.contains(&chunk.hash) {
-                                        let _ = chunk_store_for_handler.delete(&chunk.hash);
-                                    }
-                                }
+                                // The overwritten target's chunks are NOT deleted
+                                // here: chunks are content-addressed and shared
+                                // across identical content, so any synchronous
+                                // delete can destroy another file's data. The GC
+                                // sweep (storage::gc) reclaims them once truly
+                                // unreferenced.
 
                                 // Remove target from index/inode
                                 index.remove(&to_path);
@@ -1470,10 +1443,10 @@ fn main() {
                                 // Handle truncation
                                 if let Some(new_size) = setattr_req.size {
                                     if new_size == 0 {
-                                        // Full truncation: delete all chunks
-                                        for chunk in &entry.chunks {
-                                            let _ = chunk_store_for_handler.delete(&chunk.hash);
-                                        }
+                                        // Full truncation: drop the chunk refs only.
+                                        // The chunk files may be deduplicated into
+                                        // other files — the GC sweep (storage::gc)
+                                        // reclaims them once truly unreferenced.
                                         entry.chunks.clear();
                                         entry.size = 0;
                                     } else if new_size < entry.size {
@@ -3113,6 +3086,57 @@ fn main() {
                 }
             });
 
+            // In-flight S3 multipart uploads. Created HERE (not inside the S3
+            // server) because the chunk-GC thread below must count in-flight
+            // parts as references — their chunks are not in the file index
+            // until CompleteMultipartUpload, and a long upload can outlive the
+            // GC grace window. Empty forever when S3 is disabled.
+            let s3_multipart: std::sync::Arc<
+                std::sync::RwLock<
+                    std::collections::HashMap<String, wolfdisk::s3::meta::MultipartUpload>,
+                >,
+            > = std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new()));
+
+            // Chunk garbage collector (storage::gc): the ONLY place chunk
+            // files are ever deleted. Every delete/truncate/rename path now
+            // just drops index references; this sweep reclaims chunk files
+            // that nothing references any more. See the module docs for the
+            // grace-window and dedup-interlock safety argument.
+            {
+                let gc_chunk_store = chunk_store.clone();
+                let gc_file_index = file_index.clone();
+                let gc_multipart = s3_multipart.clone();
+                std::thread::spawn(move || loop {
+                    std::thread::sleep(std::time::Duration::from_secs(CHUNK_GC_INTERVAL_SECS));
+                    let referenced = {
+                        let extra: Vec<[u8; 32]> = gc_multipart
+                            .read()
+                            .unwrap()
+                            .values()
+                            .flat_map(|u| {
+                                u.parts
+                                    .values()
+                                    .flat_map(|p| p.chunks.iter().map(|c| c.hash))
+                                    .collect::<Vec<_>>()
+                            })
+                            .collect();
+                        let index = gc_file_index.read().unwrap();
+                        wolfdisk::storage::gc::referenced_chunk_hashes(&index, extra)
+                    };
+                    let stats = wolfdisk::storage::gc::collect_garbage(
+                        &gc_chunk_store,
+                        &referenced,
+                        std::time::Duration::from_secs(CHUNK_GC_GRACE_SECS),
+                    );
+                    if stats.removed > 0 {
+                        info!(
+                            "Chunk GC: reclaimed {} chunks ({} bytes); {} referenced, {} in grace window",
+                            stats.removed, stats.reclaimed_bytes, stats.referenced, stats.young
+                        );
+                    }
+                });
+            }
+
             // Start S3-compatible API server if enabled
             if config.s3.enabled {
                 let s3_file_index = file_index.clone();
@@ -3124,6 +3148,7 @@ fn main() {
                 let s3_region = config.s3.region.clone();
                 let s3_meta_path = wolfdisk::s3::meta::meta_path(&config.index_dir());
                 let s3_buckets = config.s3.buckets.clone();
+                let s3_multipart_for_server = s3_multipart.clone();
 
                 std::thread::spawn(move || {
                     let rt = tokio::runtime::Builder::new_multi_thread()
@@ -3143,6 +3168,7 @@ fn main() {
                             s3_region,
                             s3_meta_path,
                             s3_buckets,
+                            s3_multipart_for_server,
                         );
 
                         if let Err(e) = server.run().await {

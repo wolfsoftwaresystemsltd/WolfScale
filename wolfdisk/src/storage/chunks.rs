@@ -71,6 +71,13 @@ pub struct ChunkStore {
 
     /// SSD-tier bookkeeping (LRU, per-chunk size, dirty set, total bytes).
     cache_state: Mutex<CacheState>,
+
+    /// Interlock between the GC sweep and deduplicating writes. A write that
+    /// dedups against an existing chunk bumps its mtime under this lock; the
+    /// GC re-checks age under the same lock immediately before unlinking. This
+    /// closes the race where a write dedups against a grace-expired orphan the
+    /// instant the sweep removes it (see `storage::gc`).
+    gc_lock: Mutex<()>,
 }
 
 /// Simple LRU-style in-memory read cache for chunk data.
@@ -272,6 +279,7 @@ impl ChunkStore {
             chunk_size,
             read_cache: Mutex::new(ReadCache::new(DEFAULT_CACHE_CAPACITY)),
             cache_state: Mutex::new(CacheState::default()),
+            gc_lock: Mutex::new(()),
         })
     }
 
@@ -317,7 +325,20 @@ impl ChunkStore {
     /// Store a chunk with a known hash (replication path, and the engine of `store`).
     pub fn store_with_hash(&self, hash: &[u8; 32], data: &[u8]) -> Result<()> {
         // Deduplication: already durable somewhere → nothing to do.
-        if self.exists_anywhere(hash) {
+        // The existence check + mtime bump run under the GC interlock so the
+        // sweep can't unlink this chunk between us observing it and the caller
+        // inserting an index reference to it; the bump marks it young, and the
+        // sweep's final under-lock recheck honours that (see `storage::gc`).
+        let deduplicated = {
+            let _gc = self.gc_lock.lock().unwrap();
+            if self.exists_anywhere(hash) {
+                self.touch_chunk(hash);
+                true
+            } else {
+                false
+            }
+        };
+        if deduplicated {
             debug!("Chunk {} already exists (deduplicated)", hex::encode(hash));
             // Keep it warm in memory for an imminent read.
             if let Ok(mut c) = self.read_cache.lock() {
@@ -431,6 +452,138 @@ impl ChunkStore {
     /// Check if a chunk exists in any durable tier.
     pub fn exists(&self, hash: &[u8; 32]) -> bool {
         self.exists_anywhere(hash)
+    }
+
+    /// Bump the mtime of every on-disk copy of a chunk (dedup hit → "recently
+    /// referenced", which the GC grace window honours). Best-effort: a failed
+    /// touch only weakens sweep protection for this chunk, it can't corrupt.
+    fn touch_chunk(&self, hash: &[u8; 32]) {
+        let now = std::time::SystemTime::now();
+        let mut paths = vec![self.base_path(hash)];
+        if let Some(cp) = self.cache_path(hash) {
+            paths.push(cp);
+        }
+        for p in paths {
+            if p.exists() {
+                match File::options().append(true).open(&p).and_then(|f| f.set_modified(now)) {
+                    Ok(()) => {}
+                    Err(e) => warn!("Failed to touch chunk {}: {}", p.display(), e),
+                }
+            }
+        }
+    }
+
+    /// Enumerate every stored chunk across both tiers, deduplicated by hash,
+    /// reporting the NEWEST mtime and largest size seen for each. Skips the
+    /// `write_atomic` temp files (dot-prefixed) and anything that doesn't
+    /// parse as a sharded hash path (`<hex[0:2]>/<hex[2:]>`).
+    pub fn for_each_stored_chunk(&self, mut f: impl FnMut(&[u8; 32], std::time::SystemTime, u64)) {
+        let mut seen: std::collections::HashMap<[u8; 32], (std::time::SystemTime, u64)> =
+            std::collections::HashMap::new();
+        let mut walk = |root: &Path| {
+            let shards = match fs::read_dir(root) {
+                Ok(d) => d,
+                Err(_) => return,
+            };
+            for shard in shards.flatten() {
+                let prefix = shard.file_name();
+                let prefix = match prefix.to_str() {
+                    Some(s) if s.len() == 2 && s.chars().all(|c| c.is_ascii_hexdigit()) => {
+                        s.to_string()
+                    }
+                    _ => continue,
+                };
+                let files = match fs::read_dir(shard.path()) {
+                    Ok(d) => d,
+                    Err(_) => continue,
+                };
+                for file in files.flatten() {
+                    let name = file.file_name();
+                    let name = match name.to_str() {
+                        Some(s) if !s.starts_with('.') => s,
+                        _ => continue, // in-flight write_atomic temp file
+                    };
+                    let hex_full = format!("{}{}", prefix, name);
+                    let hash: [u8; 32] = match hex::decode(&hex_full).ok().and_then(|b| b.try_into().ok()) {
+                        Some(h) => h,
+                        None => continue, // not a chunk file
+                    };
+                    let meta = match file.metadata() {
+                        Ok(m) if m.is_file() => m,
+                        _ => continue,
+                    };
+                    let mtime = meta.modified().unwrap_or(std::time::UNIX_EPOCH);
+                    let size = meta.len();
+                    let slot = seen.entry(hash).or_insert((mtime, size));
+                    if mtime > slot.0 {
+                        slot.0 = mtime;
+                    }
+                    if size > slot.1 {
+                        slot.1 = size;
+                    }
+                }
+            }
+        };
+        walk(&self.base_dir);
+        if let Some(c) = &self.cache_dir {
+            walk(c);
+        }
+        for (hash, (mtime, size)) in seen {
+            f(&hash, mtime, size);
+        }
+    }
+
+    /// GC-only deletion: re-check the chunk's age under the dedup interlock and
+    /// unlink it from every tier only if it is STILL older than `grace` (a
+    /// dedup hit since the scan bumps the mtime — see `store_with_hash`).
+    /// Returns the reclaimed byte count, or None if the chunk was kept
+    /// (touched since the scan) or already gone.
+    pub fn gc_delete_if_still_old(&self, hash: &[u8; 32], grace: std::time::Duration) -> Option<u64> {
+        let _gc = self.gc_lock.lock().unwrap();
+        let now = std::time::SystemTime::now();
+        let mut newest: Option<std::time::SystemTime> = None;
+        let mut size: u64 = 0;
+        let mut paths = vec![self.base_path(hash)];
+        if let Some(cp) = self.cache_path(hash) {
+            paths.push(cp);
+        }
+        for p in &paths {
+            if let Ok(meta) = fs::metadata(p) {
+                let mtime = meta.modified().unwrap_or(std::time::UNIX_EPOCH);
+                if newest.map(|n| mtime > n).unwrap_or(true) {
+                    newest = Some(mtime);
+                }
+                if meta.len() > size {
+                    size = meta.len();
+                }
+            }
+        }
+        let mtime = newest?; // already gone from every tier
+        let old_enough = matches!(now.duration_since(mtime), Ok(age) if age >= grace);
+        if !old_enough {
+            return None; // deduped-against (or otherwise refreshed) since the scan
+        }
+        let _ = self.delete(hash);
+        Some(size)
+    }
+
+    /// Test hook: back-date a chunk's mtime so grace-window behaviour can be
+    /// exercised without sleeping.
+    #[cfg(test)]
+    pub fn test_backdate_chunk(&self, hash: &[u8; 32], by: std::time::Duration) {
+        let then = std::time::SystemTime::now() - by;
+        let mut paths = vec![self.base_path(hash)];
+        if let Some(cp) = self.cache_path(hash) {
+            paths.push(cp);
+        }
+        for p in paths {
+            if p.exists() {
+                let _ = File::options()
+                    .append(true)
+                    .open(&p)
+                    .and_then(|f| f.set_modified(then));
+            }
+        }
     }
 
     // ── Write-back: flush + crash recovery + eviction ──────────────────────────

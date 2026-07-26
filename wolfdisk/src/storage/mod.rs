@@ -1,6 +1,7 @@
 //! Storage module for chunks and file index
 
 pub mod chunks;
+pub mod gc;
 pub mod index;
 pub mod inode;
 
