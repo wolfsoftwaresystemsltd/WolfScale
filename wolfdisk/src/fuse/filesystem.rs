@@ -1210,9 +1210,8 @@ impl Filesystem for WolfDiskFS {
             if let Some(entry) = file_index.get_mut(&path) {
                 if let Some(new_size) = size {
                     if new_size == 0 {
-                        for chunk in &entry.chunks {
-                            let _ = self.chunk_store.delete(&chunk.hash);
-                        }
+                        // Refs only — deduped chunk files are reclaimed by
+                        // the GC sweep (storage::gc), never deleted inline.
                         entry.chunks.clear();
                     }
                     entry.size = new_size;
@@ -1260,10 +1259,9 @@ impl Filesystem for WolfDiskFS {
         // Handle size change (truncation)
         if let Some(new_size) = size {
             if new_size == 0 {
-                // Full truncation: delete all chunks
-                for chunk in &entry.chunks {
-                    let _ = self.chunk_store.delete(&chunk.hash);
-                }
+                // Full truncation: drop the chunk refs only. The chunk files
+                // may be deduplicated into other files — the GC sweep
+                // (storage::gc) reclaims them once truly unreferenced.
                 entry.chunks.clear();
                 entry.size = 0;
             } else if new_size < entry.size {
@@ -2012,14 +2010,11 @@ impl Filesystem for WolfDiskFS {
             info!("Forwarding unlink to leader: {:?}", file_path);
             match self.forward_unlink_to_leader(&file_path.to_string_lossy()) {
                 Ok(()) => {
-                    // Remove local entry
+                    // Remove local entry (chunk files left for the GC sweep —
+                    // they may be deduplicated into other files)
                     let mut inode_table = self.inode_table.write().unwrap();
                     let mut file_index = self.file_index.write().unwrap();
-                    if let Some(entry) = file_index.remove(&file_path) {
-                        for chunk in &entry.chunks {
-                            let _ = self.chunk_store.delete(&chunk.hash);
-                        }
-                    }
+                    file_index.remove(&file_path);
                     inode_table.remove_path(&file_path);
                     reply.ok();
                 }
@@ -2055,13 +2050,10 @@ impl Filesystem for WolfDiskFS {
             self.dirty_inodes.write().unwrap().remove(&ino);
         }
 
-        // Remove from index and inode table
-        if let Some(entry) = file_index.remove(&file_path) {
-            // Delete chunks
-            for chunk in &entry.chunks {
-                let _ = self.chunk_store.delete(&chunk.hash);
-            }
-        }
+        // Remove from index and inode table. Chunk files are left in place —
+        // they may be deduplicated into other files; the GC sweep
+        // (storage::gc) reclaims them once truly unreferenced.
+        file_index.remove(&file_path);
         inode_table.remove_path(&file_path);
 
         // Drop locks before broadcast
@@ -2302,10 +2294,9 @@ impl Filesystem for WolfDiskFS {
                 }
             }
 
-            // Delete target chunks
-            for chunk in &target_entry.chunks {
-                let _ = self.chunk_store.delete(&chunk.hash);
-            }
+            // The overwritten target's chunk files are left for the GC sweep
+            // — they may be deduplicated into other files (including the file
+            // being renamed over them, if the contents are identical).
 
             // Remove target from inode table
             if let Some(target_ino) = inode_table.get_inode(&to_path) {

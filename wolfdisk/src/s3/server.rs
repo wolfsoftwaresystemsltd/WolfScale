@@ -76,6 +76,7 @@ impl S3Server {
     /// Create a new S3 server. `meta_path` is where S3 object metadata is
     /// persisted (typically `<data_dir>/index/s3_meta.json`).
     #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         bind_addr: String,
         file_index: Arc<RwLock<FileIndex>>,
@@ -86,6 +87,10 @@ impl S3Server {
         region: String,
         meta_path: PathBuf,
         bucket_mappings: HashMap<String, String>,
+        // Shared with the chunk-GC thread so in-flight multipart parts count
+        // as references during the sweep (their chunks are not in the file
+        // index until CompleteMultipartUpload).
+        multipart: Arc<RwLock<HashMap<String, MultipartUpload>>>,
     ) -> Self {
         let meta = S3MetaStore::load(&meta_path);
         // An empty region in the config falls back to the historical default so
@@ -102,7 +107,7 @@ impl S3Server {
             next_inode,
             credentials,
             region,
-            multipart: Arc::new(RwLock::new(HashMap::new())),
+            multipart,
             meta: Arc::new(RwLock::new(meta)),
             meta_path,
             bucket_mappings: Arc::new(bucket_mappings),
@@ -992,10 +997,9 @@ async fn upload_part(
             )
             .map(|p| p.chunks)
     };
-    // Free chunks of a replaced part (refcount-safe).
-    if let Some(old) = old_chunks {
-        free_chunks_unreferenced(&state, &old);
-    }
+    // A replaced part's chunk files are left for the GC sweep (storage::gc)
+    // — they may be deduplicated into other parts/objects.
+    let _ = old_chunks;
 
     Response::builder()
         .status(StatusCode::OK)
@@ -1134,10 +1138,9 @@ async fn complete_multipart(
 async fn abort_multipart(state: S3State, upload_id: &str) -> Response {
     let removed = state.multipart.write().unwrap().remove(upload_id);
     match removed {
-        Some(upload) => {
-            for part in upload.parts.values() {
-                free_chunks_unreferenced(&state, &part.chunks);
-            }
+        Some(_upload) => {
+            // The aborted parts' chunk files are left for the GC sweep
+            // (storage::gc); dropping the upload entry removes the reference.
             (
                 StatusCode::NO_CONTENT,
                 [(header::CONTENT_TYPE, "application/xml")],
@@ -1232,11 +1235,9 @@ fn store_object(state: &S3State, object_path: &std::path::Path, chunks: Vec<Chun
         *next_ino += 1;
         inode_tbl.insert(ino, object_path.to_path_buf());
     }
-    if let Some(old) = old {
-        if !old.is_dir {
-            free_chunks_with_index(state, &index, &old.chunks);
-        }
-    }
+    // A replaced object's chunk files are left for the GC sweep
+    // (storage::gc) — they may be deduplicated into other objects.
+    let _ = old;
 }
 
 /// Remove an object entry (idempotent), freeing orphaned chunks. Returns
@@ -1247,7 +1248,7 @@ fn remove_object(state: &S3State, object_path: &std::path::Path) -> Result<(), (
     match index.remove(object_path) {
         Some(entry) if !entry.is_dir => {
             inode_tbl.remove_path(&object_path.to_path_buf());
-            free_chunks_with_index(state, &index, &entry.chunks);
+            // Chunk files are left for the GC sweep (storage::gc).
             Ok(())
         }
         Some(entry) => {
@@ -1258,37 +1259,11 @@ fn remove_object(state: &S3State, object_path: &std::path::Path) -> Result<(), (
     }
 }
 
-/// Delete each chunk not referenced by any remaining index entry OR any
-/// in-flight multipart part. Takes an already-held index reference (lock order:
-/// file_index before multipart). Reference-counted so deduplicated chunks shared
-/// by other objects/parts are never deleted out from under them.
-fn free_chunks_with_index(state: &S3State, index: &FileIndex, chunks: &[ChunkRef]) {
-    let uploads = state.multipart.read().unwrap();
-    let mut seen: HashSet<[u8; 32]> = HashSet::new();
-    for c in chunks {
-        if !seen.insert(c.hash) {
-            continue;
-        }
-        let in_index = index
-            .iter()
-            .any(|(_, e)| e.chunks.iter().any(|x| x.hash == c.hash));
-        let in_parts = uploads.values().any(|u| {
-            u.parts
-                .values()
-                .any(|p| p.chunks.iter().any(|x| x.hash == c.hash))
-        });
-        if !in_index && !in_parts {
-            let _ = state.chunk_store.delete(&c.hash);
-        }
-    }
-}
-
-/// Same as `free_chunks_with_index` but acquires the index read lock itself
-/// (used when no index guard is held, e.g. multipart part replacement/abort).
-fn free_chunks_unreferenced(state: &S3State, chunks: &[ChunkRef]) {
-    let index = state.file_index.read().unwrap();
-    free_chunks_with_index(state, &index, chunks);
-}
+// NOTE: the former `free_chunks_with_index` / `free_chunks_unreferenced`
+// inline reclaim was removed: ALL chunk-file deletion now happens exclusively
+// in the periodic GC sweep (storage::gc), which sees both the file index and
+// this server's in-flight multipart parts (the `multipart` map is shared with
+// the GC thread via `S3Server::new`). One deleter, one set of invariants.
 
 fn set_object_meta(state: &S3State, bucket: &str, key: &str, m: S3ObjectMeta) {
     {
