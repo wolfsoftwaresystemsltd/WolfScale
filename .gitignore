@@ -30,7 +30,17 @@ logs/
 .env
 .env.local
 
+# SMTP credentials
+web/includes/smtp-config.php
+
 
 # SQL dump files
 *.sql
 wolfdisk/target/
+
+# Licensing portal secrets & runtime state — the license-signing PRIVATE KEY
+# lives in web/config.php ("NEVER leaves this server"); this repo is PUBLIC.
+web/config.php
+web/data/
+web/licenses/
+web/WolfStack — Enterprise Pitch.pdf
