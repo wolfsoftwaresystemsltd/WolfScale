@@ -22,6 +22,32 @@ pub fn detect_external_interface() -> Option<String> {
 }
 
 /// Enable gateway mode: IP forwarding + NAT masquerading
+/// Add an iptables rule unless it is already present.
+///
+/// These rules used to be appended unconditionally, so every WolfNet restart
+/// left another identical copy behind — and `disable_gateway` only ever removes
+/// one of each. A gateway node that had been upgraded a dozen times carried a
+/// dozen stale MASQUERADE and FORWARD rules. `-C` is the check form of the same
+/// rule: present means there is nothing to do.
+fn ensure_rule(args: &[&str]) -> bool {
+    let check: Vec<&str> = args.iter()
+        .map(|a| if *a == "-A" { "-C" } else { *a })
+        .collect();
+    let already_present = std::process::Command::new("iptables")
+        .args(&check)
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
+    if already_present {
+        return true;
+    }
+    std::process::Command::new("iptables")
+        .args(args)
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
 pub fn enable_gateway(wolfnet_interface: &str, subnet: &str) -> Result<(), Box<dyn std::error::Error>> {
     let ext_iface = detect_external_interface()
         .ok_or("Could not detect external network interface")?;
@@ -43,26 +69,17 @@ pub fn enable_gateway(wolfnet_interface: &str, subnet: &str) -> Result<(), Box<d
 
 
     // Add iptables MASQUERADE rule for WolfNet traffic going to the internet
-    let status = std::process::Command::new("iptables")
-        .args(["-t", "nat", "-A", "POSTROUTING", "-s", subnet, "-o", &ext_iface, "-j", "MASQUERADE"])
-        .status()?;
-    if !status.success() {
+    if !ensure_rule(&["-t", "nat", "-A", "POSTROUTING", "-s", subnet, "-o", &ext_iface, "-j", "MASQUERADE"]) {
         warn!("iptables MASQUERADE rule may have failed");
     }
 
     // Allow forwarding from wolfnet interface to external
-    let status = std::process::Command::new("iptables")
-        .args(["-A", "FORWARD", "-i", wolfnet_interface, "-o", &ext_iface, "-j", "ACCEPT"])
-        .status()?;
-    if !status.success() {
+    if !ensure_rule(&["-A", "FORWARD", "-i", wolfnet_interface, "-o", &ext_iface, "-j", "ACCEPT"]) {
         warn!("iptables FORWARD rule (out) may have failed");
     }
 
     // Allow established/related traffic back
-    let status = std::process::Command::new("iptables")
-        .args(["-A", "FORWARD", "-i", &ext_iface, "-o", wolfnet_interface, "-m", "state", "--state", "ESTABLISHED,RELATED", "-j", "ACCEPT"])
-        .status()?;
-    if !status.success() {
+    if !ensure_rule(&["-A", "FORWARD", "-i", &ext_iface, "-o", wolfnet_interface, "-m", "state", "--state", "ESTABLISHED,RELATED", "-j", "ACCEPT"]) {
         warn!("iptables FORWARD rule (in) may have failed");
     }
 
