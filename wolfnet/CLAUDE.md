@@ -2,6 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## THIS DIRECTORY IS A MIRROR — releases come from the WolfNet repo
+
+The shipping source of WolfNet is **`github.com/wolfsoftwaresystemsltd/WolfNet`**,
+not this directory. `wolfstack/setup.sh` clones that repo to build from source
+and downloads its release binaries; nothing consumes the copy here.
+
+This copy lags — as of 2026-07-27 it is at 0.5.27 while upstream is 0.5.30, so
+`src/main.rs`, `src/peer.rs` and `src/tun.rs` differ (IPv6 subnet routing, peer
+dedup). **A fix committed only here reaches no user**, and the version numbers
+are not interchangeable: 0.5.28 here would collide with a real upstream release
+that contains entirely different code.
+
+To change WolfNet: commit to the WolfNet repo. Pushing to its `main` with
+`Cargo.toml`/`src/**` touched builds and publishes the release automatically.
+
 ## Project Overview
 
 WolfNet is a secure private mesh networking daemon written in Rust. It creates encrypted tunnels between machines using TUN interfaces, X25519 key exchange, and ChaCha20-Poly1305 encryption. Peers discover each other via LAN broadcast and PEX (Peer Exchange) gossip protocol.
