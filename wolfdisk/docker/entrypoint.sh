@@ -11,6 +11,24 @@ MOUNT="${WOLFDISK_MOUNT:-/mnt/wolfdisk}"
 
 mkdir -p "$(dirname "$CONFIG")" "$MOUNT" "$DATA_DIR"
 
+# Chunk-store placement guard: if DATA_DIR sits on the container's own
+# overlay filesystem, no volume/bind is mapped there — chunks would land
+# inside the container image (lost on re-create; on Unraid this silently
+# fills the size-limited docker image). Longest-prefix mount lookup from
+# /proc/mounts, same rule the kernel uses.
+data_fstype=$(awk -v dir="$DATA_DIR" '
+    # "/" prefixes every absolute path but "//" prefixes none — handle root
+    # explicitly or the overlay-root case (the one this guard exists for)
+    # never matches.
+    { if (dir == $2 || $2 == "/" || index(dir, $2 "/") == 1) { if (length($2) > best) { best = length($2); fs = $3 } } }
+    END { print fs }' /proc/mounts)
+if [ "$data_fstype" = "overlay" ]; then
+    echo "⚠ WARNING: $DATA_DIR is on the container's overlay filesystem — no volume is mapped there."
+    echo "  Chunk data will be LOST when this container is re-created."
+    echo "  Map it to persistent storage, e.g.  -v wolfdisk-data:/var/lib/wolfdisk"
+    echo "  (Unraid: -v /mnt/user/appdata/wolfdisk/data:/var/lib/wolfdisk — see the image docs)"
+fi
+
 if [ ! -c /dev/fuse ]; then
     echo "✗ /dev/fuse not found inside the container."
     echo "  Run with:  --device /dev/fuse:/dev/fuse  (and usually --privileged or --cap-add SYS_ADMIN)"

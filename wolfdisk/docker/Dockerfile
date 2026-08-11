@@ -14,6 +14,17 @@
 #     -e WOLFDISK_ROLE=client \
 #     -e WOLFDISK_PEERS=<leader_ip:8650> \
 #     ghcr.io/wolfsoftwaresystemsltd/wolfdisk:latest
+#
+# Unraid: bind the chunk store (/var/lib/wolfdisk) onto the ARRAY, not a
+# named volume — named volumes live inside Unraid's size-limited docker
+# image and vanish with it. The appdata share is the natural home:
+#     -v /mnt/user/appdata/wolfdisk/config:/etc/wolfdisk \
+#     -v /mnt/user/appdata/wolfdisk/data:/var/lib/wolfdisk \
+# For heavy write loads a direct disk path (e.g. /mnt/disk1/wolfdisk or a
+# cache-exclusive share) skips Unraid's shfs FUSE layer and is faster.
+# Keep the FUSE mountpoint (-v /mnt/wolfdisk:...) OUTSIDE /mnt/user — it's
+# a mountpoint, not data; nothing is stored there once WolfDisk mounts
+# over it. Do NOT point WOLFDISK_DATA_DIR at /boot (the flash device).
 
 FROM debian:bookworm-slim
 

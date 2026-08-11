@@ -93,6 +93,41 @@ sudo systemctl start wolfdisk
 wolfdisk status
 ```
 
+## Docker
+
+```bash
+docker run -d --name wolfdisk --network host \
+  --cap-add SYS_ADMIN --device /dev/fuse:/dev/fuse \
+  --security-opt apparmor:unconfined \
+  -v wolfdisk-config:/etc/wolfdisk \
+  -v wolfdisk-data:/var/lib/wolfdisk \
+  -v /mnt/wolfdisk:/mnt/wolfdisk:rshared \
+  -e WOLFDISK_ROLE=client \
+  -e WOLFDISK_PEERS=<leader_ip:8650> \
+  ghcr.io/wolfsoftwaresystemsltd/wolfdisk:latest
+```
+
+`/var/lib/wolfdisk` is the chunk store — every byte the cluster asks this
+node to hold lives there. Map it somewhere durable; the entrypoint warns at
+startup if it's left on the container's own overlay filesystem.
+
+### Unraid
+
+Bind the chunk store onto the **array**, not a named volume (named volumes
+live inside Unraid's size-limited docker image) and never onto `/boot`
+(the flash device) or a bare `/mnt/<dir>` path (RAM-backed root):
+
+```bash
+  -v /mnt/user/appdata/wolfdisk/config:/etc/wolfdisk \
+  -v /mnt/user/appdata/wolfdisk/data:/var/lib/wolfdisk \
+```
+
+That puts WolfDisk's data on an Unraid share with parity protection. For
+write-heavy nodes, a direct disk path (`/mnt/disk1/wolfdisk`) or a
+cache-exclusive share skips Unraid's shfs FUSE layer and is noticeably
+faster. The `-v /mnt/wolfdisk:...` FUSE mountpoint mapping is fine as-is —
+it's a mountpoint, not storage; nothing persists there.
+
 ## Configuration
 
 Edit `/etc/wolfdisk/config.toml`:
